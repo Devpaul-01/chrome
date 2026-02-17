@@ -1,0 +1,28 @@
+services:
+  bm-legacy-backend:
+    build: .
+    image: gitea.birthdaymessaging.io/ctmmediagroup/bm-legacy-backend:latest
+    container_name: bm-legacy-backend
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_proxy
+      - traefik.http.routers.bm_legacy_backend.rule=Host(`api.birthdaymessaging.io`)
+      - traefik.http.routers.bm_legacy_backend.entrypoints=websecure
+      - traefik.http.routers.bm_legacy_backend.tls.certresolver=cf
+      - traefik.http.services.bm_legacy_backend.loadbalancer.server.port=5000
+      - traefik.http.middlewares.bm_legacy_backend-xfp.headers.customrequestheaders.X-Forwarded-Proto=https
+      - traefik.http.routers.bm_legacy_backend.middlewares=bm_legacy_backend-xfp
+    restart: unless-stopped
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: traefik_proxy

@@ -1,0 +1,102 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="title"></title>
+    <link rel="stylesheet" href="./assets/style.css">
+    
+    <!-- <script src="./js/vendor.js"></script> -->
+    
+</head>
+
+<body class="mainBody">
+    <div class="inBody d-flex flex-column">
+        <!-- <div data-include="header" class="extHeader header d-flex"></div>         -->
+        <div  class="extHeader header d-flex">
+            
+            <a href="./dashboard.html" class="logo-header">
+                <!-- <img src="./assets/logo.png" alt=""> -->
+            </a>
+            
+            <div class="headerOptions">
+                <a class="home active" href="./dashboard.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20.001" height="20" viewBox="0 0 20.001 20">
+                        <path class="a"
+                        d="M19.477,6.484,10.727.234a1.251,1.251,0,0,0-1.453,0L.524,6.484A1.249,1.249,0,0,0,0,7.5v11.25A1.249,1.249,0,0,0,1.25,20h17.5A1.249,1.249,0,0,0,20,18.752V7.5a1.249,1.249,0,0,0-.524-1.017ZM8.75,17.5v-5h2.5v5Zm8.75,0H13.75v-6.25A1.249,1.249,0,0,0,12.5,10h-5a1.249,1.249,0,0,0-1.25,1.25V17.5H2.5V8.145L10,2.787l7.5,5.358Z"
+                        transform="translate(0 -0.002)" /></svg>
+                    </a>
+                    
+                    <div class="menuHeader">
+                        <button class="btn headerMenuTrigger">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                <rect class="a" width="5" height="5" rx="2.5" />
+                                <rect class="a" width="5" height="5" rx="2.5" transform="translate(7)" />
+                                <rect class="a" width="5" height="5" rx="2.5" transform="translate(15)" />
+                                <rect class="a" width="5" height="5" rx="2.5" transform="translate(0 8)" />
+                                <rect class="a" width="5" height="5" rx="2.5" transform="translate(7 8)" />
+                                <rect class="a" width="5" height="5" rx="2.5" transform="translate(15 8)" />
+                                <rect class="a" width="5" height="5" rx="2.5" transform="translate(0 15)" />
+                                <rect class="a" width="5" height="5" rx="2.5" transform="translate(7 15)" />
+                                <rect class="a" width="5" height="5" rx="2.5" transform="translate(15 15)" />
+                            </svg>
+                        </button>
+                        
+                        <div class="menuHeaderList">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- <div class="extBody intervalBody">
+                    <div class="formOuter">
+                        <h3 id="">Set Interval</h3>
+                        <form action="">
+                        <div class="form-group">
+                            <label>Time Delay</label>
+                            <div class="form-group-in">
+                                <select name="interval_select" id="interval_select">
+                                    <option value="60000">1 Min</option>
+                                    <option value="130000">2 Min</option>
+                                    <option value="180000">3 Min</option>
+                                    <option value="240000">4 Min</option>
+                                    <option value="300000">5 Min</option>
+                                </select>
+                            </div>
+                            <div class="form-error-message">
+                                Set a proper interval
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-group-in">
+                                <button id="onBwSave" class="btn btnSubmit" type="button">
+                                    SAVE
+                                </button>
+                            </div>
+                        </div>
+                        </form>
+                    </div>
+            </div> -->
+        <!-- <div data-include="footer" class="extFooter"></div> -->
+        <div class="extFooter">
+        </div>
+        <div class="cancelAccPopup" id="cancel_acc_popup" style="display:none;">
+            <button class="closeButton" id="close_popup"></button>
+            <div class="innerPopupBody">
+                <!-- <p>To cancel your account please<br>email us at <a href="mailto:support@tier5.us">support@tier5.us</a></p> -->
+                
+            </div>
+        </div>
+        <div class="cancelAccPopup" id="global_loader" style="display: none;">
+            <div class="innerPopupBody">
+                <!-- <p><img src="./assets/loader.gif" width="50"></p> -->
+            </div>
+        </div>
+    </body>
+    
+    <script src="./js/common.js"></script>
+    <script src="./js/socialLink.js"></script>
+    </html>

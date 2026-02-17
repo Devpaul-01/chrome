@@ -1,0 +1,22 @@
+.form-group .btnSubmit {
+  padding: 0;
+  color: #ffffff;
+  background-color: #FF6700;
+  text-transform: uppercase;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.inputIco {
+  background-color: #ff6700;
+}
+
+.form-forget a:hover {
+  color: #ff6700;
+}
+
+.form-forget a,
+.form-forget p {
+  color: #000;
+  font-size: 13px;
+}

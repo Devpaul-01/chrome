@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="title"></title>
+    <link rel="stylesheet" href="./assets/style.css">
+    <link rel="stylesheet" href="./css/customCss.css">
+    <!-- <script src="./js/vendor.js"></script> -->
+    <!-- <script src="./js/background.js"></script> -->
+    <script src="js/login.js"></script>
+    <script src="./js/socialLink.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+</head>
+
+<body class="authBody">
+<!-- style="background-image:url(./assets/login_bg.png);" -->
+<div class="inBody d-flex flex-column">
+    <div class="extHeader text-center">
+        <figure class="logo-basic">
+            <!-- <img src="./assets/icon249.png" alt=""> -->
+            <!-- <img id="brand_logo1" src="" alt=""> -->
+        </figure>
+        <!-- <h6>
+            <img src="./assets/logo.png" alt="">
+        </h6> -->
+    </div>
+    <div class="extBody">
+        <div class="formOuter">
+            <form action="">
+                <div class="form-group ">
+                    <input type="email" name="email" id="email" class="login-input" placeholder="Enter your email">
+                    <span class="inputIco">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="13.714" viewBox="0 0 16 13.714"><defs><style>.a {
+                                fill: #fff;
+                            }</style></defs><g transform="translate(-2 -4)"><path class="a"
+                                                                                  d="M2,4V16a1.714,1.714,0,0,0,1.714,1.714H16.286A1.714,1.714,0,0,0,18,16V4ZM15.869,5.143l-5.5,4.651a.571.571,0,0,1-.743,0l-5.5-4.651Zm.417,11.429H3.714A.571.571,0,0,1,3.143,16V5.806l5.749,4.863a1.714,1.714,0,0,0,2.217,0l5.749-4.863V16A.571.571,0,0,1,16.286,16.571Z"/></g></svg>
+                        </span>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="password" class="login-input" id="password" placeholder="Password">
+                    <span class="inputIco">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14.222" height="16" viewBox="0 0 14.222 16"><defs><style>.a {
+                                fill: #fff;
+                            }</style></defs><g transform="translate(-4 -2)"><path class="a"
+                                                                                  d="M14.667,7.926V5.556a3.556,3.556,0,1,0-7.111,0v2.37H4v7.111A2.963,2.963,0,0,0,6.963,18h8.3a2.963,2.963,0,0,0,2.963-2.963V7.926ZM8.741,5.556a2.37,2.37,0,1,1,4.741,0v2.37H8.741Zm8.3,9.481a1.778,1.778,0,0,1-1.778,1.778h-8.3a1.778,1.778,0,0,1-1.778-1.778V9.111H17.037Z"/></g></svg>
+                        </span>
+                </div>
+                <div class="form-error-message">Please enter valid credentials or user is in-active</div>
+                <br>
+                <div class="form-group">
+                    <button class="btn btnSubmit" type="button" id="login">
+                        Login
+                    </button>
+                </div>
+                <div class="form-group form-forget text-center">
+                    <a href="./forgot-pass.html">
+                        Forgot Password?
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="extFooterLogin">
+
+
+    </div>
+    <div class="cancelAccPopup" id="cancel_acc_popup" style="display:none;">
+        <button class="closeButton" id="close_popup">X</button>
+        <div class="innerPopupBody">
+            <!-- <p>To cancel your account please<br>email us at <a href=""></a></p> -->
+
+        </div>
+    </div>
+    <div class="cancelAccPopup" id="global_loader" style="display: none;">
+        <div class="innerPopupBody">
+            <!-- <p><img src="./assets/loader.gif" width="50"></p> -->
+        </div>
+    </div>
+</div>
+</body>
+</html>

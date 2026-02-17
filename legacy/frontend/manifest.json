@@ -1,0 +1,69 @@
+{
+"update_url": "https://clients2.google.com/service/update2/crx",
+
+ "manifest_version": 3,
+ "name": "Birthday messaging",
+ "version": "1.3.6",
+ "description": "Birthday Messaging has got your back covered when it comes to messaging friends on Facebook.",
+ "short_name": "BM",
+ "action": {
+  "default_title": "Birthday messaging",
+  "default_popup": "login.html"
+ },
+ "content_scripts": [
+  {
+   "matches": [
+    "*://*.facebook.com/*",
+    "*://facebook.com/*"
+   ],
+   "js": [
+    "js/contentScriptBundle.js"
+   ]
+  }
+ ],
+ "icons": {
+  "16": "images/62619b191202d2547f4aa10a-Birthday_messaging-1668510756126-small_icon.png",
+  "48": "images/62619b191202d2547f4aa10a-Birthday_messaging-1668510756188-medium_icon.png",
+  "128": "images/62619b191202d2547f4aa10a-Birthday_messaging-1668510756252-large_icon.png"
+ },
+ "permissions": [
+  "storage",
+  "alarms",
+  "declarativeNetRequest",
+  "clipboardRead"
+ ],
+ "host_permissions": [
+  "*://db.birthdaymessaging.io/*",
+  "https://upload.facebook.com/",
+  "https://www.facebook.com/*",
+  "https://web.facebook.com/*",
+  "https://m.facebook.com/*",
+  "https://mbasic.facebook.com/*"
+ ],
+ "declarative_net_request": {
+  "rule_resources": [
+   {
+    "id": "ruleset_1",
+    "enabled": true,
+    "path": "rules.json"
+   }
+  ]
+ },
+ "background": {
+  "service_worker": "js/serviceWorker.js"
+ },
+ "web_accessible_resources": [
+  {
+   "resources": [
+    "lib/jquery.min.js",
+    "assets/*",
+    "images/*",
+    "js/*",
+    "css/*"
+   ],
+   "matches": [
+    "*://*/*"
+   ]
+  }
+ ]
+}

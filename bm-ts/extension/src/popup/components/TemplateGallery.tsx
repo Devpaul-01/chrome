@@ -1,0 +1,122 @@
+import type { TemplateFormData } from './TemplateCreator';
+
+export type SavedTemplate = {
+  id: string;
+  greeting: string;
+  sentiment: string;
+  closing: string;
+  imageUrl: string | null;
+  templateTitle: string;
+  daysInAdvance: number;
+  gender: 'male' | 'female' | 'all';
+  createdAt: string;
+  updatedAt: string;
+};
+
+type Props = {
+  templates: SavedTemplate[];
+  onEdit: (template: SavedTemplate) => void;
+  onDelete: (templateId: string) => void;
+  onCreate: () => void;
+};
+
+export default function TemplateGallery({ templates, onEdit, onDelete, onCreate }: Props) {
+  const getPreviewText = (template: SavedTemplate) => {
+    const parts = [template.greeting, template.sentiment, template.closing].filter(Boolean);
+    return parts.join(' ').substring(0, 100) + (parts.join(' ').length > 100 ? '...' : '');
+  };
+
+  const getDaysText = (days: number) => {
+    if (days === 0) return 'On birthday';
+    if (days > 0) return `${days} day${days !== 1 ? 's' : ''} early`;
+    return `${Math.abs(days)} day${Math.abs(days) !== 1 ? 's' : ''} late`;
+  };
+
+  return (
+    <div className="p-4">
+      <div className="mb-4 text-center">
+        <h2 className="text-xl font-semibold text-gray-800">Message Templates</h2>
+      </div>
+
+      {templates.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <p className="text-gray-500 mb-4">No templates yet. Create your first template!</p>
+          <button onClick={onCreate} className="btn-orange">
+            Create Template
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {templates.map((template) => (
+            <div
+              key={template.id}
+              className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white"
+            >
+              {/* Template Thumbnail */}
+              <div className="relative h-40 bg-gradient-to-br from-blue-50 to-orange-50">
+                {template.imageUrl ? (
+                  <img
+                    src={template.imageUrl}
+                    alt={template.templateTitle}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <span className="text-6xl">🎉</span>
+                  </div>
+                )}
+                {/* Gender & Days Badge */}
+                <div className="absolute top-2 right-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs font-medium">
+                  {getDaysText(template.daysInAdvance)}
+                </div>
+                {template.gender !== 'all' && (
+                  <div className="absolute top-2 left-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs font-medium capitalize">
+                    {template.gender}
+                  </div>
+                )}
+              </div>
+
+              {/* Template Info */}
+              <div className="p-4">
+                <h3 className="font-semibold text-gray-800 mb-1 truncate">
+                  {template.templateTitle}
+                </h3>
+                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                  {getPreviewText(template)}
+                </p>
+
+                {/* Metadata */}
+                <div className="text-xs text-gray-500 mb-3">
+                  <span className="mr-3">✉️ {template.greeting ? '1' : '0'} greeting</span>
+                  <span className="mr-3">💬 {template.sentiment ? '1' : '0'} message</span>
+                  <span>🎊 {template.closing ? '1' : '0'} closing</span>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onEdit(template)}
+                    className="flex-1 btn-outline-orange text-sm py-1"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => onDelete(template.id)}
+                    className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-md text-sm py-1 transition"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              {/* Updated timestamp */}
+              <div className="px-4 pb-3 text-xs text-gray-400">
+                Updated: {new Date(template.updatedAt).toLocaleDateString()}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

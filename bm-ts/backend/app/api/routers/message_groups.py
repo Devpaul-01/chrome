@@ -1,0 +1,139 @@
+from __future__ import annotations
+
+from datetime import datetime
+from typing import List
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_current_user
+from app.db.models import MessageGroup, User
+from app.db.session import get_db
+from app.schemas.message_group import (
+    GenderEnum,
+    MessageGroupCreate,
+    MessageGroupOut,
+    MessageGroupUpdate,
+)
+
+router = APIRouter()
+
+
+@router.post("/message-groups", response_model=MessageGroupOut, status_code=status.HTTP_201_CREATED)
+async def create_message_group(
+    data: MessageGroupCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MessageGroupOut:
+    """Create a new message group."""
+    message_group = MessageGroup(
+        user_id=current_user.id,
+        name=data.name,
+        gender=data.gender.value,
+        segment_ids=[str(sid) for sid in data.segment_ids],
+    )
+    db.add(message_group)
+    await db.commit()
+    await db.refresh(message_group)
+    return message_group
+
+
+@router.get("/message-groups", response_model=List[MessageGroupOut])
+async def list_message_groups(
+    gender: GenderEnum | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> List[MessageGroupOut]:
+    """List all message groups for the current user."""
+    stmt = select(MessageGroup).where(MessageGroup.user_id == current_user.id)
+    
+    if gender:
+        stmt = stmt.where(MessageGroup.gender == gender.value)
+    
+    stmt = stmt.order_by(MessageGroup.created_at.desc())
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.get("/message-groups/{group_id}", response_model=MessageGroupOut)
+async def get_message_group(
+    group_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MessageGroupOut:
+    """Get a specific message group by ID."""
+    stmt = select(MessageGroup).where(
+        MessageGroup.id == group_id,
+        MessageGroup.user_id == current_user.id,
+    )
+    result = await db.execute(stmt)
+    message_group = result.scalar_one_or_none()
+    
+    if not message_group:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message group not found"
+        )
+    
+    return message_group
+
+
+@router.put("/message-groups/{group_id}", response_model=MessageGroupOut)
+async def update_message_group(
+    group_id: UUID,
+    data: MessageGroupUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MessageGroupOut:
+    """Update a message group."""
+    stmt = select(MessageGroup).where(
+        MessageGroup.id == group_id,
+        MessageGroup.user_id == current_user.id,
+    )
+    result = await db.execute(stmt)
+    message_group = result.scalar_one_or_none()
+    
+    if not message_group:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message group not found"
+        )
+    
+    if data.name is not None:
+        message_group.name = data.name
+    if data.gender is not None:
+        message_group.gender = data.gender.value
+    if data.segment_ids is not None:
+        message_group.segment_ids = [str(sid) for sid in data.segment_ids]
+    
+    message_group.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(message_group)
+    return message_group
+
+
+@router.delete("/message-groups/{group_id}", status_code=status.HTTP_200_OK)
+async def delete_message_group(
+    group_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Delete a message group."""
+    stmt = select(MessageGroup).where(
+        MessageGroup.id == group_id,
+        MessageGroup.user_id == current_user.id,
+    )
+    result = await db.execute(stmt)
+    message_group = result.scalar_one_or_none()
+    
+    if not message_group:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message group not found"
+        )
+    
+    await db.delete(message_group)
+    await db.commit()
+    return {"status": "deleted"}
