@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers import (
@@ -20,6 +20,7 @@ from app.api.routers import (
 )
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.core.rate_limiter import init_rate_limiter, limiter
 
 setup_logging()
 
@@ -36,6 +37,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+init_rate_limiter(app)
 
 # Auth and core endpoints
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -66,3 +69,9 @@ app.include_router(birthday_configs.router, prefix="/api", tags=["birthday-confi
 @app.get("/health", summary="Service health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
+
+# function needs to be finished
+@app.post("/send-birthday-message")
+@limiter.limit("1/45seconds")
+async def send_message(request: Request):
+    return {"status": "sent"}
