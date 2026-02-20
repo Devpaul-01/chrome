@@ -56,7 +56,7 @@ export default function AuthForm({
           className={`flex-1 mr-1 bg-orangeStrong text-white uppercase rounded-lg hover:bg-orangeBrand transition px-6 py-3 auth-btn ${
             authMode === 'login' ? 'active' : ''
           }`}
-          aria-pressed={ariaBoolean(authMode === 'login')}
+          aria-pressed={authMode === 'login' ? 'true' : 'false'}
         >
           Login
         </button>
@@ -66,7 +66,7 @@ export default function AuthForm({
           className={`flex-1 ml-1 bg-orangeStrong text-white uppercase rounded-lg hover:bg-orangeBrand transition px-6 py-3 auth-btn ${
             authMode === 'register' ? 'active' : ''
           }`}
-          aria-pressed={ariaBoolean(authMode === 'register')}
+          aria-pressed={authMode === 'register' ? 'true' : 'false'}
         >
           Register
         </button>
@@ -83,7 +83,7 @@ export default function AuthForm({
           type="email"
           required
           aria-required="true"
-          aria-invalid={ariaBoolean(emailTouched && !emailValid)}
+          aria-invalid={emailTouched && !emailValid ? 'true' : 'false'}
           aria-describedby={emailTouched && !emailValid ? emailErrorId : undefined}
           placeholder="Enter your email"
           className={`w-full p-1.5 mt-0.5 border rounded ${
@@ -105,7 +105,7 @@ export default function AuthForm({
           type="password"
           required
           aria-required="true"
-          aria-invalid={ariaBoolean(passwordTouched && !passwordValid)}
+          aria-invalid={passwordTouched && !passwordValid ? 'true' : 'false'}
           aria-describedby={
             authMode === 'register' && passwordTouched
               ? `${passwordErrorId} password-requirements`
@@ -165,8 +165,8 @@ export default function AuthForm({
         type="submit"
         disabled={isSubmitting || !formValid}
         className="btn flex items-center justify-center gap-2"
-        aria-busy={ariaBoolean(isSubmitting)}
-        aria-disabled={ariaBoolean(isSubmitting || !formValid)}
+        aria-busy={isSubmitting ? 'true' : 'false'}
+        aria-disabled={isSubmitting || !formValid ? 'true' : 'false'}
         title={!formValid ? 'Please fix form errors before submitting' : ''}
       >
         {isSubmitting && <Spinner size="sm" />}

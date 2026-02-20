@@ -101,26 +101,14 @@ const TabbedDashboard = forwardRef<TabbedDashboardHandle, TabbedDashboardProps>(
         </p>
 
         {/* Tab Navigation */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '8px',
-            marginBottom: '16px',
-            borderBottom: '2px solid #e0e0e0',
-            paddingBottom: '8px',
-          }}
-        >
+        <div className="tab-nav">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={activeTab === tab.key ? 'button-primary' : 'button-secondary'}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                fontSize: '14px',
-                textAlign: 'center',
-              }}
+              className={
+                activeTab === tab.key ? 'button-primary tab-btn' : 'button-secondary tab-btn'
+              }
             >
               {tab.label}
             </button>
@@ -128,8 +116,8 @@ const TabbedDashboard = forwardRef<TabbedDashboardHandle, TabbedDashboardProps>(
         </div>
 
         {/* Tab Description */}
-        <div className="card" style={{ marginBottom: '16px', background: '#f0f8ff' }}>
-          <p style={{ margin: 0, fontSize: '14px' }}>
+        <div className="card tab-desc-card">
+          <p className="tab-desc-text">
             <strong>{tabs.find((t) => t.key === activeTab)?.label}</strong>
             <br />
             {tabs.find((t) => t.key === activeTab)?.description}
@@ -161,7 +149,7 @@ const TabbedDashboard = forwardRef<TabbedDashboardHandle, TabbedDashboardProps>(
           </div>
         )}
 
-        <button onClick={onClose} className="button-secondary" style={{ marginTop: '16px' }}>
+        <button onClick={onClose} className="button-secondary button-back">
           ← Back
         </button>
       </div>
@@ -179,13 +167,12 @@ function AdvanceTab({
 }) {
   return (
     <div>
-      <div className="card" style={{ marginBottom: '16px', background: '#fff8dc' }}>
-        <h3 style={{ fontSize: '15px', marginBottom: '8px' }}>Early Bird Wishes</h3>
-        <p style={{ fontSize: '13px', margin: 0 }}>
+      <div className="card tab-desc-card advance">
+        <h3 className="tab-card-heading">Early Bird Wishes</h3>
+        <p className="tab-card-paragraph">
           Send wishes 1-7 days before birthdays. Perfect for showing you care in advance!
         </p>
       </div>
-
       {configs.map((config) => (
         <ConfigCard key={config.id} config={config} onToggle={onToggle} />
       ))}
@@ -203,13 +190,12 @@ function NormalTab({
 }) {
   return (
     <div>
-      <div className="card" style={{ marginBottom: '16px', background: '#ffe6f0' }}>
-        <h3 style={{ fontSize: '15px', marginBottom: '8px' }}>On The Day</h3>
-        <p style={{ fontSize: '13px', margin: 0 }}>
+      <div className="card tab-desc-card normal">
+        <h3 className="tab-card-heading">On The Day</h3>
+        <p className="tab-card-paragraph">
           Send wishes exactly on their birthday. The classic way to celebrate!
         </p>
       </div>
-
       {configs.map((config) => (
         <ConfigCard key={config.id} config={config} onToggle={onToggle} />
       ))}
@@ -227,13 +213,12 @@ function FollowupTab({
 }) {
   return (
     <div>
-      <div className="card" style={{ marginBottom: '16px', background: '#e6f7ff' }}>
-        <h3 style={{ fontSize: '15px', marginBottom: '8px' }}>Belated Wishes</h3>
-        <p style={{ fontSize: '13px', margin: 0 }}>
+      <div className="card tab-desc-card followup">
+        <h3 className="tab-card-heading">Belated Wishes</h3>
+        <p className="tab-card-paragraph">
           Send follow-up wishes 1-7 days after birthdays. Better late than never!
         </p>
       </div>
-
       {configs.map((config) => (
         <ConfigCard key={config.id} config={config} onToggle={onToggle} />
       ))}
@@ -258,27 +243,14 @@ function ConfigCard({
   };
 
   return (
-    <div className="card" style={{ marginBottom: '12px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span
-              style={{
-                fontSize: '13px',
-                fontWeight: 'bold',
-                color: config.enabled ? '#2ea44f' : '#999',
-              }}
-            >
+    <div className="card">
+      <div className="config-card-flex">
+        <div className="config-card-details">
+          <div className="config-card-header">
+            <span className={`config-card-days ${config.enabled ? 'active' : 'disabled'}`}>
               {getDaysLabel(config.mode, config.days_offset)}
             </span>
-            <span
-              style={{
-                fontSize: '11px',
-                background: '#f0f0f0',
-                padding: '2px 6px',
-                borderRadius: '3px',
-              }}
-            >
+            <span className="config-card-gender">
               {config.gender_filter === 'ALL'
                 ? 'All'
                 : config.gender_filter === 'MALE'
@@ -289,38 +261,24 @@ function ConfigCard({
             </span>
           </div>
 
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div className="config-card-meta">
             {config.message_group_id && (
-              <p style={{ margin: '2px 0' }}>
-                Message Group: {config.message_group_id.slice(0, 8)}...
-              </p>
+              <p>Message Group: {config.message_group_id.slice(0, 8)}...</p>
             )}
-            {config.post_id && (
-              <p style={{ margin: '2px 0' }}>Post: {config.post_id.slice(0, 8)}...</p>
-            )}
+            {config.post_id && <p>Post: {config.post_id.slice(0, 8)}...</p>}
             {config.archive_enabled && (
-              <p style={{ margin: '2px 0', color: '#2ea44f' }}>
-                Archive mode enabled (no duplicates)
-              </p>
+              <p className="archive">Archive mode enabled (no duplicates)</p>
             )}
           </div>
         </div>
 
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-          }}
-        >
+        <label className="config-card-toggle">
           <input
             type="checkbox"
             checked={config.enabled}
             onChange={(e) => onToggle(config.id, e.target.checked)}
-            style={{ width: '18px', height: '18px' }}
           />
-          <span style={{ fontSize: '13px' }}>{config.enabled ? 'Active' : 'Disabled'}</span>
+          <span>{config.enabled ? 'Active' : 'Disabled'}</span>
         </label>
       </div>
     </div>

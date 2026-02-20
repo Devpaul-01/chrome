@@ -341,6 +341,14 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
         next_scheduled_check: config.nextCheck ?? undefined,
       };
     }
+    case 'dashboard.getConfigs': {
+      // TODO: Implement actual config fetching logic
+      return [];
+    }
+    case 'dashboard.toggleConfig': {
+      // TODO: Implement actual config toggle logic
+      return { success: true };
+    }
     case 'automation.scanFacebook': {
       return handleAutomationScan();
     }
@@ -356,24 +364,32 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) => updateContact(url, accessToken, id, payload));
     }
     case 'contacts.delete': {
-      return runAuthAware((accessToken, url) => deleteContact(url, accessToken, message.payload.id));
+      return runAuthAware((accessToken, url) =>
+        deleteContact(url, accessToken, message.payload.id),
+      );
     }
     case 'contacts.bulkCreate': {
-      return runAuthAware((accessToken, url) => bulkCreateContacts(url, accessToken, message.payload));
+      return runAuthAware((accessToken, url) =>
+        bulkCreateContacts(url, accessToken, message.payload),
+      );
     }
     // Message Group handlers
     case 'messageGroups.list': {
       return runAuthAware((accessToken, url) => listMessageGroups(url, accessToken));
     }
     case 'messageGroups.create': {
-      return runAuthAware((accessToken, url) => createMessageGroup(url, accessToken, message.payload));
+      return runAuthAware((accessToken, url) =>
+        createMessageGroup(url, accessToken, message.payload),
+      );
     }
     case 'messageGroups.update': {
       const { id, ...payload } = message.payload;
       return runAuthAware((accessToken, url) => updateMessageGroup(url, accessToken, id, payload));
     }
     case 'messageGroups.delete': {
-      return runAuthAware((accessToken, url) => deleteMessageGroup(url, accessToken, message.payload.id));
+      return runAuthAware((accessToken, url) =>
+        deleteMessageGroup(url, accessToken, message.payload.id),
+      );
     }
     // Post handlers
     case 'posts.list': {
@@ -404,28 +420,42 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) => getSMTPConfig(url, accessToken));
     }
     case 'smtp.updateConfig': {
-      return runAuthAware((accessToken, url) => updateSMTPConfig(url, accessToken, message.payload));
+      return runAuthAware((accessToken, url) =>
+        updateSMTPConfig(url, accessToken, message.payload),
+      );
     }
     // User Profile handlers
     case 'auth.updateProfile': {
-      return runAuthAware((accessToken, url) => updateUserProfile(url, accessToken, message.payload));
+      return runAuthAware((accessToken, url) =>
+        updateUserProfile(url, accessToken, message.payload),
+      );
     }
     // Message Template handlers
     case 'messageTemplates.list': {
-      return runAuthAware((accessToken, url) => listMessageTemplates(url, accessToken, message.gender));
+      return runAuthAware((accessToken, url) =>
+        listMessageTemplates(url, accessToken, message.gender),
+      );
     }
     case 'messageTemplates.create': {
-      return runAuthAware((accessToken, url) => createMessageTemplate(url, accessToken, message.payload));
+      return runAuthAware((accessToken, url) =>
+        createMessageTemplate(url, accessToken, message.payload),
+      );
     }
     case 'messageTemplates.get': {
-      return runAuthAware((accessToken, url) => getMessageTemplate(url, accessToken, message.payload.id));
+      return runAuthAware((accessToken, url) =>
+        getMessageTemplate(url, accessToken, message.payload.id),
+      );
     }
     case 'messageTemplates.update': {
       const { id, ...payload } = message.payload;
-      return runAuthAware((accessToken, url) => updateMessageTemplate(url, accessToken, id, payload));
+      return runAuthAware((accessToken, url) =>
+        updateMessageTemplate(url, accessToken, id, payload),
+      );
     }
     case 'messageTemplates.delete': {
-      return runAuthAware((accessToken, url) => deleteMessageTemplate(url, accessToken, message.payload.id));
+      return runAuthAware((accessToken, url) =>
+        deleteMessageTemplate(url, accessToken, message.payload.id),
+      );
     }
     case 'auth.deleteAccount': {
       await runAuthAware((accessToken, url) => deleteUserAccount(url, accessToken));

@@ -175,6 +175,13 @@ npm run format
 2. Check browser console for frontend errors
 3. Verify services are running: `docker ps`
 
+## 📦 Dependency Management
+
+All backend dependencies (including dev and test tools) are managed in `backend/pyproject.toml`. This file is the single source of truth for Python dependencies—do not use a separate `requirements.txt` for the backend. To add or update dependencies, edit `pyproject.toml` and rebuild your Docker image or reinstall in your environment.
+
+- For local development: `pip install -e .[test]` from the backend directory.
+- For Docker: dependencies are installed automatically during build.
+
 ---
 
 **Happy Birthday Messaging! 🎉**

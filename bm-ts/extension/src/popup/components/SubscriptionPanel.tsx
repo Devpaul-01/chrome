@@ -60,13 +60,15 @@ export default function SubscriptionPanel() {
       ) : (
         <>
           <div className="mb-3 text-sm">
-            <span className="font-medium">Status:</span> {subscription ? (subscription.is_active ? 'Active' : 'Inactive') : 'Unknown'}
+            <span className="font-medium">Status:</span>{' '}
+            {subscription ? (subscription.is_active ? 'Active' : 'Inactive') : 'Unknown'}
           </div>
           <div className="mb-3 text-sm">
             <span className="font-medium">Plan:</span> {subscription?.plan ?? 'n/a'}
           </div>
           <div className="mb-5 text-sm">
-            <span className="font-medium">Renewal:</span> {subscription?.current_period_end ?? 'n/a'}
+            <span className="font-medium">Renewal:</span>{' '}
+            {subscription?.current_period_end ?? 'n/a'}
           </div>
 
           <div className="h-4" />

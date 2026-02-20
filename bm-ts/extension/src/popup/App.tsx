@@ -1,15 +1,12 @@
 // React imports for state, effect, memoization, and form event typing
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import AuthForm from './components/AuthForm';
-import TemplateEditor from './components/TemplateEditor';
 import TemplateList from './components/TemplateList';
 import TemplateCreator, { type TemplateFormData } from './components/TemplateCreator';
-import TemplateGallery, { type SavedTemplate } from './components/TemplateGallery';
 import SubscriptionPanel from './components/SubscriptionPanel';
 import ForgotPassword from './components/ForgotPassword';
 import ChangePassword from './components/ChangePassword';
-import ScheduleSettings from './components/ScheduleSettings';
-import AutomationSettings from './components/AutomationSettings';
+import SchedulingSettings from './components/SchedulingSettings';
 import MessageQueue from './components/MessageQueue';
 import MessageHistory from './components/MessageHistory';
 import Dashboard from './components/Dashboard';
@@ -17,6 +14,7 @@ import Dashboard from './components/Dashboard';
 import PostEditor from './components/PostEditor';
 import PostList from './components/PostList';
 import MessageGroups from './components/MessageGroups';
+// MessageTemplates view replaced by direct TemplateCreator
 import ImageManager from './components/ImageManager';
 // New feature components
 import ContactList, { type Contact } from './components/ContactList';
@@ -57,6 +55,7 @@ type ViewMode =
   | 'change-password'
   | 'schedules'
   | 'automation'
+  | 'message-templates'
   | 'queue'
   | 'history'
   | 'analytics'
@@ -450,10 +449,40 @@ export default function App() {
     setIsSubmitting(true);
     setMessage(null);
     try {
-      const newContact = await sendBackgroundMessage<Contact>({
-        type: 'contacts.create',
-        payload: contact,
-      });
+      // Normalize incoming contact shape to backend ContactCreate
+      const payload: any = (() => {
+        // already in backend shape?
+        if ('name' in (contact as any) && 'facebook_profile_url' in (contact as any)) {
+          return contact;
+        }
+        const c: any = contact as any;
+        const name = `${c.firstName || ''} ${c.lastName || ''}`.trim();
+        const fb = c.facebook_profile_url || c.facebookProfileUrl || c.facebook || (name
+          ? `https://facebook.com/${name.replace(/\s+/g, '.').toLowerCase()}`
+          : '');
+        let birthday = c.birthday;
+        try {
+          const d = new Date(c.birthday);
+          if (!isNaN(d.getTime())) birthday = d.toISOString();
+        } catch {}
+        const notesParts: string[] = [];
+        if (c.relationship) notesParts.push(`relationship: ${c.relationship}`);
+        if (c.phone) notesParts.push(`phone: ${c.phone}`);
+        if (c.email) notesParts.push(`email: ${c.email}`);
+        const mapped: any = {
+          name,
+          facebook_profile_url: fb,
+          birthday,
+        };
+        if (notesParts.length) mapped.notes = notesParts.join(' | ');
+        if (c.gender) {
+          const g = String(c.gender).toUpperCase();
+          mapped.gender = g === 'MALE' || g === 'FEMALE' || g === 'NEUTRAL' ? g : undefined;
+        }
+        return mapped;
+      })();
+
+      const newContact = await sendBackgroundMessage<Contact>({ type: 'contacts.create', payload });
       setContacts((prev) => [newContact, ...prev]);
       setViewMode('contacts');
       showToast('Contact added successfully!', 'success');
@@ -475,10 +504,27 @@ export default function App() {
     setIsSubmitting(true);
     setMessage(null);
     try {
-      const updatedContact = await sendBackgroundMessage<Contact>({
-        type: 'contacts.update',
-        payload: { id: editingContact.id, ...contact },
-      });
+      // Normalize update payload as well
+      const c: any = contact as any;
+      const name = c.name ?? `${c.firstName || ''} ${c.lastName || ''}`.trim();
+      const fb = c.facebook_profile_url || c.facebookProfileUrl || c.facebook || undefined;
+      let birthday = c.birthday;
+      try {
+        const d = new Date(c.birthday);
+        if (!isNaN(d.getTime())) birthday = d.toISOString();
+      } catch {}
+      const notesParts: string[] = [];
+      if (c.relationship) notesParts.push(`relationship: ${c.relationship}`);
+      if (c.phone) notesParts.push(`phone: ${c.phone}`);
+      if (c.email) notesParts.push(`email: ${c.email}`);
+      const mapped: any = { id: editingContact.id };
+      if (name) mapped.name = name;
+      if (fb) mapped.facebook_profile_url = fb;
+      if (birthday) mapped.birthday = birthday;
+      if (notesParts.length) mapped.notes = notesParts.join(' | ');
+      if (c.gender) mapped.gender = String(c.gender).toUpperCase();
+
+      const updatedContact = await sendBackgroundMessage<Contact>({ type: 'contacts.update', payload: mapped });
       setContacts((prev) =>
         prev.map((c) => (c.id === editingContact.id ? updatedContact : c)),
       );
@@ -597,6 +643,34 @@ export default function App() {
     }
   }
 
+  async function handleUpdateMessageTemplate(id: string, data: TemplateFormData): Promise<void> {
+    setIsSubmitting(true);
+    try {
+      await sendBackgroundMessage({
+        type: 'messageTemplates.update',
+        payload: {
+          id,
+          title: data.templateTitle,
+          greeting: data.greeting,
+          sentiment: data.sentiment,
+          closing: data.closing,
+          image_url: data.imageUrl,
+          days_in_advance: data.daysInAdvance,
+          gender: data.gender,
+        },
+      });
+      await loadMessageTemplates();
+      showToast('Template updated successfully!', 'success');
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      logError(error, 'handleUpdateMessageTemplate');
+      showToast(errorMessage, 'error');
+      throw error;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   // --- Account Management Handlers ---
   async function handleUpdateProfile(profile: Partial<UserProfile>): Promise<void> {
     setIsSubmitting(true);
@@ -712,17 +786,11 @@ export default function App() {
         id: 'messages',
         label: 'Messages',
         menuItems: [
-          { label: 'Add Template', action: () => { setActiveTab('messages'); setViewMode('main'); setShowTemplateCreator(true); } },
-          { label: 'View Templates', action: () => { setActiveTab('messages'); setViewMode('main'); setShowTemplateCreator(false); } },
-          { label: 'Schedule Message', action: () => setViewMode('schedules') },
-          { label: 'Automation', action: () => setViewMode('automation') },
-          { label: 'Queue', action: () => setViewMode('queue') },
-          { label: 'Sent Messages', action: () => setViewMode('history') },
+          { label: 'Message Templates', action: () => { setActiveTab('messages'); setViewMode('message-templates'); } },
+          { label: 'Timeline Posts', action: () => setViewMode('posts') },
+          { label: 'Scheduling', action: () => setViewMode('scheduling') },
           { label: 'Analytics', action: () => setViewMode('analytics') },
-          { label: 'Create Post', action: () => setViewMode('posts') },
-          { label: 'View Posts', action: () => setViewMode('post-list') },
-          { label: 'Message Groups', action: () => setViewMode('groups') },
-          { label: 'Images', action: () => setViewMode('images') },
+          { label: 'Image Library', action: () => setViewMode('images') },
         ],
       },
       {
@@ -789,11 +857,8 @@ export default function App() {
         />
       );
     }
-    if (viewMode === 'schedules') {
-      return <ScheduleSettings onClose={() => setViewMode('main')} />;
-    }
-    if (viewMode === 'automation') {
-      return <AutomationSettings onClose={() => setViewMode('main')} />;
+    if (viewMode === 'scheduling') {
+      return <SchedulingSettings onClose={() => setViewMode('main')} />;
     }
     if (viewMode === 'queue') {
       return <MessageQueue onClose={() => setViewMode('main')} />;
@@ -804,17 +869,226 @@ export default function App() {
     if (viewMode === 'analytics') {
       return <Dashboard onClose={() => setViewMode('main')} />;
     }
+    if (viewMode === 'message-templates') {
+      return (
+        <div className="view-container">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-blueStrong">Message Templates</h2>
+            <div />
+          </div>
+
+          <div className="mb-6">
+            <div className="card mb-4">
+              <TemplateCreator
+                onSubmit={editingTemplate
+                  ? (data) => handleUpdateMessageTemplate(editingTemplate.id, data)
+                  : handleCreateTemplate
+                }
+                onCancel={() => setViewMode('main')}
+                initialData={editingTemplate ? {
+                  greeting: editingTemplate.greeting,
+                  sentiment: editingTemplate.sentiment,
+                  closing: editingTemplate.closing,
+                  imageUrl: editingTemplate.imageUrl || null,
+                  templateTitle: editingTemplate.templateTitle,
+                  daysInAdvance: editingTemplate.daysInAdvance,
+                  gender: editingTemplate.gender,
+                } : undefined}
+              />
+            </div>
+
+            <div className="mb-6">
+              <MessageGroups onClose={() => setViewMode('main')} showClose={false} />
+            </div>
+          </div>
+        </div>
+      );
+    }
     if (viewMode === 'posts') {
       return (
         <div>
+          <h2 className="text-lg font-bold text-blueStrong mb-3">Timeline Posts</h2>
+          <p className="text-xs text-gray-600 mb-4">Create and manage your timeline post templates in one place.</p>
+
           <PostEditor
             postForm={postForm}
             setPostForm={setPostForm}
             onSubmit={async (e) => {
               e.preventDefault();
               setIsSubmitting(true);
+
+              async function composeImageFromUrl(
+                srcUrl: string,
+                text: string,
+                fontFamily: string | undefined,
+                fontSize: number | undefined,
+                fontColor: string | undefined,
+              ): Promise<string> {
+                return new Promise((resolve, reject) => {
+                  const img = new Image();
+                  img.crossOrigin = 'anonymous';
+                  img.onload = () => {
+                    try {
+                      const FACEBOOK_WIDTH = 1080;
+                      const FACEBOOK_HEIGHT = 1350;
+                      const canvas = document.createElement('canvas');
+                      canvas.width = FACEBOOK_WIDTH;
+                      canvas.height = FACEBOOK_HEIGHT;
+                      const ctx = canvas.getContext('2d');
+                      if (!ctx) return reject(new Error('Canvas not supported'));
+
+                      // Calculate scaling to cover the canvas while maintaining aspect ratio
+                      const imgAspect = img.width / img.height;
+                      const canvasAspect = FACEBOOK_WIDTH / FACEBOOK_HEIGHT;
+
+                      let drawWidth: number, drawHeight: number, offsetX: number, offsetY: number;
+
+                      if (imgAspect > canvasAspect) {
+                        drawHeight = FACEBOOK_HEIGHT;
+                        drawWidth = img.width * (FACEBOOK_HEIGHT / img.height);
+                        offsetX = (FACEBOOK_WIDTH - drawWidth) / 2;
+                        offsetY = 0;
+                      } else {
+                        drawWidth = FACEBOOK_WIDTH;
+                        drawHeight = img.height * (FACEBOOK_WIDTH / img.width);
+                        offsetX = 0;
+                        offsetY = (FACEBOOK_HEIGHT - drawHeight) / 2;
+                      }
+
+                      // Background
+                      ctx.fillStyle = '#ffffff';
+                      ctx.fillRect(0, 0, FACEBOOK_WIDTH, FACEBOOK_HEIGHT);
+
+                      // Draw image
+                      ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+
+                      // Overlay gradient for text readability
+                      const overlayGradient = ctx.createLinearGradient(0, FACEBOOK_HEIGHT - 500, 0, FACEBOOK_HEIGHT);
+                      overlayGradient.addColorStop(0, 'rgba(0,0,0,0)');
+                      overlayGradient.addColorStop(1, 'rgba(0,0,0,0.6)');
+                      ctx.fillStyle = overlayGradient;
+                      ctx.fillRect(0, FACEBOOK_HEIGHT - 500, FACEBOOK_WIDTH, 500);
+
+                      // Text layout
+                      const appliedFont = fontFamily || 'Arial';
+                      const appliedSize = fontSize || 48;
+                      const appliedColor = fontColor || '#ffffff';
+
+                      ctx.fillStyle = appliedColor;
+                      ctx.textAlign = 'center';
+                      ctx.textBaseline = 'middle';
+                      const maxWidth = FACEBOOK_WIDTH - 120;
+                      const lineHeight = appliedSize * 1.25;
+                      const lines: string[] = [];
+
+                      const paragraphs = text.split('\n').filter(p => p.trim());
+                      paragraphs.forEach((paragraph) => {
+                        const words = paragraph.split(' ');
+                        let currentLine = '';
+                        ctx.font = `bold ${appliedSize}px ${appliedFont}, sans-serif`;
+                        words.forEach((word) => {
+                          const testLine = currentLine + (currentLine ? ' ' : '') + word;
+                          const metrics = ctx.measureText(testLine);
+                          if (metrics.width > maxWidth && currentLine) {
+                            lines.push(currentLine);
+                            currentLine = word;
+                          } else {
+                            currentLine = testLine;
+                          }
+                        });
+                        if (currentLine) lines.push(currentLine);
+                      });
+
+                      const displayLines = lines.slice(0, 6);
+                      const totalTextHeight = displayLines.length * lineHeight;
+                      const startY = FACEBOOK_HEIGHT - 280 - (totalTextHeight / 2);
+
+                      // Draw text with shadow
+                      displayLines.forEach((line, idx) => {
+                        const y = startY + idx * lineHeight;
+                        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                        ctx.fillText(line, FACEBOOK_WIDTH / 2 + 2, y + 2);
+                        ctx.fillStyle = appliedColor;
+                        ctx.fillText(line, FACEBOOK_WIDTH / 2, y);
+                      });
+
+                      // Ellipsis if truncated
+                      if (lines.length > 6) {
+                        const ellipsisY = startY + (6 * lineHeight);
+                        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                        ctx.fillText('...', FACEBOOK_WIDTH / 2 + 2, ellipsisY + 2);
+                        ctx.fillStyle = appliedColor;
+                        ctx.fillText('...', FACEBOOK_WIDTH / 2, ellipsisY);
+                      }
+
+                      resolve(canvas.toDataURL('image/jpeg', 0.92));
+                    } catch (err) {
+                      reject(err);
+                    }
+                  };
+                  img.onerror = () => reject(new Error('Failed to load image'));
+                  img.src = srcUrl;
+                });
+              }
+
               try {
-                showToast('Post creation not yet implemented', 'warning');
+                // Prepare content with preview-like placeholders replaced for composition
+                const previewText = (postForm.content || '')
+                  .replace(/\{First_Name\}/g, 'John')
+                  .replace(/\{Last_Name\}/g, 'Doe')
+                  .replace(/\{Today\}/g, new Date().toLocaleDateString());
+
+                let imageUrlToUse: string | undefined = undefined;
+
+                if (previewText.includes('[Image]') || postForm.image_url) {
+                  // Pick a random image from user's library
+                  const images = await sendBackgroundMessage<any[]>({ type: 'images.list' });
+                  if (!images || images.length === 0) {
+                    showToast('No images in your library. Please upload one first.', 'error');
+                    return;
+                  }
+                  const random = images[Math.floor(Math.random() * images.length)];
+                  const sourceUrl = random.url;
+
+                  // Compose image with text overlay
+                  const composedDataUrl = await composeImageFromUrl(
+                    sourceUrl,
+                    previewText.replace(/\[Image\]/g, ''),
+                    postForm.fontFamily,
+                    postForm.fontSize,
+                    postForm.fontColor,
+                  );
+
+                  // Upload composed image to library/backend
+                  const uploaded = await sendBackgroundMessage<any>({
+                    type: 'images.create',
+                    payload: {
+                      url: composedDataUrl,
+                      filename: `composed_${Date.now()}.jpg`,
+                      size: composedDataUrl.length,
+                    },
+                  });
+
+                  imageUrlToUse = uploaded.url;
+                }
+
+                // Remove [Image] placeholders from content for sending
+                const finalContent = (postForm.content || '').replace(/\[Image\]/g, '');
+
+                // Send create post request
+                await sendBackgroundMessage<any>({
+                  type: 'posts.create',
+                  payload: {
+                    content: finalContent,
+                    image_url: imageUrlToUse,
+                    gender: postForm.gender,
+                    is_default: false,
+                  },
+                });
+
+                showToast('Post created successfully!', 'success');
+                // Reset form
+                setPostForm({ content: '', gender: 'NEUTRAL', image_url: '', label: '', fontFamily: 'Arial', fontSize: 60, fontColor: '#ffffff' });
               } catch (error) {
                 showToast(getErrorMessage(error), 'error');
               } finally {
@@ -824,14 +1098,12 @@ export default function App() {
             isSubmitting={isSubmitting}
             message={message}
           />
-          <button onClick={() => setViewMode('main')} className="btn-secondary btn-block mt-3">
-            ← Back to Main
-          </button>
+
+          <div className="mt-4">
+            <PostList onClose={() => setViewMode('main')} showClose={false} />
+          </div>
         </div>
       );
-    }
-    if (viewMode === 'post-list') {
-      return <PostList onClose={() => setViewMode('main')} />;
     }
     if (viewMode === 'groups') {
       return <MessageGroups onClose={() => setViewMode('main')} />;
@@ -879,7 +1151,7 @@ export default function App() {
       );
     }
     if (viewMode === 'birthday-calendar') {
-      return <BirthdayCalendar contacts={contacts} />;
+      return <BirthdayCalendar contacts={contacts} onBack={() => setViewMode('contacts')} />;
     }
     if (viewMode === 'smtp-settings') {
       return (
@@ -1013,8 +1285,8 @@ export default function App() {
           <div role="tabpanel" id="messages-panel" className="tab-content">
             {showTemplateCreator ? (
               <TemplateCreator
-                onSubmit={editingTemplate 
-                  ? (data) => handleUpdateTemplate(editingTemplate.id, data)
+                onSubmit={editingTemplate
+                  ? (data) => handleUpdateMessageTemplate(editingTemplate.id, data)
                   : handleCreateTemplate
                 }
                 onCancel={() => {
@@ -1025,27 +1297,13 @@ export default function App() {
                   greeting: editingTemplate.greeting,
                   sentiment: editingTemplate.sentiment,
                   closing: editingTemplate.closing,
-                  imageUrl: editingTemplate.imageUrl,
+                  imageUrl: editingTemplate.imageUrl || null,
                   templateTitle: editingTemplate.templateTitle,
                   daysInAdvance: editingTemplate.daysInAdvance,
                   gender: editingTemplate.gender,
                 } : undefined}
               />
-            ) : (
-              <>
-                <div className="mb-4">
-                  <TemplateGallery
-                    templates={messageTemplates}
-                    onEdit={(template) => {
-                      setEditingTemplate(template);
-                      setShowTemplateCreator(true);
-                    }}
-                    onDelete={handleDeleteTemplate}
-                    onCreate={() => setShowTemplateCreator(true)}
-                  />
-                </div>
-              </>
-            )}
+            ) : null}
           </div>
         );
 
@@ -1187,6 +1445,30 @@ export default function App() {
             onClose={() => setShowImportModal(false)}
             onImport={handleImportContacts}
           />
+        )}
+
+        {showTemplateCreator && viewMode !== 'message-templates' && (
+          <div className="modal-overlay">
+            <TemplateCreator
+              onSubmit={editingTemplate
+                ? (data) => handleUpdateMessageTemplate(editingTemplate.id, data)
+                : handleCreateTemplate
+              }
+              onCancel={() => {
+                setShowTemplateCreator(false);
+                setEditingTemplate(null);
+              }}
+              initialData={editingTemplate ? {
+                greeting: editingTemplate.greeting,
+                sentiment: editingTemplate.sentiment,
+                closing: editingTemplate.closing,
+                imageUrl: editingTemplate.imageUrl || null,
+                templateTitle: editingTemplate.templateTitle,
+                daysInAdvance: editingTemplate.daysInAdvance,
+                gender: editingTemplate.gender,
+              } : undefined}
+            />
+          </div>
         )}
       </div>
     </ErrorBoundary>

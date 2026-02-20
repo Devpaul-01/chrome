@@ -9,9 +9,9 @@ type FacebookPostPreviewProps = {
   fontColor?: string;
 };
 
-export default function FacebookPostPreview({ 
-  imageUrl, 
-  text, 
+export default function FacebookPostPreview({
+  imageUrl,
+  text,
   showAsPost = false,
   fontFamily = 'Arial',
   fontSize = 48,
@@ -34,7 +34,7 @@ export default function FacebookPostPreview({
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    
+
     img.onload = () => {
       // Set canvas dimensions to Facebook optimal size
       const FACEBOOK_WIDTH = 1080;
@@ -45,9 +45,9 @@ export default function FacebookPostPreview({
       // Calculate image scaling
       const imgAspect = img.width / img.height;
       const canvasAspect = FACEBOOK_WIDTH / FACEBOOK_HEIGHT;
-      
+
       let drawWidth, drawHeight, offsetX, offsetY;
-      
+
       if (imgAspect > canvasAspect) {
         drawHeight = FACEBOOK_HEIGHT;
         drawWidth = img.width * (FACEBOOK_HEIGHT / img.height);
@@ -63,12 +63,17 @@ export default function FacebookPostPreview({
       // Draw white background
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, FACEBOOK_WIDTH, FACEBOOK_HEIGHT);
-      
+
       // Draw image
       ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
       // Add semi-transparent overlay for text readability
-      const overlayGradient = ctx.createLinearGradient(0, FACEBOOK_HEIGHT - 500, 0, FACEBOOK_HEIGHT);
+      const overlayGradient = ctx.createLinearGradient(
+        0,
+        FACEBOOK_HEIGHT - 500,
+        0,
+        FACEBOOK_HEIGHT,
+      );
       overlayGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
       overlayGradient.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
       ctx.fillStyle = overlayGradient;
@@ -78,25 +83,25 @@ export default function FacebookPostPreview({
       ctx.fillStyle = fontColor;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      
+
       // Process and wrap text
       const maxWidth = FACEBOOK_WIDTH - 120; // Padding on sides
       const lineHeight = fontSize * 1.25; // Line height is 125% of font size
       const lines: string[] = [];
-      
+
       // Split by line breaks first
-      const paragraphs = text.split('\n').filter(p => p.trim());
-      
+      const paragraphs = text.split('\n').filter((p) => p.trim());
+
       paragraphs.forEach((paragraph) => {
         const words = paragraph.split(' ');
         let currentLine = '';
-        
+
         ctx.font = `bold ${fontSize}px ${fontFamily}, sans-serif`;
-        
+
         words.forEach((word) => {
           const testLine = currentLine + (currentLine ? ' ' : '') + word;
           const metrics = ctx.measureText(testLine);
-          
+
           if (metrics.width > maxWidth && currentLine) {
             lines.push(currentLine);
             currentLine = word;
@@ -104,7 +109,7 @@ export default function FacebookPostPreview({
             currentLine = testLine;
           }
         });
-        
+
         if (currentLine) {
           lines.push(currentLine);
         }
@@ -112,27 +117,27 @@ export default function FacebookPostPreview({
 
       // Calculate starting Y position to center the text block
       const totalTextHeight = lines.length * lineHeight;
-      let startY = FACEBOOK_HEIGHT - 280 - (totalTextHeight / 2);
+      let startY = FACEBOOK_HEIGHT - 280 - totalTextHeight / 2;
 
       // Limit to max 6 lines
       const displayLines = lines.slice(0, 6);
-      
+
       // Draw text with shadow for better readability
       displayLines.forEach((line, index) => {
-        const y = startY + (index * lineHeight);
-        
+        const y = startY + index * lineHeight;
+
         // Shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillText(line, FACEBOOK_WIDTH / 2 + 2, y + 2);
-        
-        // Text
-        ctx.fillStyle = '#ffffff';
+
+        // Text (use configured fontColor)
+        ctx.fillStyle = fontColor;
         ctx.fillText(line, FACEBOOK_WIDTH / 2, y);
       });
 
       // Add ellipsis if text was truncated
       if (lines.length > 6) {
-        const ellipsisY = startY + (6 * lineHeight);
+        const ellipsisY = startY + 6 * lineHeight;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillText('...', FACEBOOK_WIDTH / 2 + 2, ellipsisY + 2);
         ctx.fillStyle = fontColor;
@@ -173,12 +178,7 @@ export default function FacebookPostPreview({
   if (!text) {
     return (
       <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
-        <img
-          src={imageUrl}
-          alt="Preview"
-          className="w-full"
-          style={{ maxHeight: '500px', objectFit: 'contain' }}
-        />
+        <img src={imageUrl} alt="Preview" className="w-full facebook-preview-img" />
       </div>
     );
   }
@@ -203,8 +203,7 @@ export default function FacebookPostPreview({
             <img
               src={previewUrl}
               alt="Facebook post preview with text overlay"
-              className="w-full"
-              style={{ maxHeight: '600px', objectFit: 'contain' }}
+              className="w-full facebook-preview-img-overlay"
             />
           ) : (
             <div className="flex items-center justify-center p-12">
@@ -217,21 +216,25 @@ export default function FacebookPostPreview({
         </div>
 
         {/* Facebook-style actions */}
-        <div className="p-3 border-t border-gray-200 flex gap-4 justify-around text-xs text-gray-600">
-          <div className="flex items-center gap-1">
-            <span>👍</span> Like
+        <div
+          className="p-3 border-t border-gray-200 flex gap-4 justify-around text-xs text-gray-600"
+          role="group"
+          aria-label="Facebook actions"
+        >
+          <div className="flex items-center gap-1" role="button" tabIndex={0} aria-label="Like">
+            <span aria-hidden="true">👍</span> Like
           </div>
-          <div className="flex items-center gap-1">
-            <span>💬</span> Comment
+          <div className="flex items-center gap-1" role="button" tabIndex={0} aria-label="Comment">
+            <span aria-hidden="true">💬</span> Comment
           </div>
-          <div className="flex items-center gap-1">
-            <span>↗️</span> Share
+          <div className="flex items-center gap-1" role="button" tabIndex={0} aria-label="Share">
+            <span aria-hidden="true">↗️</span> Share
           </div>
         </div>
       </div>
 
       {/* Hidden canvas for rendering */}
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <canvas ref={canvasRef} className="hidden-canvas" />
 
       {/* Text-only version for reference */}
       <details className="bg-gray-50 rounded-lg p-4 border border-gray-200">

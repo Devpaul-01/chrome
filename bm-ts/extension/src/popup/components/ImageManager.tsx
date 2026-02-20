@@ -69,7 +69,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
           canvas.width = FACEBOOK_WIDTH;
           canvas.height = FACEBOOK_HEIGHT;
           const ctx = canvas.getContext('2d');
-          
+
           if (!ctx) {
             reject(new Error('Failed to get canvas context'));
             return;
@@ -132,11 +132,11 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
 
     setIsProcessing(true);
     setError(null);
-    
+
     try {
       // Resize image to Facebook optimal dimensions (same as TemplateCreator)
       const resizedDataUrl = await resizeImageForFacebook(file);
-      
+
       // Store preview and file
       setPreviewImage(resizedDataUrl);
       setSelectedFile(file);
@@ -152,7 +152,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
 
     setIsUploading(true);
     setError(null);
-    
+
     try {
       // Upload the resized image
       await sendBackgroundMessage<void>({
@@ -163,7 +163,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
           size: previewImage.length,
         },
       });
-      
+
       // Clear preview and reload
       setPreviewImage(null);
       setSelectedFile(null);
@@ -231,12 +231,9 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
               <img
                 src={previewImage}
                 alt="Preview"
-                className="w-full rounded-lg shadow-md"
-                style={{ maxHeight: '400px', objectFit: 'contain' }}
+                className="w-full rounded-lg shadow-md image-preview-max"
               />
-              <div className="mt-2 text-center text-xs text-gray-600">
-                1080×1350px (Optimized)
-              </div>
+              <div className="mt-2 text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
             </div>
             <div className="flex gap-2">
               <button
@@ -292,7 +289,9 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
                   accept="image/*"
                   onChange={handleFileUpload}
                   disabled={isUploading}
-                  style={{ display: 'none' }}
+                  className="hidden-input"
+                  title="Upload image file"
+                  placeholder="Select image file"
                 />
                 <p className="text-xs text-gray-400 mt-4">
                   Max 10MB • Auto-optimized for Facebook posts
@@ -313,9 +312,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
         <div className="text-center py-8 text-gray-500">Loading images...</div>
       ) : (
         <div>
-          <h3 className="text-sm font-bold text-textPrimary mb-4">
-            Your Images ({images.length})
-          </h3>
+          <h3 className="text-sm font-bold text-textPrimary mb-4">Your Images ({images.length})</h3>
 
           {images.length === 0 ? (
             <div className="text-center py-8 text-gray-500 bg-white bg-opacity-80 rounded-lg mb-5">
@@ -357,10 +354,6 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
           )}
         </div>
       )}
-
-      <button onClick={onClose} className="btn-secondary btn-block">
-        ← Back
-      </button>
     </div>
   );
 });

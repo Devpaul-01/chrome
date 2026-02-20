@@ -63,6 +63,8 @@ export type BackgroundMessage =
   | { type: 'messages.deleteHistory'; payload: { id: string } }
   // Dashboard messages
   | { type: 'dashboard.getStats' }
+  | { type: 'dashboard.getConfigs' }
+  | { type: 'dashboard.toggleConfig'; payload: { id: string; enabled: boolean } }
   // Contact messages
   | { type: 'contacts.list' }
   | { type: 'contacts.create'; payload: CreateContactPayload }

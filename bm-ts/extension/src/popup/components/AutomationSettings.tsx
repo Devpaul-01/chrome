@@ -11,9 +11,10 @@ interface AutomationConfig {
 
 interface AutomationSettingsProps {
   onClose: () => void;
+  showClose?: boolean;
 }
 
-export default function AutomationSettings({ onClose }: AutomationSettingsProps) {
+export default function AutomationSettings({ onClose, showClose = true }: AutomationSettingsProps) {
   const [config, setConfig] = useState<AutomationConfig>({
     enabled: false,
     checkInterval: 60, // Default: 1 hour
@@ -204,9 +205,11 @@ export default function AutomationSettings({ onClose }: AutomationSettingsProps)
             Run Check Now
           </button>
 
-          <button onClick={onClose} className="btn-secondary btn-block">
-            Close
-          </button>
+          {showClose && (
+            <button onClick={onClose} className="btn-secondary btn-block">
+              Close
+            </button>
+          )}
         </>
       )}
     </div>

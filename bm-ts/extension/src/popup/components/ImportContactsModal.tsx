@@ -1,4 +1,5 @@
 import { useState, DragEvent, ChangeEvent, useRef } from 'react';
+import Spinner from './Spinner';
 
 // Backend expects: name, facebook_profile_url, birthday, gender?, notes?
 type ImportContact = {
@@ -97,7 +98,11 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
 
       headers.forEach((header, index) => {
         if (header === 'name') contact.name = values[index];
-        if (header === 'facebook_profile_url' || header === 'facebook_url' || header === 'facebook') {
+        if (
+          header === 'facebook_profile_url' ||
+          header === 'facebook_url' ||
+          header === 'facebook'
+        ) {
           contact.facebook_profile_url = values[index];
         }
         if (header === 'birthday' || header === 'birth_date') {
@@ -174,7 +179,18 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
 
   const handleImport = async () => {
     try {
-      await onImport(parsedContacts);
+      // Map parsed contacts into backend ContactCreate shape
+      const mapped = parsedContacts.map((c) => ({
+        name: c.name,
+        facebook_profile_url: c.facebook_profile_url,
+        birthday: c.birthday,
+        gender: ['male', 'female', 'other'].includes(c.gender || '')
+          ? (c.gender as 'male' | 'female' | 'other')
+          : undefined,
+        notes: c.notes,
+      }));
+
+      await onImport(mapped);
       onClose();
     } catch (err) {
       setError(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -252,11 +268,15 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                   accept=".json,.vcf,.csv"
                   onChange={handleFileSelect}
                   className="hidden"
+                  title="Upload contacts file"
+                  placeholder="Select a .json, .vcf, or .csv file"
                 />
               </div>
 
               {isProcessing && (
-                <div className="text-center text-sm text-gray-600">Processing file...</div>
+                <div className="flex justify-center py-4">
+                  <Spinner size="md" message="Processing file..." />
+                </div>
               )}
 
               {error && <div className="p-3 rounded bg-red-50 text-red-700 text-sm">{error}</div>}

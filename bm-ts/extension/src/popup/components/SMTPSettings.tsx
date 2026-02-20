@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import Spinner from './Spinner';
 
 export type SMTPConfig = {
   host: string;
@@ -174,11 +175,21 @@ export default function SMTPSettings({
 
           {/* Actions */}
           <div className="flex gap-2 justify-end pt-2">
-            <button type="button" onClick={onBack} className="btn-secondary" disabled={isSubmitting}>
+            <button
+              type="button"
+              onClick={onBack}
+              className="btn-secondary"
+              disabled={isSubmitting}
+            >
               Cancel
             </button>
-            <button type="submit" className="btn" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Settings'}
+            <button
+              type="submit"
+              className="btn flex items-center justify-center gap-2"
+              disabled={isSubmitting}
+            >
+              {isSubmitting && <Spinner size="sm" />}
+              <span>{isSubmitting ? 'Saving...' : 'Save Settings'}</span>
             </button>
           </div>
         </form>

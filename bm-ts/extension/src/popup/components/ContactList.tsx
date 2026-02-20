@@ -40,7 +40,10 @@ export default function ContactList({
     <div className="space-y-6">
       {/* Action buttons */}
       <div className="flex gap-3">
-        <button onClick={onImportContacts} className="btn-orange flex-1 flex items-center justify-center gap-2">
+        <button
+          onClick={onImportContacts}
+          className="btn-orange flex-1 flex items-center justify-center gap-2"
+        >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -51,14 +54,12 @@ export default function ContactList({
           </svg>
           Import Contacts
         </button>
-        <button onClick={onAddContact} className="btn flex-1 flex items-center justify-center gap-2">
+        <button
+          onClick={onAddContact}
+          className="btn flex-1 flex items-center justify-center gap-2"
+        >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Add New Contact
         </button>
@@ -75,8 +76,7 @@ export default function ContactList({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search contacts by name"
-          className="w-full px-3 py-2 focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
-          style={{ borderRadius: '0.5rem' }}
+          className="w-full px-3 py-2 focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow contact-search-input"
         />
       </div>
 
@@ -100,7 +100,9 @@ export default function ContactList({
                 <p className="text-sm font-medium text-orangeBrand mt-1">
                   Birthday: {formatBirthday(contact.birthday)}
                 </p>
-                {contact.notes && <p className="text-sm text-gray-600 mt-1">Notes: {contact.notes}</p>}
+                {contact.notes && (
+                  <p className="text-sm text-gray-600 mt-1">Notes: {contact.notes}</p>
+                )}
               </div>
               <div className="flex gap-3">
                 <button

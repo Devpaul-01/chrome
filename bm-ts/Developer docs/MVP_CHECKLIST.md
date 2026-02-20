@@ -427,7 +427,7 @@ This document outlines all tasks required to make bm-ts a complete, production-r
 - [x] TemplateEditor component
 - [x] TemplateList component
 - [x] TemplateEditorEnhanced component
-- [ ] Add template preview
+- [x] Add template preview
 - [ ] Add drag-and-drop reordering
 - [ ] Add template import/export
 - [x] Add merge tag documentation/help (KeywordInserter component exists)
