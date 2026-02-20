@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +38,9 @@ from app.services.password_reset import (
     mark_token_used,
     send_reset_email,
 )
+
+from app.core.rate_limiter import limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter()
 
@@ -100,8 +103,13 @@ async def me(current_user: User = Depends(get_current_user)) -> UserProfile:
 
 
 @router.post("/request-password-reset", response_model=MessageResponse)
+@limiter.limit("1/minute")                             #
+@limiter.limit("5/hour")                               # per IP address
+@limiter.limit("20/hour", key_func=get_remote_address) #
 async def request_password_reset(
-    data: RequestPasswordResetRequest, db: AsyncSession = Depends(get_db)
+    request: Request,
+    data: RequestPasswordResetRequest,
+    db: AsyncSession = Depends(get_db)
 ) -> MessageResponse:
     """Request a password reset link"""
     # Always return success to prevent email enumeration
