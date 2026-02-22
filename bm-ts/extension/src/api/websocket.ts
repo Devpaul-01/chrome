@@ -13,7 +13,7 @@ export type WebSocketEventType =
 
 export interface WebSocketMessage {
   type: WebSocketEventType;
-  data: any;
+  data: unknown;
   timestamp: string;
 }
 
@@ -25,7 +25,7 @@ export interface WebSocketConfig {
   onError?: (error: Error) => void;
 }
 
-type EventCallback = (data: any) => void;
+type EventCallback = (data: unknown) => void;
 
 class WebSocketClient {
   private ws: WebSocket | null = null;
@@ -123,6 +123,7 @@ class WebSocketClient {
       if (listeners) {
         listeners.forEach((callback) => {
           try {
+            // If you expect a specific type, cast here or add type guards
             callback(message.data);
           } catch (error) {
             logError(error, 'WebSocketClient:eventCallback');

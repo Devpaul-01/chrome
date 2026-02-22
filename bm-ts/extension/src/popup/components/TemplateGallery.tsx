@@ -17,10 +17,18 @@ type Props = {
   templates: SavedTemplate[];
   onEdit: (template: SavedTemplate) => void;
   onDelete: (templateId: string) => void;
-  onCreate: () => void;
+  onCreate?: () => void;
+  showHeader?: boolean;
+  showCreate?: boolean;
 };
 
-export default function TemplateGallery({ templates, onEdit, onDelete, onCreate }: Props) {
+export default function TemplateGallery({
+  templates,
+  onEdit,
+  onDelete,
+  onCreate,
+  showHeader = true,
+}: Props) {
   const getPreviewText = (template: SavedTemplate) => {
     const parts = [template.greeting, template.sentiment, template.closing].filter(Boolean);
     return parts.join(' ').substring(0, 100) + (parts.join(' ').length > 100 ? '...' : '');
@@ -34,16 +42,27 @@ export default function TemplateGallery({ templates, onEdit, onDelete, onCreate 
 
   return (
     <div className="p-4">
-      <div className="mb-4 text-center">
-        <h2 className="text-xl font-semibold text-gray-800">Message Templates</h2>
-      </div>
+      {showHeader && (
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-800">Message Templates</h2>
+          {onCreate && (
+            <div>
+              <button onClick={onCreate} className="btn-orange">
+                Create Template
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {templates.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500 mb-4">No templates yet. Create your first template!</p>
-          <button onClick={onCreate} className="btn-orange">
-            Create Template
-          </button>
+          <p className="text-gray-500 mb-4">No templates yet.</p>
+          {onCreate && (
+            <button onClick={onCreate} className="btn-orange">
+              Create Template
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

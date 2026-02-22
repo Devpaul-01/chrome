@@ -12,9 +12,10 @@ export interface BirthdaySchedule {
 
 interface ScheduleSettingsProps {
   onClose: () => void;
+  showClose?: boolean;
 }
 
-export default function ScheduleSettings({ onClose }: ScheduleSettingsProps) {
+export default function ScheduleSettings({ onClose, showClose = true }: ScheduleSettingsProps) {
   const [schedules, setSchedules] = useState<BirthdaySchedule[]>([]);
   const [daysBeforeInput, setDaysBeforeInput] = useState('0');
   const [isLoading, setIsLoading] = useState(false);
@@ -189,6 +190,7 @@ export default function ScheduleSettings({ onClose }: ScheduleSettingsProps) {
                           checked={schedule.enabled}
                           onChange={(e) => handleToggleSchedule(schedule.id, e.target.checked)}
                           className="w-4 h-4"
+                          aria-label={`Enable schedule ${formatScheduleText(schedule.days_before)}`}
                         />
                         <span className="text-sm font-medium">
                           {formatScheduleText(schedule.days_before)}
@@ -208,9 +210,11 @@ export default function ScheduleSettings({ onClose }: ScheduleSettingsProps) {
         </>
       )}
 
-      <button onClick={onClose} className="btn-secondary btn-block mt-4">
-        Close
-      </button>
+      {showClose && (
+        <button onClick={onClose} className="btn-secondary btn-block mt-4">
+          Close
+        </button>
+      )}
     </div>
   );
 }

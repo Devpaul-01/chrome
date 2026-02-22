@@ -78,7 +78,7 @@ async def get_current_user_from_token(token: str, db: AsyncSession) -> User:
     credentials_exception = Exception("Could not validate credentials")
     try:
         payload = jwt.decode(
-            token, settings.secret_key, algorithms=[settings.algorithm]
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
         )
         user_id: str = payload.get("sub")
         if user_id is None:

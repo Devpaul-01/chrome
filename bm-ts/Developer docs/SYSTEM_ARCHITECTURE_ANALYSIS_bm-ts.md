@@ -142,7 +142,7 @@ The system follows a client-server architecture where the extension acts as a th
 ```
 
 ### 1.2 Technology Stack
-
+`popup.css`
 #### Backend
 - **Language**: Python 3.11+
 - **Framework**: FastAPI 0.110+

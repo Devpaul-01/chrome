@@ -1,3 +1,149 @@
+/* ImageManager migrated styles */
+.image-preview-max {
+  max-height: 400px;
+  object-fit: contain;
+}
+
+.hidden-input {
+  display: none;
+}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom font-family utility used in popup.css (falls back to sans) */
+@layer utilities {
+  .font-inter {
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn {
+    width: 100%;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    background-color: #2a7fa0;
+    border: none;
+    transition: all 0.2s;
+    margin-top: 0.875rem;
+    margin-bottom: 0.875rem;
+  }
+  .btn:hover:not(:disabled) {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+  .btn:focus-visible {
+    outline: 2px solid #2a7fa0;
+    outline-offset: 2px;
+  }
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-orange {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+    background-color: #ca4f02;
+    border: none;
+    transition: all 0.2s;
+    margin-top: 0.875rem;
+    margin-bottom: 0.875rem;
+  }
+  .btn-orange:hover:not(:disabled) {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    text-decoration-line: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: #ca4f02;
+  }
+  .btn-orange:focus-visible {
+    outline: 2px solid #2a7fa0;
+    outline-offset: 2px;
+  }
+  .btn-orange:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-outline-orange {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #ca4f02;
+    background-color: white;
+    border: none;
+    transition: all 0.2s;
+    margin-top: 0.875rem;
+    margin-bottom: 0.875rem;
+  }
+  .btn-outline-orange:hover:not(:disabled) {
+    background-color: rgba(229, 103, 23, 0.1);
+  }
+  .btn-outline-orange:focus-visible {
+    outline: 2px solid #2a7fa0;
+    outline-offset: 2px;
+  }
+  .btn-outline-orange:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-danger {
+    width: 100%;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    background-color: #dc2626;
+    margin-top: 0.875rem;
+    margin-bottom: 0.875rem;
+    border: none;
+    transition: all 0.2s;
+  }
+  .btn-danger:hover:not(:disabled) {
+    background-color: #991b1b;
+  }
+
+  .touch-target-44 {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .touch-target-24 {
+    min-width: 24px;
+    min-height: 24px;
+  }
+}
+
+/* Calendar navigation button sizing */
+.calendar-nav-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
 .popup-root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
     Arial;
@@ -6,7 +152,7 @@
   position: relative;
   min-height: 400px;
   /* Solid background with brand color */
-  background: #FFB34C;
+  background: #ffb34c;
   color: #574232;
 }
 
@@ -67,7 +213,7 @@
   border-radius: 0.5rem;
   font-size: 0.65rem;
   font-weight: 600;
-  color: #CA4F02;
+  color: #ca4f02;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -82,12 +228,12 @@
 }
 
 .tab-button.active {
-  background: #E56717;
+  background: #e56717;
   color: white;
 }
 
 .tab-button.active:hover {
-  background: #CA4F02;
+  background: #ca4f02;
   box-shadow: 0 2px 4px rgba(202, 79, 2, 0.3);
 }
 
@@ -135,7 +281,7 @@
 
 .tab-dropdown-item:hover {
   background: rgba(229, 103, 23, 0.1);
-  color: #CA4F02;
+  color: #ca4f02;
   padding-left: 1.05rem;
 }
 
@@ -279,7 +425,6 @@
 .btn-primary:hover:not(:disabled) {
   background: #e56717;
   transform: translateY(-2px);
-  text-decoration-line: underline;
   text-underline-offset: 2px;
   box-shadow: 0 6px 16px rgba(202, 79, 2, 0.35), 0 3px 6px rgba(202, 79, 2, 0.25);
 }
@@ -787,4 +932,148 @@ kbd {
   font-size: 0.75rem;
   font-weight: 600;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* TabbedDashboard custom styles */
+.tab-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 8px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 14px;
+  text-align: center;
+}
+.tab-desc-card {
+  margin-bottom: 16px;
+  background: #f0f8ff;
+}
+.tab-desc-text {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Tab card heading styles */
+.tab-card-heading {
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+/* Tab card paragraph styles */
+.tab-card-paragraph {
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Config card meta paragraph margin */
+.config-card-meta p,
+.config-card-meta .archive {
+  margin: 2px 0;
+}
+
+/* Back button margin */
+.button-back {
+  margin-top: 16px;
+}
+
+/* Card container styles */
+.card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  padding: 16px;
+  background: #fff;
+  margin-bottom: 12px;
+}
+
+/* Tab description card backgrounds */
+.tab-desc-card.advance {
+  background: #fff8dc;
+}
+.tab-desc-card.normal {
+  background: #ffe6f0;
+}
+.tab-desc-card.followup {
+  background: #e6f7ff;
+}
+
+.tab-desc-text {
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Config card flex layout */
+.config-card-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+}
+.config-card-details {
+  flex: 1;
+}
+.config-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.config-card-days {
+  font-size: 13px;
+  font-weight: bold;
+}
+.config-card-days.active {
+  color: #2ea44f;
+}
+.config-card-days.disabled {
+  color: #999;
+}
+.config-card-gender {
+  font-size: 11px;
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.config-card-meta {
+  font-size: 12px;
+  color: #666;
+}
+.config-card-meta .archive {
+  color: #2ea44f;
+}
+
+.config-card-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.config-card-toggle input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+}
+.config-card-toggle span {
+  font-size: 13px;
+}
+
+/* Contact search input style */
+.contact-search-input {
+  border-radius: 0.5rem;
+}
+
+/* Facebook post preview custom styles */
+.facebook-preview-img {
+  max-height: 500px;
+  object-fit: contain;
+}
+
+.facebook-preview-img-overlay {
+  max-height: 600px;
+  object-fit: contain;
+}
+
+.hidden-canvas {
+  display: none;
 }

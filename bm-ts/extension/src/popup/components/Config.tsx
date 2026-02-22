@@ -45,8 +45,8 @@ export default function Config({ onSaved }: Props) {
 
       <div className="bg-blue-50 rounded-lg p-3 mb-5 border-l-4 border-blue-400">
         <p className="text-xs text-blue-800">
-          <strong>Note:</strong> This setting configures where the extension connects to the
-          backend API. Only change if you're using a custom deployment.
+          <strong>Note:</strong> This setting configures where the extension connects to the backend
+          API. Only change if you're using a custom deployment.
         </p>
       </div>
 

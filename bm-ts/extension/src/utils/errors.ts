@@ -60,10 +60,23 @@ export function parseApiError(error: unknown): AppError {
 
     let message = 'An error occurred';
     if (data && typeof data === 'object' && data !== null) {
-      if ('detail' in data && typeof data.detail === 'string') {
-        message = data.detail;
-      } else if ('message' in data && typeof data.message === 'string') {
-        message = data.message;
+      // FastAPI returns 422 with detail as an array of validation errors
+      if ('detail' in data) {
+        const detail = (data as any).detail;
+        if (typeof detail === 'string') {
+          message = detail;
+        } else if (Array.isArray(detail)) {
+          // Build a concise message from the validation items
+          message = detail
+            .map((item: any) => {
+              if (typeof item === 'string') return item;
+              const loc = Array.isArray(item.loc) ? item.loc.join('.') : item.loc;
+              return `${loc}: ${item.msg}`;
+            })
+            .join('; ');
+        }
+      } else if ('message' in data && typeof (data as any).message === 'string') {
+        message = (data as any).message;
       }
     }
 
