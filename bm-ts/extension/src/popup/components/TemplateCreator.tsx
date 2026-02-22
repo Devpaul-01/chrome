@@ -1,7 +1,8 @@
 import { useState, FormEvent, useRef } from 'react';
 import Spinner from './Spinner';
 import FacebookPostPreview from './FacebookPostPreview';
-import { sendBackgroundMessage } from '../api';
+import { useImageLibrary } from '../hooks/useImageLibrary';
+import ImageLibraryPicker from './ImageLibraryPicker';
 import SegmentEditor from './SegmentEditor';
 
 export type TemplateFormData = {
@@ -41,6 +42,9 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     null,
   );
   const [isUploadingPreview, setIsUploadingPreview] = useState(false);
+  const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+  const [librarySaveMsg, setLibrarySaveMsg] = useState<string | null>(null);
+  const { images: libraryImages, isLoading: isLoadingLibrary, isFull: libraryFull, saveToLibrary } = useImageLibrary();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Optimal post dimensions
@@ -208,76 +212,90 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
   };
 
   const renderPreview = () => {
-    // Combine greeting, sentiment, and closing into complete message
     const completeMessage = [formData.greeting, formData.sentiment, formData.closing]
       .filter(Boolean)
       .join('\n\n');
 
-    return (
-      <div className="space-y-4">
-        {/* Facebook-style preview with text overlay */}
-        {formData.imageUrl ? (
-          <div className="space-y-3">
-            <div className="relative">
-              <img
-                src={formData.imageUrl}
-                alt="Preview"
-                className="w-full rounded-lg shadow-md"
-                style={{ maxHeight: '400px', objectFit: 'contain' }}
-              />
-              <div className="mt-2 text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={async () => {
-                  setIsUploadingPreview(true);
-                  try {
-                    await sendBackgroundMessage<any>({
-                      type: 'images.create',
-                      payload: {
-                        url: formData.imageUrl,
-                        filename: `template_${Date.now()}.jpg`,
-                        size: formData.imageUrl.length,
-                      },
-                    });
-                    alert('Image added to library');
-                  } catch (err) {
-                    alert('Failed to upload image: ' + (err as Error).message);
-                  } finally {
-                    setIsUploadingPreview(false);
-                  }
-                }}
-                disabled={isUploadingPreview}
-                className="btn-primary flex-1"
-              >
-                {isUploadingPreview ? 'Uploading...' : 'Add to Library'}
-              </button>
-              <button
-                onClick={() => {
-                  setFormData({
-                    greeting: '',
-                    sentiment: '',
-                    closing: '',
-                    imageUrl: null,
-                    imageFile: null,
-                    templateTitle: '',
-                    daysInAdvance: 0,
-                    gender: 'all',
-                  });
-                  setActiveTab('create');
-                }}
-                disabled={isUploadingPreview}
-                className="btn-secondary flex-1"
-              >
-                Cancel
-              </button>
-            </div>
+    const hasImageKeyword = completeMessage.includes('[Image]');
+    const libraryPreviewUrl = libraryImages.length > 0 ? libraryImages[0].url : null;
+
+    const handleAddToLibrary = async () => {
+      if (!formData.imageUrl) return;
+      setIsUploadingPreview(true);
+      setLibrarySaveMsg(null);
+      try {
+        await saveToLibrary(formData.imageUrl, `template_${Date.now()}.jpg`);
+        setLibrarySaveMsg('✓ Image saved to library');
+      } catch (err) {
+        setLibrarySaveMsg(`Error: ${(err as Error).message}`);
+      } finally {
+        setIsUploadingPreview(false);
+      }
+    };
+
+    if (formData.imageUrl) {
+      return (
+        <div className="space-y-3">
+          <div className="relative">
+            <img
+              src={formData.imageUrl}
+              alt="Preview"
+              className="w-full rounded-lg shadow-md"
+              style={{ maxHeight: '400px', objectFit: 'contain' }}
+            />
+            <div className="mt-2 text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
           </div>
-        ) : (
-          <FacebookPostPreview imageUrl={formData.imageUrl} text={completeMessage} />
-        )}
-      </div>
-    );
+          {librarySaveMsg && (
+            <p className={`text-xs font-medium ${librarySaveMsg.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
+              {librarySaveMsg}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleAddToLibrary}
+              disabled={isUploadingPreview || libraryFull}
+              className="btn-primary flex-1"
+              title={libraryFull ? 'Library full (20/20)' : undefined}
+            >
+              {isUploadingPreview ? 'Saving...' : 'Add to Library'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, imageUrl: null })}
+              disabled={isUploadingPreview}
+              className="btn-secondary flex-1"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (hasImageKeyword && libraryPreviewUrl) {
+      return (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500 italic">
+            Preview uses first library image — a random image will be picked when sending.
+          </p>
+          <FacebookPostPreview
+            imageUrl={libraryPreviewUrl}
+            text={completeMessage.replace(/\[Image\]/g, '')}
+          />
+        </div>
+      );
+    }
+
+    if (hasImageKeyword && libraryImages.length === 0) {
+      return (
+        <div className="text-xs text-amber-600 bg-amber-50 rounded p-3">
+          ⚠️ [Image] keyword found but your library is empty. Upload images in Image Library first.
+        </div>
+      );
+    }
+
+    return <FacebookPostPreview imageUrl={null} text={completeMessage} />;
   };
 
   return (
@@ -421,6 +439,72 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                 <option value="male">Male</option>
                 <option value="female">Female</option>
               </select>
+            </div>
+
+            {/* Attach Image */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🖼️ Attach Image{' '}
+                <span className="text-gray-400 font-normal text-xs">(optional — or use [Image] for random)</span>
+              </label>
+              {formData.imageUrl ? (
+                <div>
+                  <img
+                    src={formData.imageUrl}
+                    alt="Attached"
+                    className="w-full rounded-lg shadow-sm mb-2"
+                    style={{ maxHeight: '180px', objectFit: 'contain' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, imageUrl: null })}
+                    className="btn-secondary text-xs py-1 px-3"
+                  >
+                    Remove Image
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isProcessingImage}
+                      className="btn-secondary flex-1 text-sm"
+                    >
+                      {isProcessingImage ? '⏳ Processing...' : '📁 Upload'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowLibraryPicker(!showLibraryPicker)}
+                      className="btn-secondary flex-1 text-sm"
+                    >
+                      🖼️ From Library
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="sr-only"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  {showLibraryPicker && (
+                    <ImageLibraryPicker
+                      images={libraryImages}
+                      isLoading={isLoadingLibrary}
+                      onSelect={(img) => {
+                        setFormData({ ...formData, imageUrl: img.url });
+                        setShowLibraryPicker(false);
+                      }}
+                      onClose={() => setShowLibraryPicker(false)}
+                      selectedUrl={formData.imageUrl ?? undefined}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ) : (

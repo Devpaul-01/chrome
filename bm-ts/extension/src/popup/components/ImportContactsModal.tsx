@@ -6,7 +6,7 @@ type ImportContact = {
   name: string;
   facebook_profile_url: string;
   birthday: string; // ISO date string
-  gender?: 'male' | 'female' | 'other';
+  gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   notes?: string;
 };
 
@@ -110,9 +110,9 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
         }
         if (header === 'gender') {
           const g = values[index].toLowerCase();
-          if (g === 'male' || g === 'female' || g === 'other') {
-            contact.gender = g;
-          }
+          if (g === 'male') contact.gender = 'MALE';
+          else if (g === 'female') contact.gender = 'FEMALE';
+          else if (g === 'other' || g === 'neutral') contact.gender = 'NEUTRAL';
         }
         if (header === 'notes' || header === 'note') {
           contact.notes = values[index];
@@ -184,9 +184,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
         name: c.name,
         facebook_profile_url: c.facebook_profile_url,
         birthday: c.birthday,
-        gender: ['male', 'female', 'other'].includes(c.gender || '')
-          ? (c.gender as 'male' | 'female' | 'other')
-          : undefined,
+        gender: c.gender,
         notes: c.notes,
       }));
 

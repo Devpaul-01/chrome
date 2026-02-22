@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import TemplateCreator, { type TemplateFormData } from './TemplateCreator';
 import MessageGroups from './MessageGroups';
+import type { SavedTemplate } from './TemplateGallery';
 
 type Props = {
   messageTemplates: SavedTemplate[];

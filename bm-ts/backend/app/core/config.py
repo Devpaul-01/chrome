@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Iterable
+import json
+from typing import Any, Iterable
 
 from pydantic import ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
@@ -24,9 +25,23 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
 
     @field_validator("cors_origins", mode="before")
-    def parse_cors(cls, value: Iterable[str] | str) -> list[str]:
+    @classmethod
+    def parse_cors(cls, value: Any) -> list[str]:
+        # pydantic-settings may pass a pre-parsed list or a raw string
+        if isinstance(value, list):
+            return [str(o).strip() for o in value if str(o).strip()]
         if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
-        return list(value)
+            stripped = value.strip()
+            # JSON array format: ["origin1","origin2"]
+            if stripped.startswith("["):
+                try:
+                    parsed = json.loads(stripped)
+                    if isinstance(parsed, list):
+                        return [str(o).strip() for o in parsed if str(o).strip()]
+                except json.JSONDecodeError:
+                    pass
+            # Comma-separated fallback
+            return [item.strip() for item in stripped.split(",") if item.strip()]
+        return list(value)  # type: ignore[arg-type]
 
 settings = Settings()

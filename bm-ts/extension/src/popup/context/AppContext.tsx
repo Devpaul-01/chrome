@@ -1,0 +1,168 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
+import type { UserProfile } from '../../api/client';
+import { sendBackgroundMessage } from '../api';
+import { logError } from '../../utils/errors';
+import { announceToScreenReader } from '../../utils/accessibility';
+import wsClient from '../../api/websocket';
+import Toast, { type ToastType } from '../components/Toast';
+
+// ---- shared type aliases -----------------------------------------------
+export type AuthMode = 'login' | 'register' | 'forgot-password';
+export type TabType = 'home' | 'contacts' | 'messages' | 'account';
+export type ViewMode =
+  | 'main'
+  | 'change-password'
+  | 'schedules'
+  | 'scheduling'
+  | 'automation'
+  | 'message-templates'
+  | 'queue'
+  | 'history'
+  | 'analytics'
+  | 'posts'
+  | 'post-list'
+  | 'groups'
+  | 'images'
+  | 'contacts'
+  | 'add-contact'
+  | 'edit-contact'
+  | 'import-contacts'
+  | 'birthday-calendar'
+  | 'smtp-settings'
+  | 'account-management'
+  | 'subscription';
+
+// ---- context shape -----------------------------------------------------
+interface AppContextValue {
+  user: UserProfile | null;
+  setUser: (user: UserProfile | null) => void;
+  isInitializing: boolean;
+  refreshUser: () => Promise<void>;
+  handleLogout: () => Promise<void>;
+  showToast: (message: string, type: ToastType) => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
+  activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
+}
+
+const AppContext = createContext<AppContextValue | null>(null);
+
+export function useAppContext(): AppContextValue {
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useAppContext must be used within <AppProvider>');
+  return ctx;
+}
+
+// ---- provider ----------------------------------------------------------
+export function AppProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('main');
+  const [activeTab, setActiveTab] = useState<TabType>('home');
+
+  const showToast = useCallback((message: string, type: ToastType) => {
+    setToast({ message, type });
+    announceToScreenReader(message, type === 'error' ? 'assertive' : 'polite');
+  }, []);
+
+  const connectWebSocket = useCallback(async () => {
+    try {
+      const wsConfig = await sendBackgroundMessage<{ wsUrl: string; token: string }>({
+        type: 'config.getWSConfig',
+      });
+      wsClient.connect({
+        url: wsConfig.wsUrl,
+        token: wsConfig.token,
+        onConnect: () => console.log('[App] WebSocket connected'),
+        onDisconnect: () => console.log('[App] WebSocket disconnected'),
+        onError: (error) => logError(error, 'WebSocket'),
+      });
+    } catch (wsError) {
+      // Non-critical: app works without real-time updates
+      logError(wsError, 'connectWebSocket');
+    }
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const profile = await sendBackgroundMessage<UserProfile>({ type: 'auth.me' });
+      setUser(profile);
+      await connectWebSocket();
+    } catch (error) {
+      logError(error, 'refreshUser');
+      setUser(null);
+    }
+  }, [connectWebSocket]);
+
+  const handleLogout = useCallback(async () => {
+    if (!confirm('Are you sure you want to log out?')) return;
+    try {
+      await sendBackgroundMessage<void>({ type: 'auth.logout' });
+      wsClient.disconnect();
+      setUser(null);
+      showToast('Logged out successfully', 'info');
+    } catch (error) {
+      logError(error, 'handleLogout');
+      showToast((error as Error).message ?? 'Logout failed', 'error');
+    }
+  }, [showToast]);
+
+  // Initialise once on mount
+  useEffect(() => {
+    setIsInitializing(true);
+    refreshUser().finally(() => setIsInitializing(false));
+  }, [refreshUser]);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const isAuthenticated = Boolean(user);
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.altKey && event.key === 'l' && isAuthenticated) {
+        event.preventDefault();
+        void handleLogout();
+      }
+      if (event.altKey && event.key === 'h' && isAuthenticated && viewMode !== 'main') {
+        event.preventDefault();
+        setViewMode('main');
+        setActiveTab('home');
+        announceToScreenReader('Navigated to main view');
+      }
+      if (event.key === 'Escape' && viewMode !== 'main' && isAuthenticated) {
+        event.preventDefault();
+        setViewMode('main');
+        announceToScreenReader('Returned to main view');
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [user, viewMode, handleLogout]);
+
+  return (
+    <AppContext.Provider
+      value={{
+        user,
+        setUser,
+        isInitializing,
+        refreshUser,
+        handleLogout,
+        showToast,
+        viewMode,
+        setViewMode,
+        activeTab,
+        setActiveTab,
+      }}
+    >
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {children}
+    </AppContext.Provider>
+  );
+}

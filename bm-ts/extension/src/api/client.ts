@@ -8,7 +8,7 @@ export class ApiError extends Error {
   }
 }
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null | undefined;
 
@@ -62,6 +62,8 @@ export interface UserProfile {
   id: string;
   email: string;
   created_at: string;
+  name?: string;
+  timezone?: string;
 }
 
 export type SegmentType = TemplateSegment['segment_type'];
@@ -553,7 +555,7 @@ export async function listImages(
   baseUrl: string,
   accessToken: string,
 ): Promise<UserImage[]> {
-  return request(baseUrl, '/api/images/', 'GET', undefined, accessToken);
+  return request(baseUrl, '/api/images', 'GET', undefined, accessToken);
 }
 
 export async function createImage(
@@ -561,7 +563,21 @@ export async function createImage(
   accessToken: string,
   payload: CreateImagePayload,
 ): Promise<UserImage> {
-  return request(baseUrl, '/api/images/', 'POST', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, '/api/images/upload', 'POST', payload as unknown as JsonValue, accessToken);
+}
+
+export interface UploadImageFilePayload {
+  filename: string;
+  data: string;  // base64 data URL
+  size: number;  // decoded byte count
+}
+
+export async function uploadImageFile(
+  baseUrl: string,
+  accessToken: string,
+  payload: UploadImageFilePayload,
+): Promise<UserImage> {
+  return request(baseUrl, '/api/images/upload-file', 'POST', payload as unknown as JsonValue, accessToken);
 }
 
 export async function deleteImage(
@@ -704,4 +720,40 @@ export async function deleteMessageTemplate(
   templateId: string,
 ): Promise<void> {
   return request(baseUrl, `/api/message-templates/${templateId}`, 'DELETE', undefined, accessToken);
+}
+
+// ========== Birthday Configs ==========
+export interface BirthdayConfig {
+  id: string;
+  mode: 'advance' | 'normal' | 'followup';
+  days_offset: number;
+  message_group_id?: string | null;
+  post_id?: string | null;
+  gender_filter: 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL';
+  archive_enabled: boolean;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listBirthdayConfigs(
+  baseUrl: string,
+  accessToken: string,
+): Promise<BirthdayConfig[]> {
+  return request(baseUrl, '/api/birthday-configs', 'GET', undefined, accessToken);
+}
+
+export async function toggleBirthdayConfig(
+  baseUrl: string,
+  accessToken: string,
+  id: string,
+  enabled: boolean,
+): Promise<BirthdayConfig> {
+  return request(
+    baseUrl,
+    `/api/birthday-configs/${id}/toggle`,
+    'PATCH',
+    { enabled },
+    accessToken,
+  );
 }

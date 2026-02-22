@@ -1,7 +1,7 @@
 // Development logger utility for better debugging
 // Only logs in development mode (when built without --mode production)
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const isDevelopment = import.meta.env.MODE !== 'production';
 
 const logPrefix = '[BM Background]';
 

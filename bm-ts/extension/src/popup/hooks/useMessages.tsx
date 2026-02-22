@@ -36,7 +36,8 @@ export function useMessageQueue() {
   useEffect(() => {
     loadQueue();
 
-    const unsubscribe = wsClient.on('message_queue_update', (data) => {
+    const unsubscribe = wsClient.on('message_queue_update', (rawData) => {
+      const data = rawData as { action: string; message: QueuedMessage };
       if (data.action === 'created') {
         loadQueue();
         setLastUpdateAt(Date.now());
@@ -145,7 +146,8 @@ export function useMessageHistory() {
   useEffect(() => {
     loadHistory();
 
-    const unsubscribe = wsClient.on('message_history_update', (data) => {
+    const unsubscribe = wsClient.on('message_history_update', (rawData) => {
+      const data = rawData as { action: string; message: MessageHistoryItem };
       if (data.action === 'deleted') {
         setMessages((prev) => prev.filter((m) => m.id !== data.message.id));
         setLastUpdateAt(Date.now());
@@ -216,7 +218,7 @@ export function useMessageHistory() {
     // group messages by day
     const grouped: Record<string, { total: number; success: number }> = {};
     for (const m of messages) {
-      const dt = new Date(m.sent_at || m.created_at || m.birthday_date || null);
+      const dt = new Date(m.sent_at || m.birthday_date || '');
       if (isNaN(dt.getTime())) continue;
       const dayKey = dt.toISOString().slice(0, 10);
       grouped[dayKey] = grouped[dayKey] || { total: 0, success: 0 };

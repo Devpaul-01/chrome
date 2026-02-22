@@ -60,8 +60,6 @@ function isOnMessengerPage(): boolean {
 /**
  * Navigate to Messenger if not already there
  */
- * Navigate to Messenger if not already there
- */
 async function ensureOnMessengerPage(timeout: number = DEFAULT_TIMEOUT): Promise<void> {
  if (!isOnMessengerPage()) {
    console.log('[BM Archive] Navigating to Messenger...');

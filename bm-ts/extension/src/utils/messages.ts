@@ -12,7 +12,35 @@ import {
   UpdateUserProfilePayload,
   CreateMessageTemplatePayload,
   UpdateMessageTemplatePayload,
+  MessageTemplate,
+  Contact,
+  Post,
 } from '../api/client';
+
+/**
+ * Payload dispatched from background → content script to run the full automation loop.
+ * currentDayTemplates: templates for days_in_advance === 0 (birthday today).
+ * advanceEntries: templates for days_in_advance > 0 paired with the matching contacts.
+ * followUpEntries: templates for days_in_advance < 0 paired with the matching contacts.
+ * posts: timeline posts available for today.
+ * contacts: full contacts list (used for gender lookup + sync).
+ * sentToday: profile URLs already processed today (dedup guard).
+ * maxMessages: cap per run (0 = unlimited).
+ */
+export interface AutomationRunPayload {
+  currentDayTemplates: MessageTemplate[];
+  advanceEntries: Array<{ template: MessageTemplate; contacts: Contact[] }>;
+  followUpEntries: Array<{ template: MessageTemplate; contacts: Contact[] }>;
+  posts: Post[];
+  contacts: Contact[];
+  sentToday: string[];
+  maxMessages: number;
+}
+
+/** Messages sent from background service worker → content script. */
+export type ContentScriptMessage =
+  | { type: 'automation.scan' }
+  | { type: 'automation.runFull'; payload: AutomationRunPayload };
 
 export type BackgroundMessage =
   // Auth messages
@@ -51,6 +79,9 @@ export type BackgroundMessage =
   | { type: 'automation.getConfig' }
   | { type: 'automation.setEnabled'; payload: { enabled: boolean } }
   | { type: 'automation.setInterval'; payload: { minutes: number } }
+  | { type: 'automation.setMaxMessages'; payload: { max: number } }
+  | { type: 'automation.clearSentToday' }
+  | { type: 'automation.recordSent'; payload: { friendId: string; friendName: string } }
   // Message queue messages
   | { type: 'messages.listQueue' }
   | {
@@ -84,6 +115,7 @@ export type BackgroundMessage =
   // Image messages
   | { type: 'images.list' }
   | { type: 'images.create'; payload: CreateImagePayload }
+  | { type: 'images.uploadFile'; payload: { filename: string; data: string; size: number } }
   | { type: 'images.delete'; payload: { id: string } }
   // SMTP messages
   | { type: 'smtp.getConfig' }

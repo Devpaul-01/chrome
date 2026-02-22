@@ -1,6 +1,9 @@
-import { composeMessage, randomDelay } from '../utils/message';
+import { composeMessage, randomDelay, selectTemplate, selectPost, resolveKeywords, assembleMessageFromTemplate } from '../utils/message';
 import { sendContentMessage } from './api';
-import type { TemplateSegment } from '../api/client';
+import type { TemplateSegment, MessageTemplate, Contact, Post } from '../api/client';
+import type { AutomationRunPayload } from '../utils/messages';
+import { postToTimeline } from './timeline';
+import { archiveConversation } from './messenger';
 
 const MAX_MESSAGES_PER_SESSION = 5;
 const overlayId = 'bm-overlay';
@@ -230,8 +233,252 @@ async function initContentScript() {
 
 void initContentScript();
 
+// ============================================================
+// AUTOMATION OVERLAY  (full-screen dimmer shown during a run)
+// ============================================================
+
+let automationOverlay: HTMLElement | null = null;
+
+function showAutomationOverlay(friendName: string): void {
+  if (!automationOverlay) {
+    automationOverlay = document.createElement('div');
+    automationOverlay.id = 'bm-auto-overlay';
+    automationOverlay.style.cssText = [
+      'position:fixed', 'inset:0', 'z-index:2147483646',
+      'background:rgba(0,0,0,0.55)',
+      'display:flex', 'flex-direction:column',
+      'align-items:center', 'justify-content:center',
+      'color:#fff', 'font-family:system-ui,sans-serif',
+    ].join(';');
+    automationOverlay.innerHTML = `
+      <div style="background:rgba(24,24,35,0.92);padding:32px 48px;border-radius:16px;text-align:center;max-width:420px;">
+        <p style="font-size:18px;font-weight:700;margin:0 0 8px;">BirthdayMessaging</p>
+        <p id="bm-auto-name" style="font-size:15px;margin:0;opacity:0.85;">Processing…</p>
+      </div>`;
+    document.body.appendChild(automationOverlay);
+  }
+  const nameEl = automationOverlay.querySelector<HTMLParagraphElement>('#bm-auto-name');
+  if (nameEl) nameEl.textContent = `Sending to ${friendName}…`;
+  automationOverlay.style.display = 'flex';
+}
+
+function hideAutomationOverlay(): void {
+  if (automationOverlay) automationOverlay.style.display = 'none';
+}
+
+// ============================================================
+// GENDER HELPER
+// ============================================================
+
+function getContactGender(
+  friend: BirthdayFriend,
+  contacts: Contact[],
+): Contact['gender'] {
+  const match =
+    contacts.find((c) => friend.profileUrl && c.facebook_profile_url === friend.profileUrl) ??
+    contacts.find((c) => c.name.toLowerCase() === friend.name.toLowerCase());
+  return match?.gender ?? 'NEUTRAL';
+}
+
+// ============================================================
+// CONTACT SYNC  (upsert scraped friends into backend)
+// ============================================================
+
+async function syncContactsFromFriends(
+  scraped: BirthdayFriend[],
+  existing: Contact[],
+): Promise<void> {
+  for (const friend of scraped) {
+    if (!friend.profileUrl) continue;
+    const existingContact = existing.find(
+      (c) => c.facebook_profile_url === friend.profileUrl,
+    );
+    if (existingContact) {
+      if (existingContact.name !== friend.name) {
+        await sendContentMessage({
+          type: 'contacts.update',
+          payload: { id: existingContact.id, name: friend.name },
+        });
+      }
+    } else {
+      await sendContentMessage({
+        type: 'contacts.create',
+        payload: {
+          name: friend.name,
+          facebook_profile_url: friend.profileUrl,
+          birthday: '',
+        },
+      });
+    }
+  }
+}
+
+// ============================================================
+// MESSENGER HELPERS
+// ============================================================
+
+/**
+ * Use the Message button from a live BirthdayFriend entry and send a
+ * pre-composed DM string. Used for current-day birthday friends.
+ */
+async function sendComposedMessageToFriend(
+  friend: BirthdayFriend,
+  message: string,
+): Promise<void> {
+  const opened = openMessageDialog(friend);
+  if (!opened) throw new Error(`Cannot open message dialog for ${friend.name}`);
+  await fillMessageAndSend(message);
+}
+
+/**
+ * Navigate to a Facebook profile, click the Message button, and send a DM.
+ * Used for advance / follow-up contacts that are not in the live birthday feed.
+ */
+async function sendMessageFromProfile(
+  profileUrl: string,
+  message: string,
+): Promise<void> {
+  const profilePath = profileUrl.replace(/^https?:\/\/[^/]+/, '');
+  if (!window.location.pathname.startsWith(profilePath)) {
+    window.location.href = profileUrl;
+    await waitForSelector('[data-pagelet="ProfileTilesFeed"]', 12000).catch(() => undefined);
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+
+  const msgBtn = document.querySelector<HTMLElement>(
+    "div[aria-label='Message'], a[aria-label='Message'], [role='button'][aria-label*='Message']",
+  );
+  if (!msgBtn) throw new Error(`Message button not found on profile ${profileUrl}`);
+
+  msgBtn.click();
+  await waitForSelector("[role='textbox'], div[contenteditable='true']", 8000);
+  await new Promise((r) => setTimeout(r, 800));
+  await fillMessageAndSend(message);
+}
+
+// ============================================================
+// MAIN AUTOMATION LOOP
+// ============================================================
+
+async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
+  const {
+    currentDayTemplates,
+    advanceEntries,
+    followUpEntries,
+    posts,
+    contacts,
+    sentToday,
+    maxMessages,
+  } = payload;
+  let sent = 0;
+
+  // ----- PHASE 1: Current-day friends from live birthday feed -----
+  if (currentDayTemplates.length > 0) {
+    friends = gatherBirthdayFriends();
+
+    for (const friend of friends) {
+      if (maxMessages > 0 && sent >= maxMessages) break;
+      const dedupKey = friend.profileUrl ?? friend.id;
+      if (sentToday.includes(dedupKey)) continue;
+
+      const gender = getContactGender(friend, contacts);
+      const template = selectTemplate(currentDayTemplates, gender);
+      if (!template) continue;
+
+      const dmText = assembleMessageFromTemplate(template, { name: friend.name });
+
+      showAutomationOverlay(friend.name);
+      try {
+        await sendComposedMessageToFriend(friend, dmText);
+
+        if (posts.length > 0) {
+          const post = selectPost(posts, gender);
+          if (post) {
+            await postToTimeline({
+              friendName: friend.name,
+              profileUrl: friend.profileUrl,
+              content: resolveKeywords(post.content, { name: friend.name }),
+              imageUrl: post.image_url,
+            });
+          }
+        }
+
+        await archiveConversation(friend.name, friend.profileUrl);
+
+        await sendContentMessage({
+          type: 'automation.recordSent',
+          payload: { friendId: dedupKey, friendName: friend.name },
+        });
+
+        sent++;
+        setStatus(`Sent ${sent} message(s) this run`);
+        await randomDelay();
+      } catch (err) {
+        console.error(`[BM] Error processing ${friend.name}:`, err);
+      } finally {
+        hideAutomationOverlay();
+      }
+    }
+
+    // Sync newly discovered friends into the contacts list.
+    await syncContactsFromFriends(friends, contacts).catch((e) =>
+      console.warn('[BM] syncContactsFromFriends error:', e),
+    );
+  }
+
+  // ----- PHASE 2: Advance & follow-up contacts (stored contacts list) -----
+  const offDayEntries = [...advanceEntries, ...followUpEntries];
+  for (const entry of offDayEntries) {
+    for (const contact of entry.contacts) {
+      if (maxMessages > 0 && sent >= maxMessages) break;
+      if (!contact.facebook_profile_url) continue;
+      const dedupKey = contact.facebook_profile_url;
+      if (sentToday.includes(dedupKey)) continue;
+
+      const dmText = assembleMessageFromTemplate(entry.template, { name: contact.name });
+
+      showAutomationOverlay(contact.name);
+      try {
+        await sendMessageFromProfile(contact.facebook_profile_url, dmText);
+
+        if (posts.length > 0) {
+          const post = selectPost(posts, contact.gender ?? 'NEUTRAL');
+          if (post) {
+            await postToTimeline({
+              friendName: contact.name,
+              profileUrl: contact.facebook_profile_url,
+              content: resolveKeywords(post.content, { name: contact.name }),
+              imageUrl: post.image_url,
+            });
+          }
+        }
+
+        await archiveConversation(contact.name, contact.facebook_profile_url);
+
+        await sendContentMessage({
+          type: 'automation.recordSent',
+          payload: { friendId: dedupKey, friendName: contact.name },
+        });
+
+        sent++;
+        setStatus(`Sent ${sent} message(s) this run`);
+        await randomDelay();
+      } catch (err) {
+        console.error(`[BM] Error processing advance/follow-up for ${contact.name}:`, err);
+      } finally {
+        hideAutomationOverlay();
+      }
+    }
+  }
+
+  console.log(`[BM] Automation run complete. Total sent: ${sent}`);
+}
+
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === 'automation.scan') {
     void refreshFriendList();
+  }
+  if (message?.type === 'automation.runFull') {
+    void runFullAutomation(message.payload as AutomationRunPayload);
   }
 });

@@ -44,6 +44,7 @@ export default function ContactForm({
   }
   const [relationship, setRelationship] = useState(parsedRelationship);
   const [birthday, setBirthday] = useState(contact?.birthday || '');
+  const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'NEUTRAL'>(contact?.gender ?? 'NEUTRAL');
   const [phone, setPhone] = useState(parsedPhone);
   const [email, setEmail] = useState(parsedEmail);
 
@@ -62,6 +63,7 @@ export default function ContactForm({
       name,
       facebook_profile_url: fb,
       birthday: new Date(birthday).toISOString(),
+      gender,
     };
 
     // Combine optional fields into notes if present
@@ -145,6 +147,26 @@ export default function ContactForm({
             required
             className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
           />
+        </div>
+
+        {/* Gender */}
+        <div>
+          <label htmlFor="gender" className="block text-sm font-medium mb-1">
+            Gender
+          </label>
+          <select
+            id="gender"
+            value={gender}
+            onChange={(e) => setGender(e.target.value as 'MALE' | 'FEMALE' | 'NEUTRAL')}
+            className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+          >
+            <option value="NEUTRAL">Neutral / Unknown</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Used to select gender-appropriate message templates during automation.
+          </p>
         </div>
 
         {/* Phone */}

@@ -13,7 +13,7 @@ class UserImageUploadUrl(BaseModel):
 class UserImageUploadFile(BaseModel):
     filename: str = Field(..., min_length=1, max_length=255)
     data: str = Field(..., description="Base64 encoded image data")
-    size: int = Field(..., gt=0, le=5 * 1024 * 1024, description="File size in bytes, max 5MB")
+    size: int = Field(..., gt=0, le=10 * 1024 * 1024, description="File size in bytes, max 10MB")
 
 
 class UserImageOut(BaseModel):
