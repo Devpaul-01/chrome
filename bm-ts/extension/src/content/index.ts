@@ -474,11 +474,144 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
   console.log(`[BM] Automation run complete. Total sent: ${sent}`);
 }
 
-chrome.runtime.onMessage.addListener((message) => {
+// ============================================================
+// FACEBOOK BIRTHDAY CONTACT SCRAPER
+// ============================================================
+
+export interface ScrapedContact {
+  name: string;
+  facebook_profile_url: string;
+  birthday?: string; // ISO YYYY-MM-DD, derived from page context
+}
+
+function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
+  const MONTH_MAP: Record<string, string> = {
+    january: '01', february: '02', march: '03', april: '04',
+    may: '05', june: '06', july: '07', august: '08',
+    september: '09', october: '10', november: '11', december: '12',
+    jan: '01', feb: '02', mar: '03', apr: '04',
+    jun: '06', jul: '07', aug: '08',
+    sep: '09', oct: '10', nov: '11', dec: '12',
+  };
+
+  function monthDayToISO(monthStr: string, day: number): string {
+    const year = new Date().getFullYear();
+    const key = monthStr.toLowerCase().replace('.', '').trim().slice(0, 3);
+    const m = MONTH_MAP[key] ?? MONTH_MAP[monthStr.toLowerCase()] ?? '01';
+    return `${year}-${m}-${String(day).padStart(2, '0')}`;
+  }
+
+  function parseDateFromText(text: string): string | undefined {
+    const t = text.replace(/\s+/g, ' ').trim();
+    // "Today" / "Tomorrow"
+    if (/\btoday\b/i.test(t)) {
+      const n = new Date();
+      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+    }
+    if (/\btomorrow\b/i.test(t)) {
+      const n = new Date(); n.setDate(n.getDate() + 1);
+      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+    }
+    // "January 15" / "Jan. 15" / "Jan 15"
+    const reFwd = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan\.?|feb\.?|mar\.?|apr\.?|jun\.?|jul\.?|aug\.?|sep\.?|oct\.?|nov\.?|dec\.?)\s+(\d{1,2})\b/i;
+    // "15 January" / "15 Jan"
+    const reRev = /\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i;
+    let m = reFwd.exec(t);
+    if (m) return monthDayToISO(m[1], parseInt(m[2], 10));
+    m = reRev.exec(t);
+    if (m) return monthDayToISO(m[2], parseInt(m[1], 10));
+    return undefined;
+  }
+
+  function isProfileLink(href: string): boolean {
+    if (!href.includes('facebook.com')) return false;
+    if (/\/(birthdays|events|groups|pages|marketplace|watch|gaming|search|login|help|notifications|settings)\b/.test(href)) return false;
+    return (
+      /facebook\.com\/(?!pages\b|groups\b|events\b)[^/?#\s]{2,}(\?|#|$)/.test(href) ||
+      href.includes('facebook.com/profile.php')
+    );
+  }
+
+  function normalizeProfileUrl(href: string): string {
+    try {
+      const u = new URL(href);
+      const id = u.searchParams.get('id');
+      if (id) return `https://www.facebook.com/profile.php?id=${id}`;
+      return `https://www.facebook.com${u.pathname.replace(/\/$/, '')}`;
+    } catch {
+      return href;
+    }
+  }
+
+  const results: ScrapedContact[] = [];
+  const seen = new Set<string>();
+
+  function tryAddContact(link: HTMLAnchorElement, contextEl: HTMLElement | null) {
+    if (!isProfileLink(link.href)) return;
+    const name = link.textContent?.trim() ?? '';
+    if (!name || name.length < 2 || name.length > 100) return;
+    const profileUrl = normalizeProfileUrl(link.href);
+    if (seen.has(profileUrl)) return;
+    seen.add(profileUrl);
+    // Walk up DOM to find date string in surrounding text
+    let dateStr: string | undefined;
+    let el: HTMLElement | null = contextEl ?? link.parentElement;
+    for (let depth = 0; depth < 10 && el && !dateStr; depth++) {
+      const text = el.textContent ?? '';
+      // Only check short-ish text to avoid false positives from large containers
+      if (text.length < 600) dateStr = parseDateFromText(text);
+      el = el.parentElement;
+    }
+    results.push({ name, facebook_profile_url: profileUrl, birthday: dateStr });
+  }
+
+  // Strategy 1: Birthday-specific pagelets (today / reminder section)
+  document.querySelectorAll<HTMLElement>("div[data-pagelet*='Birthday']").forEach((container) => {
+    container.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((a) => tryAddContact(a, a));
+  });
+
+  // Strategy 2: Walk full page with month-heading context tracking
+  let sectionDateCtx: string | undefined;
+  document.querySelectorAll<HTMLElement>('h1,h2,h3,h4,[role="heading"],a[href]').forEach((node) => {
+    if (node.tagName !== 'A') {
+      const txt = node.textContent?.trim() ?? '';
+      if (txt.length < 80) {
+        const d = parseDateFromText(txt);
+        if (d) sectionDateCtx = d;
+      }
+      return;
+    }
+    const link = node as HTMLAnchorElement;
+    if (!isProfileLink(link.href)) return;
+    const name = link.textContent?.trim() ?? '';
+    if (!name || name.length < 2 || name.length > 100) return;
+    const profileUrl = normalizeProfileUrl(link.href);
+    if (seen.has(profileUrl)) return;
+    seen.add(profileUrl);
+    // Try local context first, then fall back to section heading date
+    let dateStr: string | undefined;
+    let el: HTMLElement | null = link.parentElement;
+    for (let depth = 0; depth < 8 && el && !dateStr; depth++) {
+      const text = el.textContent ?? '';
+      if (text.length < 400) dateStr = parseDateFromText(text);
+      el = el.parentElement;
+    }
+    results.push({ name, facebook_profile_url: profileUrl, birthday: dateStr ?? sectionDateCtx });
+  });
+
+  return results;
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'automation.scan') {
     void refreshFriendList();
   }
   if (message?.type === 'automation.runFull') {
     void runFullAutomation(message.payload as AutomationRunPayload);
   }
+  if (message?.type === 'contacts.scrapeFromPage') {
+    const contacts = scrapeBirthdayContactsFromPage();
+    sendResponse({ contacts });
+  }
+  return true; // keep channel open for async responders
 });

@@ -516,6 +516,8 @@ export default function PostEditor({
       <button
         type="submit"
         disabled={isSubmitting || contentEmpty}
+        aria-busy={isSubmitting ? 'true' : 'false'}
+        aria-disabled={isSubmitting || contentEmpty ? 'true' : 'false'}
         className="btn-primary btn-block mb-5 py-3 font-semibold"
       >
         {isSubmitting ? 'Saving...' : 'Save Post'}

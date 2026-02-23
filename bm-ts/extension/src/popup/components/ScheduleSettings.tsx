@@ -157,6 +157,8 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
             <button
               type="submit"
               disabled={isSubmitting}
+              aria-busy={isSubmitting ? 'true' : 'false'}
+              aria-disabled={isSubmitting ? 'true' : 'false'}
               className="btn-primary btn-block flex items-center justify-center gap-2"
             >
               {isSubmitting && <Spinner size="sm" />}

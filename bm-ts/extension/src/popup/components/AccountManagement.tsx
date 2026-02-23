@@ -148,6 +148,8 @@ export default function AccountManagement({
             type="submit"
             className="btn w-full flex items-center justify-center gap-2"
             disabled={isSubmitting}
+            aria-busy={isSubmitting ? 'true' : 'false'}
+            aria-disabled={isSubmitting ? 'true' : 'false'}
           >
             {isSubmitting && <Spinner size="sm" />}
             <span>{isSubmitting ? 'Updating...' : 'Update Profile'}</span>

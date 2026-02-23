@@ -1,4 +1,4 @@
-﻿import { type FormEvent, useCallback, useState } from 'react';
+﻿import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import AuthForm from './components/AuthForm';
 import TemplateCreator, { type TemplateFormData } from './components/TemplateCreator';
 import SubscriptionPanel from './components/SubscriptionPanel';
@@ -169,6 +169,20 @@ function AppShell() {
   const isAuthenticated = Boolean(user);
 
   // ---- Tab navigation ------------------------------------------------
+  const [openDropdown, setOpenDropdown] = useState<TabType | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+
+  // Close dropdown when clicking outside the nav
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const renderTabNavigation = () => {
     const tabs: {
       id: TabType;
@@ -212,26 +226,40 @@ function AppShell() {
     ];
 
     return (
-      <nav className="tab-navigation mb-4" role="tablist">
+      <nav ref={navRef} className="tab-navigation mb-4" role="tablist">
         <div className="flex gap-1">
           {tabs.map((tab) => (
             <div key={tab.id} className="tab-wrapper">
               <button
+                id={`${tab.id}-tab`}
                 role="tab"
                 aria-selected={activeTab === tab.id ? 'true' : 'false'}
                 aria-controls={`${tab.id}-panel`}
+                aria-haspopup={tab.menuItems ? 'true' : undefined}
+                aria-expanded={openDropdown === tab.id ? 'true' : 'false'}
                 className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => { setActiveTab(tab.id); setViewMode('main'); }}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setViewMode('main');
+                  // Toggle dropdown for tabs with menu items; close for others
+                  setOpenDropdown((prev) =>
+                    tab.menuItems ? (prev === tab.id ? null : tab.id) : null,
+                  );
+                }}
               >
                 {tab.label}
               </button>
-              {tab.menuItems && (
-                <div className="tab-dropdown">
+              {tab.menuItems && openDropdown === tab.id && (
+                <div className="tab-dropdown tab-dropdown-open">
                   {tab.menuItems.map((item, i) => (
                     <button
                       key={i}
                       className="tab-dropdown-item"
-                      onClick={(e) => { e.stopPropagation(); item.action(); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        item.action();
+                        setOpenDropdown(null);
+                      }}
                     >
                       {item.label}
                     </button>
@@ -608,7 +636,14 @@ function AppShell() {
         {!isInitializing && isAuthenticated && (
           <>
             {renderTabNavigation()}
-            {renderView()}
+            <section
+              role="tabpanel"
+              id={`${activeTab}-panel`}
+              aria-labelledby={`${activeTab}-tab`}
+              tabIndex={-1}
+            >
+              {renderView()}
+            </section>
           </>
         )}
       </main>
@@ -621,6 +656,7 @@ function AppShell() {
             </summary>
             <ul className="mt-2 space-y-1 text-gray-600">
               <li><kbd className="px-1 py-0.5 bg-gray-200 rounded">Alt+H</kbd> - Home</li>
+              <li><kbd className="px-1 py-0.5 bg-gray-200 rounded">Alt+D</kbd> - Dashboard</li>
               <li><kbd className="px-1 py-0.5 bg-gray-200 rounded">Alt+L</kbd> - Logout</li>
               <li><kbd className="px-1 py-0.5 bg-gray-200 rounded">Esc</kbd> - Close modal</li>
             </ul>
@@ -637,7 +673,8 @@ function AppShell() {
 
       {msgTemplates.showTemplateCreator && viewMode !== 'message-templates' && (
         <div className="modal-overlay">
-          <TemplateCreator
+          <div role="dialog" aria-modal="true" aria-label="Edit message template">
+            <TemplateCreator
             onSubmit={
               msgTemplates.editingTemplate
                 ? (data: TemplateFormData) =>
@@ -662,6 +699,7 @@ function AppShell() {
                 : undefined
             }
           />
+          </div>
         </div>
       )}
     </div>

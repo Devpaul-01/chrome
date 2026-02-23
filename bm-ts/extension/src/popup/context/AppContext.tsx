@@ -136,6 +136,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setActiveTab('home');
         announceToScreenReader('Navigated to main view');
       }
+      if (event.altKey && event.key === 'd' && isAuthenticated) {
+        event.preventDefault();
+        setViewMode('analytics');
+        setActiveTab('messages');
+        announceToScreenReader('Navigated to Dashboard');
+      }
       if (event.key === 'Escape' && viewMode !== 'main' && isAuthenticated) {
         event.preventDefault();
         setViewMode('main');

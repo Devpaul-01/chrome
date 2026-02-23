@@ -554,6 +554,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             type="submit"
             className="flex-1 btn-orange flex items-center justify-center gap-2"
             disabled={isSubmitting}
+            aria-busy={isSubmitting ? 'true' : 'false'}
+            aria-disabled={isSubmitting ? 'true' : 'false'}
           >
             {isSubmitting && <Spinner size="sm" />}
             <span>{isSubmitting ? 'Saving...' : 'Save'}</span>

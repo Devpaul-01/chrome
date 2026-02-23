@@ -2,12 +2,12 @@
 
 
 **Generated:** February 1, 2026  
-**Last Updated:** February 21, 2026  
-**Version:** 0.8.0  
+**Last Updated:** February 23, 2026  
+**Version:** 0.9.0  
 **System Type:** Full-Stack Web Application with Browser Extension
 
 
-> **Implementation Status:** ✅ **Phase 1, Phase 2 & Facebook Automation Complete** — Backend runs fully containerized in Docker with 17 registered routers, 13 database models, and all 13 tables in DDL. Extension has 35 React component files (23 imported in App.tsx) with real-time WebSocket updates, comprehensive accessibility, and a fully implemented Facebook automation pipeline: gender-aware DM sending, timeline posting, advance/follow-up modes, contact sync, and per-day deduplication.
+> **Implementation Status:** ✅ **Phase 1, Phase 2 & Facebook Automation Complete** — Backend runs fully containerized in Docker with 17 registered routers, 13 database models, and all 13 tables in DDL. Extension has 35 React component files (23 imported in App.tsx, App.tsx refactored to 698 lines with 8 extracted hook files + AppContext) with real-time WebSocket updates, comprehensive accessibility, and a fully implemented Facebook automation pipeline: gender-aware DM sending, timeline posting, advance/follow-up modes, contact sync, and per-day deduplication. Background service worker handles **64 message types** across 15 categories.
 
 ---
 
@@ -28,7 +28,6 @@
 - **Email service not configured**: Password reset tokens are logged to console only — users cannot recover accounts without a configured email provider.
 - **SMTP passwords stored in plaintext**: `smtp_configs.password` is stored unencrypted in the database — must be encrypted before any production deployment.
 - **`/send-birthday-message` is a stub**: Backend `POST /send-birthday-message` returns `{"status": "sent"}` without logic. Actual sending is handled client-side by the content script automation pipeline.
-- **`dashboard.getConfigs` / `dashboard.toggleConfig`**: Background service worker handlers for these two message types have `// TODO` bodies returning placeholder data.
 - **Production infrastructure absent**: No CI/CD, monitoring, HTTPS configuration, or Chrome Web Store listing.
 
 **Actionable Recommendations:**
@@ -36,9 +35,8 @@
 1. **Implement email delivery**: Replace the console-log placeholder in `app/services/password_reset.py` with SendGrid, SES, or real SMTP sending.
 2. **Encrypt SMTP passwords**: Add encryption at rest for `smtp_configs.password` before first production user.
 3. **Increase test coverage**: Add pytest tests for all Phase 2 routers; add Vitest/Jest for extension background handlers; add Playwright E2E.
-4. **Implement `dashboard.getConfigs` / `dashboard.toggleConfig`**: Wire the TODO stubs in background/index.ts.
-5. **Productionize deployment**: Managed PostgreSQL, HTTPS reverse proxy, CI/CD, and monitoring.
-6. **Prepare Chrome Web Store listing**: Complete manifest metadata, screenshots, and privacy policy.
+4. **Productionize deployment**: Managed PostgreSQL, HTTPS reverse proxy, CI/CD, and monitoring.
+5. **Prepare Chrome Web Store listing**: Complete manifest metadata, screenshots, and privacy policy.
 
 **Overall Assessment:**
 
@@ -56,6 +54,7 @@ bm-ts is a feature-complete, development-ready system with a fully operational a
 | 0.6.0 | February 14–20, 2026 | **Phase 2 Full Activation** — All Phase 2 routers registered (contacts, message_groups, message_templates, posts, images, birthday_configs, smtp). 13 models and 13 tables active. Auth router extended with `PUT /auth/profile` and `DELETE /auth/account`. Rate limiting added via `slowapi`. API contract aligned (PATCH→PUT for schedules, standardised DELETE responses, `/api` prefixes). 35 extension component files; 49 API client functions; 59 background message types; App.tsx grew to 1477 lines. |
 | 0.7.0 | February 20, 2026 | **Documentation Realignment** — Comprehensive audit corrected all stale counts and status flags to reflect the actually-implemented codebase. Identified remaining production gaps: email service, SMTP password encryption, stub endpoint, and test coverage. |
 | 0.8.0 | February 21, 2026 | **Facebook Automation Pipeline Complete** — `runFullAutomation()` in content/index.ts: 2-phase loop (live birthday feed + advance/follow-up from contacts DB). Gender-aware `selectTemplate`/`selectPost` with priority (exact → neutral → any). `resolveKeywords` for `[Tag Person]`/`[Today]`/`[Image]`. `handleAutomationScan` rewritten: fetches all data, opens /birthdays tab, dispatches `automation.runFull`. Sent-today deduplication (`SentTodayRecord`, chrome.storage). `maxMessages` cap. `AutomationRunPayload` + `ContentScriptMessage` types. 3 new background message types — 62 total. `ContactForm` gender selector. `AutomationSettings` max-messages + clear-sent-today controls. `submitPost` Enter-key fallback. |
+| 0.9.0 | February 23, 2026 | **Documentation Audit & Correction** — Full code audit correcting all stale counts. `dashboard.getConfigs` and `dashboard.toggleConfig` confirmed fully implemented (call `listBirthdayConfigs`/`toggleBirthdayConfig`). App.tsx refactored from 1477 → 698 lines with 8 extracted hook files (`useContacts`, `useSMTPConfig`, `useMessageTemplates`, `usePostComposer`, `useApi`, `useImageLibrary`, `useMessages`, `useTemplateSegments`) + `AppContext.tsx`. Corrected counts: background/index.ts 750 lines / 64 message types; client.ts 760 lines / 52 functions; content/index.ts 618 lines; navigation refactored to 4 tabs (Home/Contacts/Messages/Account) with 17 view modes. Removed stale TODO flags for dashboard config handlers. |
 
 ---
 
@@ -96,7 +95,7 @@ The system follows a client-server architecture where the extension acts as a th
 - ✅ **User Images**: URL/base64 image library (`/api/images`)
 - ✅ **Birthday Configs**: Advanced automation (EARLY/ON_DAY/BELATED modes, gender filter, archive) (`/api/birthday-configs`)
 - ✅ **SMTP Configuration**: Per-user SMTP settings (`/smtp/config`)
-- ✅ **Frontend UI**: 35 React component files (23 directly imported in App.tsx, 1477 lines)
+- ✅ **Frontend UI**: 35 React component files (23 directly imported in App.tsx, 698 lines; logic extracted to 8 hook files + `AppContext.tsx`)
 - ✅ **Accessibility**: WCAG 2.1 Level AA — keyboard shortcuts, screen reader support, focus management, live regions
 - ✅ **Content Scripts**: Full Facebook automation pipeline — birthday feed scraping, gender-aware DM sending, timeline posting, conversation archiving, contact sync, advance/follow-up modes, per-day deduplication
 - ✅ **Automation Orchestration**: `handleAutomationScan` fetches templates/posts/contacts, groups by `days_in_advance`, opens `/birthdays` tab, dispatches `automation.runFull` payload to content script
@@ -109,7 +108,6 @@ The system follows a client-server architecture where the extension acts as a th
 | Email service | Password reset tokens are logged to console only — no email is sent |
 | SMTP password encryption | Stored in plaintext in `smtp_configs` — must encrypt before production |
 | `POST /send-birthday-message` | Backend stub returns `{"status":"sent"}`; actual sending is handled by the content script automation pipeline |
-| `dashboard.getConfigs` / `dashboard.toggleConfig` | Background handlers return placeholder data (TODO) |
 | Test coverage | Only `test_auth.py` and `test_templates.py` exist; no Phase 2 or extension tests |
 | CI/CD and monitoring | Not configured |
 
@@ -150,26 +148,26 @@ The system follows a client-server architecture where the extension acts as a th
 │  ┌──────────────┐  ┌───────────────┐  ┌────────────────┐         │
 │  │   Popup UI   │  │  Background   │  │    Content     │         │
 │  │   (React)    │◄─┤   Service     │  │    Scripts     │         │
-│  │  29 comps    │  │   Worker      │  │  (Facebook)    │         │
+│  │  35 comps    │  │   Worker      │  │  (Facebook)    │         │
 │  └──────┬───────┘  └───────┬───────┘  └────────────────┘         │
-│         │ WebSocket         │ API Calls                          │
+│         │ WebSocket        │ API Calls                           │
 └─────────┼──────────────────┼─────────────────────────────────────┘
           │                  │
           ▼ WSS              ▼ HTTPS
 ┌──────────────────────────────────────────────────────────────────┐
 │                    FastAPI Backend (Python)                      │
-│  ┌──────────┐  ┌───────────┐  ┌────────────┐  ┌──────────┐      │
-│  │   Auth   │  │ Templates │  │Subscription│  │ Schedules│      │
-│  │  Router  │  │  Router   │  │   Router   │  │  Router  │      │
-│  └──────────┘  └───────────┘  └────────────┘  └──────────┘      │
-│  ┌──────────┐  ┌───────────┐  ┌────────────┐  ┌──────────┐      │
-│  │ Messages │  │ Dashboard │  │  Webhook   │  │WebSocket │      │
-│  │  Router  │  │  Router   │  │   Router   │  │  Router  │      │
-│  └──────────┘  └───────────┘  └────────────┘  └──────────┘      │
-│  ┌──────────┐  ┌───────────┐  ┌────────────┐  ┌──────────┐      │
-│  │ Contacts │  │  Posts &  │  │  Birthday  │  │  SMTP &  │      │
-│  │  Router  │  │  Images   │  │  Configs   │  │  MsgTmpl │      │
-│  └──────────┘  └───────────┘  └────────────┘  └──────────┘      │
+│  ┌──────────┐  ┌───────────┐  ┌────────────┐  ┌──────────┐       │
+│  │   Auth   │  │ Templates │  │Subscription│  │ Schedules│       │
+│  │  Router  │  │  Router   │  │   Router   │  │  Router  │       │
+│  └──────────┘  └───────────┘  └────────────┘  └──────────┘       │
+│  ┌──────────┐  ┌───────────┐  ┌────────────┐  ┌──────────┐       │
+│  │ Messages │  │ Dashboard │  │  Webhook   │  │WebSocket │       │
+│  │  Router  │  │  Router   │  │   Router   │  │  Router  │       │
+│  └──────────┘  └───────────┘  └────────────┘  └──────────┘       │
+│  ┌──────────┐  ┌───────────┐  ┌────────────┐  ┌──────────┐       │
+│  │ Contacts │  │  Posts &  │  │  Birthday  │  │  SMTP &  │       │
+│  │  Router  │  │  Images   │  │  Configs   │  │  MsgTmpl │       │
+│  └──────────┘  └───────────┘  └────────────┘  └──────────┘       │
 │                      │                                           │
 │           ┌──────────┴───────────┐                               │
 │           │   Service Layer      │                               │
@@ -641,22 +639,31 @@ extension/
 │       └── Birthday_messaging-logo.png
 ├── src/
 │   ├── api/
-│   │   ├── client.ts              # Type-safe HTTP client (708 lines, 49 functions)
+│   │   ├── client.ts              # Type-safe HTTP client (760 lines, 52 functions)
 │   │   └── websocket.ts           # WebSocket singleton client (235 lines)
 │   ├── background/
-│   │   └── index.ts               # Service worker (554 lines, 59 message types)
+│   │   └── index.ts               # Service worker (750 lines, 64 message types)
 │   ├── content/
-│   │   ├── index.ts               # Content script coordinator (238 lines)
+│   │   ├── index.ts               # Content script coordinator (618 lines)
 │   │   ├── api.ts                 # Content→background bridge (7 lines)
 │   │   ├── messenger.ts           # Messenger automation (511 lines)
 │   │   └── timeline.ts            # Timeline posting automation (575 lines)
 │   ├── popup/
 │   │   ├── main.tsx               # React entry point
-│   │   ├── App.tsx                # Main SPA orchestrator (1477 lines, 20 view modes)
+│   │   ├── App.tsx                # Main SPA orchestrator (698 lines, 4 tabs, 17 view modes)
 │   │   ├── api.ts                 # Popup→background bridge (7 lines)
 │   │   ├── popup.css              # Component styles + brand theme
+│   │   ├── context/
+│   │   │   └── AppContext.tsx      # Auth state, toast, tab/view routing context
 │   │   ├── hooks/
-│   │   │   └── useApi.ts          # React hook for messaging
+│   │   │   ├── useApi.ts           # React hook for messaging
+│   │   │   ├── useContacts.ts      # Contact CRUD + import modal state
+│   │   │   ├── useImageLibrary.ts  # Image library state
+│   │   │   ├── useMessages.tsx     # Queue/history state
+│   │   │   ├── useMessageTemplates.ts # Complete template state
+│   │   │   ├── usePostComposer.ts  # Post creation state
+│   │   │   ├── useSMTPConfig.ts    # SMTP config state
+│   │   │   └── useTemplateSegments.ts # Segment CRUD state
 │   │   └── components/            # 35 component files (23 imported in App.tsx)
 │   └── utils/
 │       ├── accessibility.ts       # A11y utilities (216 lines, 8 functions)
@@ -743,50 +750,48 @@ extension/
 
 ### 3.4 App.tsx View Management
 
-**20 ViewMode states:**
-`main`, `change-password`, `schedules`, `automation`, `message-templates`, `queue`, `history`, `analytics`, `posts`, `post-list`, `groups`, `images`, `contacts`, `add-contact`, `edit-contact`, `import-contacts`, `birthday-calendar`, `smtp-settings`, `account-management`, `subscription`
+**17 ViewMode states:**
+`main`, `change-password`, `scheduling`, `queue`, `history`, `analytics`, `message-templates`, `posts`, `groups`, `images`, `contacts`, `add-contact`, `edit-contact`, `birthday-calendar`, `smtp-settings`, `account-management`, `subscription`
 
 **4-Tab Navigation with Dropdowns:**
-- **Contacts** (4): Add Contact, Manage Contacts, Import Contacts, Birthday Calendar
-- **Templates** (2): Add Template, View Templates
-- **Messages** (9): Schedule Message, Automation, Queue, Sent Messages, Dashboard, Create Post, View Posts, Message Groups, Images
-- **Account** (6): Profile, Change Password, SMTP Settings, Subscription, Advanced Config, Sign Out
+- **Home**: Dashboard quick-stats (contacts count, upcoming birthdays, analytics shortcut)
+- **Contacts** (2 dropdown items): Manage Contacts, Birthday Calendar
+- **Messages** (5 dropdown items): Message Templates, Timeline Posts, Scheduling, Analytics, Image Library
+- **Account** (4 dropdown items): Profile, Change Password, SMTP Settings, Subscription, Sign Out
 
-### 3.5 Background Service Worker (554 lines)
+### 3.5 Background Service Worker (750 lines)
 
-**59 message types** handled via switch/case dispatch:
+**64 message types** handled via switch/case dispatch:
 
 | Category | Message Types |
 |----------|--------------|
-| Auth (9) | `auth.register`, `auth.login`, `auth.refresh`, `auth.logout`, `auth.requestPasswordReset`, `auth.resetPassword`, `auth.changePassword`, `auth.me`, `auth.updateProfile`, `auth.deleteAccount` |
+| Auth (10) | `auth.register`, `auth.login`, `auth.refresh`, `auth.logout`, `auth.requestPasswordReset`, `auth.resetPassword`, `auth.changePassword`, `auth.me`, `auth.updateProfile`, `auth.deleteAccount` |
 | Templates (4) | `templates.list`, `templates.create`, `templates.update`, `templates.delete` |
 | Subscription (2) | `subscription.status`, `subscription.checkout` |
 | Config (3) | `config.getBackendUrl`, `config.setBackendUrl`, `config.getWSConfig` |
 | Schedules (4) | `schedules.list`, `schedules.create`, `schedules.update`, `schedules.delete` |
-| Automation (4) | `automation.getConfig`, `automation.setEnabled`, `automation.setInterval`, `automation.scanFacebook` |
+| Automation (7) | `automation.getConfig`, `automation.setEnabled`, `automation.setInterval`, `automation.setMaxMessages`, `automation.clearSentToday`, `automation.recordSent`, `automation.scanFacebook` |
 | Messages (6) | `messages.listQueue`, `messages.updateQueued`, `messages.cancelQueued`, `messages.retryQueued`, `messages.listHistory`, `messages.deleteHistory` |
-| Dashboard (3) | `dashboard.getStats`, `dashboard.getConfigs`\*, `dashboard.toggleConfig`\* |
-| Contacts (5) | `contacts.list`, `contacts.create`, `contacts.update`, `contacts.delete`, `contacts.bulkCreate` |
+| Dashboard (3) | `dashboard.getStats`, `dashboard.getConfigs`, `dashboard.toggleConfig` |
+| Contacts (6) | `contacts.list`, `contacts.create`, `contacts.update`, `contacts.delete`, `contacts.bulkCreate`, `contacts.scrapeFromFacebook` |
 | Message Groups (4) | `messageGroups.list`, `messageGroups.create`, `messageGroups.update`, `messageGroups.delete` |
 | Posts (4) | `posts.list`, `posts.create`, `posts.update`, `posts.delete` |
-| Images (3) | `images.list`, `images.create`, `images.delete` |
+| Images (4) | `images.list`, `images.create`, `images.uploadFile`, `images.delete` |
 | SMTP (2) | `smtp.getConfig`, `smtp.updateConfig` |
 | Message Templates (5) | `messageTemplates.list`, `messageTemplates.create`, `messageTemplates.get`, `messageTemplates.update`, `messageTemplates.delete` |
-
-\* `dashboard.getConfigs` and `dashboard.toggleConfig` return placeholder data pending full implementation.
 
 **Token Management:**
 - Stores access/refresh tokens in `chrome.storage.local`
 - Auto-refresh on 401 errors (transparent to callers)
 - `config.getWSConfig` converts HTTP URL to WebSocket URL for popup connection
 
-### 3.6 API Client (708 lines)
+### 3.6 API Client (760 lines)
 
-**49 exported functions:**
+**52 exported functions:**
 
 | Category | Functions |
 |----------|-----------|
-| Auth (8) | `register`, `login`, `refreshToken`, `me`, `requestPasswordReset`, `resetPassword`, `changePassword`, `updateUserProfile`, `deleteUserAccount` |
+| Auth (9) | `register`, `login`, `refreshToken`, `me`, `requestPasswordReset`, `resetPassword`, `changePassword`, `updateUserProfile`, `deleteUserAccount` |
 | Templates (4) | `listTemplates`, `createTemplate`, `updateTemplate`, `deleteTemplate` |
 | Subscription (2) | `subscriptionStatus`, `createCheckoutSession` |
 | Schedules (4) | `listSchedules`, `createSchedule`, `updateSchedule`, `deleteSchedule` |
@@ -795,19 +800,27 @@ extension/
 | Contacts (5) | `listContacts`, `createContact`, `updateContact`, `deleteContact`, `bulkCreateContacts` |
 | Message Groups (4) | `listMessageGroups`, `createMessageGroup`, `updateMessageGroup`, `deleteMessageGroup` |
 | Posts (4) | `listPosts`, `createPost`, `updatePost`, `deletePost` |
-| Images (3) | `listImages`, `createImage`, `deleteImage` |
+| Images (4) | `listImages`, `createImage`, `uploadImageFile`, `deleteImage` |
 | SMTP (2) | `getSMTPConfig`, `updateSMTPConfig` |
 | Message Templates (5) | `listMessageTemplates`, `createMessageTemplate`, `getMessageTemplate`, `updateMessageTemplate`, `deleteMessageTemplate` |
+| Birthday Configs (2) | `listBirthdayConfigs`, `toggleBirthdayConfig` |
 
 Plus `ApiError` class and 20+ exported interfaces/types.
 
 ### 3.7 Content Scripts
 
-**index.ts (238 lines)** — Coordinator:
-- Overlay UI on Facebook pages
+**index.ts (618 lines)** — Main coordinator + full automation loop:
+- Overlay UI on Facebook pages (friend list, send-all button, status p)
 - Birthday friend detection via DOM scraping (`div[data-pagelet*="Birthday"]`)
-- Auto-send with confirmation prompt
-- Max 5 messages per session, random delays 5–15s
+- `runFullAutomation(AutomationRunPayload)` — 2-phase loop:
+  - Phase 1: current-day friends from live birthday feed (DM + timeline post + archive + contact sync)
+  - Phase 2: advance/follow-up contacts from stored contacts list
+- `scrapeBirthdayContactsFromPage()` — rich DOM scraper with date parsing, profile URL normalisation, section-heading context tracking
+- `syncContactsFromFriends()` — upserts scraped friends into backend contacts
+- `getContactGender()` — gender lookup by profile URL then by name
+- `showAutomationOverlay()` / `hideAutomationOverlay()` — full-screen dimmer shown during each send
+- Max messages cap, per-day deduplication guard (sentToday array)
+- Responds to messages: `automation.scan`, `automation.runFull`, `contacts.scrapeFromPage`
 
 **messenger.ts (511 lines)** — Messenger automation:
 - Archive/unarchive conversations
@@ -835,8 +848,8 @@ Plus `ApiError` class and 20+ exported interfaces/types.
        │ fetch()               │
        ▼                       │
 ┌─────────────────┐     ┌─────┴──────────┐
-│  Backend API    │     │ Content Script  │
-│  (FastAPI)      │     │ (Facebook DOM)  │
+│  Backend API    │     │ Content Script │
+│  (FastAPI)      │     │ (Facebook DOM) │
 └─────────────────┘     └────────────────┘
 ```
 
@@ -1060,7 +1073,7 @@ pytest --cov=app --cov-report=html
 
 ### 9.3 Manual Testing
 
-- **Popup**: Load extension, test all 18 view modes
+- **Popup**: Load extension, test all 17 view modes
 - **Content Script**: Navigate to Facebook, verify overlay and automation
 - **Background**: Check service worker console (`chrome://extensions` → Inspect)
 - **WebSocket**: Verify real-time updates appear in dashboard/queue/history
@@ -1078,8 +1091,6 @@ All features are registered and implemented. The following are gaps within the e
 | Email delivery not implemented | `app/services/password_reset.py` | Password reset unusable by real users |
 | SMTP passwords stored in plaintext | `app/db/models.py` SMTPConfig | Security risk in production |
 | `POST /send-birthday-message` is a stub | `app/main.py` | Backend endpoint non-functional; content script handles sending directly |
-| `dashboard.getConfigs` returns `[]` | `extension/src/background/index.ts` | Dashboard config features non-functional |
-| `dashboard.toggleConfig` returns `{success: true}` | `extension/src/background/index.ts` | Toggle has no effect |
 
 ### 10.2 Testing Gaps
 
@@ -1139,7 +1150,7 @@ All features are registered and implemented. The following are gaps within the e
 
 ## 12. API Contract Compliance
 
-[API_CONTRACT.md](API_CONTRACT.md) documents the core endpoints (auth, templates, subscription). Phase 1 additions (schedules, messages, dashboard, password reset) are documented in [BACKEND_INTEGRATION_SUMMARY.md](BACKEND_INTEGRATION_SUMMARY.md). WebSocket events are documented in [REALTIME_FEATURES.md](REALTIME_FEATURES.md).
+[API_CONTRACT.md](API_CONTRACT.md) documents the frozen interface spec for core endpoints. The full mapping of every HTTP route to its `client.ts` function and background message type is in [BACKEND_INTEGRATION_SUMMARY.md](BACKEND_INTEGRATION_SUMMARY.md). WebSocket events are documented in [REALTIME_FEATURES.md](REALTIME_FEATURES.md).
 
 **Contract compliance verified:**
 - ✅ Register/Login return identical `TokenResponse` structure
@@ -1181,8 +1192,8 @@ All features are registered and implemented. The following are gaps within the e
 | Database | 13 tables, 5 enums, 25+ indexes |
 | API Endpoints | ~64 HTTP + 1 WebSocket (17 routers) |
 | Component Files | 35 (23 directly in App.tsx) |
-| Background Message Types | 59 |
-| API Client Functions | 49 |
+| Background Message Types | 64 |
+| API Client Functions | 52 |
 | Accessibility Utilities | 8 functions |
 | Runtime Dependencies | 13 Python + 3 npm |
 
@@ -1197,17 +1208,16 @@ All features are registered and implemented. The following are gaps within the e
 ### Remaining Work for Production
 1. Configure email service for password reset (`app/services/password_reset.py`)
 2. Encrypt SMTP passwords at rest before first real user
-3. Resolve `dashboard.getConfigs` / `dashboard.toggleConfig` TODO handlers
-4. Comprehensive test coverage (Phase 2 routes, extension, E2E)
-5. Deploy to production infrastructure (managed DB, HTTPS, CI/CD, monitoring)
-6. Chrome Web Store listing
+3. Comprehensive test coverage (Phase 2 routes, extension, E2E)
+4. Deploy to production infrastructure (managed DB, HTTPS, CI/CD, monitoring)
+5. Chrome Web Store listing
 
 ### Documentation Index
 | Document | Purpose |
 |----------|---------|
 | [SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md](SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md) | This document |
 | [API_CONTRACT.md](API_CONTRACT.md) | Frozen API interface spec (core endpoints) |
-| [BACKEND_INTEGRATION_SUMMARY.md](BACKEND_INTEGRATION_SUMMARY.md) | Phase 1 implementation details |
+| [BACKEND_INTEGRATION_SUMMARY.md](BACKEND_INTEGRATION_SUMMARY.md) | Full HTTP→client.ts→background message type mapping; error handling conventions; integration totals |
 | [BACKEND_TESTING_GUIDE.md](BACKEND_TESTING_GUIDE.md) | Testing setup |
 | [REALTIME_FEATURES.md](REALTIME_FEATURES.md) | WebSocket event documentation |
 | [ACCESSIBILITY.md](ACCESSIBILITY.md) | Accessibility features |

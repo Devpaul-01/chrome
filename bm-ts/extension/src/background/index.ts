@@ -518,6 +518,56 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
         bulkCreateContacts(url, accessToken, message.payload),
       );
     }
+    case 'contacts.scrapeFromFacebook': {
+      // Find a suitable Facebook birthday tab.
+      // Priority order:
+      //  1. facebook.com/birthdays  (dedicated birthday page)
+      //  2. friends_with_upcoming_birthdays panel (Friends > Birthdays section)
+      //  3. Any active Facebook tab
+      async function findFacebookBirthdayTab(): Promise<chrome.tabs.Tab | null> {
+        // 1. Dedicated /birthdays page
+        const birthdayTabs = await new Promise<chrome.tabs.Tab[]>((resolve) =>
+          chrome.tabs.query({ url: '*://*.facebook.com/birthdays*' }, resolve),
+        );
+        if (birthdayTabs.length && birthdayTabs[0].id) return birthdayTabs[0];
+
+        // 2. Friends > Birthdays panel  (URL: /friends/?sk=friends_with_upcoming_birthdays)
+        const friendsBirthdayTabs = await new Promise<chrome.tabs.Tab[]>((resolve) =>
+          chrome.tabs.query({ url: '*://*.facebook.com/friends*' }, resolve),
+        );
+        const upcomingTab = friendsBirthdayTabs.find(
+          (t) => t.url?.includes('friends_with_upcoming_birthdays'),
+        );
+        if (upcomingTab?.id) return upcomingTab;
+
+        // 3. Any active Facebook tab as last resort
+        const activeFbTabs = await new Promise<chrome.tabs.Tab[]>((resolve) =>
+          chrome.tabs.query({ active: true, url: '*://*.facebook.com/*' }, resolve),
+        );
+        if (activeFbTabs.length && activeFbTabs[0].id) return activeFbTabs[0];
+
+        return null;
+      }
+
+      const fbTab = await findFacebookBirthdayTab();
+      if (!fbTab || !fbTab.id) {
+        throw new Error(
+          'No Facebook birthday page found. Open facebook.com/birthdays or navigate to Friends > Birthdays on Facebook, then try again.',
+        );
+      }
+      const tabId = fbTab.id!;
+      // Ask the content script on that tab to scrape the page
+      const response = await new Promise<{ contacts: unknown[] } | undefined>((resolve, reject) => {
+        chrome.tabs.sendMessage(tabId, { type: 'contacts.scrapeFromPage' }, (res) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message ?? 'Content script not ready — try refreshing the Facebook page'));
+          } else {
+            resolve(res);
+          }
+        });
+      });
+      return response?.contacts ?? [];
+    }
     // Message Group handlers
     case 'messageGroups.list': {
       return runAuthAware((accessToken, url) => listMessageGroups(url, accessToken));

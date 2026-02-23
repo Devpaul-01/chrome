@@ -102,6 +102,8 @@ export default function SubscriptionPanel() {
             onClick={handleSubscriptionCheckout}
             className="btn-primary btn-block flex items-center justify-center gap-2"
             disabled={isSubmitting}
+            aria-busy={isSubmitting ? 'true' : 'false'}
+            aria-disabled={isSubmitting ? 'true' : 'false'}
           >
             {isSubmitting && <Spinner size="sm" />}
             {isSubmitting ? 'Preparing...' : 'Upgrade / Renew'}

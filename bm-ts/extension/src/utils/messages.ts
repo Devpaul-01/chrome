@@ -102,6 +102,7 @@ export type BackgroundMessage =
   | { type: 'contacts.update'; payload: { id: string } & UpdateContactPayload }
   | { type: 'contacts.delete'; payload: { id: string } }
   | { type: 'contacts.bulkCreate'; payload: CreateContactPayload[] }
+  | { type: 'contacts.scrapeFromFacebook' }
   // Message Group messages
   | { type: 'messageGroups.list' }
   | { type: 'messageGroups.create'; payload: CreateMessageGroupPayload }

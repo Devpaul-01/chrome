@@ -2,8 +2,14 @@
  * Accessibility utilities for screen reader announcements and keyboard navigation
  */
 
+// Debounce timer for polite announcements to avoid flooding on rapid WebSocket updates
+let politeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 /**
- * Announce a message to screen readers using a live region
+ * Announce a message to screen readers using a live region.
+ * - `assertive` messages (errors/alerts) are announced immediately.
+ * - `polite` messages are debounced (500 ms) so that rapid WebSocket-triggered
+ *   updates don't flood screen readers.
  */
 export function announceToScreenReader(
   message: string,
@@ -26,11 +32,26 @@ export function announceToScreenReader(
     liveRegion.setAttribute('aria-live', priority);
   }
 
-  // Clear and set message with slight delay for screen readers to detect change
-  liveRegion.textContent = '';
-  setTimeout(() => {
-    liveRegion!.textContent = message;
-  }, 100);
+  // Assertive (errors/alerts) always fires immediately without debounce
+  if (priority === 'assertive') {
+    liveRegion.textContent = '';
+    setTimeout(() => {
+      liveRegion!.textContent = message;
+    }, 100);
+    return;
+  }
+
+  // Polite announcements: debounce so only the latest message is announced
+  // when calls arrive in rapid succession (e.g. WebSocket real-time updates)
+  if (politeDebounceTimer !== null) clearTimeout(politeDebounceTimer);
+  const capturedRegion = liveRegion;
+  politeDebounceTimer = setTimeout(() => {
+    capturedRegion.textContent = '';
+    setTimeout(() => {
+      capturedRegion.textContent = message;
+    }, 100);
+    politeDebounceTimer = null;
+  }, 500);
 }
 
 /**

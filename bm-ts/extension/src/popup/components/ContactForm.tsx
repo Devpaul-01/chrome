@@ -233,7 +233,13 @@ export default function ContactForm({
           >
             Cancel
           </button>
-          <button type="submit" className="btn-orange" disabled={isSubmitting}>
+          <button
+            type="submit"
+            className="btn-orange"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting ? 'true' : 'false'}
+            aria-disabled={isSubmitting ? 'true' : 'false'}
+          >
             {isSubmitting ? 'Saving...' : 'Save Contact'}
           </button>
         </div>

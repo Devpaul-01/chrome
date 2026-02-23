@@ -83,7 +83,6 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 **Remaining Gaps:**
 - ⚠️ No email service configured (password reset not functional for users — tokens log to console only)
 - ⚠️ `/send-birthday-message` backend endpoint is a non-functional stub (extension content scripts handle actual sending)
-- ⚠️ `dashboard.getConfigs` and `dashboard.toggleConfig` are TODO stubs in background/index.ts
 - ⚠️ SMTP passwords stored as plaintext in database (security risk for production)
 - ⚠️ No production deployment infrastructure
 - ⚠️ Minimal testing coverage (only 3 backend test files, no Phase 2 coverage, no frontend tests)
@@ -91,8 +90,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 **Actionable Next Steps:**
 1. Implement email service for password reset (critical user recovery path)
-2. Implement dashboard config management in background service worker
-3. Encrypt SMTP passwords at rest before production
+2. Encrypt SMTP passwords at rest before production
 4. Increase test coverage (Phase 2 backend, extension, E2E)
 5. Set up production deployment, CI/CD, and monitoring
 6. Prepare documentation and onboarding for production users
