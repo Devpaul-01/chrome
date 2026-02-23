@@ -444,7 +444,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             {/* Attach Image */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                🖼️ Attach Image{' '}
+                Attach Image{' '}
                 <span className="text-gray-400 font-normal text-xs">(optional — or use [Image] for random)</span>
               </label>
               {formData.imageUrl ? (
@@ -470,16 +470,16 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isProcessingImage}
-                      className="btn-secondary flex-1 text-sm"
+                      className="btn-secondary btn-sm flex-1"
                     >
-                      {isProcessingImage ? '⏳ Processing...' : '📁 Upload'}
+                      {isProcessingImage ? 'Processing...' : 'Upload'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowLibraryPicker(!showLibraryPicker)}
-                      className="btn-secondary flex-1 text-sm"
+                      className="btn-secondary btn-sm flex-1"
                     >
-                      🖼️ From Library
+                      From Library
                     </button>
                     <input
                       ref={fileInputRef}

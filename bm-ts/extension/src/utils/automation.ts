@@ -129,3 +129,22 @@ export async function updateMaxMessages(max: number): Promise<AutomationConfig> 
   await saveAutomationConfig(config);
   return config;
 }
+
+// ---------------------------------------------------------------------------
+// Per-action delay: how many minutes to wait between each automated send
+// (1–5 minutes, default 1). Stored separately from AutomationConfig.
+// ---------------------------------------------------------------------------
+
+const ACTION_DELAY_KEY = 'bm_action_delay_minutes';
+
+export async function getActionDelayMinutes(): Promise<number> {
+  const result = await chrome.storage.local.get(ACTION_DELAY_KEY);
+  const val = result[ACTION_DELAY_KEY];
+  if (typeof val === 'number' && val >= 1 && val <= 5) return val;
+  return 1; // default: 1 minute
+}
+
+export async function setActionDelayMinutes(minutes: number): Promise<void> {
+  const clamped = Math.max(1, Math.min(5, Math.round(minutes)));
+  await chrome.storage.local.set({ [ACTION_DELAY_KEY]: clamped });
+}

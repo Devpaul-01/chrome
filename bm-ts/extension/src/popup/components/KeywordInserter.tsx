@@ -21,10 +21,10 @@ export default function KeywordInserter({ onInsert, compact = false }: KeywordIn
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="button-secondary"
-          style={{ fontSize: '12px', padding: '4px 8px', marginBottom: '4px' }}
+          className="btn-secondary btn-sm"
+          style={{ marginBottom: '4px' }}
         >
-          {isExpanded ? '▼' : '▶'} Insert Keyword
+          {isExpanded ? '− Hide Keywords' : '+ Insert Keyword'}
         </button>
 
         {isExpanded && (
@@ -34,8 +34,7 @@ export default function KeywordInserter({ onInsert, compact = false }: KeywordIn
                 key={kw.value}
                 type="button"
                 onClick={() => onInsert(kw.value)}
-                className="button-secondary"
-                style={{ fontSize: '11px', padding: '4px 6px' }}
+                className="btn-secondary btn-sm"
                 title={kw.description}
               >
                 {kw.label}
@@ -60,12 +59,8 @@ export default function KeywordInserter({ onInsert, compact = false }: KeywordIn
             key={kw.value}
             type="button"
             onClick={() => onInsert(kw.value)}
-            className="button-secondary"
-            style={{
-              textAlign: 'left',
-              padding: '8px',
-              fontSize: '13px',
-            }}
+            className="btn-secondary btn-sm"
+            style={{ textAlign: 'left' }}
           >
             <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{kw.label}</div>
             <div style={{ fontSize: '11px', color: '#666' }}>{kw.value}</div>

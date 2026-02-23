@@ -17,6 +17,8 @@ import ContactForm from './components/ContactForm';
 import ImportContactsModal from './components/ImportContactsModal';
 import BirthdayCalendar from './components/BirthdayCalendar';
 import SMTPSettings from './components/SMTPSettings';
+import MessagesHub from './components/MessagesHub';
+import HomeControls from './components/HomeControls';
 import AccountManagement from './components/AccountManagement';
 import Spinner from './components/Spinner';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -190,28 +192,8 @@ function AppShell() {
       menuItems?: { label: string; action: () => void }[];
     }[] = [
       { id: 'home', label: 'Home' },
-      {
-        id: 'contacts',
-        label: 'Contacts',
-        menuItems: [
-          { label: 'Manage Contacts', action: () => setActiveTab('contacts') },
-          { label: 'Birthday Calendar', action: () => setViewMode('birthday-calendar') },
-        ],
-      },
-      {
-        id: 'messages',
-        label: 'Messages',
-        menuItems: [
-          {
-            label: 'Message Templates',
-            action: () => { setActiveTab('messages'); setViewMode('message-templates'); },
-          },
-          { label: 'Timeline Posts', action: () => setViewMode('posts') },
-          { label: 'Scheduling', action: () => setViewMode('scheduling') },
-          { label: 'Analytics', action: () => setViewMode('analytics') },
-          { label: 'Image Library', action: () => setViewMode('images') },
-        ],
-      },
+      { id: 'contacts', label: 'Contacts' },
+      { id: 'messages', label: 'Messages' },
       {
         id: 'account',
         label: 'Account',
@@ -280,7 +262,14 @@ function AppShell() {
       return <ChangePassword onCancel={() => setViewMode('main')} onSuccess={() => setViewMode('main')} />;
     }
     if (viewMode === 'scheduling') {
-      return <SchedulingSettings onClose={() => setViewMode('main')} />;
+      return (
+        <div>
+          <SchedulingSettings onClose={() => setViewMode('main')} />
+          <button className="messages-hub-back" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+            ← Back to Messages
+          </button>
+        </div>
+      );
     }
     if (viewMode === 'queue') {
       return <MessageQueue onClose={() => setViewMode('main')} />;
@@ -289,7 +278,14 @@ function AppShell() {
       return <MessageHistory onClose={() => setViewMode('main')} />;
     }
     if (viewMode === 'analytics') {
-      return <Dashboard onClose={() => setViewMode('main')} />;
+      return (
+        <div>
+          <Dashboard onClose={() => setViewMode('main')} />
+          <button className="messages-hub-back" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+            ← Back to Messages
+          </button>
+        </div>
+      );
     }
     if (viewMode === 'message-templates') {
       const { editingTemplate } = msgTemplates;
@@ -328,6 +324,9 @@ function AppShell() {
               <MessageGroups onClose={() => setViewMode('main')} showClose={false} />
             </div>
           </div>
+          <button className="messages-hub-back" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+            ← Back to Messages
+          </button>
         </div>
       );
     }
@@ -348,6 +347,9 @@ function AppShell() {
           <div className="mt-4">
             <PostList onClose={() => setViewMode('main')} showClose={false} />
           </div>
+          <button className="messages-hub-back" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+            ← Back to Messages
+          </button>
         </div>
       );
     }
@@ -355,7 +357,14 @@ function AppShell() {
       return <MessageGroups onClose={() => setViewMode('main')} />;
     }
     if (viewMode === 'images') {
-      return <ImageManager onClose={() => setViewMode('main')} />;
+      return (
+        <div>
+          <ImageManager onClose={() => setViewMode('main')} />
+          <button className="messages-hub-back" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+            ← Back to Messages
+          </button>
+        </div>
+      );
     }
     if (viewMode === 'contacts') {
       return (
@@ -436,66 +445,12 @@ function AppShell() {
     switch (activeTab) {
       case 'home':
         return (
-          <div role="tabpanel" id="home-panel" className="tab-content">
-            <div className="card text-center mb-6">
-              <h2 className="text-2xl font-bold text-blueStrong mb-3">
-                Welcome, {user?.email?.split('@')[0] || 'User'}!
-              </h2>
-              <p className="text-textMuted text-sm">
-                Manage your birthday messages and social posts all in one place
-              </p>
-            </div>
-            <div className="h-4" />
-            <div className="card mb-6">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-blueStrong">
-                    {contactsHook.contacts.length}
-                  </div>
-                  <div className="text-xs text-textMuted">Contacts</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-blueStrong">
-                    {contactsHook.contacts.length}
-                  </div>
-                  <div className="text-xs text-textMuted">Birthdays</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-blueStrong">0</div>
-                  <div className="text-xs text-textMuted">Scheduled</div>
-                </div>
-              </div>
-            </div>
-            <div className="h-4" />
-            <div className="card mb-6">
-              <h3 className="text-lg font-semibold text-blueStrong mb-4">Upcoming Birthdays</h3>
-              <div className="bg-surfaceSection rounded-lg p-4 text-center text-textMuted">
-                {contactsHook.contacts.length === 0
-                  ? 'No upcoming birthdays. Add contacts to get started!'
-                  : 'No upcoming birthdays.'}
-              </div>
-              <button
-                onClick={() => setViewMode('birthday-calendar')}
-                className="btn-outline-orange w-full mt-4"
-              >
-                View Calendar
-              </button>
-            </div>
-            <div className="h-4" />
-            <div className="card mb-6 bg-surfaceSection">
-              <h4 className="font-semibold text-orangeStrong mb-1">Quick Tip</h4>
-              <p className="text-sm text-textMuted">
-                Set up your contacts first to easily send personalized birthday messages
-              </p>
-            </div>
-            <div className="h-6" />
-            <button
-              onClick={() => setViewMode('analytics')}
-              className="btn-primary btn-block mb-3"
-            >
-              View Analytics
-            </button>
-          </div>
+          <HomeControls
+            contactCount={contactsHook.contacts.length}
+            userName={user?.email?.split('@')[0] || 'User'}
+            onViewCalendar={() => setViewMode('birthday-calendar')}
+            onViewAnalytics={() => setViewMode('analytics')}
+          />
         );
 
       case 'contacts':
@@ -511,44 +466,17 @@ function AppShell() {
               }}
               onDeleteContact={contactsHook.handleDeleteContact}
             />
+            <button
+              className="btn-secondary btn-sm mt-4"
+              onClick={() => setViewMode('birthday-calendar')}
+            >
+              Birthday Calendar
+            </button>
           </div>
         );
 
       case 'messages':
-        return (
-          <div role="tabpanel" id="messages-panel" className="tab-content">
-            {msgTemplates.showTemplateCreator && (
-              <TemplateCreator
-                onSubmit={
-                  msgTemplates.editingTemplate
-                    ? (data: TemplateFormData) =>
-                        msgTemplates.handleUpdateMessageTemplate(
-                          msgTemplates.editingTemplate!.id,
-                          data,
-                        )
-                    : msgTemplates.handleCreateTemplate
-                }
-                onCancel={() => {
-                  msgTemplates.setShowTemplateCreator(false);
-                  msgTemplates.setEditingTemplate(null);
-                }}
-                initialData={
-                  msgTemplates.editingTemplate
-                    ? {
-                        greeting: msgTemplates.editingTemplate.greeting,
-                        sentiment: msgTemplates.editingTemplate.sentiment,
-                        closing: msgTemplates.editingTemplate.closing,
-                        imageUrl: msgTemplates.editingTemplate.imageUrl || null,
-                        templateTitle: msgTemplates.editingTemplate.templateTitle,
-                        daysInAdvance: msgTemplates.editingTemplate.daysInAdvance,
-                        gender: msgTemplates.editingTemplate.gender,
-                      }
-                    : undefined
-                }
-              />
-            )}
-          </div>
-        );
+        return <MessagesHub onNavigate={setViewMode} />;
 
       case 'account':
         return (
@@ -642,6 +570,7 @@ function AppShell() {
               id={`${activeTab}-panel`}
               aria-labelledby={`${activeTab}-tab`}
               tabIndex={-1}
+              className="pb-4"
             >
               {renderView()}
             </section>
@@ -650,7 +579,7 @@ function AppShell() {
       </main>
 
       {isAuthenticated && (
-        <footer role="contentinfo" className="mt-2">
+        <footer role="contentinfo" className="mt-10">
           <details className="card text-xs">
             <summary className="cursor-pointer font-semibold text-textPrimary hover:text-blueStrong">
               Keyboard Shortcuts

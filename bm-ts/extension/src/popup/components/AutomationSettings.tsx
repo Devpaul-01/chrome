@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import Spinner from './Spinner';
 import { getErrorMessage, logError } from '../../utils/errors';
 
+const ACTION_DELAY_KEY = 'bm_action_delay_minutes';
+
 interface AutomationConfig {
   enabled: boolean;
   checkInterval: number; // minutes
@@ -27,6 +29,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionDelayMinutes, setActionDelayMinutes] = useState(1);
 
   useEffect(() => {
     loadConfig();
@@ -41,6 +44,10 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
       });
       if (data) {
         setConfig(data);
+      }
+      const stored = await chrome.storage.local.get(ACTION_DELAY_KEY);
+      if (typeof stored[ACTION_DELAY_KEY] === 'number') {
+        setActionDelayMinutes(stored[ACTION_DELAY_KEY] as number);
       }
     } catch (err) {
       const errorMessage = getErrorMessage(err);
@@ -255,6 +262,35 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
             </div>
             <p className="text-xs text-gray-500 mt-1">
               Set to 0 for no limit. Useful to avoid sending too many messages at once.
+            </p>
+          </div>
+
+          {/* Per-Action Delay */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">
+              Delay Between Actions
+            </label>
+            <div className="flex gap-3 items-center">
+              <input
+                type="range"
+                min={1}
+                max={5}
+                step={1}
+                value={actionDelayMinutes}
+                onChange={async (e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setActionDelayMinutes(val);
+                  await chrome.storage.local.set({ [ACTION_DELAY_KEY]: val });
+                }}
+                className="flex-1"
+                aria-label="Delay between actions in minutes"
+              />
+              <span className="text-sm font-semibold text-textPrimary w-16 text-right">
+                {actionDelayMinutes} min{actionDelayMinutes > 1 ? 's' : ''}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Wait 1–5 minutes between each automated send to mimic human behaviour.
             </p>
           </div>
 

@@ -37,9 +37,9 @@ export default function ContactList({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Action buttons */}
-      <div className="flex gap-3">
+      <div className="flex gap-2">
         <button
           onClick={onImportContacts}
           className="btn-orange flex-1 flex items-center justify-center gap-2"
@@ -64,8 +64,6 @@ export default function ContactList({
           Add New Contact
         </button>
       </div>
-
-      <div className="h-4" />
 
       <h2 className="text-xl font-bold text-blueStrong">My Contacts</h2>
 
@@ -104,17 +102,17 @@ export default function ContactList({
                   <p className="text-sm text-gray-600 mt-1">Notes: {contact.notes}</p>
                 )}
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <button
                   onClick={() => onEditContact(contact)}
-                  className="btn-secondary text-xs py-1 px-3"
+                  className="btn-secondary btn-sm"
                   aria-label={`Edit ${contact.name}`}
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => onDeleteContact(contact.id)}
-                  className="btn-danger text-xs py-1 px-3"
+                  className="btn-danger btn-sm"
                   aria-label={`Delete ${contact.name}`}
                 >
                   Delete

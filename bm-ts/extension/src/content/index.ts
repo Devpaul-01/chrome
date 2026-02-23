@@ -231,6 +231,53 @@ async function initContentScript() {
   await refreshFriendList();
 }
 
+// ============================================================
+// CLIPBOARD PERMISSION CHECK
+// ============================================================
+
+const CLIPBOARD_BANNER_ID = 'bm-clipboard-warning';
+
+async function checkClipboardPermission(): Promise<void> {
+  try {
+    const status = await navigator.permissions.query({
+      name: 'clipboard-write' as PermissionName,
+    });
+    if (status.state === 'denied') {
+      showClipboardPermissionBanner();
+    }
+  } catch {
+    // permissions API not available or not applicable — silently ignore
+  }
+}
+
+function showClipboardPermissionBanner(): void {
+  if (document.getElementById(CLIPBOARD_BANNER_ID)) return;
+  const banner = document.createElement('div');
+  banner.id = CLIPBOARD_BANNER_ID;
+  banner.style.cssText = [
+    'position:fixed', 'bottom:16px', 'left:50%', 'transform:translateX(-50%)',
+    'z-index:2147483647', 'max-width:480px', 'width:calc(100% - 32px)',
+    'background:#fff3cd', 'border:1.5px solid #f59e0b', 'border-radius:8px',
+    'padding:12px 16px', 'font-family:system-ui,sans-serif', 'font-size:13px',
+    'box-shadow:0 4px 12px rgba(0,0,0,0.15)', 'display:flex', 'gap:12px',
+    'align-items:flex-start',
+  ].join(';');
+  banner.innerHTML = `
+    <div style="flex:1">
+      <strong style="color:#92400e;">Clipboard permission required</strong>
+      <p style="margin:4px 0 0;color:#78350f;">
+        BirthdayMessaging needs clipboard access on Facebook to fill messages reliably.
+        Go to <strong>Site Settings → Clipboard → Allow</strong> for facebook.com, then refresh.
+      </p>
+    </div>
+    <button id="bm-clipboard-dismiss"
+      style="background:none;border:none;cursor:pointer;font-size:18px;color:#92400e;padding:0;line-height:1;"
+      aria-label="Dismiss">&#10005;</button>
+  `;
+  document.body.appendChild(banner);
+  banner.querySelector('#bm-clipboard-dismiss')?.addEventListener('click', () => banner.remove());
+}
+
 void initContentScript();
 
 // ============================================================
@@ -372,6 +419,21 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
   } = payload;
   let sent = 0;
 
+  // Read user-configured per-action delay and feature flags from storage.
+  const stored = await chrome.storage.local.get(['bm_action_delay_minutes', 'bm_feature_flags']);
+  const rawDelay = stored['bm_action_delay_minutes'];
+  const delayMinutes: number =
+    typeof rawDelay === 'number' && rawDelay >= 1 && rawDelay <= 5 ? rawDelay : 1;
+  const delayMsBase = delayMinutes * 60_000;
+  const delayMin = Math.round(delayMsBase * 0.8);
+  const delayMax = Math.round(delayMsBase * 1.2);
+
+  const flags = (stored['bm_feature_flags'] as { makePost: boolean; sendMessage: boolean } | undefined) ??
+    { makePost: true, sendMessage: true };
+
+  // Check clipboard permission and warn if denied.
+  await checkClipboardPermission();
+
   // ----- PHASE 1: Current-day friends from live birthday feed -----
   if (currentDayTemplates.length > 0) {
     friends = gatherBirthdayFriends();
@@ -389,9 +451,11 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
 
       showAutomationOverlay(friend.name);
       try {
-        await sendComposedMessageToFriend(friend, dmText);
+        if (flags.sendMessage) {
+          await sendComposedMessageToFriend(friend, dmText);
+        }
 
-        if (posts.length > 0) {
+        if (flags.makePost && posts.length > 0) {
           const post = selectPost(posts, gender);
           if (post) {
             await postToTimeline({
@@ -412,7 +476,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
 
         sent++;
         setStatus(`Sent ${sent} message(s) this run`);
-        await randomDelay();
+        await randomDelay(delayMin, delayMax);
       } catch (err) {
         console.error(`[BM] Error processing ${friend.name}:`, err);
       } finally {
@@ -439,9 +503,11 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
 
       showAutomationOverlay(contact.name);
       try {
-        await sendMessageFromProfile(contact.facebook_profile_url, dmText);
+        if (flags.sendMessage) {
+          await sendMessageFromProfile(contact.facebook_profile_url, dmText);
+        }
 
-        if (posts.length > 0) {
+        if (flags.makePost && posts.length > 0) {
           const post = selectPost(posts, contact.gender ?? 'NEUTRAL');
           if (post) {
             await postToTimeline({
@@ -462,7 +528,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
 
         sent++;
         setStatus(`Sent ${sent} message(s) this run`);
-        await randomDelay();
+        await randomDelay(delayMin, delayMax);
       } catch (err) {
         console.error(`[BM] Error processing advance/follow-up for ${contact.name}:`, err);
       } finally {

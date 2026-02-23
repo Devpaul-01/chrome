@@ -297,15 +297,15 @@ export default function PostEditor({
 
           <div className="mb-6">
             <label className="text-xs font-semibold text-textPrimary mb-2 block">
-              ✍️ Post Content
+              Post Content
             </label>
 
             <button
               type="button"
               onClick={() => setShowKeywords(!showKeywords)}
-              className="btn-secondary text-xs py-2 px-3 mb-3"
+              className="btn-secondary btn-sm mb-3"
             >
-              {showKeywords ? '▼' : '▶'} Insert Keyword
+              {showKeywords ? '− Hide Keywords' : '+ Insert Keyword'}
             </button>
 
             {showKeywords && (
