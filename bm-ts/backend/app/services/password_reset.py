@@ -1,4 +1,5 @@
 import hashlib
+import os
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -7,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import User, PasswordResetToken
 
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 async def create_reset_token(user: User, db: AsyncSession) -> str:
     """Create a password reset token for a user"""
@@ -71,28 +74,18 @@ async def mark_token_used(raw_token: str, db: AsyncSession) -> None:
 
 
 async def send_reset_email(email: str, token: str) -> None:
-    """Send a password reset email
-    
-    TODO: Implement actual email sending logic
-    For now, this is a placeholder that logs the token
-    """
-    # In production, you would use an email service like SendGrid, AWS SES, etc.
     reset_url = f"chrome-extension://YOUR_EXTENSION_ID/popup.html?token={token}"
     
     print(f"Password reset requested for {email}")
     print(f"Reset URL: {reset_url}")
     print(f"Token: {token}")
     
-    # TODO: Replace with actual email sending
-    # Example with SendGrid:
-    # from sendgrid import SendGridAPIClient
-    # from sendgrid.helpers.mail import Mail
-    # 
-    # message = Mail(
-    #     from_email='noreply@yourdomain.com',
-    #     to_emails=email,
-    #     subject='Password Reset Request',
-    #     html_content=f'<p>Click <a href="{reset_url}">here</a> to reset your password.</p>'
-    # )
-    # sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
-    # sg.send(message)
+    message = Mail(
+        from_email="noreply@yourdomain.com",
+        to_emails=email,
+        subject="Password Reset Request",
+        html_content=f"<p>Click <a href='{reset_url}'>here</a> to reset your password.</p>"
+    )
+
+    sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+    sg.send(message)
