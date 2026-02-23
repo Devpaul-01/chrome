@@ -19,7 +19,7 @@ from app.api.routers import (
     smtp,
 )
 from app.core.config import settings
-from app.core.logging import setup_logging
+from app.core.app_logging import setup_logging
 from app.core.rate_limiter import init_rate_limiter, limiter
 
 setup_logging()
