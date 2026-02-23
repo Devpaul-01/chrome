@@ -241,6 +241,7 @@ function AppShell() {
                 onClick={() => {
                   setActiveTab(tab.id);
                   setViewMode('main');
+                  contactsHook.setShowImportModal(false);
                   // Toggle dropdown for tabs with menu items; close for others
                   setOpenDropdown((prev) =>
                     tab.menuItems ? (prev === tab.id ? null : tab.id) : null,
