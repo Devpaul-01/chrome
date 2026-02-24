@@ -91,8 +91,20 @@ import {
 } from '../utils/automation';
 import logger from '../utils/logger';
 
+/**
+ * Sentinel `ApiError` thrown when no valid access/refresh tokens are available.
+ * Using a pre-allocated instance avoids creating a new Error object on every
+ * unauthenticated call while still being recognisable by `instanceof ApiError`.
+ */
 const AUTH_ERROR = new ApiError(401, { detail: 'Not authenticated' });
 
+/**
+ * Calls the refresh-token endpoint, persists the new token pair to storage,
+ * and returns the raw `TokenResponse`.
+ *
+ * All token refresh logic in this file goes through this single function to
+ * keep storage state consistent.
+ */
 async function refreshTokensFlow(
   existingRefreshToken: string,
   baseUrl: string,
@@ -102,6 +114,11 @@ async function refreshTokensFlow(
   return tokens;
 }
 
+/**
+ * Returns a valid `TokenBundle` (guaranteed to have an `accessToken`), auto-
+ * refreshing via the refresh token if the access token is absent. Throws
+ * `AUTH_ERROR` (401) when neither token is available.
+ */
 async function ensureTokens(baseUrl: string): Promise<TokenBundle> {
   let tokens = await getTokens();
   if (!tokens.accessToken) {
@@ -116,6 +133,18 @@ async function ensureTokens(baseUrl: string): Promise<TokenBundle> {
 
 type AuthCall<T> = (accessToken: string, baseUrl: string) => Promise<T>;
 
+/**
+ * Higher-order helper that executes an authenticated API call.
+ *
+ * It:
+ *  1. Ensures a valid access token exists (refreshing if needed).
+ *  2. Calls `fn(accessToken, baseUrl)`.
+ *  3. On a 401 response, attempts a single token refresh and retries the call.
+ *  4. Re-throws any other errors unchanged.
+ *
+ * Use `runAuthAware` (below) as the call site wrapper — it simply delegates
+ * to this function.
+ */
 async function withAuth<T>(fn: AuthCall<T>): Promise<T> {
   const baseUrl = await getBackendUrl();
   const tokens = await ensureTokens(baseUrl);
@@ -296,6 +325,7 @@ type BackgroundResponse =
   | { message: string }
   | null;
 
+/** Convenience wrapper used throughout `handleMessage` to call an API function with automatic auth. */
 async function runAuthAware<T>(call: AuthCall<T>): Promise<T> {
   return withAuth(call);
 }

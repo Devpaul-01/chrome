@@ -1,3 +1,25 @@
+/**
+ * api/client.ts — HTTP client layer for the BirthdayMessaging backend API.
+ *
+ * All requests are proxied through the background service worker
+ * (`background/index.ts`) rather than being made directly from the popup or
+ * content scripts, because Chrome MV3 restricts cross-origin fetch in those
+ * contexts.  This module therefore runs ONLY in the background context and
+ * is imported exclusively by `background/index.ts`.
+ *
+ * Architecture:
+ *   popup / content  ──chrome.runtime.sendMessage──►  background
+ *   background       ──fetch()──►  backend API
+ *
+ * Every exported function follows the same signature convention:
+ *   (baseUrl: string, accessToken?: string, ...args) ⇒ Promise<ResponseType>
+ */
+
+/**
+ * Structured error thrown by `request()` when the server returns a non-2xx
+ * status code.  The `status` field mirrors the HTTP status and `data` carries
+ * the parsed response body (e.g. FastAPI's `{detail: string}` shape).
+ */
 export class ApiError extends Error {
   constructor(public status: number, public data: unknown) {
     const detail =
@@ -12,6 +34,19 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null | undefined;
 
+/**
+ * Central HTTP dispatcher for all backend requests.
+ *
+ * Handles `Authorization: Bearer` injection, JSON serialisation/deserialisation,
+ * and translates non-2xx responses into `ApiError` instances so callers receive
+ * a consistent error type regardless of which endpoint failed.
+ *
+ * @param baseUrl - Backend base URL (e.g. `http://localhost:8000`).
+ * @param path    - API path starting with `/` (e.g. `/auth/login`).
+ * @param method  - HTTP verb.
+ * @param body    - Optional request body; will be JSON-stringified.
+ * @param accessToken - If provided, attached as `Authorization: Bearer <token>`.
+ */
 async function request<T>(
   baseUrl: string,
   path: string,
@@ -38,17 +73,20 @@ async function request<T>(
   return data as T;
 }
 
+/** Registration / login request body. */
 export interface RegisterPayload {
   email: string;
   password: string;
 }
 
+/** Token pair returned by register, login, and refresh endpoints. */
 export interface TokenResponse {
   access_token: string;
   refresh_token: string;
   token_type: string;
 }
 
+/** Legacy three-part template segment (greeting / body / closing). */
 export interface TemplateSegment {
   id: string;
   segment_type: 'GREETING' | 'BODY' | 'CLOSING';
@@ -58,6 +96,7 @@ export interface TemplateSegment {
   updated_at: string;
 }
 
+/** Authenticated user's profile document. */
 export interface UserProfile {
   id: string;
   email: string;
@@ -68,6 +107,7 @@ export interface UserProfile {
 
 export type SegmentType = TemplateSegment['segment_type'];
 
+/** User's Stripe subscription status. */
 export interface SubscriptionStatus {
   is_active: boolean;
   plan?: 'monthly' | 'yearly';
@@ -86,18 +126,22 @@ export interface CheckoutSessionResponse {
   checkout_url: string;
 }
 
+/** Register a new account and return a token pair. */
 export async function register(baseUrl: string, payload: RegisterPayload): Promise<TokenResponse> {
   return request<TokenResponse>(baseUrl, '/auth/register', 'POST', payload as unknown as JsonValue);
 }
 
+/** Authenticate with email + password and return a token pair. */
 export async function login(baseUrl: string, payload: RegisterPayload): Promise<TokenResponse> {
   return request<TokenResponse>(baseUrl, '/auth/login', 'POST', payload as unknown as JsonValue);
 }
 
+/** Exchange a valid refresh token for a new access/refresh token pair. */
 export async function refreshToken(baseUrl: string, refresh_token: string): Promise<TokenResponse> {
   return request<TokenResponse>(baseUrl, '/auth/refresh', 'POST', { refresh_token });
 }
 
+/** Return the currently-authenticated user's profile (‘/auth/me’). */
 export async function me(baseUrl: string, accessToken: string): Promise<UserProfile> {
   return request(baseUrl, '/auth/me', 'GET', undefined, accessToken);
 }
@@ -358,6 +402,11 @@ export async function getDashboardStats(
 }
 
 // ========== Contact Management ==========
+/**
+ * A stored contact representing a Facebook friend.
+ * `gender` drives pronoun/template selection during automation.
+ * `birthday` is stored as `YYYY-MM-DD` or `MM-DD`.
+ */
 export interface Contact {
   id: string;
   name: string;
@@ -480,6 +529,11 @@ export async function deleteMessageGroup(
 }
 
 // ========== Posts ==========
+/**
+ * Timeline post that can be attached to a birthday automation run.
+ * `gender` is used to pick the most appropriate post for the recipient.
+ * `image_url` may reference a Nifty Images URL with merge-tag placeholders.
+ */
 export interface Post {
   id: string;
   content: string;
@@ -589,6 +643,7 @@ export async function deleteImage(
 }
 
 // ========== SMTP Settings ==========
+/** SMTP configuration for outbound email notifications (stored server-side). */
 export interface SMTPConfig {
   host: string;
   port: number;
@@ -646,6 +701,11 @@ export async function deleteUserAccount(
 }
 
 // ========== Message Templates ==========
+/**
+ * A full message template composed of greeting / sentiment / closing segments.
+ * `days_in_advance` controls when the DM is sent relative to the birthday:
+ *   > 0 = N days BEFORE,  0 = ON the day,  < 0 = N days AFTER.
+ */
 export interface MessageTemplate {
   id: string;
   user_id: string;
@@ -723,6 +783,11 @@ export async function deleteMessageTemplate(
 }
 
 // ========== Birthday Configs ==========
+/**
+ * Birthday automation config doc.  Each entry ties together a mode
+ * (advance / normal / follow-up), an optional message group, an optional post,
+ * a day offset, and a gender filter.
+ */
 export interface BirthdayConfig {
   id: string;
   mode: 'advance' | 'normal' | 'followup';

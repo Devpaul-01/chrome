@@ -1,3 +1,18 @@
+/**
+ * context/AppContext.tsx — Global shared state for the popup React tree.
+ *
+ * Provides:
+ *   - `user` / `setUser`          — authenticated `UserProfile` or null
+ *   - `isInitializing`            — true while the auth-check is in flight
+ *   - `viewMode` / `setViewMode`  — current sub-view (main, schedules, etc.)
+ *   - `activeTab` / `setActiveTab`— bottom-nav tab selection
+ *   - `showToast(msg, type?)`      — imperative toast notification helper
+ *   - `handleLogout()`            — clears auth and resets view state
+ *
+ * WebSocket connection lifecycle is managed here so it is tied to the auth
+ * state: the WS connects after login and disconnects on logout.
+ */
+
 import {
   createContext,
   useCallback,

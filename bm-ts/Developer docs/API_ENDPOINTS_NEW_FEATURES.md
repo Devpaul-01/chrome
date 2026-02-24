@@ -191,7 +191,7 @@ Authorization: Bearer <token>
   "url": "https://example.com/image.jpg",
   "filename": "image.jpg",
   "size": 0,
-  "uploaded_at": "2026-02-06T10:00:00Z"
+  "created_at": "2026-02-06T10:00:00Z"
 }
 ```
 
@@ -215,12 +215,12 @@ Authorization: Bearer <token>
   "url": "data:image/jpeg;base64,/9j/4AAQSkZJRg...",
   "filename": "birthday.jpg",
   "size": 524288,
-  "uploaded_at": "2026-02-06T10:00:00Z"
+  "created_at": "2026-02-06T10:00:00Z"
 }
 ```
 
 **Validation:**
-- Max file size: 5MB (5,242,880 bytes)
+- Max file size: 10 MB (10,485,760 bytes)
 - Data must be valid base64 encoded
 
 ### List Images
@@ -237,7 +237,7 @@ Authorization: Bearer <token>
     "url": "https://example.com/image.jpg",
     "filename": "image.jpg",
     "size": 524288,
-    "uploaded_at": "2026-02-06T10:00:00Z"
+    "created_at": "2026-02-06T10:00:00Z"
   }
 ]
 ```
@@ -256,7 +256,7 @@ DELETE /api/images/{image_id}
 Authorization: Bearer <token>
 ```
 
-**Response:** `204 No Content`
+**Response:** `200 OK` — `{"status": "deleted"}`
 
 ---
 
@@ -760,7 +760,7 @@ curl -X GET http://localhost:8000/api/posts \
 
 **Note:** The endpoints documented above are now ACTIVE. The current database schema (applied via docker-compose) includes all tables for Phase 1 and Phase 2 features.
 
-### Current Active Schema (13 Tables)
+### Current Active Schema (14 Tables)
 
 The active schema includes:
 - users

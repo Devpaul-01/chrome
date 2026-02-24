@@ -1,3 +1,12 @@
+"""
+schemas/subscription.py — Pydantic schemas for subscription status and Stripe checkout.
+
+  SubscriptionStatusResponse  — GET  /subscription/status response
+  CheckoutSessionRequest      — POST /subscription/create-checkout-session body
+  CheckoutSessionResponse     — POST /subscription/create-checkout-session response
+  StripeWebhookResponse       — generic webhook acknowledgement response
+"""
+
 from __future__ import annotations
 
 from datetime import datetime

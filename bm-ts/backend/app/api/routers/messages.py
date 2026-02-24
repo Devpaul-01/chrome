@@ -70,7 +70,7 @@ async def create_queued_message(
     return message
 
 
-@router.patch("/queue/{message_id}", response_model=MessageQueueSchema)
+@router.put("/queue/{message_id}", response_model=MessageQueueSchema)
 async def update_queued_message(
     message_id: UUID,
     message_data: MessageQueueUpdate,

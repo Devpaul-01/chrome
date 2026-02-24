@@ -1,3 +1,35 @@
+"""
+main.py — FastAPI application factory and router registration.
+
+Startup order:
+  1. Logging is configured via ``setup_logging()``.
+  2. The FastAPI application is created with CORS middleware allowing
+     ``chrome-extension://`` origins so the browser extension can call the API.
+  3. The SlowAPI rate-limiting middleware is attached via ``init_rate_limiter``.
+  4. All routers are registered with their path prefixes and OpenAPI tags.
+
+Router layout
+-------------
+Prefix-less (own prefix in router):
+  /auth/*                auth + password-reset
+  /smtp/*                SMTP config (prefix set inside the router)
+  /templates/*           legacy template segments
+  /subscription/*        Stripe subscription status & checkout
+  /stripe/*              Stripe webhook
+  /ws                    WebSocket real-time updates
+
+/api prefix:
+  /api/schedules         birthday schedules
+  /api/messages          message queue & history
+  /api/dashboard         dashboard stats & birthday configs
+  /api/contacts          contact CRUD
+  /api/message-groups    message group CRUD
+  /api/message-templates full message-template CRUD
+  /api/posts             timeline post CRUD
+  /api/images            user image library
+  /api/birthday-configs  birthday automation config
+"""
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -71,7 +103,7 @@ app.include_router(birthday_configs.router, prefix="/api", tags=["birthday-confi
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
-# function needs to be finished
+# TODO: finish implementation — currently a stub that returns immediately.
 @app.post("/send-birthday-message")
 @limiter.limit("1/45seconds")
 async def send_message(request: Request):

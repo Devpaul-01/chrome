@@ -1,3 +1,15 @@
+"""
+schemas/smtp.py — Pydantic schemas for SMTP configuration and user-profile update.
+
+  SMTPConfigCreate   — POST /smtp/config body
+  SMTPConfigUpdate   — PUT  /smtp/config body
+  SMTPConfigOut      — GET  /smtp/config response (ORM-mapped)
+  UserProfileUpdate  — PATCH /auth/profile body
+
+Note: ``SMTPConfigOut`` currently exposes the plaintext password field.
+This should be masked or omitted before the API is made public.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime

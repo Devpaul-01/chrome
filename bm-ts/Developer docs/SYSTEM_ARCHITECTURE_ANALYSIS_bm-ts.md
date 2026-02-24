@@ -2,12 +2,12 @@
 
 
 **Generated:** February 1, 2026  
-**Last Updated:** February 23, 2026  
-**Version:** 0.9.0  
+**Last Updated:** February 24, 2026  
+**Version:** 1.0.0  
 **System Type:** Full-Stack Web Application with Browser Extension
 
 
-> **Implementation Status:** ✅ **Phase 1, Phase 2 & Facebook Automation Complete** — Backend runs fully containerized in Docker with 17 registered routers, 13 database models, and all 13 tables in DDL. Extension has 35 React component files (23 imported in App.tsx, App.tsx refactored to 698 lines with 8 extracted hook files + AppContext) with real-time WebSocket updates, comprehensive accessibility, and a fully implemented Facebook automation pipeline: gender-aware DM sending, timeline posting, advance/follow-up modes, contact sync, and per-day deduplication. Background service worker handles **64 message types** across 15 categories.
+> **Implementation Status:** ✅ **Phase 1, Phase 2 & Facebook Automation Complete** — Backend runs fully containerized in Docker with 17 registered routers, 14 database models, and all 14 tables in DDL. Extension has 38 React component files (23 imported in App.tsx, App.tsx refactored to 651 lines with 8 extracted hook files + AppContext) with real-time WebSocket updates, comprehensive accessibility, and a fully implemented Facebook automation pipeline: gender-aware DM sending, timeline posting, advance/follow-up modes, contact sync, and per-day deduplication. Background service worker handles **64 message types** across 15 categories.
 
 ---
 
@@ -40,7 +40,7 @@
 
 **Overall Assessment:**
 
-bm-ts is a feature-complete, development-ready system with a fully operational automation pipeline. Both Phase 1 and Phase 2 are fully implemented with all 17 routers registered, all 13 models and tables active, and the full frontend wired to every backend feature. The Facebook automation pipeline is end-to-end: the content script scrapes the birthday feed, selects gender-appropriate templates from the backend, sends DMs and timeline posts, archives conversations, syncs contacts, and enforces per-day deduplication. The architecture is solid — async FastAPI, type-safe TypeScript, WCAG 2.1 AA accessibility, and WebSocket real-time updates. The primary remaining work is production hardening (email, encryption, testing, deployment) rather than feature development.
+bm-ts is a feature-complete, development-ready system with a fully operational automation pipeline. Both Phase 1 and Phase 2 are fully implemented with all 17 routers registered, all 14 models and tables active, and the full frontend wired to every backend feature. The Facebook automation pipeline is end-to-end: the content script scrapes the birthday feed, selects gender-appropriate templates from the backend, sends DMs and timeline posts, archives conversations, syncs contacts, and enforces per-day deduplication. The architecture is solid — async FastAPI, type-safe TypeScript, WCAG 2.1 AA accessibility, and WebSocket real-time updates. The primary remaining work is production hardening (email, encryption, testing, deployment) rather than feature development.
 
 ### Version History
 
@@ -55,6 +55,7 @@ bm-ts is a feature-complete, development-ready system with a fully operational a
 | 0.7.0 | February 20, 2026 | **Documentation Realignment** — Comprehensive audit corrected all stale counts and status flags to reflect the actually-implemented codebase. Identified remaining production gaps: email service, SMTP password encryption, stub endpoint, and test coverage. |
 | 0.8.0 | February 21, 2026 | **Facebook Automation Pipeline Complete** — `runFullAutomation()` in content/index.ts: 2-phase loop (live birthday feed + advance/follow-up from contacts DB). Gender-aware `selectTemplate`/`selectPost` with priority (exact → neutral → any). `resolveKeywords` for `[Tag Person]`/`[Today]`/`[Image]`. `handleAutomationScan` rewritten: fetches all data, opens /birthdays tab, dispatches `automation.runFull`. Sent-today deduplication (`SentTodayRecord`, chrome.storage). `maxMessages` cap. `AutomationRunPayload` + `ContentScriptMessage` types. 3 new background message types — 62 total. `ContactForm` gender selector. `AutomationSettings` max-messages + clear-sent-today controls. `submitPost` Enter-key fallback. |
 | 0.9.0 | February 23, 2026 | **Documentation Audit & Correction** — Full code audit correcting all stale counts. `dashboard.getConfigs` and `dashboard.toggleConfig` confirmed fully implemented (call `listBirthdayConfigs`/`toggleBirthdayConfig`). App.tsx refactored from 1477 → 698 lines with 8 extracted hook files (`useContacts`, `useSMTPConfig`, `useMessageTemplates`, `usePostComposer`, `useApi`, `useImageLibrary`, `useMessages`, `useTemplateSegments`) + `AppContext.tsx`. Corrected counts: background/index.ts 750 lines / 64 message types; client.ts 760 lines / 52 functions; content/index.ts 618 lines; navigation refactored to 4 tabs (Home/Contacts/Messages/Account) with 17 view modes. Removed stale TODO flags for dashboard config handlers. |
+| 1.0.0 | February 24, 2026 | **Full Accuracy Audit** — Second code audit correcting remaining stale metrics. Model and table count corrected: 13 → **14** (models.py and ddl.sql both contain 14 entries; the 0.6.0 count of 13 was an off-by-one). Component count corrected: 35 → **38** (three previously undocumented components added to inventory: `HomeControls.tsx`, `ImageLibraryPicker.tsx`, `MessagesHub.tsx`; sub-component count updated from 12 → 15). Line counts corrected: background/index.ts 750 → **715**; client.ts 760 → **667**; content/index.ts 618 → **613**; App.tsx 698 → **651**. Images endpoint URL corrected in § 2.3 and BACKEND_INTEGRATION_SUMMARY (`POST /api/images/` → `POST /api/images/upload`). Evaluation summary and all metric tables updated to reflect verified counts. |
 
 ---
 
@@ -75,7 +76,7 @@ The system follows a client-server architecture where the extension acts as a th
 **Fully Implemented and Active:**
 
 - ✅ **Docker Containerization**: Backend and PostgreSQL run in Docker containers via docker-compose
-- ✅ **Database Schema**: 13 tables and 5 enums complete in both `models.py` and `ddl.sql`
+- ✅ **Database Schema**: 14 tables and 5 enums complete in both `models.py` and `ddl.sql`
 - ✅ **API Endpoints**: 17 registered routers with ~64 HTTP endpoints + 1 WebSocket endpoint
 - ✅ **Rate Limiting**: `slowapi` middleware; password-reset endpoint is rate-limited per IP (1/min, 5/hr, 20/hr on outer key)
 - ✅ **WebSocket Real-Time**: Live updates for queue, history, dashboard, and notifications
@@ -95,7 +96,7 @@ The system follows a client-server architecture where the extension acts as a th
 - ✅ **User Images**: URL/base64 image library (`/api/images`)
 - ✅ **Birthday Configs**: Advanced automation (EARLY/ON_DAY/BELATED modes, gender filter, archive) (`/api/birthday-configs`)
 - ✅ **SMTP Configuration**: Per-user SMTP settings (`/smtp/config`)
-- ✅ **Frontend UI**: 35 React component files (23 directly imported in App.tsx, 698 lines; logic extracted to 8 hook files + `AppContext.tsx`)
+- ✅ **Frontend UI**: 38 React component files (23 directly imported in App.tsx, 651 lines; logic extracted to 8 hook files + `AppContext.tsx`)
 - ✅ **Accessibility**: WCAG 2.1 Level AA — keyboard shortcuts, screen reader support, focus management, live regions
 - ✅ **Content Scripts**: Full Facebook automation pipeline — birthday feed scraping, gender-aware DM sending, timeline posting, conversation archiving, contact sync, advance/follow-up modes, per-day deduplication
 - ✅ **Automation Orchestration**: `handleAutomationScan` fetches templates/posts/contacts, groups by `days_in_advance`, opens `/birthdays` tab, dispatches `automation.runFull` payload to content script
@@ -148,7 +149,7 @@ The system follows a client-server architecture where the extension acts as a th
 │  ┌──────────────┐  ┌───────────────┐  ┌────────────────┐         │
 │  │   Popup UI   │  │  Background   │  │    Content     │         │
 │  │   (React)    │◄─┤   Service     │  │    Scripts     │         │
-│  │  35 comps    │  │   Worker      │  │  (Facebook)    │         │
+│  │  38 comps    │  │   Worker      │  │  (Facebook)    │         │
 │  └──────┬───────┘  └───────┬───────┘  └────────────────┘         │
 │         │ WebSocket        │ API Calls                           │
 └─────────┼──────────────────┼─────────────────────────────────────┘
@@ -254,7 +255,7 @@ backend/
 │   │   └── rate_limiter.py        # slowapi rate limiter; per-IP key function
 │   ├── db/
 │   │   ├── base.py                # SQLAlchemy declarative_base()
-│   │   ├── models.py              # 13 ORM models (373 lines)
+│   │   ├── models.py              # 14 ORM models (373 lines)
 │   │   ├── session.py             # AsyncSession factory, get_db() dependency
 │   │   ├── database.py            # Alternative engine/session module
 │   │   ├── connect_db.py          # Standalone DB connection script
@@ -292,7 +293,7 @@ backend/
 
 ### 2.2 Database Schema
 
-**DDL Status:** ✅ Complete — `ddl.sql` defines all 13 tables, 5 enums, and 2 extensions.
+**DDL Status:** ✅ Complete — `ddl.sql` defines all 14 tables, 5 enums, and 2 extensions.
 
 #### Tables
 
@@ -536,7 +537,7 @@ backend/
 |----------|--------|------|-------------|
 | `/api/messages/queue` | GET | Bearer | List queued messages |
 | `/api/messages/queue` | POST | Bearer | Create queued message |
-| `/api/messages/queue/{id}` | PUT | Bearer | Update message content/time |
+| `/api/messages/queue/{id}` | PATCH | Bearer | Update message content/time |
 | `/api/messages/queue/{id}` | DELETE | Bearer | Cancel message |
 | `/api/messages/queue/{id}/retry` | POST | Bearer | Retry failed message |
 | `/api/messages/history` | GET | Bearer | List history (search/filter) |
@@ -578,8 +579,8 @@ backend/
 #### Images (`/api/images`)
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `/api/images/` | POST | Bearer | Store image by URL |
-| `/api/images/upload-file` | POST | Bearer | Store base64 image (max 5 MB) |
+| `/api/images/upload` | POST | Bearer | Store image by URL |
+| `/api/images/upload-file` | POST | Bearer | Store base64 image (max 10 MB) |
 | `/api/images/` | GET | Bearer | List images |
 | `/api/images/{id}` | GET | Bearer | Get image |
 | `/api/images/{id}` | DELETE | Bearer | Delete image |
@@ -639,18 +640,18 @@ extension/
 │       └── Birthday_messaging-logo.png
 ├── src/
 │   ├── api/
-│   │   ├── client.ts              # Type-safe HTTP client (760 lines, 52 functions)
+│   │   ├── client.ts              # Type-safe HTTP client (667 lines, 52 functions)
 │   │   └── websocket.ts           # WebSocket singleton client (235 lines)
 │   ├── background/
-│   │   └── index.ts               # Service worker (750 lines, 64 message types)
+│   │   └── index.ts               # Service worker (715 lines, 64 message types)
 │   ├── content/
-│   │   ├── index.ts               # Content script coordinator (618 lines)
+│   │   ├── index.ts               # Content script coordinator (613 lines)
 │   │   ├── api.ts                 # Content→background bridge (7 lines)
 │   │   ├── messenger.ts           # Messenger automation (511 lines)
 │   │   └── timeline.ts            # Timeline posting automation (575 lines)
 │   ├── popup/
 │   │   ├── main.tsx               # React entry point
-│   │   ├── App.tsx                # Main SPA orchestrator (698 lines, 4 tabs, 17 view modes)
+│   │   ├── App.tsx                # Main SPA orchestrator (651 lines, 4 tabs, 17 view modes)
 │   │   ├── api.ts                 # Popup→background bridge (7 lines)
 │   │   ├── popup.css              # Component styles + brand theme
 │   │   ├── context/
@@ -664,7 +665,7 @@ extension/
 │   │   │   ├── usePostComposer.ts  # Post creation state
 │   │   │   ├── useSMTPConfig.ts    # SMTP config state
 │   │   │   └── useTemplateSegments.ts # Segment CRUD state
-│   │   └── components/            # 35 component files (23 imported in App.tsx)
+│   │   └── components/            # 38 component files (23 imported in App.tsx)
 │   └── utils/
 │       ├── accessibility.ts       # A11y utilities (216 lines, 8 functions)
 │       ├── automation.ts          # Chrome storage config, alarms scheduling
@@ -682,7 +683,7 @@ extension/
 └── postcss.config.js
 ```
 
-### 3.2 Component Inventory (35 files)
+### 3.2 Component Inventory (38 files)
 
 | Component | Purpose | Imported in App.tsx |
 |-----------|---------|:-------------------:|
@@ -701,12 +702,15 @@ extension/
 | `FacebookPostPreview.tsx` | Live post preview (used inside PostEditor) | sub-component |
 | `ForgotPassword.tsx` | Password reset request | ✅ |
 | `GenderFilter.tsx` | Gender-based filter UI | sub-component |
+| `HomeControls.tsx` | Home tab entry point: contact count, upcoming birthdays, analytics shortcut | ✅ |
+| `ImageLibraryPicker.tsx` | Inline image picker for selecting from saved library | sub-component |
 | `ImageManager.tsx` | Image URL/base64 upload and management | ✅ |
 | `ImportContactsModal.tsx` | Bulk import contacts (JSON/VCF/CSV) | ✅ |
 | `KeywordInserter.tsx` | Template placeholder helper `{First_Name}` etc. | sub-component |
 | `MessageGroups.tsx` | Message group CRUD | ✅ |
 | `MessageHistory.tsx` | Searchable sent message log | ✅ |
 | `MessageQueue.tsx` | Pending message management | ✅ |
+| `MessagesHub.tsx` | Messages tab hub — routes to templates, posts, scheduling, analytics, images | ✅ |
 | `MessageTemplates.tsx` | Complete message template list view | sub-component |
 | `PostEditor.tsx` | Post creation/edit with font customisation | ✅ |
 | `PostList.tsx` | Post management | ✅ |
@@ -722,7 +726,7 @@ extension/
 | `TemplateList.tsx` | CRUD for template segments (GREETING/BODY/CLOSING) | ✅ |
 | `Toast.tsx` | Toast notifications | ✅ |
 
-**23 components** are directly imported in `App.tsx`; the remaining 12 are used as sub-components within others.
+**23 components** are directly imported in `App.tsx`; the remaining 15 are used as sub-components within others.
 
 ### 3.3 Manifest V3 Configuration
 
@@ -759,7 +763,7 @@ extension/
 - **Messages** (5 dropdown items): Message Templates, Timeline Posts, Scheduling, Analytics, Image Library
 - **Account** (4 dropdown items): Profile, Change Password, SMTP Settings, Subscription, Sign Out
 
-### 3.5 Background Service Worker (750 lines)
+### 3.5 Background Service Worker (715 lines)
 
 **64 message types** handled via switch/case dispatch:
 
@@ -785,7 +789,7 @@ extension/
 - Auto-refresh on 401 errors (transparent to callers)
 - `config.getWSConfig` converts HTTP URL to WebSocket URL for popup connection
 
-### 3.6 API Client (760 lines)
+### 3.6 API Client (667 lines)
 
 **52 exported functions:**
 
@@ -809,7 +813,7 @@ Plus `ApiError` class and 20+ exported interfaces/types.
 
 ### 3.7 Content Scripts
 
-**index.ts (618 lines)** — Main coordinator + full automation loop:
+**index.ts (613 lines)** — Main coordinator + full automation loop:
 - Overlay UI on Facebook pages (friend list, send-all button, status p)
 - Birthday friend detection via DOM scraping (`div[data-pagelet*="Birthday"]`)
 - `runFullAutomation(AutomationRunPayload)` — 2-phase loop:
@@ -1169,9 +1173,9 @@ All features are registered and implemented. The following are gaps within the e
 | **Backend** | Flask (sync, WSGI) | FastAPI (async, ASGI) |
 | **Auth** | Single hex token in DB | JWT access/refresh with rotation |
 | **Password Hashing** | Werkzeug | Argon2 (passlib) |
-| **Database** | 4 tables, integer PKs | 13 tables, UUID PKs, soft-delete |
+| **Database** | 4 tables, integer PKs | 14 tables, UUID PKs, soft-delete |
 | **Payments** | None | Full Stripe integration + webhooks |
-| **Frontend** | 12 HTML pages, minified jQuery (~3.5MB) | 1-page React SPA, 35 components (~210KB) |
+| **Frontend** | 12 HTML pages, minified jQuery (~3.5MB) | 1-page React SPA, 38 components (~210KB) |
 | **Types** | None | Full TypeScript + Pydantic |
 | **Build** | Committed minified bundles | Vite source build (reproducible) |
 | **Real-Time** | None | WebSocket live updates |
@@ -1189,9 +1193,9 @@ All features are registered and implemented. The following are gaps within the e
 |--------|-------|
 | Backend LOC | ~3000 Python |
 | Extension LOC | ~7000 TypeScript/React |
-| Database | 13 tables, 5 enums, 25+ indexes |
+| Database | 14 tables, 5 enums, 25+ indexes |
 | API Endpoints | ~64 HTTP + 1 WebSocket (17 routers) |
-| Component Files | 35 (23 directly in App.tsx) |
+| Component Files | 38 (23 directly in App.tsx) |
 | Background Message Types | 64 |
 | API Client Functions | 52 |
 | Accessibility Utilities | 8 functions |

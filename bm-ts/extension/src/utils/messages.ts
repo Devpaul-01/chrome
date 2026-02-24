@@ -1,3 +1,28 @@
+/**
+ * messages.ts — Discriminated-union message types for the Chrome MV3 message bus.
+ *
+ * Every message passed between the popup, content script, and background service
+ * worker must be listed here.  Using a discriminated union (tagged by `type`)
+ * gives full TypeScript narrowing inside `background/index.ts#handleMessage`
+ * and at every `sendContentMessage` / `sendExtensionMessage` call site.
+ *
+ * Naming conventions:
+ *   auth.*             — authentication / account management
+ *   templates.*        — legacy template segments (greeting / body / closing)
+ *   subscription.*     — Stripe subscription status & checkout
+ *   config.*           — extension configuration (backend URL, WS config)
+ *   schedules.*        — per-contact birthday schedule CRUD
+ *   automation.*       — automation engine control & state
+ *   messages.*         — queued-message & history management
+ *   dashboard.*        — dashboard stats & birthday config
+ *   contacts.*         — contact CRUD + Facebook scraper
+ *   messageGroups.*    — message group CRUD
+ *   posts.*            — timeline post CRUD
+ *   images.*           — user image library CRUD + upload
+ *   smtp.*             — SMTP send config
+ *   messageTemplates.* — full message templates with days_in_advance support
+ */
+
 import {
   CheckoutSessionRequest,
   SegmentType,

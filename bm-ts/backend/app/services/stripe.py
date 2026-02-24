@@ -1,3 +1,16 @@
+"""
+services/stripe.py — Stripe API integration helpers.
+
+Handles:
+  - Creating Stripe Checkout Sessions for monthly and yearly subscription plans.
+  - Constructing and validating incoming Stripe webhook events.
+  - Upserting ``SubscriptionRecord`` rows from webhook payloads so the local
+    database always mirrors Stripe's subscription state.
+
+The Stripe SDK calls are wrapped in ``run_in_threadpool`` because the SDK is
+not async-native; wrapping prevents them from blocking the async event loop.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -16,12 +29,14 @@ stripe.api_key = settings.stripe_api_key
 
 
 def _timestamp(value: int | None) -> datetime | None:
+    """Convert a Unix timestamp integer to a UTC-aware ``datetime``, or ``None`` if the value is absent."""
     if value is None:
         return None
     return datetime.fromtimestamp(value, tz=timezone.utc)
 
 
 def get_price_id(plan: str) -> str:
+    """Map ``"monthly"`` / ``"yearly"`` to the corresponding Stripe price ID from settings."""
     mapping = {
         "monthly": settings.stripe_price_monthly,
         "yearly": settings.stripe_price_yearly,
@@ -39,6 +54,12 @@ async def create_checkout_session(
     cancel_url: str,
     db: AsyncSession,
 ) -> str:
+    """
+    Create a Stripe Checkout Session for the given ``plan`` and return its URL.
+
+    If the user does not yet have a ``stripe_customer_id``, a Stripe Customer
+    is created and the ID is persisted before the session is created.
+    """
     if not user.stripe_customer_id:
         customer = await run_in_threadpool(stripe.Customer.create, email=user.email)
         user.stripe_customer_id = customer["id"]
@@ -59,6 +80,7 @@ async def create_checkout_session(
 
 
 def construct_event(payload: bytes, signature: str) -> stripe.Event:
+    """Verify the Stripe-Signature header and return a parsed ``stripe.Event``. Raises on invalid signature."""
     return stripe.Webhook.construct_event(
         payload=payload,
         sig_header=signature,
@@ -69,6 +91,13 @@ def construct_event(payload: bytes, signature: str) -> stripe.Event:
 async def sync_subscription_record(
     db: AsyncSession, user_id: UUID, data: Mapping[str, Any], metadata: Mapping[str, Any]
 ) -> SubscriptionRecord:
+    """
+    Upsert a ``SubscriptionRecord`` from a Stripe subscription object.
+
+    If the incoming status is ``ACTIVE`` any other active subscriptions for the
+    same user are transitioned to ``PAST_DUE`` first, enforcing the one-active-
+    subscription-per-user invariant at the application level as a safety net.
+    """
     if data.get("status") == "ACTIVE":
         await db.execute(
             update(SubscriptionRecord)

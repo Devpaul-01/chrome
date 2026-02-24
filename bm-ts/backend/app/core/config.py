@@ -1,3 +1,15 @@
+"""
+core/config.py — Application settings loaded from environment variables / .env file.
+
+All settings are read by ``pydantic_settings.BaseSettings``, which first checks
+actual environment variables (overriding .env values), making it easy to inject
+production secrets via the container environment without modifying files on disk.
+
+Sensitive defaults (JWT secret, Stripe keys) are intentional placeholders that
+cause the app to work in development but should ALWAYS be overridden in any
+deployed environment.
+"""
+
 from __future__ import annotations
 
 import json
@@ -8,6 +20,10 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    """
+    Central configuration object.  One instance is created at module-import time
+    (``settings = Settings()``) and shared across the application.
+    """
     model_config = ConfigDict(env_file=".env", case_sensitive=False)
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/birthdaymessaging",

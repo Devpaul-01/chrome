@@ -1,3 +1,27 @@
+/**
+ * content/index.ts — BirthdayMessaging content script.
+ *
+ * Injected into every Facebook page by the extension manifest.  Responsibilities:
+ *
+ *   1. **Overlay UI** — mounts a lightweight sidebar that lists today's birthday
+ *      friends and lets the user manually trigger "Send to all".
+ *
+ *   2. **Manual send** — `handleSendAll` iterates detected friends, opens each
+ *      Facebook Messenger dialog, fills in a templated message, and clicks Send.
+ *
+ *   3. **Automation run** — `runFullAutomation` is the entry point dispatched by
+ *      the background service worker (`automation.runFull` message).  It handles
+ *      three phases: (a) current-day friends from the live birthday feed,
+ *      (b) advance-notice contacts, (c) follow-up contacts.
+ *
+ *   4. **Contact scraper** — `scrapeBirthdayContactsFromPage` harvests profile
+ *      links and birthday dates from the DOM for the `contacts.scrapeFromFacebook`
+ *      background message.
+ *
+ * All API calls are proxied to the background service worker via `sendContentMessage`
+ * because content scripts cannot make cross-origin requests directly.
+ */
+
 import { composeMessage, randomDelay, selectTemplate, selectPost, resolveKeywords, assembleMessageFromTemplate } from '../utils/message';
 import { sendContentMessage } from './api';
 import type { TemplateSegment, MessageTemplate, Contact, Post } from '../api/client';
@@ -5,15 +29,21 @@ import type { AutomationRunPayload } from '../utils/messages';
 import { postToTimeline } from './timeline';
 import { archiveConversation } from './messenger';
 
+/** Maximum messages the manual "Send to all" flow will send per session (safety cap). */
 const MAX_MESSAGES_PER_SESSION = 5;
 const overlayId = 'bm-overlay';
 
+/** Template segments grouped by type, loaded from the backend and used to compose messages. */
 type SegmentGroups = {
   GREETING: string[];
   BODY: string[];
   CLOSING: string[];
 };
 
+/**
+ * Represents a person whose birthday is today as found in the Facebook birthday feed DOM.
+ * `messageButton` and `container` are live DOM references used to open the Messenger dialog.
+ */
 type BirthdayFriend = {
   id: string;
   name: string;
@@ -26,12 +56,18 @@ const overlay = createOverlay();
 let friends: BirthdayFriend[] = [];
 let segments: SegmentGroups = { GREETING: [], BODY: [], CLOSING: [] };
 
+/** Re-scrape the birthday feed, repopulate the overlay friend list, and reload segments. */
 async function refreshFriendList() {
   friends = gatherBirthdayFriends();
   renderFriendList();
   await loadSegments();
 }
 
+/**
+ * Scrapes birthday friend entries from the current Facebook page.
+ * Searches `div[data-pagelet*='Birthday']` elements which Facebook renders
+ * for birthday widgets in the news feed and the dedicated /birthdays page.
+ */
 function gatherBirthdayFriends(): BirthdayFriend[] {
   // Look for Facebook elements that are part of the birthday feed. `data-pagelet` often
   // mentions “Birthday” when the birthday widget is rendered on the news feed.
@@ -55,6 +91,7 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
   return detected;
 }
 
+/** Fetches template segments from the backend and groups them by type into `segments`. */
 async function loadSegments() {
   try {
     const data = await sendContentMessage<TemplateSegment[]>({ type: 'templates.list' });
@@ -69,6 +106,7 @@ async function loadSegments() {
   }
 }
 
+/** Renders the current `friends` array into the overlay sidebar list. */
 function renderFriendList() {
   const list = overlay.querySelector<HTMLDivElement>('#bm-friend-list');
   if (!list) return;
@@ -92,6 +130,7 @@ function renderFriendList() {
   });
 }
 
+/** Updates the status line shown in the overlay sidebar. */
 function setStatus(text: string) {
   const status = overlay.querySelector<HTMLParagraphElement>('#bm-status');
   if (status) {
@@ -99,6 +138,11 @@ function setStatus(text: string) {
   }
 }
 
+/**
+ * "Send to all" button handler used by the manual overlay UI.
+ * Confirms with the user, then iterates `friends` and sends a templated
+ * message to each, respecting `MAX_MESSAGES_PER_SESSION`.
+ */
 async function handleSendAll() {
   if (!confirm('Send messages to all detected friends?')) {
     return;
@@ -130,6 +174,11 @@ async function handleSendAll() {
   }
 }
 
+/**
+ * Sends a pre-assembled message string to a birthday friend by opening the
+ * Messenger dialog on their birthday feed entry and submitting the composed DM.
+ * Used by the manual overlay's "send to all" path.
+ */
 async function sendMessageToFriend(friend: BirthdayFriend): Promise<void> {
   const dialogClicked = openMessageDialog(friend);
   if (!dialogClicked) {
@@ -172,6 +221,10 @@ async function fillMessageAndSend(message: string): Promise<void> {
   sendButton.click();
 }
 
+/**
+ * Waits up to `timeout` ms for a DOM element matching `selector` to appear,
+ * polling via `requestAnimationFrame`. Rejects if the timeout is exceeded.
+ */
 async function waitForSelector(selector: string, timeout = 5000): Promise<boolean> {
   const start = Date.now();
   return new Promise((resolve, reject) => {
@@ -190,6 +243,10 @@ async function waitForSelector(selector: string, timeout = 5000): Promise<boolea
   });
 }
 
+/**
+ * Creates (or returns the existing) overlay sidebar and appends it to `document.body`.
+ * The overlay shows a friend list, a status line, and Send / Refresh buttons.
+ */
 function createOverlay(): HTMLElement {
   const existing = document.getElementById(overlayId);
   if (existing) {

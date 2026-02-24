@@ -1,3 +1,17 @@
+"""
+api/routers/subscription.py — Stripe subscription status and checkout endpoints.
+
+Mounted under ``/subscription`` (set in main.py).
+
+Endpoints
+---------
+GET  /subscription/status                       Return the user's current subscription status.
+POST /subscription/create-checkout-session      Create a Stripe Checkout Session URL.
+
+``_infer_plan`` maps a Stripe price ID back to the human-readable
+``"monthly"`` / ``"yearly"`` label used by the frontend.
+"""
+
 from __future__ import annotations
 
 from sqlalchemy import desc, select
@@ -19,6 +33,7 @@ router = APIRouter()
 
 
 def _infer_plan(price_id: str | None) -> str | None:
+    """Map a Stripe price ID to a plan label (``"monthly"`` or ``"yearly"``), or ``None`` if unrecognised."""
     mapping = {
         settings.stripe_price_monthly: "monthly",
         settings.stripe_price_yearly: "yearly",
@@ -33,6 +48,7 @@ async def status(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> SubscriptionStatusResponse:
+    """Return the most recent subscription record for the current user, or ``is_active=False`` if none exists."""
     stmt = (
         select(SubscriptionRecord)
         .where(SubscriptionRecord.user_id == current_user.id)

@@ -1,8 +1,8 @@
 # BirthdayMessaging bm-ts MVP Checklist
 
 
-**Last Updated:** February 21, 2026  
-**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented (17 routers, ~64 endpoints, 13 DB tables, 35 UI components), production readiness pending
+**Last Updated:** February 24, 2026  
+**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented (15 routers + 2 inline app routes, 64 HTTP endpoints + 1 WebSocket, 14 DB tables, 38 UI components), production readiness pending
 
 ---
 
@@ -64,15 +64,18 @@
 - Verified relationship loading configuration
 - Achieved consistent API behavior across all endpoints
 
-**Result:** 11 integration issues resolved, 0 compilation errors, full backend-frontend alignment
+### Phase 4 Fix: Message Queue HTTP Method Mismatch ✅ (Feb 24, 2026)
+- Fixed `PATCH → PUT` on `PUT /api/messages/queue/{id}` (backend had `@router.patch`, frontend sent `PUT` — would cause 405 errors)
+
+**Result:** 12 integration issues resolved, 0 compilation errors, full backend-frontend alignment
 
 ## Executive Summary (as of February 20, 2026)
 
 This checklist tracks all tasks required to make bm-ts a production-ready MVP. The system is robust and well-architected, with Phase 1 features fully implemented and integrated. Phase 2 backend features are scaffolded (models, routers, and tables exist) but require activation and full wiring to the frontend. Production infrastructure, comprehensive testing, and user-facing polish are still pending.
 
 **Current Strengths:**
-- ✅ Core backend API with 17 routers and ~64 HTTP endpoints + 1 WebSocket (all Phase 1 and Phase 2 routers registered)
-- ✅ Chrome extension with React UI, 35 components, real-time updates, and accessibility
+- ✅ Core backend API with 15 routers and 64 HTTP endpoints + 1 WebSocket (all Phase 1 and Phase 2 routers registered; 2 additional inline app routes: `/health`, `/send-birthday-message`)
+- ✅ Chrome extension with React UI, 38 components, real-time updates, and accessibility
 - ✅ Docker-based development environment (Dockerfile + docker-compose.yml with PostgreSQL)
 - ✅ Database schema and models complete for all Phase 1 and Phase 2
 - ✅ Strong security (JWT rotation, Argon2, Stripe webhooks)
@@ -103,7 +106,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 **Priority:** ~~P0~~ — Resolved  
 **Status:** ✅ Complete (February 12, 2026)
 
-**Resolution:** `ddl.sql` now contains all 13 tables, 5 enums, and 2 extensions. Fresh deployments work correctly.
+**Resolution:** `ddl.sql` now contains all 14 tables, 5 enums, and 2 extensions. Fresh deployments work correctly.
 
 **Tasks:**
 - [x] Add `birthday_schedules` table to ddl.sql
@@ -112,7 +115,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Add `password_reset_tokens` table to ddl.sql
 - [x] Add `message_status_enum` type definition
 - [ ] Test fresh deployment: `docker-compose down -v && docker-compose up -d`
-- [ ] Verify all 13 models can query their tables without errors
+- [ ] Verify all 14 models can query their tables without errors
 - [x] Update BACKEND_INTEGRATION_SUMMARY.md to remove critical warning
 
 ---
@@ -142,8 +145,8 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 ## 🗄️ Database Layer
 
 ### Schema & Migrations
-- [x] Define 13 models in models.py (User, SubscriptionRecord, TemplateSegment, BirthdaySchedule, MessageQueue, MessageHistory, PasswordResetToken — Phase 1; Contact, MessageGroup, Post, UserImage, BirthdayConfig, SMTPConfig, MessageTemplate — Phase 2)
-- [x] Complete ddl.sql with all tables ✅ (13 tables including Phase 2: posts, message_groups, user_images, birthday_configs, smtp_configs, message_templates)
+- [x] Define 14 models in models.py (User, SubscriptionRecord, TemplateSegment, BirthdaySchedule, MessageQueue, MessageHistory, PasswordResetToken — Phase 1; Contact, MessageGroup, Post, UserImage, BirthdayConfig, SMTPConfig, MessageTemplate — Phase 2)
+- [x] Complete ddl.sql with all tables ✅ (14 tables including Phase 2: posts, message_groups, user_images, birthday_configs, smtp_configs, message_templates)
 - [x] Add database indexes for performance:
   - [x] Index on `message_queue.user_id` (idx_queue_user_status)
   - [x] Index on `message_queue.scheduled_send_time` (idx_queue_scheduled_time)
@@ -154,7 +157,9 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
   - [x] Index on `password_reset_tokens.expires_at` (idx_reset_token_expires)
 - [ ] Set up Alembic properly for schema migrations:
   - [x] Alembic config file exists (alembic.ini)
-  - [ ] Generate initial migration from models
+  - [x] Initial migration file generated (`a32e3aa11961_initial_tables.py`) — **but upgrade/downgrade are empty `pass` stubs, must be populated**
+  - [x] Font fields migration file exists (`20260218_add_post_font_fields.py`) — fully implemented, migration chain fixed Feb 24
+  - [ ] Populate initial migration with full DDL from models
   - [ ] Test migration up/down
   - [ ] Document migration workflow in DEVELOPMENT_GUIDE.md
 
@@ -426,34 +431,19 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [ ] In-App Help System
   - [ ] Help icon/button in header/navigation
   - [ ] Contextual help tooltips (? icons)
-  - [ ] Help panel/sidebar (expandable)
   - [ ] Search help articles (in-app)
-  - [ ] "What's This?" mode (click to learn about any feature)
 - [ ] Tutorial Components
   - [ ] Template creation tutorial (guided mode)
   - [ ] Schedule setup tutorial (interactive)
   - [ ] Contact import tutorial (step-by-step)
   - [ ] Automation test tutorial (safe mode)
-- [ ] Empty State Guidance
-  - [ ] Illustrative empty states with CTAs
-  - [ ] "Get Started" buttons with actions
-  - [ ] Sample data option (populate with examples)
-  - [ ] Quick action buttons
 - [ ] Feature Discovery
-  - [ ] "New Feature" badges
-  - [ ] Feature announcement modals
   - [ ] "Tips & Tricks" notification system
-  - [ ] Power user shortcuts guide
 - [ ] Embedded Help Resources
   - [ ] FAQ accordion component
   - [ ] Video tutorial player (embedded)
   - [ ] Help article preview cards
   - [ ] Support chat widget (optional)
-- [ ] Progress Tracking
-  - [ ] Setup checklist (getting started tasks)
-  - [ ] Achievement system (milestones)
-  - [ ] User level/status (beginner → expert)
-  - [ ] Feature usage analytics (show unused features)
 
 ### Template Management UI
 - [x] TemplateCreator component
@@ -630,18 +620,6 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
   - [ ] Link to video tutorials
   - [ ] Link to FAQ
   - [ ] Contact support option
-- [ ] Add empty state guidance
-  - [ ] "No templates yet" → Create your first template (CTA)
-  - [ ] "No schedules yet" → Set up your first schedule (CTA)
-  - [ ] "No messages yet" → Messages will appear here after automation runs
-- [ ] Add error state help
-  - [ ] Explain what went wrong
-  - [ ] Suggest troubleshooting steps
-  - [ ] Link to relevant help article
-- [ ] Add feature discovery notifications
-  - [ ] Highlight new features after updates
-  - [ ] "Did you know?" tips for power features
-  - [ ] Best practices suggestions
 
 ---
 
@@ -1127,7 +1105,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 3. No CI/CD pipeline
 4. No production monitoring
 5. No error tracking service
-6. No active Alembic migration history (Alembic configured in alembic.ini but no migrations generated)
+6. Alembic migrations exist but are incomplete: initial migration (`a32e3aa11961_initial_tables.py`) has empty `upgrade()`/`downgrade()` stubs — needs populating from models; migration chain is now properly linked (fixed Feb 24)
 7. Image upload/storage not implemented (URL-based currently)
 8. No user onboarding or interactive tutorials
 9. No comprehensive help documentation or FAQ
@@ -1177,4 +1155,4 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - Iterate quickly based on user needs
 - Consider soft launch with beta testers before public launch
 
-**Last Updated:** February 20, 2026
+**Last Updated:** February 24, 2026

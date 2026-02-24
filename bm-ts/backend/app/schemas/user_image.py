@@ -1,3 +1,11 @@
+"""
+schemas/user_image.py — Pydantic schemas for user-uploaded image endpoints.
+
+  UserImageUploadUrl   — POST /images/url body  (upload by remote URL)
+  UserImageUploadFile  — POST /images/upload body (upload by base64 payload, max 10 MB)
+  UserImageOut         — unified response for both upload strategies (ORM-mapped)
+"""
+
 from __future__ import annotations
 
 from datetime import datetime

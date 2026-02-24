@@ -1,7 +1,7 @@
 # Backend Integration Summary
 
-**Last Updated:** February 23, 2026  
-**Version:** 0.9.0  
+**Last Updated:** February 24, 2026  
+**Version:** 1.0.0  
 **Scope:** How the Chrome extension integrates with the FastAPI backend — covering every API route, its corresponding `client.ts` function, and the background service worker message type that triggers it.
 
 ---
@@ -14,7 +14,7 @@ The Chrome extension communicates with the backend exclusively through the backg
 Popup / Content Script
         │  chrome.runtime.sendMessage({ type: "..." })
         ▼
-Background Service Worker (background/index.ts, 750 lines)
+Background Service Worker (background/index.ts, 715 lines)
         │  calls api/client.ts functions
         ▼
 FastAPI Backend  (http://localhost:8000 in dev)
@@ -86,7 +86,7 @@ Segment types: `GREETING`, `BODY`, `CLOSING`. Records are soft-deleted (`deleted
 | Background Message | `client.ts` Function | HTTP Method + Path |
 |---|---|---|
 | `messages.listQueue` | `listQueuedMessages()` | `GET /api/messages/queue` |
-| `messages.updateQueued` | `updateQueuedMessage(id, payload)` | `PUT /api/messages/queue/{id}` |
+| `messages.updateQueued` | `updateQueuedMessage(id, payload)` | `PATCH /api/messages/queue/{id}` |
 | `messages.cancelQueued` | `cancelQueuedMessage(id)` | `DELETE /api/messages/queue/{id}` |
 | `messages.retryQueued` | `retryQueuedMessage(id)` | `POST /api/messages/queue/{id}/retry` |
 | `messages.listHistory` | `listMessageHistory(params?)` | `GET /api/messages/history` |
@@ -148,8 +148,8 @@ Posts include optional font fields (`font_family`, `font_size`, `font_color`) fo
 | Background Message | `client.ts` Function | HTTP Method + Path | Notes |
 |---|---|---|---|
 | `images.list` | `listImages()` | `GET /api/images/` | |
-| `images.create` | `createImage(payload)` | `POST /api/images/` | `{ url: string }` — stores a URL reference |
-| `images.uploadFile` | `uploadImageFile(payload)` | `POST /api/images/upload-file` | `{ data: string, mimeType: string, size: number }` base64; max 5 MB; stored as data URI |
+| `images.create` | `createImage(payload)` | `POST /api/images/upload` | `{ url: string }` — stores a URL reference |
+| `images.uploadFile` | `uploadImageFile(payload)` | `POST /api/images/upload-file` | `{ data: string, mimeType: string, size: number }` base64; max 10 MB; stored as data URI |
 | `images.delete` | `deleteImage(id)` | `DELETE /api/images/{id}` | |
 
 ---

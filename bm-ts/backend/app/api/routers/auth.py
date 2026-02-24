@@ -1,3 +1,24 @@
+"""
+api/routers/auth.py — Authentication, profile, and account-management endpoints.
+
+All routes are mounted under ``/auth`` (set in main.py).
+
+Endpoints
+---------
+POST  /auth/register               Register a new account, return token pair.
+POST  /auth/login                  Authenticate, return token pair.
+POST  /auth/refresh                Exchange a refresh token for a new token pair.
+GET   /auth/me                     Return the current user's profile.
+POST  /auth/request-password-reset Send a password-reset email (rate: 5/hour).
+POST  /auth/reset-password         Consume a reset token and set a new password.
+POST  /auth/change-password        Change password for an authenticated user.
+PUT   /auth/profile                Update profile fields (name, timezone).
+DELETE /auth/account               Permanently delete the user's account.
+
+The password-reset flow intentionally returns an identical success response
+whether or not the email exists, to prevent user enumeration attacks.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -46,6 +67,7 @@ router = APIRouter()
 
 
 def _build_token_response(user_id: UUID) -> TokenResponse:
+    """Create a fresh access + refresh token pair for ``user_id``."""
     return TokenResponse(
         access_token=create_access_token(user_id),
         refresh_token=create_refresh_token(user_id),
@@ -56,6 +78,7 @@ def _build_token_response(user_id: UUID) -> TokenResponse:
 async def register(
     data: RegisterRequest, db: AsyncSession = Depends(get_db)
 ) -> TokenResponse:
+    """Register a new account.  Returns a token pair on success; 400 if the email is already taken."""
     stmt = select(User).where(User.email == data.email)
     result = await db.execute(stmt)
     if result.scalar_one_or_none():
@@ -74,6 +97,7 @@ async def register(
 
 @router.post("/login", response_model=TokenResponse)
 async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+    """Authenticate with email + password.  Returns a token pair; 401 on invalid credentials."""
     stmt = select(User).where(User.email == data.email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
@@ -87,6 +111,7 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)) -> Token
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(data: RefreshRequest) -> TokenResponse:
+    """Exchange a valid refresh token for a fresh token pair; 401 on invalid/expired token."""
     try:
         payload = decode_token(data.refresh_token)
         ensure_token_type(payload, TokenType.REFRESH)
@@ -99,6 +124,7 @@ async def refresh(data: RefreshRequest) -> TokenResponse:
 
 @router.get("/me", response_model=UserProfile)
 async def me(current_user: User = Depends(get_current_user)) -> UserProfile:
+    """Return the profile of the currently authenticated user."""
     return current_user
 
 

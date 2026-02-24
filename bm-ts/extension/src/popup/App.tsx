@@ -1,4 +1,21 @@
-﻿import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+﻿/**
+ * popup/App.tsx — Root React component for the extension popup.
+ *
+ * Component tree:
+ *   App
+ *   └─ ErrorBoundary       (catches unhandled render errors)
+ *      └─ AppProvider        (shared auth / toast / tab context via AppContext)
+ *         └─ AppShell          (consumes context + all domain hooks; renders tabs)
+ *
+ * `AppShell` is deliberately extracted from `App` so that hooks that call
+ * `useAppContext()` can be used inside the provider boundary.
+ *
+ * Navigation is state-driven (`viewMode` / `activeTab`): there are no routes.
+ * All backend communication goes through `sendBackgroundMessage` which proxies
+ * calls to the background service worker.
+ */
+
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import AuthForm from './components/AuthForm';
 import TemplateCreator, { type TemplateFormData } from './components/TemplateCreator';
 import SubscriptionPanel from './components/SubscriptionPanel';

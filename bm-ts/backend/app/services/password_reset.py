@@ -1,3 +1,14 @@
+"""
+services/password_reset.py — Password reset token lifecycle management.
+
+Tokens are generated as URL-safe random bytes (``secrets.token_urlsafe``),
+then stored as a SHA-256 hash so that the raw token value is never persisted
+in the database (defence-in-depth: a DB leak does not expose usable tokens).
+
+Token expiry: 30 minutes from creation.
+Rate limiting on the endpoint is handled upstream in the auth router.
+"""
+
 import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone

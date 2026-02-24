@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '20260218_add_post_font_fields'
-down_revision = None  # Set to previous revision id if this is not the first migration
+down_revision = 'a32e3aa11961'  # chains to initial_tables migration
 branch_labels = None
 depends_on = None
 def upgrade():
