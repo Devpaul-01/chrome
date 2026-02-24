@@ -14,7 +14,6 @@ down_revision = None  # Set to previous revision id if this is not the first mig
 branch_labels = None
 depends_on = None
 def upgrade():
-    op.add_column('posts', sa.Column('font_color', sa.Text(), nullable=False, server_default='#ffffff'))
     op.execute("UPDATE posts SET font_family = 'Arial', font_size = 48, font_color = '#ffffff' WHERE font_family IS NULL")
     op.create_check_constraint('check_font_size_range', 'posts', 'font_size >= 24 AND font_size <= 96')
     op.execute("COMMENT ON COLUMN posts.font_family IS 'Font family for text overlay on post images'")
@@ -23,6 +22,5 @@ def upgrade():
 
 def downgrade():
     op.drop_constraint('check_font_size_range', 'posts', type_='check')
-    op.drop_column('posts', 'font_color')
     op.drop_column('posts', 'font_size')
     op.drop_column('posts', 'font_family')

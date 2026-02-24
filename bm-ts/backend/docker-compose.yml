@@ -7,7 +7,6 @@ services:
       POSTGRES_DB: birthdaymessaging
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../ddl.sql:/docker-entrypoint-initdb.d/ddl.sql:ro
     ports:
       - "5432:5432"
 
@@ -21,7 +20,12 @@ services:
       - .:/app
     env_file:
       - .env
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: >
+      bash -c "
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
+      "
 
 volumes:
   postgres_data:
+  
