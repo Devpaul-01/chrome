@@ -107,7 +107,7 @@ const TabbedDashboard = forwardRef<TabbedDashboardHandle, TabbedDashboardProps>(
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={
-                activeTab === tab.key ? 'btn-primary tab-btn' : 'btn-secondary btn-sm tab-btn'
+                activeTab === tab.key ? 'btn-primary tab-btn' : 'btn-secondary tab-btn'
               }
             >
               {tab.label}
@@ -149,7 +149,7 @@ const TabbedDashboard = forwardRef<TabbedDashboardHandle, TabbedDashboardProps>(
           </div>
         )}
 
-        <button onClick={onClose} className="btn-secondary btn-sm button-back">
+        <button onClick={onClose} className="btn-secondary button-back">
           ← Back
         </button>
       </div>

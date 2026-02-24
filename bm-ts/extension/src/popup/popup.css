@@ -56,6 +56,13 @@
   --font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
 
+/* Slightly larger base for improved visual accessibility.
+   All rem-based sizes (Tailwind utilities + custom classes) scale proportionally.
+   17px base vs browser default of 16px (~6% increase). */
+html {
+  font-size: 106.25%;
+}
+
 /* ImageManager migrated styles */
 .image-preview-max {
   max-height: 25rem;
@@ -205,6 +212,61 @@
 
   .touch-target-44 { min-width: 2.75rem; min-height: 2.75rem; }
   .touch-target-24 { min-width: 1.5rem;  min-height: 1.5rem;  }
+
+  /* Compact inline variants — used in contact cards etc. */
+  .btn-sm-blue {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    background-color: var(--color-blue-strong);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(42, 127, 160, 0.2);
+    transition:
+      background-color var(--duration-normal) var(--ease-out),
+      box-shadow       var(--duration-normal) var(--ease-out),
+      transform        var(--duration-fast)   var(--ease-out);
+  }
+  .btn-sm-blue:hover:not(:disabled) {
+    background-color: var(--color-blue-brand);
+    box-shadow: 0 3px 8px rgba(42, 127, 160, 0.3);
+    transform: translateY(-1px);
+  }
+  .btn-sm-blue:active:not(:disabled) { transform: translateY(0); }
+  .btn-sm-blue:focus-visible { outline: 2px solid var(--color-blue-strong); outline-offset: 2px; }
+  .btn-sm-blue:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .btn-sm-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    background-color: #dc2626;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(220, 38, 38, 0.2);
+    transition:
+      background-color var(--duration-normal) var(--ease-out),
+      box-shadow       var(--duration-normal) var(--ease-out),
+      transform        var(--duration-fast)   var(--ease-out);
+  }
+  .btn-sm-danger:hover:not(:disabled) {
+    background-color: #b91c1c;
+    box-shadow: 0 3px 8px rgba(220, 38, 38, 0.3);
+    transform: translateY(-1px);
+  }
+  .btn-sm-danger:active:not(:disabled) { transform: translateY(0); }
+  .btn-sm-danger:focus-visible { outline: 2px solid #dc2626; outline-offset: 2px; }
+  .btn-sm-danger:disabled { opacity: 0.55; cursor: not-allowed; }
 }
 
 /* Calendar navigation button sizing */
@@ -518,17 +580,6 @@
   box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.25);
 }
 
-/* Small button modifier — for compact / inline utility buttons */
-.btn-sm {
-  width: auto;
-  padding: 0.3rem 0.7rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  text-transform: none;
-  margin-top: 0;
-  margin-bottom: 0;
-  border-radius: var(--radius-md);
-}
 
 .btn-block {
   width: 100%;
@@ -1048,9 +1099,18 @@ kbd {
 
 /* Contact search input style */
 .contact-search-input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   border: 1.5px solid #d1b8a8;
   border-radius: var(--radius-md);
   padding: 0.5rem 0.75rem;
+  background-color: #fff;
+  outline: none;
+  font-size: 0.875rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
 }
 .contact-search-input:focus {
   border-color: var(--color-blue-strong);
@@ -1146,6 +1206,7 @@ kbd {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.625rem;
+  margin-bottom: 2rem;
 }
 
 .messages-hub-card {

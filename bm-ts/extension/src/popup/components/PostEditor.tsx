@@ -303,7 +303,7 @@ export default function PostEditor({
             <button
               type="button"
               onClick={() => setShowKeywords(!showKeywords)}
-              className="btn-secondary btn-sm mb-3"
+              className="btn mb-3"
             >
               {showKeywords ? '− Hide Keywords' : '+ Insert Keyword'}
             </button>
@@ -313,28 +313,28 @@ export default function PostEditor({
                 <button
                   type="button"
                   onClick={() => insertKeyword('{First_Name}')}
-                  className="btn-secondary text-xs py-1.5 px-3"
+                  className="btn-sm-blue"
                 >
                   {'{First_Name}'}
                 </button>
                 <button
                   type="button"
                   onClick={() => insertKeyword('{Last_Name}')}
-                  className="btn-secondary text-xs py-1.5 px-3"
+                  className="btn-sm-blue"
                 >
                   {'{Last_Name}'}
                 </button>
                 <button
                   type="button"
                   onClick={() => insertKeyword('{Today}')}
-                  className="btn-secondary text-xs py-1.5 px-3"
+                  className="btn-sm-blue"
                 >
                   {'{Today}'}
                 </button>
                 <button
                   type="button"
                   onClick={() => insertKeyword('[Image]')}
-                  className="btn-secondary text-xs py-1.5 px-3"
+                  className="btn-sm-blue"
                 >
                   [Image]
                 </button>
@@ -423,16 +423,16 @@ export default function PostEditor({
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isProcessingImage}
-                    className="btn-secondary flex-1 text-sm"
+                    className="btn flex-1 text-sm"
                   >
-                    {isProcessingImage ? '\u23f3 Processing...' : '\ud83d\udcc1 Upload'}
+                    {isProcessingImage ? '⏳ Processing...' : '📁 Upload'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowLibraryPicker(!showLibraryPicker)}
-                    className="btn-secondary flex-1 text-sm"
+                    className="btn flex-1 text-sm"
                   >
-                    \ud83d\uddbc\ufe0f From Library
+                    🖼️ From Library
                   </button>
                   <input
                     ref={fileInputRef}

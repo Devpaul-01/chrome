@@ -112,7 +112,7 @@ export default function ChangePassword({ onCancel, onSuccess }: ChangePasswordPr
           disabled={isSubmitting}
           aria-busy={isSubmitting ? 'true' : 'false'}
           aria-disabled={isSubmitting ? 'true' : 'false'}
-          className="btn-primary btn-block mb-2 flex items-center justify-center gap-2"
+          className="btn mb-2 flex items-center justify-center gap-2"
         >
           {isSubmitting && <Spinner size="sm" />}
           {isSubmitting ? 'Changing...' : 'Change Password'}

@@ -100,7 +100,7 @@ export default function SubscriptionPanel() {
 
           <button
             onClick={handleSubscriptionCheckout}
-            className="btn-primary btn-block flex items-center justify-center gap-2"
+            className="btn flex items-center justify-center gap-2"
             disabled={isSubmitting}
             aria-busy={isSubmitting ? 'true' : 'false'}
             aria-disabled={isSubmitting ? 'true' : 'false'}

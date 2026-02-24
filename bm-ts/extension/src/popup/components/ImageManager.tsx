@@ -224,39 +224,37 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
             </div>
           </div>
         ) : (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+          <div className="py-2">
             {isProcessing ? (
-              <div className="py-6">
+              <div className="py-6 text-center">
                 <div className="text-4xl mb-3">⏳</div>
                 <p className="text-sm text-gray-600 font-medium">Optimizing image...</p>
                 <p className="text-xs text-gray-500 mt-1">Resizing to 1080×1350px</p>
               </div>
             ) : (
-              <>              
-                <div className="text-4xl mb-3">🖼️</div>
+              <>
                 {isFull ? (
-                  <>
+                  <div className="text-center py-4">
                     <p className="text-sm font-medium text-red-600 mb-1">Library full ({MAX_LIBRARY_IMAGES}/{MAX_LIBRARY_IMAGES})</p>
                     <p className="text-xs text-gray-500">Delete an image below to make room.</p>
-                  </>
+                  </div>
                 ) : (
                   <>
-                    <p className="text-sm font-medium text-gray-700 mb-1">Click to add an image</p>
-                    <p className="text-xs text-gray-500 mb-4">
-                      Will be automatically resized to 1080×1350px
+                    <p className="text-xs text-textMuted mb-3">
+                      Will be automatically resized to 1080×1350px • Max 10MB
                     </p>
-                    <div className="flex gap-2 justify-center">
+                    <div className="flex gap-2">
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploading}
-                        className="btn-primary px-6 py-2 text-sm font-medium"
+                        className="btn flex-1"
                       >
                         Upload Image
                       </button>
                       <button
                         onClick={handleGenerateAI}
                         disabled={isUploading}
-                        className="btn-secondary px-6 py-2 text-sm font-medium"
+                        className="btn-outline-orange flex-1"
                       >
                         Generate with AI
                       </button>
@@ -267,13 +265,9 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
                       accept="image/*"
                       onChange={handleFileUpload}
                       disabled={isUploading}
-                      className="hidden-input"
-                      title="Upload image file"
-                      placeholder="Select image file"
+                      style={{ display: 'none' }}
+                      aria-hidden="true"
                     />
-                    <p className="text-xs text-gray-400 mt-4">
-                      Max 10MB • Auto-optimized for Facebook posts
-                    </p>
                   </>
                 )}
               </>
@@ -330,16 +324,16 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
                     {image.filename}
                   </p>
                   <p className="text-xs text-gray-400 mb-2">{(image.size / 1024).toFixed(1)} KB</p>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1.5">
                     <button
                       onClick={() => copyUrl(image.url)}
-                      className="btn-secondary flex-1 text-xs py-1"
+                      className="btn-sm-blue flex-1"
                     >
                       Copy
                     </button>
                     <button
                       onClick={() => handleDelete(image.id)}
-                      className="flex-1 text-xs py-1 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium"
+                      className="btn-sm-danger flex-1"
                     >
                       Delete
                     </button>

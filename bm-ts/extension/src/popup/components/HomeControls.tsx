@@ -209,7 +209,7 @@ export default function HomeControls({
       </div>
 
       {/* Shortcuts */}
-      <button onClick={onViewCalendar} className="btn-outline-orange w-full">
+      <button onClick={onViewCalendar} className="btn w-full">
         View Birthday Calendar
       </button>
       <button onClick={onViewAnalytics} className="btn-primary btn-block">

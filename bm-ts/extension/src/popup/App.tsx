@@ -199,7 +199,6 @@ function AppShell() {
         label: 'Account',
         menuItems: [
           { label: 'Profile', action: () => setViewMode('account-management') },
-          { label: 'Change Password', action: () => setViewMode('change-password') },
           { label: 'SMTP Settings', action: () => setViewMode('smtp-settings') },
           { label: 'Subscription', action: () => setViewMode('subscription') },
           { label: 'Sign Out', action: () => void handleLogout() },
@@ -265,7 +264,7 @@ function AppShell() {
       return (
         <div>
           <SchedulingSettings onClose={() => setViewMode('main')} />
-          <button className="messages-hub-back" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+          <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
             ← Back to Messages
           </button>
         </div>
@@ -281,7 +280,7 @@ function AppShell() {
       return (
         <div>
           <Dashboard onClose={() => setViewMode('main')} />
-          <button className="messages-hub-back" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+          <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
             ← Back to Messages
           </button>
         </div>
@@ -324,7 +323,7 @@ function AppShell() {
               <MessageGroups onClose={() => setViewMode('main')} showClose={false} />
             </div>
           </div>
-          <button className="messages-hub-back" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+          <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
             ← Back to Messages
           </button>
         </div>
@@ -347,7 +346,7 @@ function AppShell() {
           <div className="mt-4">
             <PostList onClose={() => setViewMode('main')} showClose={false} />
           </div>
-          <button className="messages-hub-back" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+          <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
             ← Back to Messages
           </button>
         </div>
@@ -360,7 +359,7 @@ function AppShell() {
       return (
         <div>
           <ImageManager onClose={() => setViewMode('main')} />
-          <button className="messages-hub-back" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+          <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
             ← Back to Messages
           </button>
         </div>
@@ -467,7 +466,7 @@ function AppShell() {
               onDeleteContact={contactsHook.handleDeleteContact}
             />
             <button
-              className="btn-secondary btn-sm mt-4"
+              className="btn mt-2"
               onClick={() => setViewMode('birthday-calendar')}
             >
               Birthday Calendar
@@ -493,7 +492,7 @@ function AppShell() {
               <div className="space-y-3">
                 <button
                   onClick={() => setViewMode('change-password')}
-                  className="btn-secondary btn-block"
+                  className="btn"
                   disabled={isAccountSubmitting}
                 >
                   Change Password
@@ -507,7 +506,6 @@ function AppShell() {
                 </button>
               </div>
             </div>
-            <SubscriptionPanel />
           </div>
         );
 
@@ -570,7 +568,7 @@ function AppShell() {
               id={`${activeTab}-panel`}
               aria-labelledby={`${activeTab}-tab`}
               tabIndex={-1}
-              className="pb-4"
+              className="pb-10"
             >
               {renderView()}
             </section>
@@ -582,9 +580,23 @@ function AppShell() {
         <footer role="contentinfo" className="mt-10">
           <details className="card text-xs">
             <summary className="cursor-pointer font-semibold text-textPrimary hover:text-blueStrong">
-              Keyboard Shortcuts
+              Help &amp; Shortcuts
             </summary>
-            <ul className="mt-2 space-y-1 text-gray-600">
+            <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap justify-center gap-x-5 gap-y-1.5">
+              <a href="https://www.youtube.com/@birthdaymessaging" target="_blank" rel="noreferrer" className="font-semibold text-textPrimary hover:text-blueStrong">
+                📺 Tutorial
+              </a>
+              <a href="https://birthdaymessaging.com/faq" target="_blank" rel="noreferrer" className="font-semibold text-textPrimary hover:text-blueStrong">
+                ❓ FAQ
+              </a>
+              <a href="https://birthdaymessaging.com/support" target="_blank" rel="noreferrer" className="font-semibold text-textPrimary hover:text-blueStrong">
+                🛟 Support
+              </a>
+              <a href="https://www.facebook.com/groups/birthdaymessaging" target="_blank" rel="noreferrer" className="font-semibold text-textPrimary hover:text-blueStrong">
+                👥 FB Group
+              </a>
+            </div>
+            <ul className="mt-2 pt-2 border-t border-gray-100 space-y-1 text-gray-600">
               <li><kbd className="px-1 py-0.5 bg-gray-200 rounded">Alt+H</kbd> - Home</li>
               <li><kbd className="px-1 py-0.5 bg-gray-200 rounded">Alt+D</kbd> - Dashboard</li>
               <li><kbd className="px-1 py-0.5 bg-gray-200 rounded">Alt+L</kbd> - Logout</li>

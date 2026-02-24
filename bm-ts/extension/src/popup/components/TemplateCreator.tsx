@@ -318,7 +318,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                   type="button"
                   onClick={() => generateAIText('greeting')}
                   disabled={isGenerating === 'greeting'}
-                  className="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 disabled:opacity-50 flex items-center gap-1"
+                  className="btn-outline-orange"
                 >
                   {isGenerating === 'greeting' ? <>⏳ Generating...</> : <>✨ Generate</>}
                 </button>
@@ -344,7 +344,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                   type="button"
                   onClick={() => generateAIText('sentiment')}
                   disabled={isGenerating === 'sentiment'}
-                  className="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 disabled:opacity-50 flex items-center gap-1"
+                  className="btn-outline-orange"
                 >
                   {isGenerating === 'sentiment' ? <>⏳ Generating...</> : <>✨ Generate</>}
                 </button>
@@ -370,7 +370,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                   type="button"
                   onClick={() => generateAIText('closing')}
                   disabled={isGenerating === 'closing'}
-                  className="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 disabled:opacity-50 flex items-center gap-1"
+                  className="btn-outline-orange"
                 >
                   {isGenerating === 'closing' ? <>⏳ Generating...</> : <>✨ Generate</>}
                 </button>
@@ -470,14 +470,14 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isProcessingImage}
-                      className="btn-secondary btn-sm flex-1"
+                      className="btn flex-1"
                     >
                       {isProcessingImage ? 'Processing...' : 'Upload'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowLibraryPicker(!showLibraryPicker)}
-                      className="btn-secondary btn-sm flex-1"
+                      className="btn flex-1"
                     >
                       From Library
                     </button>
