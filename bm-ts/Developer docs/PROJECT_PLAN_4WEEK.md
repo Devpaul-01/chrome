@@ -3,7 +3,7 @@
 **Created:** February 24, 2026  
 **Scope:** Production launch of bm-ts from development-complete to Chrome Web Store  
 **Team Size:** 6 developers  
-**Sprint Cadence:** 1-week sprints (Mon–Fri), stand-up daily, sprint review/retro Friday EOD
+**Sprint Cadence:** 1-week sprints, stand-up Tuesday and Thursday, sprint review/retro Saturday
 
 ---
 
@@ -29,26 +29,12 @@ The codebase is **feature-complete for development**. This plan covers exclusive
 
 | Dev | Title | Domain |
 |-----|-------|--------|
-| **Dev 1** | Backend Lead | Email service, security hardening, Alembic, load testing |
-| **Dev 2** | DevOps / Infra | Cloud deployment, CI/CD, monitoring, HTTPS |
-| **Dev 3** | Backend QA | All backend testing (Phase 1 + Phase 2, integration, DB) |
-| **Dev 4** | Frontend QA | Extension testing (unit, component, E2E with Playwright) |
-| **Dev 5** | Extension UX | Onboarding flow, in-app help, UX polish |
-| **Dev 6** | Product / Docs | Chrome Web Store, privacy policy, user documentation |
-
----
-
-## Critical Path
-
-```
-Week 1: Email service (Dev1) ─────────────────────────────► Week 3: E2E pw-reset test (Dev3)
-Week 1: Cloud DB + domain (Dev2) ────────────────────────► Week 2: Deploy backend (Dev2)
-                                                         └──────► Week 3: Staging E2E (Dev4)
-Week 1: Alembic migration (Dev3) ───► Week 2: Phase 2 tests (Dev3)
-Week 2: CI/CD backend (Dev2) ────────────────────────────► Week 4: Automated coverage gate
-Week 3: All tests passing (Dev3+4) ─────────────────────► Week 4: Chrome Web Store submit
-Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 4: Store approved (Dev6)
-```
+| **BrianN** | Backend Lead | Email service, security hardening, Alembic, load testing | (BrianN)
+| **Mohamed** | DevOps / Infra | Cloud deployment, CI/CD, monitoring, HTTPS | (Mohamed)
+| **BrianK** | Backend QA | All backend testing (Phase 1 + Phase 2, integration, DB) | (BrianK)
+| **Bhagath** | Frontend QA | Extension testing (unit, component, E2E with Playwright) | (Bhagath)
+| **Annamarie** | Extension UX | Onboarding flow, in-app help, UX polish | (Annamarie)
+| **Rezene** | Product / Docs | Chrome Web Store, privacy policy, user documentation | (Rezene)
 
 ---
 
@@ -56,7 +42,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 **Sprint Goal:** Unblock production by resolving the two P0 security/functionality gaps and laying the deployment foundation.
 
-### Dev 1 — Email Service & SMTP Encryption
+### BrianN — Email Service & SMTP Encryption
 
 | # | Task | File(s) | Notes |
 |---|------|---------|-------|
@@ -72,7 +58,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 2 — Production Infrastructure Foundation
+### Mohamed — Production Infrastructure Foundation
 
 | # | Task | Notes |
 |---|------|-------|
@@ -88,7 +74,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 3 — Alembic Migration & Test Infrastructure
+### BrianK — Alembic Migration & Test Infrastructure
 
 | # | Task | File(s) | Notes |
 |---|------|---------|-------|
@@ -104,7 +90,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 4 — Frontend Test Infrastructure
+### Bhagath — Frontend Test Infrastructure
 
 | # | Task | File(s) | Notes |
 |---|------|---------|-------|
@@ -120,7 +106,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 5 — Onboarding Flow Design & Welcome Screen
+### Annamarie — Onboarding Flow Design & Welcome Screen
 
 | # | Task | File(s) | Notes |
 |---|------|---------|-------|
@@ -135,11 +121,11 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 6 — Legal, Store Account & Documentation Outline
+### Rezene — Legal, Store Account & Documentation Outline
 
 | # | Task | Notes |
 |---|------|-------|
-| 6.1 | Create Chrome Web Store developer account ($5 one-time fee) | Required before any submission |
+| 6.1 | Create Chrome Web Store developer account ($5 one-time fee) | Required before any submission | (Speak to Alex, BM-TS must replace existing chrome listing as version update)
 | 6.2 | Draft privacy policy covering: data collected, data usage, data sharing, user rights (access + deletion) | Must be hosted at a public URL (can use GitHub Pages or the production domain) |
 | 6.3 | Draft Terms of Service — basic SaaS ToS covering subscription, acceptable use, liability limits | Same hosting requirement |
 | 6.4 | Publish privacy policy and ToS to a publicly accessible URL | Required for Chrome Web Store and for the extension's `options_page` or settings link |
@@ -157,7 +143,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 1 — Production Backend Deployment Config
+### BrianN — Production Backend Deployment Config
 
 | # | Task | Notes |
 |---|------|-------|
@@ -170,7 +156,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 2 — CI/CD & Backend Production Deployment
+### Mohamed — CI/CD & Backend Production Deployment
 
 | # | Task | Notes |
 |---|------|-------|
@@ -183,7 +169,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 3 — Phase 2 Backend Tests
+### BrianK — Phase 2 Backend Tests
 
 | # | Task | File(s) |
 |---|------|---------|
@@ -200,7 +186,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 4 — Extension Component Tests
+### Bhagath — Extension Component Tests
 
 | # | Task | File(s) |
 |---|------|---------|
@@ -214,7 +200,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 5 — Onboarding Steps 2–4 & Contextual Help
+### Annamarie — Onboarding Steps 2–4 & Contextual Help
 
 | # | Task | File(s) |
 |---|------|---------|
@@ -227,7 +213,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 6 — Quick Start Guide, FAQ & Store Listing Content
+### Rezene — Quick Start Guide, FAQ & Store Listing Content
 
 | # | Task | Notes |
 |---|------|-------|
@@ -245,7 +231,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 1 — Integration Verification & Security Audit
+### BrianN — Integration Verification & Security Audit
 
 | # | Task | Notes |
 |---|------|-------|
@@ -259,7 +245,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 2 — Monitoring, Staging, Rollback
+### Mohamed — Monitoring, Staging, Rollback
 
 | # | Task | Notes |
 |---|------|-------|
@@ -272,7 +258,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 3 — Integration & Database Tests
+### BrianK — Integration & Database Tests
 
 | # | Task | File(s) |
 |---|------|---------|
@@ -286,7 +272,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 4 — Playwright E2E Setup & Critical Path Tests
+### Bhagath — Playwright E2E Setup & Critical Path Tests
 
 | # | Task | Notes |
 |---|------|-------|
@@ -300,7 +286,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 5 — Onboarding Step 5 & UX Polish Sprint
+### Annamarie — Onboarding Step 5 & UX Polish Sprint
 
 | # | Task | File(s) |
 |---|------|---------|
@@ -314,7 +300,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 6 — Promotional Assets & Store Submission Prep
+### Rezene — Promotional Assets & Store Submission Prep
 
 | # | Task | Notes |
 |---|------|-------|
@@ -333,7 +319,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 1 — Performance, Final Hardening & Beta Support
+### BrianN — Performance, Final Hardening & Beta Support
 
 | # | Task | Notes |
 |---|------|-------|
@@ -345,7 +331,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 2 — Monitoring Dashboard & Production Verification
+### Mohamed — Monitoring Dashboard & Production Verification
 
 | # | Task | Notes |
 |---|------|-------|
@@ -357,7 +343,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 3 — Coverage Gate, Regression & Docs
+### BrianK — Coverage Gate, Regression & Docs
 
 | # | Task | Notes |
 |---|------|-------|
@@ -370,7 +356,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 4 — Full E2E Suite, Browser Compat & Accessibility Audit
+### Bhagath — Full E2E Suite, Browser Compat & Accessibility Audit
 
 | # | Task | Notes |
 |---|------|-------|
@@ -383,7 +369,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 5 — Final UX, Beta Feedback Loop & Onboarding Analytics
+### Annamarie — Final UX, Beta Feedback Loop & Onboarding Analytics
 
 | # | Task | Notes |
 |---|------|-------|
@@ -396,7 +382,7 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 
 ---
 
-### Dev 6 — Chrome Web Store Submission & Beta Launch
+### Rezene — Chrome Web Store Submission & Beta Launch
 
 | # | Task | Notes |
 |---|------|-------|
@@ -427,14 +413,14 @@ Week 4: Monitoring up (Dev2) ───► Week 4: Soft launch ◄─── Week 
 ## Dependencies Between Developers
 
 ```
-Dev 2 (prod DB, Week 1) ──────────────────────────────► Dev 1 (connect prod DB, Week 2)
-Dev 2 (staging env, Week 3) ──────────────────────────► Dev 4 (E2E against staging, Week 3–4)
-Dev 1 (email service, Week 1) ────────────────────────► Dev 3 (pw-reset integration test, Week 3)
-Dev 1 (SMTP encryption, Week 1) ──────────────────────► Dev 3 (SMTP round-trip test, Week 2)
-Dev 4 (extension .zip, Week 4) ───────────────────────► Dev 6 (store upload, Week 4)
-Dev 6 (privacy policy URL, Week 1) ───────────────────► Dev 5 (link in AccountManagement, Week 2)
-Dev 3 (full test suite green, Week 4) ────────────────► Dev 6 (soft launch go/no-go, Week 4)
-Dev 4 (E2E suite green, Week 4) ──────────────────────► Dev 6 (soft launch go/no-go, Week 4)
+Mohamed (prod DB, Week 1) ──────────────────────────────► BrianN (connect prod DB, Week 2)
+Mohamed (staging env, Week 3) ──────────────────────────► Bhagath (E2E against staging, Week 3–4)
+BrianN (email service, Week 1) ────────────────────────► BrianK (pw-reset integration test, Week 3)
+BrianN (SMTP encryption, Week 1) ──────────────────────► BrianK (SMTP round-trip test, Week 2)
+Bhagath (extension .zip, Week 4) ───────────────────────► Rezene (store upload, Week 4)
+Rezene (privacy policy URL, Week 1) ───────────────────► Annamarie (link in AccountManagement, Week 2)
+BrianK (full test suite green, Week 4) ────────────────► Rezene (soft launch go/no-go, Week 4)
+Bhagath (E2E suite green, Week 4) ──────────────────────► Rezene (soft launch go/no-go, Week 4)
 ```
 
 ---

@@ -1,8 +1,8 @@
 # BirthdayMessaging bm-ts MVP Checklist
 
 
-**Last Updated:** February 24, 2026  
-**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented (15 routers + 2 inline app routes, 64 HTTP endpoints + 1 WebSocket, 14 DB tables, 38 UI components), production readiness pending
+**Last Updated:** February 25, 2026  
+**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, frontend testing framework in place (117 tests, Feb 25, 2026)
 
 ---
 
@@ -815,23 +815,33 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 ### Frontend/Extension Testing
 **Priority:** P1 - USER EXPERIENCE CRITICAL  
-**Status:** 🔴 No Tests
+**Status:** � Framework In Place — 117 unit/component tests passing (Feb 25, 2026)
+
+**Setup complete (Feb 25, 2026):**
+- ✅ Vitest + jsdom + @testing-library/react installed
+- ✅ `vitest.config.ts` configured with jsdom environment, coverage thresholds (70% lines/functions)
+- ✅ `src/test-setup.ts` — global Chrome API stub (storage.local Promise + callback dual-mode, alarms, runtime)
+- ✅ Test scripts added: `npm test`, `npm run test:watch`, `npm run test:coverage`
+- ✅ 5 test files, 117 tests, all passing
 
 #### Unit Tests
-- [ ] Add Jest/Vitest configuration
-- [ ] Test API client functions
-- [ ] Test storage utilities
-- [ ] Test message composition logic
-- [ ] Test automation utilities
+- [x] Add Jest/Vitest configuration ✅ (Vitest + jsdom, Feb 25, 2026)
+- [x] Test API client functions ✅ (`src/api/__tests__/client.test.ts` — 7 tests: ApiError, login, auth headers)
+- [x] Test storage utilities ✅ (`src/utils/__tests__/storage.test.ts` — 9 tests: tokens, backend URL)
+- [x] Test message composition logic ✅ (`src/utils/__tests__/message.test.ts` — 26 tests: shufflePick, composeMessage, selectTemplate, selectPost, resolveKeywords, assembleMessageFromTemplate)
+- [x] Test automation utilities ✅ (`src/utils/__tests__/automation.test.ts` — 22 tests: config, dedup, alarms, delays)
 - [ ] Target: >70% coverage
 
 #### Component Tests
-- [ ] Test AuthForm component
-- [ ] Test Dashboard component
-- [ ] Test TemplateCreator component
+- [x] Test Spinner component ✅ (renders, size prop, optional message)
+- [x] Test Toast component ✅ (renders, auto-close, manual close, all types)
+- [x] Test ErrorBoundary component ✅ (catches errors, custom fallback, try-again button)
+- [x] Test AuthForm component ✅ (login/register toggle, inputs, validation display, spinner on submit, message display)
+- [x] Test Dashboard component ✅ (`src/popup/__tests__/Dashboard.test.tsx` — 12 tests: loading/error/stats/automation-status/refresh, Feb 25, 2026)
+- [x] Test TemplateCreator component ✅ (`src/popup/__tests__/TemplateCreator.test.tsx` — 15 tests: form fields, validation, submit/cancel/preview, gender select, initialData, Feb 25, 2026)
+- [x] Test MessageQueue component ✅ (`src/popup/__tests__/MessageQueue.test.tsx` — 20 tests: empty/loading/list/badges/counts/cancel/retry/expand/refresh, Feb 25, 2026)
 - [ ] Test TemplateGallery component
 - [ ] Test TemplateList component
-- [ ] Test MessageQueue component
 - [ ] Test all form validation
 - [ ] Test error states
 - [ ] Test loading states
@@ -887,7 +897,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [ ] Build production extension (npm run build)
 - [ ] Test built extension thoroughly
 - [ ] Create Chrome Web Store developer account ($5 one-time fee)
-- [ ] Prepare extension listing:
+- [ ] Prepare extension listing (Legacy extension already exists in Chrome Web Store, the new build must replace it as an updated version/rebrand):
   - [ ] Extension name and description (detailed)
   - [ ] Short description (132 chars max)
   - [ ] Category selection
