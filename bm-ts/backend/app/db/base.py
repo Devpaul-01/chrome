@@ -9,3 +9,5 @@ migrations) ensures every mapped class is registered in the metadata.
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
+
+import app.db.models

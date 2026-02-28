@@ -7,21 +7,31 @@ services:
       POSTGRES_DB: birthdaymessaging
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../ddl.sql:/docker-entrypoint-initdb.d/ddl.sql:ro
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: .
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
       - .:/app
     env_file:
       - .env
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: >
+      bash -c "
+        ./wait-for-db.sh db &&
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
+      "
 
 volumes:
   postgres_data:

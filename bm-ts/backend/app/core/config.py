@@ -20,11 +20,11 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """
-    Central configuration object.  One instance is created at module-import time
-    (``settings = Settings()``) and shared across the application.
-    """
-    model_config = ConfigDict(env_file=".env", case_sensitive=False)
+    model_config = ConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore"
+    )
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/birthdaymessaging",
         alias="DATABASE_URL",
