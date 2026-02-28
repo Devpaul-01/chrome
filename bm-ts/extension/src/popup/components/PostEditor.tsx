@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import FacebookPostPreview from './FacebookPostPreview';
-import { sendBackgroundMessage } from '../api';
+import { useImageLibrary } from '../hooks/useImageLibrary';
+import ImageLibraryPicker from './ImageLibraryPicker';
 
 type PostForm = {
   content: string;
@@ -34,6 +35,9 @@ export default function PostEditor({
   const [imageError, setImageError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'create' | 'preview'>('create');
   const [isUploadingPreview, setIsUploadingPreview] = useState(false);
+  const [librarySaveMsg, setLibrarySaveMsg] = useState<string | null>(null);
+  const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+  const { images: libraryImages, isLoading: isLoadingLibrary, isFull: libraryFull, saveToLibrary } = useImageLibrary();
 
   // Optimal post dimensions
   const FACEBOOK_WIDTH = 1080;
@@ -157,37 +161,27 @@ export default function PostEditor({
   };
 
   const renderPreview = () => {
-    // Replace placeholders for preview
     const previewText = postForm.content
       .replace(/\{First_Name\}/g, 'John')
       .replace(/\{Last_Name\}/g, 'Doe')
       .replace(/\{Today\}/g, new Date().toLocaleDateString());
 
     const previewImage = postForm.image_url || null;
+    const hasImageKeyword = postForm.content.includes('[Image]');
+    const libraryPreviewUrl = libraryImages.length > 0 ? libraryImages[0].url : null;
 
     const handleUploadToLibraryLocal = async () => {
       if (!previewImage) return;
       setIsUploadingPreview(true);
+      setLibrarySaveMsg(null);
       try {
-        await sendBackgroundMessage<any>({
-          type: 'images.create',
-          payload: {
-            url: previewImage,
-            filename: `uploaded_${Date.now()}.jpg`,
-            size: previewImage.length,
-          },
-        });
-        alert('Image uploaded to your library');
+        await saveToLibrary(previewImage, `post_${Date.now()}.jpg`);
+        setLibrarySaveMsg('✓ Image saved to library');
       } catch (err) {
-        alert('Failed to upload image: ' + (err as Error).message);
+        setLibrarySaveMsg(`Error: ${(err as Error).message}`);
       } finally {
         setIsUploadingPreview(false);
       }
-    };
-
-    const handleCancelPreviewLocal = () => {
-      // clear image from form
-      setPostForm({ ...postForm, image_url: '' });
     };
 
     if (previewImage) {
@@ -202,37 +196,67 @@ export default function PostEditor({
             />
             <div className="mt-2 text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
           </div>
+          {librarySaveMsg && (
+            <p className={`text-xs font-medium ${librarySaveMsg.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
+              {librarySaveMsg}
+            </p>
+          )}
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={handleUploadToLibraryLocal}
-              disabled={isUploadingPreview}
+              disabled={isUploadingPreview || libraryFull}
               className="btn-primary flex-1"
+              title={libraryFull ? 'Library full (20/20)' : undefined}
             >
-              {isUploadingPreview ? 'Uploading...' : 'Add to Library'}
+              {isUploadingPreview ? 'Saving...' : 'Add to Library'}
             </button>
             <button
-              onClick={handleCancelPreviewLocal}
+              type="button"
+              onClick={() => setPostForm({ ...postForm, image_url: '' })}
               disabled={isUploadingPreview}
               className="btn-secondary flex-1"
             >
-              Cancel
+              Remove
             </button>
           </div>
         </div>
       );
     }
 
+    if (hasImageKeyword && libraryPreviewUrl) {
+      return (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500 italic">
+            Preview uses first library image — a random image will be picked when posting.
+          </p>
+          <FacebookPostPreview
+            imageUrl={libraryPreviewUrl}
+            text={previewText.replace(/\[Image\]/g, '')}
+            fontFamily={postForm.fontFamily}
+            fontSize={postForm.fontSize}
+            fontColor={postForm.fontColor}
+          />
+        </div>
+      );
+    }
+
+    if (hasImageKeyword && libraryImages.length === 0) {
+      return (
+        <div className="text-xs text-amber-600 bg-amber-50 rounded p-3">
+          ⚠️ [Image] keyword found but your library is empty. Upload images in Image Library first.
+        </div>
+      );
+    }
+
     return (
-      <div className="space-y-4">
-        {/* Facebook-style preview */}
-        <FacebookPostPreview
-          imageUrl={null}
-          text={previewText}
-          fontFamily={postForm.fontFamily}
-          fontSize={postForm.fontSize}
-          fontColor={postForm.fontColor}
-        />
-      </div>
+      <FacebookPostPreview
+        imageUrl={null}
+        text={previewText}
+        fontFamily={postForm.fontFamily}
+        fontSize={postForm.fontSize}
+        fontColor={postForm.fontColor}
+      />
     );
   };
 
@@ -273,15 +297,15 @@ export default function PostEditor({
 
           <div className="mb-6">
             <label className="text-xs font-semibold text-textPrimary mb-2 block">
-              ✍️ Post Content
+              Post Content
             </label>
 
             <button
               type="button"
               onClick={() => setShowKeywords(!showKeywords)}
-              className="btn-secondary text-xs py-2 px-3 mb-3"
+              className="btn mb-3"
             >
-              {showKeywords ? '▼' : '▶'} Insert Keyword
+              {showKeywords ? '− Hide Keywords' : '+ Insert Keyword'}
             </button>
 
             {showKeywords && (
@@ -289,28 +313,28 @@ export default function PostEditor({
                 <button
                   type="button"
                   onClick={() => insertKeyword('{First_Name}')}
-                  className="btn-secondary text-xs py-1.5 px-3"
+                  className="btn-sm-blue"
                 >
                   {'{First_Name}'}
                 </button>
                 <button
                   type="button"
                   onClick={() => insertKeyword('{Last_Name}')}
-                  className="btn-secondary text-xs py-1.5 px-3"
+                  className="btn-sm-blue"
                 >
                   {'{Last_Name}'}
                 </button>
                 <button
                   type="button"
                   onClick={() => insertKeyword('{Today}')}
-                  className="btn-secondary text-xs py-1.5 px-3"
+                  className="btn-sm-blue"
                 >
                   {'{Today}'}
                 </button>
                 <button
                   type="button"
                   onClick={() => insertKeyword('[Image]')}
-                  className="btn-secondary text-xs py-1.5 px-3"
+                  className="btn-sm-blue"
                 >
                   [Image]
                 </button>
@@ -370,6 +394,73 @@ export default function PostEditor({
             </div>
           </div>
 
+          {/* Image */}
+          <div className="mb-6">
+            <label className="text-xs font-semibold text-textPrimary mb-2 block">
+              \ud83d\uddbc\ufe0f Attach Image{' '}
+              <span className="text-gray-400 font-normal">(optional \u2014 or use [Image] for random)</span>
+            </label>
+            {postForm.image_url ? (
+              <div>
+                <img
+                  src={postForm.image_url}
+                  alt="Attached"
+                  className="w-full rounded-lg shadow-sm mb-2"
+                  style={{ maxHeight: '180px', objectFit: 'contain' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setPostForm({ ...postForm, image_url: '' })}
+                  className="btn-secondary text-xs py-1 px-3"
+                >
+                  Remove Image
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isProcessingImage}
+                    className="btn flex-1 text-sm"
+                  >
+                    {isProcessingImage ? '⏳ Processing...' : '📁 Upload'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowLibraryPicker(!showLibraryPicker)}
+                    className="btn flex-1 text-sm"
+                  >
+                    🖼️ From Library
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="sr-only"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
+                </div>
+                {imageError && <p className="text-xs text-red-600">{imageError}</p>}
+                {showLibraryPicker && (
+                  <ImageLibraryPicker
+                    images={libraryImages}
+                    isLoading={isLoadingLibrary}
+                    onSelect={(img) => {
+                      setPostForm({ ...postForm, image_url: img.url });
+                      setShowLibraryPicker(false);
+                    }}
+                    onClose={() => setShowLibraryPicker(false)}
+                    selectedUrl={postForm.image_url}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Spacer */}
           <div className="h-6" />
 
@@ -425,6 +516,8 @@ export default function PostEditor({
       <button
         type="submit"
         disabled={isSubmitting || contentEmpty}
+        aria-busy={isSubmitting ? 'true' : 'false'}
+        aria-disabled={isSubmitting || contentEmpty ? 'true' : 'false'}
         className="btn-primary btn-block mb-5 py-3 font-semibold"
       >
         {isSubmitting ? 'Saving...' : 'Save Post'}

@@ -1,3 +1,12 @@
+"""
+routers/schedules.py — CRUD endpoints for birthday schedule entries.
+
+  GET    /schedules          list all schedules for the current user
+  POST   /schedules          create a new schedule (unique per days_before value)
+  PUT    /schedules/{id}     update the enabled flag
+  DELETE /schedules/{id}     delete a schedule entry
+"""
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status

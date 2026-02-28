@@ -1,3 +1,9 @@
+enforced per Facebook user rather than per IP address.  This is appropriate for
+the send-birthday-message endpoint because each Facebook account should be
+capped independently regardless of the IP it connects from.
+to attach the middleware and exception handler.
+def fb_user_key(request):
+def init_rate_limiter(app):
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded

@@ -1,3 +1,28 @@
+/**
+ * messages.ts — Discriminated-union message types for the Chrome MV3 message bus.
+ *
+ * Every message passed between the popup, content script, and background service
+ * worker must be listed here.  Using a discriminated union (tagged by `type`)
+ * gives full TypeScript narrowing inside `background/index.ts#handleMessage`
+ * and at every `sendContentMessage` / `sendExtensionMessage` call site.
+ *
+ * Naming conventions:
+ *   auth.*             — authentication / account management
+ *   templates.*        — legacy template segments (greeting / body / closing)
+ *   subscription.*     — Stripe subscription status & checkout
+ *   config.*           — extension configuration (backend URL, WS config)
+ *   schedules.*        — per-contact birthday schedule CRUD
+ *   automation.*       — automation engine control & state
+ *   messages.*         — queued-message & history management
+ *   dashboard.*        — dashboard stats & birthday config
+ *   contacts.*         — contact CRUD + Facebook scraper
+ *   messageGroups.*    — message group CRUD
+ *   posts.*            — timeline post CRUD
+ *   images.*           — user image library CRUD + upload
+ *   smtp.*             — SMTP send config
+ *   messageTemplates.* — full message templates with days_in_advance support
+ */
+
 import {
   CheckoutSessionRequest,
   SegmentType,
@@ -12,7 +37,35 @@ import {
   UpdateUserProfilePayload,
   CreateMessageTemplatePayload,
   UpdateMessageTemplatePayload,
+  MessageTemplate,
+  Contact,
+  Post,
 } from '../api/client';
+
+/**
+ * Payload dispatched from background → content script to run the full automation loop.
+ * currentDayTemplates: templates for days_in_advance === 0 (birthday today).
+ * advanceEntries: templates for days_in_advance > 0 paired with the matching contacts.
+ * followUpEntries: templates for days_in_advance < 0 paired with the matching contacts.
+ * posts: timeline posts available for today.
+ * contacts: full contacts list (used for gender lookup + sync).
+ * sentToday: profile URLs already processed today (dedup guard).
+ * maxMessages: cap per run (0 = unlimited).
+ */
+export interface AutomationRunPayload {
+  currentDayTemplates: MessageTemplate[];
+  advanceEntries: Array<{ template: MessageTemplate; contacts: Contact[] }>;
+  followUpEntries: Array<{ template: MessageTemplate; contacts: Contact[] }>;
+  posts: Post[];
+  contacts: Contact[];
+  sentToday: string[];
+  maxMessages: number;
+}
+
+/** Messages sent from background service worker → content script. */
+export type ContentScriptMessage =
+  | { type: 'automation.scan' }
+  | { type: 'automation.runFull'; payload: AutomationRunPayload };
 
 export type BackgroundMessage =
   // Auth messages
@@ -51,6 +104,9 @@ export type BackgroundMessage =
   | { type: 'automation.getConfig' }
   | { type: 'automation.setEnabled'; payload: { enabled: boolean } }
   | { type: 'automation.setInterval'; payload: { minutes: number } }
+  | { type: 'automation.setMaxMessages'; payload: { max: number } }
+  | { type: 'automation.clearSentToday' }
+  | { type: 'automation.recordSent'; payload: { friendId: string; friendName: string } }
   // Message queue messages
   | { type: 'messages.listQueue' }
   | {
@@ -71,6 +127,7 @@ export type BackgroundMessage =
   | { type: 'contacts.update'; payload: { id: string } & UpdateContactPayload }
   | { type: 'contacts.delete'; payload: { id: string } }
   | { type: 'contacts.bulkCreate'; payload: CreateContactPayload[] }
+  | { type: 'contacts.scrapeFromFacebook' }
   // Message Group messages
   | { type: 'messageGroups.list' }
   | { type: 'messageGroups.create'; payload: CreateMessageGroupPayload }
@@ -84,6 +141,7 @@ export type BackgroundMessage =
   // Image messages
   | { type: 'images.list' }
   | { type: 'images.create'; payload: CreateImagePayload }
+  | { type: 'images.uploadFile'; payload: { filename: string; data: string; size: number } }
   | { type: 'images.delete'; payload: { id: string } }
   // SMTP messages
   | { type: 'smtp.getConfig' }

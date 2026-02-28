@@ -1,3 +1,15 @@
+"""
+schemas/template.py — Pydantic schemas for template-segment CRUD endpoints.
+
+  SegmentTypeEnum       — GREETING / BODY / CLOSING segment classifications
+  TemplateSegmentCreate — POST /templates/ body
+  TemplateSegmentUpdate — PUT  /templates/{id} body (content/label optional)
+  TemplateSegmentOut    — full segment response (ORM-mapped)
+
+Segments are composed into birthday messages at send-time by
+``services/templates.py::compose_message``.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime

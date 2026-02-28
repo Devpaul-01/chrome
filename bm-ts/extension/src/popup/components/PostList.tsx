@@ -176,11 +176,13 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
 
                   const genderLabel =
                     gender === 'MALE' ? 'Male' : gender === 'FEMALE' ? 'Female' : 'All';
+                  const genderEmoji =
+                    gender === 'MALE' ? '♂️' : gender === 'FEMALE' ? '♀️' : '✨';
 
                   return (
                     <div key={gender} className="mb-6">
                       <h3 className="text-sm font-bold text-textPrimary mb-3 pb-2 border-b-2 border-orangeBrand">
-                        {genderEmoji} {gender} Posts ({genderPosts.length})
+                        {genderEmoji} {genderLabel} Posts ({genderPosts.length})
                       </h3>
 
                       {genderPosts.map((post) => (

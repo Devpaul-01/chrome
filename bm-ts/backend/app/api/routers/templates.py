@@ -1,3 +1,15 @@
+"""
+routers/templates.py — CRUD endpoints for template segments.
+
+  POST   /templates/       create a segment (GREETING / BODY / CLOSING)
+  GET    /templates/       list segments (optional segment_type filter)
+  PUT    /templates/{id}   update content or label of a segment
+  DELETE /templates/{id}   soft-delete a segment (sets deleted_at)
+
+Segments are the atomic building-blocks composed by
+``services/templates.py::compose_message`` into full birthday messages.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -27,6 +39,7 @@ async def create_template(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> TemplateSegmentOut:
+    """Create a new template segment owned by the current user."""
     segment = TemplateSegment(
         user_id=current_user.id,
         segment_type=data.segment_type.value,
@@ -45,6 +58,7 @@ async def list_templates(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[TemplateSegmentOut]:
+    """List all (non-deleted) template segments; optionally filtered by ``segment_type``."""
     stmt = select(TemplateSegment).where(
         TemplateSegment.user_id == current_user.id,
         TemplateSegment.deleted_at.is_(None),
@@ -87,6 +101,7 @@ async def delete_template(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
+    """Soft-delete a template segment by setting its ``deleted_at`` timestamp."""
     stmt = select(TemplateSegment).where(
         TemplateSegment.id == segment_id,
         TemplateSegment.user_id == current_user.id,

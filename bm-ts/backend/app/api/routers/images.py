@@ -107,7 +107,7 @@ async def list_images(
     """List all images for the current user."""
     stmt = select(UserImage).where(
         UserImage.user_id == current_user.id
-    ).order_by(UserImage.uploaded_at.desc())
+    ).order_by(UserImage.created_at.desc())
     
     result = await db.execute(stmt)
     return result.scalars().all()

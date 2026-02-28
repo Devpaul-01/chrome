@@ -1,5 +1,15 @@
+"""
+create_tables_async.py — One-shot async script to create all database tables.
+
+Runs ``Base.metadata.create_all`` through an async SQLAlchemy engine.  Note
+that ORM models must already be imported before calling ``create_all`` so
+their metadata is registered on ``Base``.  If tables are missing, prefer
+``create_tables_async2.py`` which explicitly imports the models module first.
+
+Usage:
+    python create_tables_async.py
+"""
 import asyncio
-from app.db.base import Base
 from app.core.config import settings
 from sqlalchemy.ext.asyncio import create_async_engine
 

@@ -1,3 +1,15 @@
+"""
+schemas/post.py — Pydantic schemas for timeline post CRUD endpoints.
+
+  PostCreate  — POST /api/posts body
+  PostUpdate  — PUT  /api/posts/{id} body (all fields optional)
+  PostOut     — response model with font customisation fields (ORM-mapped)
+
+Font fields (``font_family``, ``font_size``, ``font_color``) are used by the
+extension's canvas compositor (``utils/image.ts``) when attaching an image
+overlay to a timeline post.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime

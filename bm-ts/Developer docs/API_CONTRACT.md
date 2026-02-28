@@ -275,7 +275,7 @@ This document remains frozen until the backend implementation changes; all clien
 - **Response**: Created schedule object
 - **Errors**: 400 – duplicate schedule for same days_before value
 
-#### `PATCH /api/schedules/{schedule_id}`
+#### `PUT /api/schedules/{schedule_id}`
 - **Auth**: Bearer
 - **Request**: `{ "enabled": false }` (partial update)
 - **Response**: Updated schedule object

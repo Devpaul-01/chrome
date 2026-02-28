@@ -412,8 +412,10 @@ export async function submitPost(): Promise<boolean> {
     const postButtonSelectors = [
       '[role="button"][aria-label="Post"]',
       '[role="button"][aria-label="Share"]',
-
       '[aria-label*="Post"][role="button"]',
+      // Legacy pattern: Facebook sometimes renders an Enter/Post div
+      'div[aria-label*="enter" i]',
+      'div[aria-label*="post" i][role="button"]',
     ];
 
     let postButton: HTMLElement | null = null;
@@ -445,6 +447,17 @@ export async function submitPost(): Promise<boolean> {
     }
 
     if (!postButton) {
+      // Final fallback: dispatch Enter keydown on the active post textbox.
+      // This mirrors the legacy approach for dialogs that don't expose a Post button.
+      const textbox =
+        document.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]') ??
+        document.activeElement as HTMLElement | null;
+      if (textbox) {
+        console.log('[BM Timeline] No Post button found — dispatching Enter key on textbox');
+        textbox.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+        await delay(LONG_DELAY);
+        return true;
+      }
       console.error('[BM Timeline] Could not find Post button');
       return false;
     }

@@ -38,7 +38,7 @@ export default function Dashboard({ onClose }: DashboardProps) {
     // Subscribe to real-time dashboard updates
     const unsubscribeDashboard = wsClient.on('dashboard_update', (data) => {
       console.log('[Dashboard] Real-time update:', data);
-      setStats(data);
+      setStats(data as DashboardStats);
     });
 
     // Also listen to message updates to refresh stats

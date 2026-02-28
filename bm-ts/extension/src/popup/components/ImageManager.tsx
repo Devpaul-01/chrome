@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { sendBackgroundMessage } from '../api';
+import { useImageLibrary, MAX_LIBRARY_IMAGES } from '../hooks/useImageLibrary';
 
 export interface UserImage {
   id: string;
@@ -20,8 +20,7 @@ export interface ImageManagerHandle {
 const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClose }, ref) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [images, setImages] = useState<UserImage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { images, isLoading, loadError, isFull, reload: loadImages, saveToLibrary, deleteImage } = useImageLibrary();
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,24 +38,8 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
   }));
 
   useEffect(() => {
-    loadImages();
     headingRef.current?.focus();
   }, []);
-
-  async function loadImages() {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await sendBackgroundMessage<UserImage[]>({
-        type: 'images.list',
-      });
-      setImages(data);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   const resizeImageForFacebook = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -149,28 +132,21 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
 
   async function handleUploadToLibrary() {
     if (!previewImage || !selectedFile) return;
+    if (isFull) {
+      setError(`Library full (${MAX_LIBRARY_IMAGES}/${MAX_LIBRARY_IMAGES}). Delete an image first.`);
+      return;
+    }
 
     setIsUploading(true);
     setError(null);
 
     try {
-      // Upload the resized image
-      await sendBackgroundMessage<void>({
-        type: 'images.uploadFile',
-        payload: {
-          filename: selectedFile.name,
-          data: previewImage,
-          size: previewImage.length,
-        },
-      });
+      await saveToLibrary(previewImage, selectedFile.name);
 
-      // Clear preview and reload
+      // Clear preview
       setPreviewImage(null);
       setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      await loadImages();
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -193,13 +169,8 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
 
   async function handleDelete(id: string) {
     if (!confirm('Are you sure you want to delete this image?')) return;
-
     try {
-      await sendBackgroundMessage<void>({
-        type: 'images.delete',
-        payload: { id },
-      });
-      await loadImages();
+      await deleteImage(id);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -219,7 +190,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
 
       <p className="text-xs text-gray-600 mb-5">
         Upload and manage images for your birthday posts. Use [Image] in messages to insert a random
-        image.
+        image. <span className={`font-semibold ${isFull ? 'text-red-600' : 'text-gray-500'}`}>{images.length} / {MAX_LIBRARY_IMAGES} images used.</span>
       </p>
 
       <div className="card mb-5">
@@ -253,49 +224,52 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
             </div>
           </div>
         ) : (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+          <div className="py-2">
             {isProcessing ? (
-              <div className="py-6">
+              <div className="py-6 text-center">
                 <div className="text-4xl mb-3">⏳</div>
                 <p className="text-sm text-gray-600 font-medium">Optimizing image...</p>
                 <p className="text-xs text-gray-500 mt-1">Resizing to 1080×1350px</p>
               </div>
             ) : (
               <>
-                <div className="text-4xl mb-3">🖼️</div>
-                <p className="text-sm font-medium text-gray-700 mb-1">Click to add an image</p>
-                <p className="text-xs text-gray-500 mb-4">
-                  Will be automatically resized to 1080×1350px
-                </p>
-                <div className="flex gap-2 justify-center">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="btn-primary px-6 py-2 text-sm font-medium"
-                  >
-                    Upload Image
-                  </button>
-                  <button
-                    onClick={handleGenerateAI}
-                    disabled={isUploading}
-                    className="btn-secondary px-6 py-2 text-sm font-medium"
-                  >
-                    Generate with AI
-                  </button>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  disabled={isUploading}
-                  className="hidden-input"
-                  title="Upload image file"
-                  placeholder="Select image file"
-                />
-                <p className="text-xs text-gray-400 mt-4">
-                  Max 10MB • Auto-optimized for Facebook posts
-                </p>
+                {isFull ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm font-medium text-red-600 mb-1">Library full ({MAX_LIBRARY_IMAGES}/{MAX_LIBRARY_IMAGES})</p>
+                    <p className="text-xs text-gray-500">Delete an image below to make room.</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-textMuted mb-3">
+                      Will be automatically resized to 1080×1350px • Max 10MB
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="btn flex-1"
+                      >
+                        Upload Image
+                      </button>
+                      <button
+                        onClick={handleGenerateAI}
+                        disabled={isUploading}
+                        className="btn-outline-orange flex-1"
+                      >
+                        Generate with AI
+                      </button>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      disabled={isUploading}
+                      style={{ display: 'none' }}
+                      aria-hidden="true"
+                    />
+                  </>
+                )}
               </>
             )}
           </div>
@@ -308,11 +282,27 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
         </div>
       )}
 
+      {loadError && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+          <span className="text-amber-600 text-xs flex-1">
+            ⚠️ Could not sync library: {loadError}
+          </span>
+          <button
+            onClick={() => void loadImages()}
+            className="text-xs text-orangeBrand font-medium underline shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="text-center py-8 text-gray-500">Loading images...</div>
       ) : (
         <div>
-          <h3 className="text-sm font-bold text-textPrimary mb-4">Your Images ({images.length})</h3>
+          <h3 className="text-sm font-bold text-textPrimary mb-4">
+            Your Images ({images.length} / {MAX_LIBRARY_IMAGES})
+          </h3>
 
           {images.length === 0 ? (
             <div className="text-center py-8 text-gray-500 bg-white bg-opacity-80 rounded-lg mb-5">
@@ -334,16 +324,16 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(({ onClos
                     {image.filename}
                   </p>
                   <p className="text-xs text-gray-400 mb-2">{(image.size / 1024).toFixed(1)} KB</p>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1.5">
                     <button
                       onClick={() => copyUrl(image.url)}
-                      className="btn-secondary flex-1 text-xs py-1"
+                      className="btn-sm-blue flex-1"
                     >
                       Copy
                     </button>
                     <button
                       onClick={() => handleDelete(image.id)}
-                      className="flex-1 text-xs py-1 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium"
+                      className="btn-sm-danger flex-1"
                     >
                       Delete
                     </button>

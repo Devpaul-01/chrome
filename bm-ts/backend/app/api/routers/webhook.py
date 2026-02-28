@@ -1,3 +1,22 @@
+"""
+api/routers/webhook.py — Stripe webhook handler.
+
+Mounted under ``/stripe`` (set in main.py).
+
+Endpoints
+---------
+POST /stripe/webhook   Verify the Stripe-Signature header, parse the event,
+                       and update the local subscription record for the
+                       relevant user on subscription lifecycle events.
+
+Only ``customer.subscription.created``, ``customer.subscription.updated``,
+and ``customer.subscription.deleted`` events are acted upon; all other event
+types return ``{"received": True}`` immediately.
+
+The payload is validated via Stripe's HMAC signature before any database
+operations are performed, so spoofed requests are rejected before touching data.
+"""
+
 from __future__ import annotations
 
 from typing import Mapping

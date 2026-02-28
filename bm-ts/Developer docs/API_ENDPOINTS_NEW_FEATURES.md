@@ -9,7 +9,7 @@ This document describes the new features added in Phase 2. All routers, schemas,
 - ✅ **Endpoints are fully functional and return correct responses**
 
 **Backend-frontend integration is complete.**
-See [SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md Section 9](../SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md#9-unregistered-features--future-work) for historical context.
+See [SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md Section 10](../SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md#10-production-gaps--future-work) 
 
 **For ACTIVE endpoints, see below.**
 
@@ -191,7 +191,7 @@ Authorization: Bearer <token>
   "url": "https://example.com/image.jpg",
   "filename": "image.jpg",
   "size": 0,
-  "uploaded_at": "2026-02-06T10:00:00Z"
+  "created_at": "2026-02-06T10:00:00Z"
 }
 ```
 
@@ -215,12 +215,12 @@ Authorization: Bearer <token>
   "url": "data:image/jpeg;base64,/9j/4AAQSkZJRg...",
   "filename": "birthday.jpg",
   "size": 524288,
-  "uploaded_at": "2026-02-06T10:00:00Z"
+  "created_at": "2026-02-06T10:00:00Z"
 }
 ```
 
 **Validation:**
-- Max file size: 5MB (5,242,880 bytes)
+- Max file size: 10 MB (10,485,760 bytes)
 - Data must be valid base64 encoded
 
 ### List Images
@@ -237,7 +237,7 @@ Authorization: Bearer <token>
     "url": "https://example.com/image.jpg",
     "filename": "image.jpg",
     "size": 524288,
-    "uploaded_at": "2026-02-06T10:00:00Z"
+    "created_at": "2026-02-06T10:00:00Z"
   }
 ]
 ```
@@ -256,7 +256,7 @@ DELETE /api/images/{image_id}
 Authorization: Bearer <token>
 ```
 
-**Response:** `204 No Content`
+**Response:** `200 OK` — `{"status": "deleted"}`
 
 ---
 
@@ -269,7 +269,7 @@ Content-Type: application/json
 Authorization: Bearer <token>
 
 {
-  "mode": "advance",
+  "mode": "EARLY",
   "days_offset": -3,
   "message_group_id": "uuid",
   "post_id": "uuid",
@@ -280,15 +280,15 @@ Authorization: Bearer <token>
 ```
 
 **Validation Rules:**
-- `mode: "advance"` → `days_offset` must be -7 to -1
-- `mode: "normal"` → `days_offset` must be 0
-- `mode: "followup"` → `days_offset` must be 1 to 7
+- `mode: "EARLY"` → `days_offset` must be -7 to -1
+- `mode: "ON_DAY"` → `days_offset` must be 0
+- `mode: "BELATED"` → `days_offset` must be 1 to 7
 
 **Response:** `201 Created`
 ```json
 {
   "id": "uuid",
-  "mode": "advance",
+  "mode": "EARLY",
   "days_offset": -3,
   "message_group_id": "uuid",
   "post_id": "uuid",
@@ -302,13 +302,13 @@ Authorization: Bearer <token>
 
 ### List Birthday Configs
 ```http
-GET /api/birthday-configs?mode=advance&enabled=true
+GET /api/birthday-configs?mode=EARLY&enabled=true
 Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
-- `mode` (optional): Filter by mode (advance, normal, followup)
-- `enabled` (optional): Filter by enabled status (true, false)
+- `mode` (optional): Filter by mode (`EARLY`, `ON_DAY`, `BELATED`)
+- `enabled` (optional): Filter by enabled status (`true`, `false`)
 
 **Response:** `200 OK`
 
@@ -359,6 +359,247 @@ Authorization: Bearer <token>
 
 ---
 
+## Contacts (ACTIVE)
+
+### Create Contact
+```http
+POST /api/contacts
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "name": "Jane Smith",
+  "facebook_id": "1234567890",
+  "birthday": "1990-07-15",
+  "gender": "FEMALE",
+  "notes": "Friend from college"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": "uuid",
+  "name": "Jane Smith",
+  "facebook_id": "1234567890",
+  "birthday": "1990-07-15",
+  "gender": "FEMALE",
+  "notes": "Friend from college",
+  "created_at": "2026-02-06T10:00:00Z",
+  "updated_at": "2026-02-06T10:00:00Z"
+}
+```
+
+### Bulk Create Contacts
+```http
+POST /api/contacts/bulk
+Content-Type: application/json
+Authorization: Bearer <token>
+
+[
+  { "name": "Jane Smith", "facebook_id": "111", "birthday": "1990-07-15", "gender": "FEMALE" },
+  { "name": "John Doe",   "facebook_id": "222", "birthday": "1985-03-22", "gender": "MALE" }
+]
+```
+
+**Response:** `201 Created` — array of created contacts
+
+### List Contacts
+```http
+GET /api/contacts
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK` — array of contacts
+
+### Get Contact
+```http
+GET /api/contacts/{contact_id}
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK` or `404 Not Found`
+
+### Update Contact
+```http
+PUT /api/contacts/{contact_id}
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "name": "Jane Doe",
+  "gender": "FEMALE"
+}
+```
+
+**Response:** `200 OK`
+
+### Delete Contact
+```http
+DELETE /api/contacts/{contact_id}
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK` — `{ "status": "deleted" }`
+
+---
+
+## SMTP Configuration (ACTIVE)
+
+### Get SMTP Config
+```http
+GET /smtp/config
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK`
+```json
+{
+  "id": "uuid",
+  "host": "smtp.gmail.com",
+  "port": 587,
+  "username": "user@gmail.com",
+  "use_tls": true,
+  "from_address": "user@gmail.com",
+  "created_at": "2026-02-06T10:00:00Z",
+  "updated_at": "2026-02-06T10:00:00Z"
+}
+```
+
+**Note:** Password field is not returned in responses.
+
+### Update SMTP Config
+```http
+PUT /smtp/config
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "host": "smtp.gmail.com",
+  "port": 587,
+  "username": "user@gmail.com",
+  "password": "app-specific-password",
+  "use_tls": true,
+  "from_address": "user@gmail.com"
+}
+```
+
+**Response:** `200 OK`
+
+> ⚠️ **Security Note:** Passwords are currently stored as plaintext (TEXT column in PostgreSQL). Encrypt at rest before production deployment.
+
+---
+
+## Account Management (ACTIVE)
+
+### Update Profile
+```http
+PUT /auth/profile
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "name": "Alice Johnson",
+  "timezone": "America/New_York"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "id": "uuid",
+  "email": "alice@example.com",
+  "metadata": {
+    "name": "Alice Johnson",
+    "timezone": "America/New_York"
+  }
+}
+```
+
+### Delete Account
+```http
+DELETE /auth/account
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK` — `{ "status": "deleted" }`
+
+> ⚠️ **Warning:** This permanently deletes the user and all associated data (cascade delete).
+
+---
+
+## Message Templates (ACTIVE)
+
+These are complete pre-built message templates (distinct from individual `TemplateSegments`).
+
+### Create Message Template
+```http
+POST /api/message-templates
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "name": "Warm Female Birthday",
+  "content": "Happy birthday {First_Name}! Wishing you a wonderful day! 🎂",
+  "gender": "FEMALE"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": "uuid",
+  "name": "Warm Female Birthday",
+  "content": "Happy birthday {First_Name}! Wishing you a wonderful day! 🎂",
+  "gender": "FEMALE",
+  "created_at": "2026-02-06T10:00:00Z",
+  "updated_at": "2026-02-06T10:00:00Z"
+}
+```
+
+### List Message Templates
+```http
+GET /api/message-templates?gender=FEMALE
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `gender` (optional): Filter by gender (`MALE`, `FEMALE`, `NEUTRAL`, `ALL`)
+
+**Response:** `200 OK` — array of message templates
+
+### Get Message Template
+```http
+GET /api/message-templates/{template_id}
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK` or `404 Not Found`
+
+### Update Message Template
+```http
+PUT /api/message-templates/{template_id}
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "name": "Updated Template",
+  "content": "Hey {First_Name}, happy birthday! 🎉"
+}
+```
+
+**Response:** `200 OK`
+
+### Delete Message Template
+```http
+DELETE /api/message-templates/{template_id}
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK` — `{ "status": "deleted" }`
+
+---
+
 ## Error Responses
 
 All endpoints may return the following error responses:
@@ -401,17 +642,73 @@ All endpoints may return the following error responses:
 
 ## Keyword Replacement
 
-Posts and messages support dynamic keywords that are replaced at send time:
+Posts and message templates support dynamic keywords replaced at send time by `resolveKeywords()` in `utils/message.ts`:
 
-- `{First_Name}` - Friend's first name
-- `{Last_Name}` - Friend's last name
-- `{Today}` - Current date (formatted)
-- `[Image]` - Random image from user's library
+| Keyword | Replacement | Notes |
+|---------|-------------|-------|
+| `[Tag Person]` | Friend's full name | Exact string used in DM templates |
+| `[Today]` | Localised date string (e.g. "February 21") | Uses `toLocaleDateString('en-US', {month:'long', day:'numeric'})` |
+| `[Image]` | *(stripped / empty string)* | Images are attached separately; this placeholder is removed from text |
+| `{First_Name}` | Friend's first name | Legacy-style merge tag — supported by backend docs but resolved separately |
+| `{Last_Name}` | Friend's last name | As above |
 
-**Example:**
+**Example (DM assembled from MessageTemplate):**
 ```
-Input: "Happy birthday {First_Name}! Hope you have a great day. [Image]"
-Output: "Happy birthday John! Hope you have a great day. https://example.com/image.jpg"
+greeting:  "Hey [Tag Person]!"
+sentiment: "Wishing you an amazing birthday on [Today]."
+closing:   "Hope this year is your best yet! [Image]"
+
+Output: "Hey John! Wishing you an amazing birthday on February 21. Hope this year is your best yet!"
+```
+
+---
+
+## Automation Extension Messages
+
+The extension background service worker exposes additional message types for controlling the automation pipeline. These are sent via `chrome.runtime.sendMessage()` from the popup (not HTTP endpoints).
+
+### `automation.scanFacebook`
+Triggers a full automation run: fetches templates/posts/contacts, groups by `days_in_advance`, opens `facebook.com/birthdays`, dispatches `automation.runFull` to the content script.
+
+### `automation.getConfig`
+Returns the current `AutomationConfig` from `chrome.storage.local`:
+```json
+{
+  "enabled": true,
+  "checkInterval": 60,
+  "lastCheck": "2026-02-21T10:00:00.000Z",
+  "nextCheck": "2026-02-21T11:00:00.000Z",
+  "maxMessages": 0
+}
+```
+
+### `automation.setEnabled`
+Payload: `{ enabled: boolean }` — enables/disables scheduled automation.
+
+### `automation.setInterval`
+Payload: `{ minutes: number }` (minimum 30) — sets how often the alarm fires.
+
+### `automation.setMaxMessages`
+Payload: `{ max: number }` — caps messages per run. `0` = unlimited.
+
+### `automation.clearSentToday`
+No payload. Clears the `chrome.storage.local` deduplication list so all contacts can be processed again today.
+
+### `automation.recordSent`
+Payload: `{ friendId: string; friendName: string }` — sent from the content script after each successful DM. Adds `friendId` (profile URL or generated ID) to the sent-today list.
+
+### `automation.runFull` (background → content script)
+Dispatched from the background to the Facebook birthdays tab containing an `AutomationRunPayload`:
+```typescript
+{
+  currentDayTemplates: MessageTemplate[];   // days_in_advance === 0
+  advanceEntries: Array<{ template: MessageTemplate; contacts: Contact[] }>; // > 0
+  followUpEntries: Array<{ template: MessageTemplate; contacts: Contact[] }>; // < 0
+  posts: Post[];
+  contacts: Contact[];     // full list for gender lookup + sync
+  sentToday: string[];     // profile URLs already processed today
+  maxMessages: number;     // 0 = unlimited
+}
 ```
 
 ---
@@ -463,7 +760,7 @@ curl -X GET http://localhost:8000/api/posts \
 
 **Note:** The endpoints documented above are now ACTIVE. The current database schema (applied via docker-compose) includes all tables for Phase 1 and Phase 2 features.
 
-### Current Active Schema (11 Tables)
+### Current Active Schema (14 Tables)
 
 The active schema includes:
 - users
@@ -477,6 +774,8 @@ The active schema includes:
 - posts
 - message_groups
 - user_images
+- smtp_configs
+- message_templates
 
 ### Current Development Setup (Docker)
 
@@ -493,28 +792,38 @@ The schema is loaded from `ddl.sql` during container initialization. This create
 
 ## Notes
 
-⚠️ **REMINDER: These endpoints are NOT ACTIVE in the current system.**
-
-When these features are activated, the following will apply:
-
-1. **Authentication Required**: All endpoints require a valid JWT token
+1. **Authentication Required**: All endpoints require a valid JWT Bearer token
 2. **User Isolation**: Users can only access their own resources
 3. **Cascade Deletes**: Deleting a user deletes all related resources
-4. **Image Storage**: Currently stores URLs/base64; production should use cloud storage (S3, GCS, etc.)
+4. **Image Storage**: Currently stores URLs/base64 data; production should use cloud storage (S3, GCS, etc.)
 5. **Archive Mode**: When enabled, prevents sending duplicate birthday messages across years
-6. **Days Offset**: Negative for advance, zero for normal, positive for followup
+6. **Days Offset**: Negative for EARLY, zero for ON_DAY, positive for BELATED
+7. **SMTP Passwords**: Currently stored as plaintext — must be encrypted before production deployment
+8. **Send Birthday Message** (`POST /send-birthday-message`): Backend returns `{"status":"sent"}` stub. Actual sending is performed client-side by the content script automation pipeline (`runFullAutomation` in `content/index.ts`) — the API endpoint exists for logging/record-keeping only
 
-## Active Endpoints (Phase 1)
+## All Active Endpoints
 
-For documentation of currently active endpoints, refer to:
-- **Authentication**: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`
-- **Password Reset**: `POST /auth/request-password-reset`, `POST /auth/reset-password`, `POST /auth/change-password`
-- **Templates**: `POST /templates/`, `GET /templates/`, `PUT /templates/{id}`, `DELETE /templates/{id}`
-- **Subscriptions**: `GET /subscription/status`, `POST /subscription/create-checkout-session`
-- **Schedules**: `GET /api/schedules`, `POST /api/schedules`, `PATCH /api/schedules/{id}`, `DELETE /api/schedules/{id}`
-- **Message Queue**: `GET /api/messages/queue`, `POST /api/messages/queue`, `PATCH /api/messages/queue/{id}`, `DELETE /api/messages/queue/{id}`, `POST /api/messages/queue/{id}/retry`
-- **Message History**: `GET /api/messages/history`, `DELETE /api/messages/history/{id}`
-- **Dashboard**: `GET /api/dashboard/stats`
-- **Stripe Webhook**: `POST /stripe/webhook`
+### Phase 1 — Auth & Core
+- `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`
+- `GET /auth/me`, `PUT /auth/profile`, `DELETE /auth/account`
+- `POST /auth/request-password-reset` *(rate-limited)*, `POST /auth/reset-password`, `POST /auth/change-password`
+- `GET /templates/`, `POST /templates/`, `PUT /templates/{id}`, `DELETE /templates/{id}`
+- `GET /subscription/status`, `POST /subscription/create-checkout-session`
+- `POST /stripe/webhook`
+- `GET /api/schedules`, `POST /api/schedules`, `PUT /api/schedules/{id}`, `DELETE /api/schedules/{id}`
+- `GET /api/messages/queue`, `POST /api/messages/queue`, `PATCH /api/messages/queue/{id}`, `DELETE /api/messages/queue/{id}`, `POST /api/messages/queue/{id}/retry`
+- `GET /api/messages/history`, `DELETE /api/messages/history/{id}`
+- `GET /api/dashboard/stats`
+- `WS  /ws` (WebSocket)
 
-See [BACKEND_TESTING_GUIDE.md](../BACKEND_TESTING_GUIDE.md) for examples of testing active endpoints.
+### Phase 2 — Extended Features
+- `GET /api/contacts`, `POST /api/contacts`, `POST /api/contacts/bulk`, `GET /api/contacts/{id}`, `PUT /api/contacts/{id}`, `DELETE /api/contacts/{id}`
+- `GET /api/message-groups`, `POST /api/message-groups`, `GET /api/message-groups/{id}`, `PUT /api/message-groups/{id}`, `DELETE /api/message-groups/{id}`
+- `GET /api/posts`, `POST /api/posts`, `GET /api/posts/{id}`, `PUT /api/posts/{id}`, `DELETE /api/posts/{id}`
+- `GET /api/images`, `POST /api/images/upload`, `POST /api/images/upload-file`, `GET /api/images/{id}`, `DELETE /api/images/{id}`
+- `GET /api/birthday-configs`, `POST /api/birthday-configs`, `GET /api/birthday-configs/{id}`, `PUT /api/birthday-configs/{id}`, `PATCH /api/birthday-configs/{id}/toggle`, `DELETE /api/birthday-configs/{id}`
+- `GET /smtp/config`, `PUT /smtp/config`
+- `GET /api/message-templates`, `POST /api/message-templates`, `GET /api/message-templates/{id}`, `PUT /api/message-templates/{id}`, `DELETE /api/message-templates/{id}`
+
+See [BACKEND_TESTING_GUIDE.md](../BACKEND_TESTING_GUIDE.md) for curl/PowerShell examples.
+

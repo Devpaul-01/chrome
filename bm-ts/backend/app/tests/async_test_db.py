@@ -1,5 +1,17 @@
+"""
+tests/async_test_db.py — Standalone async script to verify live database connectivity and table presence.
+
+Connects directly with a hardcoded URL (update before running), checks that
+every expected table exists in the ``public`` schema, and runs a ``SELECT``
+against each one to confirm basic query access.
+
+Usage:
+    python -m app.tests.async_test_db
+
+Note: This is a development diagnostic script, not a pytest test.
+Update ``DATABASE_URL`` or switch to an env-var before team use.
+"""
 import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 
 DATABASE_URL = "postgresql+asyncpg://postgres:password@localhost:5432/birthdaymessaging"

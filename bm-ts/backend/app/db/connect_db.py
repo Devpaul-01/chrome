@@ -1,4 +1,10 @@
-# connects the database to the backend of web app and prints all tables
+"""
+db/connect_db.py — Standalone script that initialises the database and prints all User rows.
+
+Run directly (``python connect_db.py``) to verify connectivity and confirm
+that ``Base.metadata.create_all`` can reach the target database.  Intended
+for local development / debugging only — not imported by the application.
+"""
 import asyncio
 from sqlalchemy import select
 

@@ -1,4 +1,13 @@
-# contains methods for configuration of database connection
+"""
+db/db_config.py — Database connection-string configuration for standalone scripts.
+
+Reads ``DATABASE_URL`` (preferred) or constructs a ``postgresql://`` connection
+string from individual ``DB_USER`` / ``DB_PASS`` / ``DB_HOST`` / ``DB_PORT`` /
+``DB_NAME`` environment variables loaded from a ``.env`` file.
+
+Used by ``connect_db.py`` and any offline tooling that needs a DB URL without
+going through FastAPI's ``config.py`` / ``pydantic_settings`` path.
+"""
 import re
 
 from dataclasses import dataclass

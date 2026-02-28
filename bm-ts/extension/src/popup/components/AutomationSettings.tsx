@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import Spinner from './Spinner';
 import { getErrorMessage, logError } from '../../utils/errors';
 
+const ACTION_DELAY_KEY = 'bm_action_delay_minutes';
+
 interface AutomationConfig {
   enabled: boolean;
   checkInterval: number; // minutes
   lastCheck: string | null;
   nextCheck: string | null;
+  maxMessages: number; // 0 = unlimited
 }
 
 interface AutomationSettingsProps {
@@ -17,14 +20,16 @@ interface AutomationSettingsProps {
 export default function AutomationSettings({ onClose, showClose = true }: AutomationSettingsProps) {
   const [config, setConfig] = useState<AutomationConfig>({
     enabled: false,
-    checkInterval: 60, // Default: 1 hour
+    checkInterval: 60,
     lastCheck: null,
     nextCheck: null,
+    maxMessages: 0,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionDelayMinutes, setActionDelayMinutes] = useState(1);
 
   useEffect(() => {
     loadConfig();
@@ -39,6 +44,10 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
       });
       if (data) {
         setConfig(data);
+      }
+      const stored = await chrome.storage.local.get(ACTION_DELAY_KEY);
+      if (typeof stored[ACTION_DELAY_KEY] === 'number') {
+        setActionDelayMinutes(stored[ACTION_DELAY_KEY] as number);
       }
     } catch (err) {
       const errorMessage = getErrorMessage(err);
@@ -86,6 +95,35 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
       setError((err as Error).message);
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleUpdateMaxMessages(max: number) {
+    setIsSaving(true);
+    setMessage(null);
+    setError(null);
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'automation.setMaxMessages',
+        payload: { max },
+      });
+      setConfig((prev) => ({ ...prev, maxMessages: max }));
+      setMessage(max === 0 ? 'Max messages set to unlimited' : `Max messages set to ${max}`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleClearSentToday() {
+    setMessage(null);
+    setError(null);
+    try {
+      await chrome.runtime.sendMessage({ type: 'automation.clearSentToday' });
+      setMessage('Sent-today list cleared — all contacts can be messaged again today');
+    } catch (err) {
+      setError((err as Error).message);
     }
   }
 
@@ -204,6 +242,69 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
           <button onClick={handleRunNow} className="btn-primary btn-block mb-3">
             Run Check Now
           </button>
+
+          {/* Max Messages */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">
+              Max Messages Per Run
+            </label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={config.maxMessages}
+                onChange={(e) => handleUpdateMaxMessages(parseInt(e.target.value) || 0)}
+                disabled={isSaving}
+                className="w-24 px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+              />
+              <span className="text-sm text-gray-500">{config.maxMessages === 0 ? '(unlimited)' : `per run`}</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Set to 0 for no limit. Useful to avoid sending too many messages at once.
+            </p>
+          </div>
+
+          {/* Per-Action Delay */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">
+              Delay Between Actions
+            </label>
+            <div className="flex gap-3 items-center">
+              <input
+                type="range"
+                min={1}
+                max={5}
+                step={1}
+                value={actionDelayMinutes}
+                onChange={async (e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setActionDelayMinutes(val);
+                  await chrome.storage.local.set({ [ACTION_DELAY_KEY]: val });
+                }}
+                className="flex-1"
+                aria-label="Delay between actions in minutes"
+              />
+              <span className="text-sm font-semibold text-textPrimary w-16 text-right">
+                {actionDelayMinutes} min{actionDelayMinutes > 1 ? 's' : ''}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Wait 1–5 minutes between each automated send to mimic human behaviour.
+            </p>
+          </div>
+
+          {/* Clear Sent Today */}
+          <button
+            onClick={handleClearSentToday}
+            disabled={isSaving}
+            className="btn-secondary btn-block mb-3"
+          >
+            Clear Sent-Today List
+          </button>
+          <p className="text-xs text-gray-500 mb-4">
+            Resets the deduplication list so automation can re-send to contacts already processed today.
+          </p>
 
           {showClose && (
             <button onClick={onClose} className="btn-secondary btn-block">

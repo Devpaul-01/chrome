@@ -22,9 +22,17 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [utcTime, setUtcTime] = useState(() =>
+    new Date().toUTCString().replace(' GMT', ' UTC'),
+  );
 
   useEffect(() => {
     loadSchedules();
+    const timer = setInterval(
+      () => setUtcTime(new Date().toUTCString().replace(' GMT', ' UTC')),
+      1000,
+    );
+    return () => clearInterval(timer);
   }, []);
 
   async function loadSchedules() {
@@ -121,9 +129,13 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
   return (
     <div className="card">
       <h2 className="text-lg font-semibold mb-3">Birthday Message Schedule</h2>
-      <p className="text-sm text-gray-600 mb-4">
+      <p className="text-sm text-gray-600 mb-3">
         Configure when to send birthday messages relative to the actual birthday date.
       </p>
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-xs text-textMuted font-medium">Current UTC time:</span>
+        <span className="utc-clock">{utcTime}</span>
+      </div>
 
       {error && <div className="error mb-3">{error}</div>}
       {message && <div className="success mb-3">{message}</div>}
@@ -157,6 +169,8 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
             <button
               type="submit"
               disabled={isSubmitting}
+              aria-busy={isSubmitting ? 'true' : 'false'}
+              aria-disabled={isSubmitting ? 'true' : 'false'}
               className="btn-primary btn-block flex items-center justify-center gap-2"
             >
               {isSubmitting && <Spinner size="sm" />}

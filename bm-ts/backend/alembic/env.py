@@ -1,3 +1,13 @@
+"""
+alembic/env.py — Alembic migration environment configuration.
+
+Configures both offline (URL-only, no live DB connection) and online
+(async engine + live connection) migration modes.  The async engine uses
+``NullPool`` to avoid persistent connections during migration runs.
+
+All application models are pulled in via ``app.db.base.Base.metadata`` so
+Alembic autogenerate can diff them against the live schema.
+"""
 from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection

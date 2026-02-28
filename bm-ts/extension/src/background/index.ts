@@ -54,6 +54,7 @@ import {
   deletePost,
   listImages,
   createImage,
+  uploadImageFile,
   deleteImage,
   getSMTPConfig,
   updateSMTPConfig,
@@ -64,6 +65,9 @@ import {
   updateMessageTemplate,
   deleteMessageTemplate,
   deleteUserAccount,
+  BirthdayConfig,
+  listBirthdayConfigs,
+  toggleBirthdayConfig,
 } from '../api/client';
 import {
   clearTokens,
@@ -73,18 +77,34 @@ import {
   setBackendUrl,
   TokenBundle,
 } from '../utils/storage';
-import { BackgroundMessage } from '../utils/messages';
+import { AutomationRunPayload, BackgroundMessage } from '../utils/messages';
 import {
   AutomationConfig,
   getAutomationConfig,
   updateAutomationEnabled,
   updateCheckInterval,
   updateLastCheck,
+  getSentToday,
+  addToSentToday,
+  clearSentToday,
+  updateMaxMessages,
 } from '../utils/automation';
 import logger from '../utils/logger';
 
+/**
+ * Sentinel `ApiError` thrown when no valid access/refresh tokens are available.
+ * Using a pre-allocated instance avoids creating a new Error object on every
+ * unauthenticated call while still being recognisable by `instanceof ApiError`.
+ */
 const AUTH_ERROR = new ApiError(401, { detail: 'Not authenticated' });
 
+/**
+ * Calls the refresh-token endpoint, persists the new token pair to storage,
+ * and returns the raw `TokenResponse`.
+ *
+ * All token refresh logic in this file goes through this single function to
+ * keep storage state consistent.
+ */
 async function refreshTokensFlow(
   existingRefreshToken: string,
   baseUrl: string,
@@ -94,6 +114,11 @@ async function refreshTokensFlow(
   return tokens;
 }
 
+/**
+ * Returns a valid `TokenBundle` (guaranteed to have an `accessToken`), auto-
+ * refreshing via the refresh token if the access token is absent. Throws
+ * `AUTH_ERROR` (401) when neither token is available.
+ */
 async function ensureTokens(baseUrl: string): Promise<TokenBundle> {
   let tokens = await getTokens();
   if (!tokens.accessToken) {
@@ -108,6 +133,18 @@ async function ensureTokens(baseUrl: string): Promise<TokenBundle> {
 
 type AuthCall<T> = (accessToken: string, baseUrl: string) => Promise<T>;
 
+/**
+ * Higher-order helper that executes an authenticated API call.
+ *
+ * It:
+ *  1. Ensures a valid access token exists (refreshing if needed).
+ *  2. Calls `fn(accessToken, baseUrl)`.
+ *  3. On a 401 response, attempts a single token refresh and retries the call.
+ *  4. Re-throws any other errors unchanged.
+ *
+ * Use `runAuthAware` (below) as the call site wrapper — it simply delegates
+ * to this function.
+ */
 async function withAuth<T>(fn: AuthCall<T>): Promise<T> {
   const baseUrl = await getBackendUrl();
   const tokens = await ensureTokens(baseUrl);
@@ -122,22 +159,136 @@ async function withAuth<T>(fn: AuthCall<T>): Promise<T> {
   }
 }
 
-async function handleAutomationScan(): Promise<{ success: boolean }> {
-  const tab = await queryActiveFacebookTab();
-  if (!tab?.id) {
-    return { success: false };
-  }
-  chrome.tabs.sendMessage(tab.id, { type: 'automation.scan' });
-  await updateLastCheck();
-  return { success: true };
+/** Returns the MM-DD string for today offset by `daysOffset` calendar days. */
+function birthdayDateOffset(daysOffset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysOffset);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${mm}-${dd}`;
 }
 
-function queryActiveFacebookTab(): Promise<chrome.tabs.Tab | undefined> {
+/**
+ * Returns contacts whose birthday (stored as YYYY-MM-DD or MM-DD) falls on
+ * the day that is `days` calendar days away from today.
+ * Pass a positive number to look N days ahead, negative to look N days behind.
+ */
+function getContactsForDaysInAdvance(contacts: Contact[], days: number): Contact[] {
+  const target = birthdayDateOffset(days);
+  return contacts.filter((c) => {
+    const parts = c.birthday.split('-');
+    const mmdd =
+      parts.length >= 2 ? `${parts[parts.length - 2]}-${parts[parts.length - 1]}` : '';
+    return mmdd === target;
+  });
+}
+
+/**
+ * Opens https://www.facebook.com/birthdays in a background tab (or focuses an
+ * existing one) and resolves once the page is ready.
+ */
+async function openOrFocusFacebookBirthdaysTab(): Promise<chrome.tabs.Tab> {
   return new Promise((resolve) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      resolve(tabs.find((tab) => tab.url?.includes('facebook.com')));
+    chrome.tabs.query({ url: '*://*.facebook.com/birthdays*' }, (tabs) => {
+      if (tabs.length > 0 && tabs[0].id !== undefined) {
+        chrome.tabs.update(tabs[0].id, { active: false }, (tab) => resolve(tab!));
+      } else {
+        chrome.tabs.create(
+          { url: 'https://www.facebook.com/birthdays', active: false },
+          (tab) => resolve(tab),
+        );
+      }
     });
   });
+}
+
+/**
+ * Core automation scan: fetches templates / posts / contacts from the backend,
+ * groups them by days_in_advance, opens the Facebook birthdays page, and
+ * dispatches the full automation payload to the content script.
+ */
+async function handleAutomationScan(): Promise<{ success: boolean }> {
+  let templates: MessageTemplate[] = [];
+  let posts: Post[] = [];
+  let contacts: Contact[] = [];
+
+  try {
+    [templates, posts, contacts] = (await Promise.all([
+      runAuthAware((accessToken, url) => listMessageTemplates(url, accessToken)),
+      runAuthAware((accessToken, url) => listPosts(url, accessToken)),
+      runAuthAware((accessToken, url) => listContacts(url, accessToken)),
+    ])) as [MessageTemplate[], Post[], Contact[]];
+  } catch (err) {
+    logger.error('handleAutomationScan: failed to fetch backend data', err);
+    return { success: false };
+  }
+
+  const sentToday = await getSentToday();
+
+  const config = await getAutomationConfig();
+
+  // Current-day templates (days_in_advance === 0) — used for friends scraped from
+  // the Facebook birthday feed live during this run.
+  const currentDayTemplates = templates.filter((t) => t.days_in_advance === 0);
+
+  // Advance templates (days_in_advance > 0) — send DM N days BEFORE birthday.
+  const advanceEntries = templates
+    .filter((t) => t.days_in_advance > 0)
+    .map((template) => ({
+      template,
+      contacts: getContactsForDaysInAdvance(contacts, template.days_in_advance),
+    }))
+    .filter((e) => e.contacts.length > 0);
+
+  // Follow-up templates (days_in_advance < 0) — send DM N days AFTER birthday.
+  const followUpEntries = templates
+    .filter((t) => t.days_in_advance < 0)
+    .map((template) => ({
+      template,
+      // days_in_advance is negative, so getContactsForDaysInAdvance receives e.g. -2
+      // which looks 2 days into the past.
+      contacts: getContactsForDaysInAdvance(contacts, template.days_in_advance),
+    }))
+    .filter((e) => e.contacts.length > 0);
+
+  const payload: AutomationRunPayload = {
+    currentDayTemplates,
+    advanceEntries,
+    followUpEntries,
+    posts,
+    contacts,
+    sentToday,
+    maxMessages: config.maxMessages ?? 0,
+  };
+
+  const tab = await openOrFocusFacebookBirthdaysTab();
+  if (!tab.id) {
+    logger.error('handleAutomationScan: could not open Facebook birthdays tab');
+    return { success: false };
+  }
+
+  // Wait for the tab to finish loading (cap at 15 s).
+  await new Promise<void>((resolve) => {
+    if (tab.status === 'complete') {
+      setTimeout(resolve, 1500);
+      return;
+    }
+    const listener = (tabId: number, info: chrome.tabs.TabChangeInfo) => {
+      if (tabId === tab.id && info.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        setTimeout(resolve, 1500);
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+    setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    }, 15000);
+  });
+
+  chrome.tabs.sendMessage(tab.id, { type: 'automation.runFull', payload });
+  await updateLastCheck();
+  return { success: true };
 }
 
 type BackgroundResponse =
@@ -164,12 +315,17 @@ type BackgroundResponse =
   | UserImage
   | UserImage[]
   | SMTPConfig
+  | BirthdayConfig
+  | BirthdayConfig[]
+  | MessageTemplate
+  | MessageTemplate[]
   | { success: boolean }
   | { backendUrl: string }
   | { wsUrl: string; token: string }
   | { message: string }
   | null;
 
+/** Convenience wrapper used throughout `handleMessage` to call an API function with automatic auth. */
 async function runAuthAware<T>(call: AuthCall<T>): Promise<T> {
   return withAuth(call);
 }
@@ -246,8 +402,15 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) =>
         deleteTemplate(url, accessToken, message.payload.id),
       );
-    }
-    case 'subscription.status': {
+    }    case 'images.uploadFile': {
+      return runAuthAware((accessToken, url) =>
+        uploadImageFile(url, accessToken, {
+          filename: message.payload.filename,
+          data: message.payload.data,
+          size: message.payload.size,
+        }),
+      );
+    }    case 'subscription.status': {
       return runAuthAware((accessToken, url) => subscriptionStatus(url, accessToken));
     }
     case 'subscription.checkout': {
@@ -301,6 +464,17 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
     case 'automation.setInterval': {
       return updateCheckInterval(message.payload.minutes);
     }
+    case 'automation.setMaxMessages': {
+      return updateMaxMessages(message.payload.max);
+    }
+    case 'automation.clearSentToday': {
+      await clearSentToday();
+      return { success: true };
+    }
+    case 'automation.recordSent': {
+      await addToSentToday(message.payload.friendId);
+      return { success: true };
+    }
     case 'messages.listQueue': {
       return runAuthAware((accessToken, url) => listQueuedMessages(url, accessToken));
     }
@@ -342,11 +516,12 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       };
     }
     case 'dashboard.getConfigs': {
-      // TODO: Implement actual config fetching logic
-      return [];
+      return runAuthAware((accessToken, url) => listBirthdayConfigs(url, accessToken));
     }
     case 'dashboard.toggleConfig': {
-      // TODO: Implement actual config toggle logic
+      await runAuthAware((accessToken, url) =>
+        toggleBirthdayConfig(url, accessToken, message.payload.id, message.payload.enabled),
+      );
       return { success: true };
     }
     case 'automation.scanFacebook': {
@@ -372,6 +547,56 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) =>
         bulkCreateContacts(url, accessToken, message.payload),
       );
+    }
+    case 'contacts.scrapeFromFacebook': {
+      // Find a suitable Facebook birthday tab.
+      // Priority order:
+      //  1. facebook.com/birthdays  (dedicated birthday page)
+      //  2. friends_with_upcoming_birthdays panel (Friends > Birthdays section)
+      //  3. Any active Facebook tab
+      async function findFacebookBirthdayTab(): Promise<chrome.tabs.Tab | null> {
+        // 1. Dedicated /birthdays page
+        const birthdayTabs = await new Promise<chrome.tabs.Tab[]>((resolve) =>
+          chrome.tabs.query({ url: '*://*.facebook.com/birthdays*' }, resolve),
+        );
+        if (birthdayTabs.length && birthdayTabs[0].id) return birthdayTabs[0];
+
+        // 2. Friends > Birthdays panel  (URL: /friends/?sk=friends_with_upcoming_birthdays)
+        const friendsBirthdayTabs = await new Promise<chrome.tabs.Tab[]>((resolve) =>
+          chrome.tabs.query({ url: '*://*.facebook.com/friends*' }, resolve),
+        );
+        const upcomingTab = friendsBirthdayTabs.find(
+          (t) => t.url?.includes('friends_with_upcoming_birthdays'),
+        );
+        if (upcomingTab?.id) return upcomingTab;
+
+        // 3. Any active Facebook tab as last resort
+        const activeFbTabs = await new Promise<chrome.tabs.Tab[]>((resolve) =>
+          chrome.tabs.query({ active: true, url: '*://*.facebook.com/*' }, resolve),
+        );
+        if (activeFbTabs.length && activeFbTabs[0].id) return activeFbTabs[0];
+
+        return null;
+      }
+
+      const fbTab = await findFacebookBirthdayTab();
+      if (!fbTab || !fbTab.id) {
+        throw new Error(
+          'No Facebook birthday page found. Open facebook.com/birthdays or navigate to Friends > Birthdays on Facebook, then try again.',
+        );
+      }
+      const tabId = fbTab.id!;
+      // Ask the content script on that tab to scrape the page
+      const response = await new Promise<{ contacts: unknown[] } | undefined>((resolve, reject) => {
+        chrome.tabs.sendMessage(tabId, { type: 'contacts.scrapeFromPage' }, (res) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message ?? 'Content script not ready — try refreshing the Facebook page'));
+          } else {
+            resolve(res);
+          }
+        });
+      });
+      return response?.contacts ?? [];
     }
     // Message Group handlers
     case 'messageGroups.list': {
@@ -453,9 +678,10 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       );
     }
     case 'messageTemplates.delete': {
-      return runAuthAware((accessToken, url) =>
+      await runAuthAware((accessToken, url) =>
         deleteMessageTemplate(url, accessToken, message.payload.id),
       );
+      return { status: 'deleted' };
     }
     case 'auth.deleteAccount': {
       await runAuthAware((accessToken, url) => deleteUserAccount(url, accessToken));

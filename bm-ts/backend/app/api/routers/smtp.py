@@ -1,3 +1,13 @@
+"""
+routers/smtp.py — Endpoints for managing the user's SMTP configuration.
+
+  GET /smtp/config   retrieve current SMTP settings
+  PUT /smtp/config   upsert SMTP settings (creates if none exist)
+
+SMTP credentials are stored in plaintext for now.
+TODO: enc before storing (AES-GCM or secrets manager).
+"""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

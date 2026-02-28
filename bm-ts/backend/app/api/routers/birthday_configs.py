@@ -1,3 +1,17 @@
+"""
+routers/birthday_configs.py — CRUD endpoints for birthday automation configs.
+
+  POST   /birthday-configs          create a new config
+  GET    /birthday-configs          list configs (optional mode/enabled filter)
+  GET    /birthday-configs/{id}     retrieve a single config
+  PUT    /birthday-configs/{id}     update fields of a config
+  PATCH  /birthday-configs/{id}/toggle  enable or disable a config
+  DELETE /birthday-configs/{id}     delete a config
+
+Each config specifies the timing mode (advance / normal / followup),
+the days offset, and an optional message-group / post association.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
