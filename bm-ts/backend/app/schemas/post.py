@@ -13,18 +13,12 @@ overlay to a timeline post.
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
 from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, constr
 
-
-class GenderEnum(str, Enum):
-    MALE = "MALE"
-    FEMALE = "FEMALE"
-    NEUTRAL = "NEUTRAL"
-    ALL = "ALL"
+from app.schemas.enums import GenderEnum
 
 
 class PostCreate(BaseModel):

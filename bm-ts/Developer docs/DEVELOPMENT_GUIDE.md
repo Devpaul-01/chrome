@@ -347,6 +347,12 @@ npm run reload
 # Build and watch for changes
 npm run build:watch
 
+# Run extension tests (214 tests)
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
 # Lint code
 npm run lint
 
@@ -683,7 +689,7 @@ After setup, you should have:
 - **Backend README:** [backend/README.md](backend/README.md)
 - **Extension README:** [extension/README.md](extension/README.md)
 - **API Documentation:** http://localhost:8000/docs (when backend running)
-- **Database Schema:** [ddl.sql](ddl.sql)
+- **Database Schema:** Managed by Alembic migrations (`backend/alembic/`)
 
 ---
 

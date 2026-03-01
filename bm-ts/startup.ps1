@@ -10,25 +10,48 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "Docker is running" -ForegroundColor Green
 
-# Start backend
+# Start backend (DB + API)
 Write-Host "Starting backend..." -ForegroundColor Yellow
 Push-Location (Join-Path $PSScriptRoot "backend")
-docker-compose up -d
+docker-compose up -d --build
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Failed to start backend" -ForegroundColor Red
+    Write-Host "Failed to start backend containers" -ForegroundColor Red
     Pop-Location
     exit 1
 }
-Start-Sleep -Seconds 5
 Pop-Location
-Write-Host "Backend started" -ForegroundColor Green
+
+# Wait for backend health endpoint
+Write-Host "Waiting for backend to be ready..." -ForegroundColor Yellow
+$maxAttempts = 20
+$attempt = 0
+$ready = $false
+while ($attempt -lt $maxAttempts) {
+    Start-Sleep -Seconds 2
+    $attempt++
+    try {
+        $response = Invoke-RestMethod -Uri "http://localhost:8000/health" -Method Get -ErrorAction Stop
+        if ($response.status -eq "ok") {
+            $ready = $true
+            break
+        }
+    } catch {
+        Write-Host "  Attempt $attempt/$maxAttempts - not ready yet..." -ForegroundColor Gray
+    }
+}
+if (-not $ready) {
+    Write-Host "Backend failed to become healthy after $maxAttempts attempts." -ForegroundColor Red
+    Write-Host "Check logs with: docker logs backend-backend-1" -ForegroundColor Yellow
+    exit 1
+}
+Write-Host "Backend is healthy" -ForegroundColor Green
 
 # Build extension
 Write-Host "Building extension..." -ForegroundColor Yellow
 Push-Location (Join-Path $PSScriptRoot "extension")
 npm run build
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Build failed" -ForegroundColor Red
+    Write-Host "Extension build failed" -ForegroundColor Red
     Pop-Location
     exit 1
 }
@@ -36,4 +59,7 @@ Pop-Location
 Write-Host "Extension built" -ForegroundColor Green
 
 Write-Host ""
-Write-Host "All done! Load extension/dist in Chrome" -ForegroundColor Cyan
+Write-Host "All done! Load extension/dist in Chrome (chrome://extensions)" -ForegroundColor Cyan
+Write-Host "  Backend API: http://localhost:8000" -ForegroundColor Gray
+Write-Host "  Health:      http://localhost:8000/health" -ForegroundColor Gray
+Write-Host "  DB:          localhost:5432" -ForegroundColor Gray

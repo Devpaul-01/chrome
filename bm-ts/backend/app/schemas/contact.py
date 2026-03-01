@@ -9,17 +9,12 @@ schemas/contact.py — Pydantic schemas for the contacts CRUD endpoints.
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
 from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
-
-class GenderEnum(str, Enum):
-    MALE = "MALE"
-    FEMALE = "FEMALE"
-    NEUTRAL = "NEUTRAL"
+from app.schemas.enums import GenderEnum
 
 
 class ContactCreate(BaseModel):
