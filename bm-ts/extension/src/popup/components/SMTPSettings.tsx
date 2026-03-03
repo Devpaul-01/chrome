@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react';
 import Spinner from './Spinner';
+import HelpTooltip from './HelpTooltip';
 
 export type SMTPConfig = {
   host: string;
@@ -60,7 +61,7 @@ export default function SMTPSettings({
           {/* Host */}
           <div>
             <label htmlFor="host" className="block text-sm font-medium mb-1">
-              Host
+              Host{' '}<HelpTooltip label="Your SMTP server hostname. Contact your email provider for this detail — e.g. smtp.gmail.com for Google, smtp.office365.com for Microsoft." />
             </label>
             <input
               type="text"

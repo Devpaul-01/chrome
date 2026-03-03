@@ -4,6 +4,7 @@ import FacebookPostPreview from './FacebookPostPreview';
 import { useImageLibrary } from '../hooks/useImageLibrary';
 import ImageLibraryPicker from './ImageLibraryPicker';
 import SegmentEditor from './SegmentEditor';
+import HelpTooltip from './HelpTooltip';
 
 export type TemplateFormData = {
   greeting: string;
@@ -313,6 +314,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Greeting <span className="text-red-500">*</span>
+                  {' '}<HelpTooltip label="Use merge tags like [Tag Person] to insert the friend's name, [Today] for today's date, and [Image] for an image URL." />
                 </label>
                 <button
                   type="button"

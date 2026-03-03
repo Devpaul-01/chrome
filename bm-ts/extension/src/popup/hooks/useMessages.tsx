@@ -135,21 +135,30 @@ export function useMessageQueue() {
 }
 
 export function useMessageHistory() {
-  const [messages, setMessages] = useState<MessageHistoryItem[]>([]);
+  const [items, setItems] = useState<MessageHistoryItem[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(25);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'sent' | 'delivered' | 'failed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [lastUpdateAt, setLastUpdateAt] = useState<number | null>(null);
 
+  // Single effect: subscribe to WS updates on mount, and reload whenever
+  // filter / pagination params change. Combining both concerns into one effect
+  // avoids calling loadHistory() twice on initial mount.
   useEffect(() => {
     loadHistory();
 
     const unsubscribe = wsClient.on('message_history_update', (rawData) => {
       const data = rawData as { action: string; message: MessageHistoryItem };
       if (data.action === 'deleted') {
-        setMessages((prev) => prev.filter((m) => m.id !== data.message.id));
+        setItems((prev) => prev.filter((m) => m.id !== data.message.id));
+        setTotalItems((t) => Math.max(0, t - 1));
         setLastUpdateAt(Date.now());
       } else if (data.action === 'created') {
         loadHistory();
@@ -159,19 +168,39 @@ export function useMessageHistory() {
 
     return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [page, filterStatus, searchQuery, startDate, endDate]);
 
   async function loadHistory() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await chrome.runtime.sendMessage({ type: 'messages.listHistory' });
-      setMessages(Array.isArray(data) ? data : []);
+      const payload: Record<string, unknown> = {
+        page,
+        page_size: pageSize,
+      };
+      if (searchQuery) payload.search = searchQuery;
+      if (filterStatus !== 'all') payload.status_filter = filterStatus;
+      if (startDate) payload.start_date = new Date(startDate).toISOString();
+      if (endDate) {
+        // include the full end day
+        const ed = new Date(endDate);
+        ed.setHours(23, 59, 59, 999);
+        payload.end_date = ed.toISOString();
+      }
+      const data = await chrome.runtime.sendMessage({ type: 'messages.listHistory', payload });
+      if (data && typeof data === 'object' && 'items' in data) {
+        setItems(Array.isArray(data.items) ? data.items : []);
+        setTotalItems(typeof data.total === 'number' ? data.total : 0);
+      } else {
+        // backward-compat: raw array fallback
+        setItems(Array.isArray(data) ? data : []);
+        setTotalItems(Array.isArray(data) ? data.length : 0);
+      }
     } catch (err) {
       const errorMessage = getErrorMessage(err);
       logError(err, 'useMessageHistory:loadHistory');
       setError(errorMessage);
-      setMessages([]);
+      setItems([]);
     } finally {
       setIsLoading(false);
     }
@@ -182,7 +211,8 @@ export function useMessageHistory() {
     setError(null);
     try {
       await chrome.runtime.sendMessage({ type: 'messages.deleteHistory', payload: { id } });
-      setMessages((prev) => prev.filter((m) => m.id !== id));
+      setItems((prev) => prev.filter((m) => m.id !== id));
+      setTotalItems((t) => Math.max(0, t - 1));
     } catch (err) {
       const errorMessage = getErrorMessage(err);
       logError(err, 'useMessageHistory:deleteMessage');
@@ -190,21 +220,23 @@ export function useMessageHistory() {
     }
   }
 
-  const filteredMessages = messages
-    .filter((m) => filterStatus === 'all' || m.status === filterStatus)
-    .filter(
-      (m) => searchQuery === '' || m.friend_name.toLowerCase().includes(searchQuery.toLowerCase()),
-    )
-    .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
+  // Items are already filtered server-side; expose directly as filteredMessages for compat
+  const filteredMessages = items;
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  function goToPage(p: number) {
+    setPage(Math.min(Math.max(1, p), totalPages));
+  }
 
   const stats = {
-    total: messages.length,
-    sent: messages.filter((m) => m.status === 'sent').length,
-    delivered: messages.filter((m) => m.status === 'delivered').length,
-    failed: messages.filter((m) => m.status === 'failed').length,
+    total: totalItems,
+    sent: items.filter((m) => m.status === 'sent').length,
+    delivered: items.filter((m) => m.status === 'delivered').length,
+    failed: items.filter((m) => m.status === 'failed').length,
   };
 
-  // Compute simple trends for the last N days (defaults to 7)
+  // Compute simple trends for the last N days
   function computeTrends(days = 7) {
     const today = new Date();
     const buckets: { date: string; total: number; successRate: number }[] = [];
@@ -215,9 +247,8 @@ export function useMessageHistory() {
       buckets.push({ date: key, total: 0, successRate: 0 });
     }
 
-    // group messages by day
     const grouped: Record<string, { total: number; success: number }> = {};
-    for (const m of messages) {
+    for (const m of items) {
       const dt = new Date(m.sent_at || m.birthday_date || '');
       if (isNaN(dt.getTime())) continue;
       const dayKey = dt.toISOString().slice(0, 10);
@@ -238,13 +269,29 @@ export function useMessageHistory() {
   }
 
   return {
-    messages,
+    messages: items,
     isLoading,
     error,
     filterStatus,
-    setFilterStatus,
+    setFilterStatus: (s: 'all' | 'sent' | 'delivered' | 'failed') => {
+      setPage(1);
+      setFilterStatus(s);
+    },
     searchQuery,
-    setSearchQuery,
+    setSearchQuery: (q: string) => {
+      setPage(1);
+      setSearchQuery(q);
+    },
+    startDate,
+    setStartDate: (d: string) => {
+      setPage(1);
+      setStartDate(d);
+    },
+    endDate,
+    setEndDate: (d: string) => {
+      setPage(1);
+      setEndDate(d);
+    },
     expandedId,
     setExpandedId,
     loadHistory,
@@ -253,5 +300,11 @@ export function useMessageHistory() {
     stats,
     trends: computeTrends,
     live: lastUpdateAt !== null && Date.now() - lastUpdateAt < 15000,
+    // pagination
+    page,
+    pageSize,
+    totalItems,
+    totalPages,
+    goToPage,
   };
 }

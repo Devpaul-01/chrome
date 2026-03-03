@@ -37,6 +37,7 @@ import SMTPSettings from './components/SMTPSettings';
 import MessagesHub from './components/MessagesHub';
 import HomeControls from './components/HomeControls';
 import AccountManagement from './components/AccountManagement';
+import OnboardingWizard from './components/OnboardingWizard';
 import Spinner from './components/Spinner';
 import ErrorBoundary from './components/ErrorBoundary';
 import './popup.css';
@@ -44,6 +45,7 @@ import './popup.css';
 import type { UserProfile } from '../api/client';
 import { sendBackgroundMessage } from './api';
 import { getErrorMessage, logError } from '../utils/errors';
+import { getOnboardingComplete, setOnboardingComplete } from '../utils/storage';
 import wsClient from '../api/websocket';
 
 import { AppProvider, useAppContext, type AuthMode, type TabType } from './context/AppContext';
@@ -82,6 +84,22 @@ function AppShell() {
   const smtpHook = useSMTPConfig();
   const msgTemplates = useMessageTemplates();
   const post = usePostComposer();
+
+  // ---- Onboarding wizard --------------------------------------------------
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      getOnboardingComplete().then((done) => {
+        if (!done) setShowOnboarding(true);
+      });
+    }
+  }, [user]);
+
+  function handleOnboardingDismiss() {
+    setOnboardingComplete(true);
+    setShowOnboarding(false);
+  }
 
   // ---- Auth local state (only needed while unauthenticated) ----------
   const [authMode, setAuthMode] = useState<AuthMode>('login');
@@ -660,6 +678,14 @@ function AppShell() {
           />
           </div>
         </div>
+      )}
+      
+      {/* Onboarding wizard — shown once after first login */}
+      {showOnboarding && (
+        <OnboardingWizard
+          onComplete={handleOnboardingDismiss}
+          onSkip={handleOnboardingDismiss}
+        />
       )}
     </div>
   );

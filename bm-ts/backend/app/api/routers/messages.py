@@ -13,6 +13,7 @@ from app.schemas.messages import (
     MessageQueueCreate,
     MessageQueueUpdate,
     MessageHistoryItem,
+    MessageHistoryPage,
 )
 from app.schemas.password_reset import MessageResponse
 from app.api.routers.websocket import broadcast_message_queue_update, broadcast_message_history_update
@@ -211,35 +212,44 @@ async def retry_failed_message(
     return message
 
 
-@router.get("/history", response_model=list[MessageHistoryItem])
+@router.get("/history", response_model=MessageHistoryPage)
 async def list_message_history(
     search: str | None = Query(None, description="Search by friend name"),
     status_filter: str | None = Query(None, description="Filter by status"),
     start_date: datetime | None = Query(None, description="Start date"),
     end_date: datetime | None = Query(None, description="End date"),
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    page_size: int = Query(25, ge=1, le=200, description="Items per page"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List message history with optional filters"""
-    query = select(MessageHistory).where(MessageHistory.user_id == current_user.id)
+    """List message history with optional filters and pagination"""
+    base_query = select(MessageHistory).where(MessageHistory.user_id == current_user.id)
 
     if search:
-        query = query.where(MessageHistory.friend_name.ilike(f"%{search}%"))
-    
-    if status_filter:
-        query = query.where(MessageHistory.status == status_filter)
-    
-    if start_date:
-        query = query.where(MessageHistory.sent_at >= start_date)
-    
-    if end_date:
-        query = query.where(MessageHistory.sent_at <= end_date)
+        base_query = base_query.where(MessageHistory.friend_name.ilike(f"%{search}%"))
 
-    query = query.order_by(desc(MessageHistory.sent_at))
-    
-    result = await db.execute(query)
-    messages = result.scalars().all()
-    return messages
+    if status_filter:
+        base_query = base_query.where(MessageHistory.status == status_filter)
+
+    if start_date:
+        base_query = base_query.where(MessageHistory.sent_at >= start_date)
+
+    if end_date:
+        base_query = base_query.where(MessageHistory.sent_at <= end_date)
+
+    # Count total matching rows
+    count_result = await db.execute(select(func.count()).select_from(base_query.subquery()))
+    total = count_result.scalar_one()
+
+    # Apply ordering + pagination
+    paged_query = base_query.order_by(desc(MessageHistory.sent_at))
+    paged_query = paged_query.offset((page - 1) * page_size).limit(page_size)
+
+    result = await db.execute(paged_query)
+    items = result.scalars().all()
+
+    return MessageHistoryPage(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.delete("/history/{message_id}", status_code=status.HTTP_200_OK)

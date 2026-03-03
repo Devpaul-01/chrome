@@ -23,6 +23,9 @@ const mockDeleteMessage = vi.fn();
 const mockSetFilterStatus = vi.fn();
 const mockSetSearchQuery = vi.fn();
 const mockSetExpandedId = vi.fn();
+const mockSetStartDate = vi.fn();
+const mockSetEndDate = vi.fn();
+const mockGoToPage = vi.fn();
 
 const defaultHookReturn = {
   isLoading: false,
@@ -31,12 +34,21 @@ const defaultHookReturn = {
   setFilterStatus: mockSetFilterStatus,
   searchQuery: '',
   setSearchQuery: mockSetSearchQuery,
+  startDate: '',
+  setStartDate: mockSetStartDate,
+  endDate: '',
+  setEndDate: mockSetEndDate,
   expandedId: null,
   setExpandedId: mockSetExpandedId,
   loadHistory: mockLoadHistory,
   deleteMessage: mockDeleteMessage,
   filteredMessages: [],
   stats: { total: 0, sent: 0, delivered: 0, failed: 0 },
+  page: 1,
+  pageSize: 25,
+  totalItems: 0,
+  totalPages: 1,
+  goToPage: mockGoToPage,
   trends: vi.fn(() => ({ volume: [], successRate: [] })),
   live: false,
 };
@@ -138,6 +150,12 @@ describe('MessageHistory', () => {
     expect(screen.getByText('No matching messages')).toBeInTheDocument();
   });
 
+  it('shows "No matching messages" when startDate is active', () => {
+    mockHook({ filteredMessages: [], searchQuery: '', filterStatus: 'all', startDate: '2024-01-01' });
+    render(<MessageHistory onClose={vi.fn()} />);
+    expect(screen.getByText('No matching messages')).toBeInTheDocument();
+  });
+
   // --- Stats summary (non-compact) -----------------------------------------
 
   it('shows Total / Sent / Delivered / Failed stats in full mode', () => {
@@ -157,6 +175,51 @@ describe('MessageHistory', () => {
     render(<MessageHistory onClose={vi.fn()} compact />);
     // "Total" label only exists in the stats grid
     expect(screen.queryByText('Total')).not.toBeInTheDocument();
+  });
+
+  // --- Date range filters --------------------------------------------------
+
+  it('renders From and To date inputs in full mode', () => {
+    render(<MessageHistory onClose={vi.fn()} />);
+    expect(screen.getByLabelText('Start date')).toBeInTheDocument();
+    expect(screen.getByLabelText('End date')).toBeInTheDocument();
+  });
+
+  it('hides date inputs in compact mode', () => {
+    render(<MessageHistory onClose={vi.fn()} compact />);
+    expect(screen.queryByLabelText('Start date')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('End date')).not.toBeInTheDocument();
+  });
+
+  it('calls setStartDate when start date input changes', async () => {
+    const user = userEvent.setup();
+    render(<MessageHistory onClose={vi.fn()} />);
+    const startInput = screen.getByLabelText('Start date');
+    await user.type(startInput, '2024-01-01');
+    expect(mockSetStartDate).toHaveBeenCalled();
+  });
+
+  it('calls setEndDate when end date input changes', async () => {
+    const user = userEvent.setup();
+    render(<MessageHistory onClose={vi.fn()} />);
+    const endInput = screen.getByLabelText('End date');
+    await user.type(endInput, '2024-12-31');
+    expect(mockSetEndDate).toHaveBeenCalled();
+  });
+
+  it('shows the clear date range button when startDate is set', () => {
+    mockHook({ startDate: '2024-01-01' });
+    render(<MessageHistory onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /clear date range/i })).toBeInTheDocument();
+  });
+
+  it('calls both setStartDate and setEndDate with empty string when clear button clicked', async () => {
+    const user = userEvent.setup();
+    mockHook({ startDate: '2024-01-01' });
+    render(<MessageHistory onClose={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /clear date range/i }));
+    expect(mockSetStartDate).toHaveBeenCalledWith('');
+    expect(mockSetEndDate).toHaveBeenCalledWith('');
   });
 
   // --- Filters (non-compact) ------------------------------------------------
@@ -200,6 +263,26 @@ describe('MessageHistory', () => {
     expect(mockSetFilterStatus).toHaveBeenCalledWith('failed');
   });
 
+  // --- Export CSV ----------------------------------------------------------
+
+  it('shows Export CSV button when messages are present in full mode', () => {
+    mockHook({ filteredMessages: [makeMessage()] });
+    render(<MessageHistory onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /export.*csv/i })).toBeInTheDocument();
+  });
+
+  it('hides Export CSV button when no messages', () => {
+    mockHook({ filteredMessages: [] });
+    render(<MessageHistory onClose={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /export.*csv/i })).not.toBeInTheDocument();
+  });
+
+  it('hides Export CSV button in compact mode', () => {
+    mockHook({ filteredMessages: [makeMessage()] });
+    render(<MessageHistory onClose={vi.fn()} compact />);
+    expect(screen.queryByRole('button', { name: /export.*csv/i })).not.toBeInTheDocument();
+  });
+
   // --- Message list ---------------------------------------------------------
 
   it('renders a message row with the friend name and status badge', () => {
@@ -237,15 +320,15 @@ describe('MessageHistory', () => {
 
   // --- Expand / collapse details --------------------------------------------
 
-  it('calls setExpandedId when Details toggle is clicked', async () => {
+  it('calls setExpandedId when Expand toggle is clicked', async () => {
     const user = userEvent.setup();
     mockHook({ filteredMessages: [makeMessage({ id: 'hist-x' })] });
     render(<MessageHistory onClose={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: /details/i }));
+    await user.click(screen.getByRole('button', { name: /^expand$/i }));
     expect(mockSetExpandedId).toHaveBeenCalledWith('hist-x');
   });
 
-  it('shows message content in expanded view', () => {
+  it('shows message content in expanded inline panel', () => {
     const msg = makeMessage({ id: 'expand-me' });
     mockHook({ filteredMessages: [msg], expandedId: 'expand-me' });
     render(<MessageHistory onClose={vi.fn()} />);
@@ -256,28 +339,29 @@ describe('MessageHistory', () => {
     const msg = makeMessage({ id: 'expand-me' });
     mockHook({ filteredMessages: [msg], expandedId: 'expand-me' });
     render(<MessageHistory onClose={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /hide/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^hide$/i })).toBeInTheDocument();
   });
 
-  it('shows error_message in expanded view when present', () => {
+  it('shows error_message in expanded inline panel when present', () => {
     const msg = makeMessage({ id: 'err-msg', status: 'failed', error_message: 'Post limit reached' });
     mockHook({ filteredMessages: [msg], expandedId: 'err-msg' });
     render(<MessageHistory onClose={vi.fn()} />);
     expect(screen.getByText(/post limit reached/i)).toBeInTheDocument();
   });
 
-  // --- Delete action --------------------------------------------------------
+  // --- Delete action (expanded inline panel) --------------------------------
 
   it('calls deleteMessage with message id when Delete is clicked in expanded view', async () => {
     const user = userEvent.setup();
     const msg = makeMessage({ id: 'del-me' });
     mockHook({ filteredMessages: [msg], expandedId: 'del-me' });
     render(<MessageHistory onClose={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: /delete/i }));
+    // The expanded inline panel has a Delete button
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
     expect(mockDeleteMessage).toHaveBeenCalledWith('del-me');
   });
 
-  // --- Profile link ---------------------------------------------------------
+  // --- Profile link (expanded inline panel) ---------------------------------
 
   it('renders View Profile link pointing to friend_profile_url in expanded view', () => {
     const msg = makeMessage({ id: 'vp-test' });
@@ -285,6 +369,69 @@ describe('MessageHistory', () => {
     render(<MessageHistory onClose={vi.fn()} />);
     const link = screen.getByRole('link', { name: /view profile/i });
     expect(link).toHaveAttribute('href', 'https://facebook.com/alice');
+  });
+
+  // --- Details modal --------------------------------------------------------
+
+  it('opens details modal when Details button is clicked', async () => {
+    const user = userEvent.setup();
+    const msg = makeMessage({ id: 'modal-test' });
+    mockHook({ filteredMessages: [msg] });
+    render(<MessageHistory onClose={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /view details for alice smith/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('details modal shows message content', async () => {
+    const user = userEvent.setup();
+    const msg = makeMessage({ id: 'modal-content', message_content: 'Hello Modal World!' });
+    mockHook({ filteredMessages: [msg] });
+    render(<MessageHistory onClose={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /view details for alice smith/i }));
+    expect(screen.getByText('Hello Modal World!')).toBeInTheDocument();
+  });
+
+  it('details modal shows error when present', async () => {
+    const user = userEvent.setup();
+    const msg = makeMessage({ id: 'modal-err', status: 'failed', error_message: 'Rate limit hit' });
+    mockHook({ filteredMessages: [msg] });
+    render(<MessageHistory onClose={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /view details for alice smith/i }));
+    expect(screen.getByText(/rate limit hit/i)).toBeInTheDocument();
+  });
+
+  it('closes details modal when Close button is clicked', async () => {
+    const user = userEvent.setup();
+    const msg = makeMessage({ id: 'modal-close' });
+    mockHook({ filteredMessages: [msg] });
+    render(<MessageHistory onClose={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /view details for alice smith/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^close$/i }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('closes details modal when ✕ button is clicked', async () => {
+    const user = userEvent.setup();
+    const msg = makeMessage({ id: 'modal-x' });
+    mockHook({ filteredMessages: [msg] });
+    render(<MessageHistory onClose={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /view details for alice smith/i }));
+    await user.click(screen.getByRole('button', { name: /close details/i }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('calls deleteMessage from details modal and closes modal', async () => {
+    const user = userEvent.setup();
+    const msg = makeMessage({ id: 'modal-del' });
+    mockHook({ filteredMessages: [msg] });
+    render(<MessageHistory onClose={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /view details for alice smith/i }));
+    // Delete inside modal
+    const deleteButtons = screen.getAllByRole('button', { name: /^delete$/i });
+    await user.click(deleteButtons[deleteButtons.length - 1]);
+    expect(mockDeleteMessage).toHaveBeenCalledWith('modal-del');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   // --- Compact mode ---------------------------------------------------------
@@ -310,6 +457,59 @@ describe('MessageHistory', () => {
     render(<MessageHistory onClose={vi.fn()} compact />);
     await user.click(screen.getByRole('button', { name: /^del$/i }));
     expect(mockDeleteMessage).toHaveBeenCalledWith('compact-del');
+  });
+
+  // --- Pagination controls --------------------------------------------------
+
+  it('hides pagination when totalPages is 1', () => {
+    mockHook({ filteredMessages: [makeMessage()], totalPages: 1 });
+    render(<MessageHistory onClose={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /previous page/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /next page/i })).not.toBeInTheDocument();
+  });
+
+  it('shows pagination controls when totalPages > 1', () => {
+    mockHook({ filteredMessages: [makeMessage()], totalPages: 3, page: 2, totalItems: 75 });
+    render(<MessageHistory onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /previous page/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next page/i })).toBeInTheDocument();
+    expect(screen.getByText(/page 2 of 3/i)).toBeInTheDocument();
+    expect(screen.getByText(/75 total/i)).toBeInTheDocument();
+  });
+
+  it('Prev button calls goToPage(page - 1)', async () => {
+    const user = userEvent.setup();
+    mockHook({ filteredMessages: [makeMessage()], totalPages: 3, page: 2 });
+    render(<MessageHistory onClose={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /previous page/i }));
+    expect(mockGoToPage).toHaveBeenCalledWith(1);
+  });
+
+  it('Next button calls goToPage(page + 1)', async () => {
+    const user = userEvent.setup();
+    mockHook({ filteredMessages: [makeMessage()], totalPages: 3, page: 2 });
+    render(<MessageHistory onClose={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /next page/i }));
+    expect(mockGoToPage).toHaveBeenCalledWith(3);
+  });
+
+  it('Prev button is disabled on page 1', () => {
+    mockHook({ filteredMessages: [makeMessage()], totalPages: 3, page: 1 });
+    render(<MessageHistory onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /previous page/i })).toBeDisabled();
+  });
+
+  it('Next button is disabled on last page', () => {
+    mockHook({ filteredMessages: [makeMessage()], totalPages: 3, page: 3 });
+    render(<MessageHistory onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /next page/i })).toBeDisabled();
+  });
+
+  it('hides pagination in compact mode even when totalPages > 1', () => {
+    mockHook({ filteredMessages: [makeMessage()], totalPages: 5, page: 2 });
+    render(<MessageHistory onClose={vi.fn()} compact />);
+    expect(screen.queryByRole('button', { name: /previous page/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /next page/i })).not.toBeInTheDocument();
   });
 
   // --- Refresh button -------------------------------------------------------

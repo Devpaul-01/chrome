@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   accessToken: 'bm_access_token',
   refreshToken: 'bm_refresh_token',
   backendUrl: 'bm_backend_url',
+  onboardingComplete: 'bm_onboarding_complete',
 };
 
 /** Access and refresh token pair.  Both fields are optional because either may be absent after a partial auth state. */
@@ -74,5 +75,24 @@ export async function getBackendUrl(): Promise<string> {
 export async function setBackendUrl(url: string): Promise<void> {
   return new Promise((resolve) => {
     chrome.storage.local.set({ [STORAGE_KEYS.backendUrl]: url }, () => resolve());
+  });
+}
+
+/**
+ * Returns whether the user has completed (or skipped) the onboarding wizard.
+ * Defaults to `false` so the wizard always shows for new installs.
+ */
+export async function getOnboardingComplete(): Promise<boolean> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([STORAGE_KEYS.onboardingComplete], (data) => {
+      resolve(Boolean(data[STORAGE_KEYS.onboardingComplete]));
+    });
+  });
+}
+
+/** Marks the onboarding wizard as complete so it is not shown again. */
+export async function setOnboardingComplete(value: boolean): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ [STORAGE_KEYS.onboardingComplete]: value }, () => resolve());
   });
 }

@@ -1,8 +1,8 @@
 # BirthdayMessaging bm-ts MVP Checklist
 
 
-**Last Updated:** March 1, 2026  
-**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, frontend testing framework in place (214 tests across 11 files, Mar 1, 2026)
+**Last Updated:** March 3, 2026  
+**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (280 tests across 13 files, Mar 3, 2026)
 
 ---
 
@@ -89,7 +89,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - ⚠️ SMTP passwords stored as plaintext in database (security risk for production)
 - ⚠️ No production deployment infrastructure
 - ⚠️ Limited backend testing (only 4 unit tests in 2 files; no integration or API tests)
-- ✅ Extension testing: 214 tests across 11 files (95 unit + 119 component), all passing
+- ✅ Extension testing: 280 tests across 13 files (95 unit + 185 component), all passing
 - ✅ Alembic migration fully populated — single comprehensive migration creates all 14 tables with ENUMs, indexes, FK CASCADE, unique constraints
 - ⚠️ No CI/CD pipeline or monitoring
 
@@ -234,7 +234,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Update message status
 - [x] Retry failed message
 - [x] Cancel message
-- [ ] Add bulk operations (cancel all, retry all failed)
+- [x] Add bulk operations (cancel all, retry all failed) ✅ (frontend bulk retry/cancel implemented; backend endpoint pending)
 - [ ] Add message priority levels
 - [ ] Add schedule conflict detection
 
@@ -242,9 +242,9 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] List message history
 - [x] Search by name/status
 - [x] Delete history item
-- [ ] Add pagination (currently no limit)
-- [ ] Add date range filtering
-- [ ] Add export to CSV
+- [x] Add pagination (currently no limit) ✅ (page/page_size params, MessageHistoryPage response)
+- [x] Add date range filtering ✅ (start_date/end_date query params on history endpoint)
+- [ ] Add export to CSV (frontend CSV export implemented; no dedicated backend endpoint)
 - [ ] Add analytics aggregation
 
 #### Dashboard
@@ -417,21 +417,21 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [ ] Add dark mode support
 
 ### User Education & Training UI
-- [ ] Welcome/Onboarding Flow
-  - [ ] Welcome modal on first launch
-  - [ ] Multi-step onboarding wizard (5 steps)
-  - [ ] Progress indicator for onboarding
-  - [ ] Skip option with confirmation
-  - [ ] Mark onboarding as complete in user preferences
+- [x] Welcome/Onboarding Flow ✅ (OnboardingWizard component, Mar 3, 2026)
+  - [x] Welcome modal on first launch ✅
+  - [x] Multi-step onboarding wizard (5 steps) ✅
+  - [x] Progress indicator for onboarding ✅
+  - [x] Skip option with confirmation ✅
+  - [x] Mark onboarding as complete in user preferences ✅ (bm_onboarding_complete in chrome.storage.local)
 - [ ] Interactive Product Tour
   - [ ] Spotlight/highlight key UI elements
   - [ ] Step-by-step feature walkthrough
   - [ ] Tooltip bubbles with next/previous buttons
   - [ ] Tour progress indicator
   - [ ] Re-trigger tour from help menu
-- [ ] In-App Help System
+- [x] In-App Help System (partial ✅)
   - [ ] Help icon/button in header/navigation
-  - [ ] Contextual help tooltips (? icons)
+  - [x] Contextual help tooltips (? icons) ✅ (HelpTooltip component, Mar 3, 2026)
   - [ ] Search help articles (in-app)
 - [ ] Tutorial Components
   - [ ] Template creation tutorial (guided mode)
@@ -479,19 +479,19 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 ### Message Queue UI
 - [x] MessageQueue component
 - [ ] Add real-time status updates
-- [ ] Add bulk operations (select multiple)
-- [ ] Add filtering by status
-- [ ] Add sorting by date
-- [ ] Add message preview modal
-- [ ] Add retry all failed button
+- [x] Add bulk operations (select multiple) ✅ (checkboxes, select-all, Retry Selected, Cancel Selected)
+- [x] Add filtering by status ✅ (status filter dropdown)
+- [x] Add sorting by date ✅ (sort direction toggle)
+- [x] Add message preview modal ✅
+- [x] Add retry all failed button ✅
 
 ### Message History UI
 - [x] MessageHistory component
-- [ ] Add pagination
-- [ ] Add advanced search filters
-- [ ] Add date range picker
-- [ ] Add export to CSV
-- [ ] Add message details modal
+- [x] Add pagination ✅ (server-side pagination with Prev/Next controls)
+- [x] Add advanced search filters ✅ (date range + status filter + search)
+- [x] Add date range picker ✅ (From/To date inputs wired to backend)
+- [x] Add export to CSV ✅ (current page exported as Blob download)
+- [x] Add message details modal ✅
 - [ ] Add graphs/charts for history
 
 ### Subscription UI
@@ -588,29 +588,30 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Birthday Calendar UI scaffolded (completed Feb 11) ✨
 - [x] SMTP Settings UI scaffolded (completed Feb 11) ✨
 - [x] Account Management UI scaffolded (completed Feb 11) ✨
-- [ ] MessageQueue component enhancements
-- [ ] MessageHistory component enhancements
+- [x] MessageQueue component enhancements ✅ (bulk ops, status filter, sort, preview modal, retry all failed, Mar 3, 2026)
+- [x] MessageHistory component enhancements ✅ (pagination, date range, CSV export, details modal, Mar 3, 2026)
 - [ ] TemplateCreator / TemplateGallery / TemplateList component enhancements
 - [ ] AuthForm component enhancements
 - [ ] Add internationalization (i18n) support
 - [ ] Test on different screen sizes
 - [x] Test keyboard shortcuts (Alt+H, Alt+D, Alt+L, Esc implemented)
-- [ ] Add user onboarding flow (first-time setup)
+- [x] Add user onboarding flow (first-time setup) ✅ (OnboardingWizard, Mar 3, 2026)
 
 ### In-App Help & Training
-- [ ] Add welcome/onboarding tutorial (first-time user flow)
-  - [ ] Step 1: Welcome screen with extension overview
-  - [ ] Step 2: Account creation/login
-  - [ ] Step 3: Create your first template (guided)
-  - [ ] Step 4: Set up your first schedule (guided)
-  - [ ] Step 5: Test automation (optional)
-  - [ ] Skip tutorial option
-- [ ] Add contextual help tooltips
-  - [ ] Help icons (?) next to complex features
-  - [ ] Template editor merge tags explanation
-  - [ ] Schedule timing explanation (days before/after)
-  - [ ] Automation settings explanation
-  - [ ] Gender filter explanation
+- [x] Add welcome/onboarding tutorial (first-time user flow) ✅ (OnboardingWizard, Mar 3, 2026)
+  - [x] Step 1: Welcome screen with extension overview ✅
+  - [x] Step 2: Account creation/login ✅
+  - [x] Step 3: Create your first template (guided) ✅
+  - [x] Step 4: Set up your first schedule (guided) ✅
+  - [x] Step 5: Test automation (optional) ✅
+  - [x] Skip tutorial option ✅
+- [x] Add contextual help tooltips ✅ (HelpTooltip component, Mar 3, 2026)
+  - [x] Help icons (?) next to complex features ✅
+  - [x] Template editor merge tags explanation ✅ (TemplateCreator Greeting label)
+  - [x] Schedule timing explanation (days before/after) ✅ (ScheduleSettings days-before input)
+  - [x] Automation settings explanation ✅ (AutomationSettings Max Messages Per Run)
+  - [x] Gender filter explanation ✅ (ContactForm Gender label)
+  - [x] SMTP host/port explanation ✅ (SMTPSettings Host label)
 - [ ] Add interactive product tour (optional walkthrough)
   - [ ] Highlight key features on dashboard
   - [ ] Show where to find templates
@@ -816,14 +817,14 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 ### Frontend/Extension Testing
 **Priority:** P1 - USER EXPERIENCE CRITICAL  
-**Status:** ✅ Comprehensive — 214 tests across 11 files, all passing (Mar 1, 2026)
+**Status:** ✅ Comprehensive — 280 tests across 13 files, all passing (Mar 3, 2026)
 
 **Setup complete (Feb 25, 2026):**
 - ✅ Vitest + jsdom + @testing-library/react installed
 - ✅ `vitest.config.ts` configured with jsdom environment, coverage thresholds (70% lines/functions)
 - ✅ `src/test-setup.ts` — global Chrome API stub (storage.local Promise + callback dual-mode, alarms, runtime)
 - ✅ Test scripts added: `npm test`, `npm run test:watch`, `npm run test:coverage`
-- ✅ 11 test files, 214 tests, all passing (verified Mar 1, 2026)
+- ✅ 13 test files, 280 tests, all passing (verified Mar 3, 2026)
 
 #### Unit Tests
 - [x] Add Jest/Vitest configuration ✅ (Vitest + jsdom, Feb 25, 2026)
@@ -840,9 +841,11 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Test AuthForm component ✅ (login/register toggle, inputs, validation display, spinner on submit, message display)
 - [x] Test Dashboard component ✅ (`src/popup/__tests__/Dashboard.test.tsx` — 12 tests: loading/error/stats/automation-status/refresh, Feb 25, 2026)
 - [x] Test TemplateCreator component ✅ (`src/popup/__tests__/TemplateCreator.test.tsx` — 15 tests: form fields, validation, submit/cancel/preview, gender select, initialData, Feb 25, 2026)
-- [x] Test MessageQueue component ✅ (`src/popup/__tests__/MessageQueue.test.tsx` — 20 tests: empty/loading/list/badges/counts/cancel/retry/expand/refresh, Feb 25, 2026)
+- [x] Test MessageQueue component ✅ (`src/popup/__tests__/MessageQueue.test.tsx` — 37 tests: +status filter, sort, bulk ops, retry-all-failed, preview modal, Mar 3, 2026)
 - [x] Test TemplateGallery component ✅ (`src/popup/__tests__/TemplateGallery.test.tsx` — 22 tests: template rendering, badges, edit/delete actions, Feb 25, 2026)
-- [x] Test MessageHistory component ✅ (`src/popup/__tests__/MessageHistory.test.tsx` — 28 tests: filter/search/expand, status badges, Feb 25, 2026)
+- [x] Test MessageHistory component ✅ (`src/popup/__tests__/MessageHistory.test.tsx` — 51 tests: +date range, CSV export, details modal, pagination, Mar 3, 2026)
+- [x] Test HelpTooltip component ✅ (`src/popup/__tests__/HelpTooltip.test.tsx` — 10 tests: render, hover/focus show/hide, accessibility, Mar 3, 2026)
+- [x] Test OnboardingWizard component ✅ (`src/popup/__tests__/OnboardingWizard.test.tsx` — 16 tests: navigation, step content, progress bar, complete/skip, Mar 3, 2026)
 - [ ] Test all form validation
 - [ ] Test error states
 - [ ] Test loading states
@@ -1025,10 +1028,10 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
   - [ ] Quick start guide (5-minute setup)
   - [ ] Basic FAQ (10-15 common questions)
   - [ ] Troubleshooting guide (common issues)
-- [ ] Implement basic onboarding flow:
-  - [ ] Welcome screen on first launch
-  - [ ] Essential setup wizard (templates + schedule)
-  - [ ] Contextual help tooltips on key features
+- [x] Implement basic onboarding flow: ✅ (Mar 3, 2026)
+  - [x] Welcome screen on first launch ✅
+  - [x] Essential setup wizard (templates + schedule) ✅
+  - [x] Contextual help tooltips on key features ✅
 
 **Post-MVP (Can Launch Without):**
 - Image upload/storage implementation (currently URL-based)
@@ -1067,7 +1070,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 4. 🔴 Deploy production infrastructure
 5. 🔴 Write privacy policy and terms
 6. 🔴 End-to-end testing
-7. 🔴 Create quick start guide and basic onboarding
+7. 🔴 Create quick start guide (basic onboarding wizard + tooltips ✅ done; static guide still needed)
 
 ### Soon (Weeks 3-4)
 1. 🟡 CI/CD pipeline setup
@@ -1075,7 +1078,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 3. 🟡 Chrome Web Store submission
 4. 🟡 User documentation (FAQ, troubleshooting)
 5. 🟡 Load testing
-6. 🟡 In-app help tooltips and contextual guidance
+6. ~~🟡 In-app help tooltips and contextual guidance~~ ✅ Done (HelpTooltip + OnboardingWizard, Mar 3, 2026)
 
 ### Later (Post-MVP)
 1. 🟢 Phase 2 feature enhancements (image upload/storage, advanced testing, frontend integration)
@@ -1119,7 +1122,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 5. No error tracking service
 6. ~~Alembic migrations incomplete~~ ✅ Resolved — single comprehensive migration (`78efe19bc04e_initial_schema.py`, 289 lines) creates all 14 tables with ENUMs, indexes, FK CASCADE constraints, and unique constraints; both `upgrade()` and `downgrade()` fully implemented (Feb 27, 2026)
 7. Image upload/storage not implemented (URL-based currently)
-8. No user onboarding or interactive tutorials
+8. ~~No user onboarding or interactive tutorials~~ ✅ Resolved — OnboardingWizard (5-step) + HelpTooltip contextual help implemented (Mar 3, 2026)
 9. No comprehensive help documentation or FAQ
 10. No video tutorials or training materials
 11. SMTP passwords stored as plaintext in database (security risk for production)
@@ -1136,7 +1139,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 3. [x] Test password reset flow end-to-end ✅
 4. [x] Build extension and test in Chrome ✅
 5. [x] Implement Facebook automation pipeline ✅ (Phase 4 complete)
-6. [x] Implement extension test suite ✅ (214 tests, 11 files, all passing)
+6. [x] Implement extension test suite ✅ (280 tests, 13 files, all passing — updated Mar 3, 2026)
 7. [x] Consolidate Alembic migrations ✅ (single comprehensive migration, Feb 27)
 8. [x] Add data integrity constraints ✅ (FK CASCADE, ENUMs, NOT NULL, UNIQUE)
 
@@ -1154,7 +1157,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 5. [ ] Run end-to-end testing
 6. [ ] Create quick start guide (5-minute setup)
 7. [ ] Draft basic FAQ (10-15 questions)
-8. [ ] Implement basic onboarding flow (welcome + wizard)
+8. [x] Implement basic onboarding flow (welcome + wizard) ✅ (Mar 3, 2026)
 
 ### Medium Term
 1. [ ] Submit to Chrome Web Store
@@ -1177,4 +1180,4 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - Iterate quickly based on user needs
 - Consider soft launch with beta testers before public launch
 
-**Last Updated:** March 1, 2026
+**Last Updated:** March 3, 2026

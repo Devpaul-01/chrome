@@ -25,6 +25,7 @@ import type { UserProfile } from '../../api/client';
 import { sendBackgroundMessage } from '../api';
 import { logError } from '../../utils/errors';
 import { announceToScreenReader } from '../../utils/accessibility';
+import { getTokens } from '../../utils/storage';
 import wsClient from '../../api/websocket';
 import Toast, { type ToastType } from '../components/Toast';
 
@@ -109,6 +110,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
+      // Check storage directly (no background round-trip needed) before
+      // attempting auth.me. This avoids a 10-30 s wait when the backend is
+      // unreachable and the service worker has to be woken up just to return
+      // a 401 / network error.
+      const tokens = await getTokens();
+      if (!tokens.accessToken && !tokens.refreshToken) {
+        setUser(null);
+        return;
+      }
       const profile = await sendBackgroundMessage<UserProfile>({ type: 'auth.me' });
       setUser(profile);
       await connectWebSocket();
