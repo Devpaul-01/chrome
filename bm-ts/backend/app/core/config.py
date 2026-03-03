@@ -21,9 +21,9 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     model_config = ConfigDict(
-        env_file=".env",
-        case_sensitive=False,
-        extra="ignore"
+    env_file=".env", 
+    case_sensitive=False,
+    extra="ignore"
     )
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/birthdaymessaging",
@@ -37,8 +37,9 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = Field(default="whsec_placeholder", alias="STRIPE_WEBHOOK_SECRET")
     stripe_price_monthly: str = Field(default="price_monthly_placeholder", alias="STRIPE_PRICE_MONTHLY")
     stripe_price_yearly: str = Field(default="price_yearly_placeholder", alias="STRIPE_PRICE_YEARLY")
-    cors_origins: list[str] = Field(default_factory=lambda: ["chrome-extension://*", "http://localhost:3000"])
+    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     log_level: str = Field(default="INFO")
+    
 
     @field_validator("cors_origins", mode="before")
     @classmethod

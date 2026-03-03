@@ -52,7 +52,7 @@ async def verify_reset_token(raw_token: str, db: AsyncSession) -> User | None:
         .join(User, PasswordResetToken.user_id == User.id)
         .where(
             and_(
-                PasswordResetToken.hash_token == hash_token,
+                PasswordResetToken.token == hash_token,
                 PasswordResetToken.expires_at > datetime.now(timezone.utc),
                 PasswordResetToken.used_at.is_(None),
             )
@@ -72,7 +72,7 @@ async def mark_token_used(raw_token: str, db: AsyncSession) -> None:
     hash_token = hashlib.sha256(raw_token.encode()).hexdigest()
 
     result = await db.execute(
-        select(PasswordResetToken).where(PasswordResetToken.hash_token == hash_token)
+        select(PasswordResetToken).where(PasswordResetToken.token == hash_token)
     )
     
     reset_token = result.scalar_one_or_none()

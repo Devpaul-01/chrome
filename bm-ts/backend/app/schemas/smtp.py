@@ -1,8 +1,7 @@
 """
 schemas/smtp.py — Pydantic schemas for SMTP configuration and user-profile update.
 
-  SMTPConfigCreate   — POST /smtp/config body
-  SMTPConfigUpdate   — PUT  /smtp/config body
+  SMTPConfigUpdate   — POST/PUT /smtp/config body
   SMTPConfigOut      — GET  /smtp/config response (ORM-mapped)
   UserProfileUpdate  — PATCH /auth/profile body
 
@@ -17,16 +16,6 @@ from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-
-
-class SMTPConfigCreate(BaseModel):
-    host: str = Field(..., min_length=1)
-    port: int = Field(..., ge=1, le=65535)
-    username: str = Field(..., min_length=1)
-    password: str = Field(..., min_length=1)
-    use_tls: bool = True
-    from_email: EmailStr
-    from_name: Optional[str] = None
 
 
 class SMTPConfigUpdate(BaseModel):

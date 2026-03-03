@@ -1,6 +1,6 @@
 # BirthdayMessaging Backend
 
-Python FastAPI backend for the BirthdayMessaging Chrome extension. It exposes auth, template management, and Stripe subscription flows against the provided PostgreSQL schema (`ddl.sql`).
+Python FastAPI backend for the BirthdayMessaging Chrome extension. It exposes auth, template management, and Stripe subscription flows against a PostgreSQL schema managed by SQLAlchemy ORM models and Alembic migrations.
 
 > **Note:** This backend runs entirely in Docker containers. No local Python environment is required.
 
@@ -32,7 +32,7 @@ STRIPE_PRICE_YEARLY=price_yearly_id
    docker-compose up -d
    ```
    
-   The database schema (`ddl.sql`) is automatically applied on first run.
+   The database schema (via Alembic migrations) is automatically applied on first run.
    
 **Alternative - Production-like deployment:**
 ```bash
@@ -62,7 +62,7 @@ docker-compose exec backend pytest --cov=app --cov-report=term-missing
 - `Dockerfile` - Builds the FastAPI service container
 - `docker-compose.yml` - Orchestrates both PostgreSQL and FastAPI containers
 - `deploy.sh` - Production deployment script (pulls images, rebuilds, restarts)
-- `ddl.sql` - Database schema automatically applied on first run
+- `ddl.sql` - Legacy reference; schema now managed by `app/db/models.py` + Alembic migrations (`alembic/versions/`)
 
 **View logs:**
 ```bash
@@ -83,6 +83,6 @@ docker-compose down
 
 ## Notes
 
-- The schema is intentionally matched to `ddl.sql`; do not generate migrations that alter table/column names or types.
+- The schema is defined in `app/db/models.py` (14 ORM models, 499 lines) and applied via Alembic migrations; do not alter table/column names or types without generating a new migration.
 - Token rotation is handled entirely via JWT refresh tokens without persistence; to revoke tokens, rotate the `JWT_SECRET_KEY`.
 - The Stripe service creates a customer for each user (if needed) before opening a Checkout session.

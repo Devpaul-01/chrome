@@ -2,6 +2,21 @@
 
 This Manifest V3 extension provides the Chrome UI and Facebook automation layer for BirthdayMessaging. It proxies all API calls through the background service worker to conform with the frozen backend contract and keeps tokens in `chrome.storage.local` per the security guidance.
 
+## Architecture at a Glance
+
+| Layer | Files | Lines |
+|-------|-------|-------|
+| React popup (34 components) | `src/popup/` | ~4,000 |
+| Background service worker | `src/background/index.ts` | 780 |
+| API client | `src/api/client.ts` | 825 (52 functions) |
+| Content scripts | `src/content/` (5 files) | 1,839 |
+| Hooks | `src/popup/hooks/` (7 files) | 1,013 |
+| Utilities | `src/utils/` (9 files) | 1,086 |
+| WebSocket client | `src/api/websocket.ts` | 225 |
+| Tests | `src/popup/__tests__/` (11 files) | 214 tests |
+
+**Total:** ~75 TypeScript/TSX files, ~15,000 lines.
+
 ## Build
 
 ```bash
@@ -14,6 +29,23 @@ The build command runs Vite and emits `dist/{popup.html,background.js,content.js
 ## Development
 
 During development use `npm run dev` (starts Vite dev server, but Chrome extensions must still be loaded as unpacked and configured to point to the dev server). Typically you work in `popup.html` via `vite` and copy the built files into the extension directory.
+
+## Testing
+
+```bash
+npm test            # Run all 214 tests
+npm run test:watch  # Watch mode
+```
+
+Tests use Vitest 4.0 + @testing-library/react + jsdom. Coverage spans utilities, components, hooks, and API integration. See [FRONTEND_TEST_RESULTS.md](../Developer%20docs/FRONTEND_TEST_RESULTS.md) for breakdown.
+
+## Key Features
+
+- **64 background message types** (47 calling backend, 17 local-only)
+- **Real-time WebSocket updates** — queue, history, dashboard, notifications
+- **WCAG 2.1 AA accessibility** — keyboard navigation, ARIA labels, focus management, screen reader support
+- **Facebook automation** — birthday detection, message/post composition, deduplication, advance/belated scheduling
+- **Stripe subscription** — checkout session, webhook status updates
 
 ## Backend configuration
 

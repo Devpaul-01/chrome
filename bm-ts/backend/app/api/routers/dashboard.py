@@ -87,8 +87,8 @@ async def get_dashboard_stats(
     )
     queued_messages = queued_result.scalar() or 0
 
-    # Upcoming birthdays (next 30 days)
-    # Note: This is a placeholder - you'll need to implement based on your friend data model
+    # TODO: Implement upcoming birthdays count using contacts table
+    # Currently returns 0 — query contacts.birthday within next 30 days
     friends_with_upcoming_birthdays = 0
 
     return DashboardStats(

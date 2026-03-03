@@ -13,6 +13,8 @@ const DEFAULT_TIMEOUT = 10000;
 const RETRY_DELAY = 1000;
 const MAX_RETRIES = 3;
 
+import { waitForElement, delay } from './dom-helpers';
+
 /**
  * Storage interface for tracking archived conversations
  */
@@ -20,34 +22,6 @@ interface ArchivedConversation {
   friendName: string;
   archivedAt: number;
   profileUrl?: string;
-}
-
-/**
- * Wait for an element to appear in the DOM
- */
-async function waitForElement(
-  selector: string,
-  timeout = DEFAULT_TIMEOUT,
-  parent: Document | HTMLElement = document
-): Promise<HTMLElement | null> {
-  const startTime = Date.now();
-  
-  while (Date.now() - startTime < timeout) {
-    const element = parent.querySelector<HTMLElement>(selector);
-    if (element) {
-      return element;
-    }
-    await delay(100);
-  }
-  
-  return null;
-}
-
-/**
- * Delay execution for specified milliseconds
- */
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**

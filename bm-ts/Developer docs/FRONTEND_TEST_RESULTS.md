@@ -1,12 +1,12 @@
 # Frontend Test Results
 
 ## Test Date
-February 25, 2026
+March 1, 2026 (originally: February 25, 2026)
 
 ## Test Summary
 ✅ **All TypeScript type checks passed**  
 ✅ **Build successful**  
-✅ **228 automated tests passing (12 test files)**  
+✅ **214 automated tests passing (11 test files)**  
 ⚠️ **Linting warnings (non-critical)**
 
 ## TypeScript Type Checking
@@ -125,7 +125,7 @@ npm run lint
   | `src/api/__tests__/client.test.ts` | 7 | ApiError class, login, getDashboardStats (auth headers) |
 
 ### Component Tests
-- **Status**: ✅ IMPLEMENTED — 133 tests passing
+- **Status**: ✅ IMPLEMENTED — 119 tests passing
 - **Framework**: @testing-library/react + @testing-library/jest-dom + @testing-library/user-event
 - **Files**:
   | File | Tests | Coverage |
@@ -135,7 +135,6 @@ npm run lint
   | `src/popup/__tests__/TemplateCreator.test.tsx` | 15 | form field rendering, initialData pre-population, segment validation, title validation, submit callback, busy spinner, Cancel clears form, Preview tab toggle, gender select, image library picker |
   | `src/popup/__tests__/MessageQueue.test.tsx` | 20 | empty state, loading spinner, message list, status badges, summary grid counts, compact mode, error/success banners, Cancel/Retry/Profile actions, expand-collapse, Refresh |
   | `src/popup/__tests__/TemplateGallery.test.tsx` | 22 | empty state, Create button visibility, header toggle, card title/preview, truncation, days badge (On birthday / N days early / late), gender badge, image vs emoji, onEdit/onDelete/onCreate callbacks, updatedAt timestamp |
-  | `src/popup/__tests__/TemplateList.test.tsx` | 14 | section headings, empty state per section, content/label display, (no label) fallback, Edit button triggers setEditingId/Content/Label, Delete calls handleTemplateDelete, inline edit mode (textarea + input aria-labels), Save/Cancel, multiple segments |
   | `src/popup/__tests__/MessageHistory.test.tsx` | 28 | loading spinner, error banner, empty states (no history / no match), stats grid, compact mode hides stats/filters/search, filter buttons (All/Sent/Delivered/Failed), setFilterStatus/setSearchQuery, message rows with status badges, Details expand/Hide toggle, expanded message content/profile link/Delete, compact View link and Del button, Refresh calls loadHistory |
 
 ### Chrome Extension API Mock
@@ -163,7 +162,10 @@ npm run lint
 
 ### Next Testing Priorities
 1. **Add Component Tests** for remaining components:
-   - `TabbedDashboard` navigation
+   - `ContactForm` / `ContactList`
+   - `PostEditor` / `PostList`
+   - `ImageManager`
+   - `SMTPSettings`
 
 2. **Add Integration Tests**:
    ```bash
@@ -193,7 +195,7 @@ npm run lint
 ### Overall Assessment
 - ✅ **Type Safety**: Excellent - All TypeScript errors resolved
 - ✅ **Build Process**: Working - Successful builds with no errors
-- ✅ **Test Coverage**: 228 tests passing across 12 files (unit + component)
+- ✅ **Test Coverage**: 214 tests passing across 11 files (unit + component)
 - ⚠️ **Code Quality**: Good - Minor linting warnings (formatting only)
 - ❌ **Integration / E2E Tests**: Not yet implemented
 
@@ -202,6 +204,7 @@ npm run lint
 |------|-------|-------|--------|
 | Feb 25, 2026 | 9 | 164 | ✅ All passing |
 | Feb 25, 2026 | 12 | 228 | ✅ All passing |
+| Mar 1, 2026 | 11 | 214 | ✅ All passing (removed phantom `TemplateList.test.tsx` — file did not exist) |
 
 ### Production Readiness
 - **Type Safety**: Production ready ✅
@@ -214,12 +217,12 @@ npm run lint
 ### Next Steps
 1. Run prettier to fix formatting (optional)
 2. Add integration/E2E tests with Playwright
-3. Expand component tests for TabbedDashboard navigation
+3. Expand component tests for remaining untested components
 4. Monitor coverage threshold compliance (`npm run test:coverage`)
 
 ---
 **Test Status**: ✅ **PASSED**  
 **Type Checking**: ✅ **100% PASS**  
 **Build**: ✅ **SUCCESS**  
-**Unit Tests**: ✅ **228/228 PASSING** (12 files)  
+**Unit Tests**: ✅ **214/214 PASSING** (11 files)  
 **Linting**: ⚠️ **WARNINGS ONLY** (non-blocking)

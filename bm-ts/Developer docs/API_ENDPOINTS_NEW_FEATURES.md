@@ -1,7 +1,7 @@
 
 # API Endpoints Documentation - New Features
 
-> **UPDATE (Feb 14, 2026): ALL PHASE 2 ENDPOINTS ARE NOW ACTIVE**
+> **UPDATE (March 1, 2026): ALL PHASE 2 ENDPOINTS ARE NOW ACTIVE — schema fields verified against codebase**
 
 This document describes the new features added in Phase 2. All routers, schemas, and frontend components are now implemented and registered:
 - ✅ **Database models are defined** in `app/db/models.py`
@@ -94,7 +94,7 @@ DELETE /api/message-groups/{group_id}
 Authorization: Bearer <token>
 ```
 
-**Response:** `204 No Content`
+**Response:** `200 OK` — `{"status": "deleted"}`
 
 ---
 
@@ -167,7 +167,7 @@ DELETE /api/posts/{post_id}
 Authorization: Bearer <token>
 ```
 
-**Response:** `204 No Content`
+**Response:** `200 OK` — `{"status": "deleted"}`
 
 ---
 
@@ -355,7 +355,7 @@ DELETE /api/birthday-configs/{config_id}
 Authorization: Bearer <token>
 ```
 
-**Response:** `204 No Content`
+**Response:** `200 OK` — `{"status": "deleted"}`
 
 ---
 
@@ -369,7 +369,7 @@ Authorization: Bearer <token>
 
 {
   "name": "Jane Smith",
-  "facebook_id": "1234567890",
+  "facebook_profile_url": "https://www.facebook.com/jane.smith",
   "birthday": "1990-07-15",
   "gender": "FEMALE",
   "notes": "Friend from college"
@@ -381,7 +381,7 @@ Authorization: Bearer <token>
 {
   "id": "uuid",
   "name": "Jane Smith",
-  "facebook_id": "1234567890",
+  "facebook_profile_url": "https://www.facebook.com/jane.smith",
   "birthday": "1990-07-15",
   "gender": "FEMALE",
   "notes": "Friend from college",
@@ -397,8 +397,8 @@ Content-Type: application/json
 Authorization: Bearer <token>
 
 [
-  { "name": "Jane Smith", "facebook_id": "111", "birthday": "1990-07-15", "gender": "FEMALE" },
-  { "name": "John Doe",   "facebook_id": "222", "birthday": "1985-03-22", "gender": "MALE" }
+  { "name": "Jane Smith", "facebook_profile_url": "https://www.facebook.com/jane.smith", "birthday": "1990-07-15", "gender": "FEMALE" },
+  { "name": "John Doe",   "facebook_profile_url": "https://www.facebook.com/john.doe", "birthday": "1985-03-22", "gender": "MALE" }
 ]
 ```
 
@@ -460,7 +460,7 @@ Authorization: Bearer <token>
   "port": 587,
   "username": "user@gmail.com",
   "use_tls": true,
-  "from_address": "user@gmail.com",
+  "from_email": "user@gmail.com",
   "created_at": "2026-02-06T10:00:00Z",
   "updated_at": "2026-02-06T10:00:00Z"
 }
@@ -480,7 +480,7 @@ Authorization: Bearer <token>
   "username": "user@gmail.com",
   "password": "app-specific-password",
   "use_tls": true,
-  "from_address": "user@gmail.com"
+  "from_email": "user@gmail.com"
 }
 ```
 
@@ -539,8 +539,10 @@ Content-Type: application/json
 Authorization: Bearer <token>
 
 {
-  "name": "Warm Female Birthday",
-  "content": "Happy birthday {First_Name}! Wishing you a wonderful day! 🎂",
+  "title": "Warm Female Birthday",
+  "greeting": "Happy birthday {First_Name}!",
+  "sentiment": "Wishing you a wonderful day! 🎂",
+  "closing": "Have an amazing year ahead!",
   "gender": "FEMALE"
 }
 ```
@@ -549,8 +551,10 @@ Authorization: Bearer <token>
 ```json
 {
   "id": "uuid",
-  "name": "Warm Female Birthday",
-  "content": "Happy birthday {First_Name}! Wishing you a wonderful day! 🎂",
+  "title": "Warm Female Birthday",
+  "greeting": "Happy birthday {First_Name}!",
+  "sentiment": "Wishing you a wonderful day! 🎂",
+  "closing": "Have an amazing year ahead!",
   "gender": "FEMALE",
   "created_at": "2026-02-06T10:00:00Z",
   "updated_at": "2026-02-06T10:00:00Z"
@@ -583,8 +587,10 @@ Content-Type: application/json
 Authorization: Bearer <token>
 
 {
-  "name": "Updated Template",
-  "content": "Hey {First_Name}, happy birthday! 🎉"
+  "title": "Updated Template",
+  "greeting": "Hey {First_Name}, happy birthday!",
+  "sentiment": "Hope your day is a blast! 🎉",
+  "closing": "Cheers!"
 }
 ```
 
@@ -776,6 +782,7 @@ The active schema includes:
 - user_images
 - smtp_configs
 - message_templates
+- contacts
 
 ### Current Development Setup (Docker)
 
@@ -786,7 +793,7 @@ cd backend
 docker-compose up -d
 ```
 
-The schema is loaded from `ddl.sql` during container initialization. This creates all active tables.
+The schema is managed by Alembic migrations, applied automatically during container initialization.
 
 ---
 
@@ -811,7 +818,7 @@ The schema is loaded from `ddl.sql` during container initialization. This create
 - `GET /subscription/status`, `POST /subscription/create-checkout-session`
 - `POST /stripe/webhook`
 - `GET /api/schedules`, `POST /api/schedules`, `PUT /api/schedules/{id}`, `DELETE /api/schedules/{id}`
-- `GET /api/messages/queue`, `POST /api/messages/queue`, `PATCH /api/messages/queue/{id}`, `DELETE /api/messages/queue/{id}`, `POST /api/messages/queue/{id}/retry`
+- `GET /api/messages/queue`, `POST /api/messages/queue`, `PUT /api/messages/queue/{id}`, `DELETE /api/messages/queue/{id}`, `POST /api/messages/queue/{id}/retry`
 - `GET /api/messages/history`, `DELETE /api/messages/history/{id}`
 - `GET /api/dashboard/stats`
 - `WS  /ws` (WebSocket)

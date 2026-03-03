@@ -28,7 +28,7 @@
    docker-compose up -d
    ```
    
-   The database schema (`ddl.sql`) and migrations are automatically applied on first run.
+   The database schema and migrations (via Alembic) are automatically applied on first run.
 
 ## Starting the Server
 
@@ -110,7 +110,7 @@ curl -X GET http://localhost:8000/api/schedules \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 
 # Update schedule
-curl -X PATCH http://localhost:8000/api/schedules/SCHEDULE_ID \
+curl -X PUT http://localhost:8000/api/schedules/SCHEDULE_ID \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{"enabled":false}'
@@ -140,7 +140,7 @@ curl -X GET http://localhost:8000/api/messages/queue \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 
 # Update queued message
-curl -X PATCH http://localhost:8000/api/messages/queue/MESSAGE_ID \
+curl -X PUT http://localhost:8000/api/messages/queue/MESSAGE_ID \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{"message_content":"Updated birthday message!"}'
@@ -250,9 +250,9 @@ Server logs will show:
    - Add credentials to environment
    - Update `password_reset.py` service
 
-2. **Add Rate Limiting**
-   - Install: `pip install slowapi`
-   - Limit password reset requests per IP/email
+2. **Add Rate Limiting** ✅
+   - Implemented via `slowapi`
+   - Password reset requests are rate-limited per IP/email
 
 3. **Background Jobs**
    - Implement message sending worker

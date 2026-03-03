@@ -10,18 +10,12 @@ the scheduler selects templates for a given birthday run.
 """
 
 from datetime import datetime
-from enum import Enum
 from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-
-class GenderEnum(str, Enum):
-    MALE = "MALE"
-    FEMALE = "FEMALE"
-    NEUTRAL = "NEUTRAL"
-    ALL = "ALL"
+from app.schemas.enums import GenderEnum
 
 
 class MessageTemplateCreate(BaseModel):

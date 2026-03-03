@@ -1,6 +1,6 @@
 # BirthdayMessaging API Contract
 
-> **Last Updated:** February 12, 2026 — Added Phase 1 endpoints (password reset, schedules, messages, dashboard, WebSocket).
+> **Last Updated:** March 1, 2026 — Added Phase 1 endpoints (password reset, schedules, messages, dashboard, WebSocket). Fixed PATCH→PUT and DELETE response codes.
 
 ## Overview
 All endpoints are served under `app.main`. Authentication uses Bearer JWTs issued via `/auth/register` and `/auth/login`; a short-lived access token and longer refresh token are returned together. Include `Authorization: Bearer <access_token>` on protected routes. All timestamps are ISO8601 UTC strings. Password hashing uses **Argon2** via passlib.
@@ -283,7 +283,7 @@ This document remains frozen until the backend implementation changes; all clien
 
 #### `DELETE /api/schedules/{schedule_id}`
 - **Auth**: Bearer
-- **Response**: 204 No Content
+- **Response**: 200 OK — `{"status": "deleted"}`
 - **Errors**: 404 – not found
 
 ### Message Queue (`/api/messages/queue`)
@@ -297,7 +297,7 @@ This document remains frozen until the backend implementation changes; all clien
 - **Request**: `{ "friend_name": "...", "friend_profile_url": "...", "birthday_date": "...", "scheduled_send_time": "...", "message_content": "..." }`
 - **Response**: Created message object (status: "pending")
 
-#### `PATCH /api/messages/queue/{message_id}`
+#### `PUT /api/messages/queue/{message_id}`
 - **Auth**: Bearer
 - **Request**: `{ "message_content": "...", "scheduled_send_time": "..." }` (partial update)
 - **Response**: Updated message object
@@ -305,7 +305,7 @@ This document remains frozen until the backend implementation changes; all clien
 
 #### `DELETE /api/messages/queue/{message_id}`
 - **Auth**: Bearer
-- **Response**: 204 No Content
+- **Response**: 200 OK — `{"status": "deleted"}`
 - **Errors**: 400 – message not in pending/failed status
 
 #### `POST /api/messages/queue/{message_id}/retry`
@@ -322,7 +322,7 @@ This document remains frozen until the backend implementation changes; all clien
 
 #### `DELETE /api/messages/history/{message_id}`
 - **Auth**: Bearer
-- **Response**: 204 No Content
+- **Response**: 200 OK — `{"status": "deleted"}`
 - **Errors**: 404 – not found
 
 ### Dashboard (`/api/dashboard`)

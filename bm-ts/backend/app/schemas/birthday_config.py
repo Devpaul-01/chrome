@@ -17,18 +17,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, validator
 
+from app.schemas.enums import GenderEnum
+
 
 class BirthdayModeEnum(str, Enum):
     ADVANCE = "advance"
     NORMAL = "normal"
     FOLLOWUP = "followup"
-
-
-class GenderEnum(str, Enum):
-    MALE = "MALE"
-    FEMALE = "FEMALE"
-    NEUTRAL = "NEUTRAL"
-    ALL = "ALL"
 
 
 class BirthdayConfigCreate(BaseModel):

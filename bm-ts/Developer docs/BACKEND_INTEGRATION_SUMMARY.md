@@ -1,7 +1,7 @@
 # Backend Integration Summary
 
-**Last Updated:** February 24, 2026  
-**Version:** 1.0.0  
+**Last Updated:** March 1, 2026  
+**Version:** 1.1.0  
 **Scope:** How the Chrome extension integrates with the FastAPI backend — covering every API route, its corresponding `client.ts` function, and the background service worker message type that triggers it.
 
 ---
@@ -14,7 +14,7 @@ The Chrome extension communicates with the backend exclusively through the backg
 Popup / Content Script
         │  chrome.runtime.sendMessage({ type: "..." })
         ▼
-Background Service Worker (background/index.ts, 715 lines)
+Background Service Worker (background/index.ts, 780 lines)
         │  calls api/client.ts functions
         ▼
 FastAPI Backend  (http://localhost:8000 in dev)
@@ -86,7 +86,7 @@ Segment types: `GREETING`, `BODY`, `CLOSING`. Records are soft-deleted (`deleted
 | Background Message | `client.ts` Function | HTTP Method + Path |
 |---|---|---|
 | `messages.listQueue` | `listQueuedMessages()` | `GET /api/messages/queue` |
-| `messages.updateQueued` | `updateQueuedMessage(id, payload)` | `PATCH /api/messages/queue/{id}` |
+| `messages.updateQueued` | `updateQueuedMessage(id, payload)` | `PUT /api/messages/queue/{id}` |
 | `messages.cancelQueued` | `cancelQueuedMessage(id)` | `DELETE /api/messages/queue/{id}` |
 | `messages.retryQueued` | `retryQueuedMessage(id)` | `POST /api/messages/queue/{id}/retry` |
 | `messages.listHistory` | `listMessageHistory(params?)` | `GET /api/messages/history` |
@@ -161,7 +161,7 @@ Posts include optional font fields (`font_family`, `font_size`, `font_color`) fo
 | `dashboard.getConfigs` | `listBirthdayConfigs(params?)` | `GET /api/birthday-configs` |
 | `dashboard.toggleConfig` | `toggleBirthdayConfig(id)` | `PATCH /api/birthday-configs/{id}/toggle` |
 
-Full CRUD is available through the API but only `list` and `toggle` are wired to background message types. Direct creation/editing is handled via the `BirthdayConfigsView` component which calls `client.ts` functions directly through the `useApi` hook.
+Full CRUD is available through the API but only `list` and `toggle` are wired to background message types. Direct creation/editing is handled via the `BirthdayConfigsView` component which calls `client.ts` functions directly through the background message layer.
 
 ---
 
@@ -248,7 +248,7 @@ All `client.ts` functions throw on non-2xx responses. The thrown object is an `A
 
 | Layer | Count |
 |---|---|
-| HTTP endpoints | ~64 |
+| HTTP endpoints | 65 |
 | WebSocket endpoints | 1 |
 | `client.ts` exported functions | 52 |
 | Background message types that call the backend | 47 |

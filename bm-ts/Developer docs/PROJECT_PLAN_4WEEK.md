@@ -7,6 +7,26 @@
 
 ---
 
+## 📊 Progress Summary (as of March 1, 2026)
+
+> Week 1 starts March 3. Several planned tasks have been completed ahead of schedule during pre-sprint development.
+
+| Area | Planned Tasks | Completed | Remaining | Notes |
+|------|:---:|:---:|:---:|-------|
+| **Alembic Migrations** (BrianK 3.1–3.4) | 4 | 4 | 0 | ✅ Single comprehensive migration `78efe19bc04e` fully populates all 14 tables |
+| **Frontend Test Infra** (Bhagath 4.1–4.7) | 7 | 7 | 0 | ✅ 214 tests across 11 files, all passing |
+| **Component Tests** (Bhagath 4.8–4.14) | 7 | 4 | 3 | ScheduleSettings, ContactForm, AutomationSettings still needed |
+| **Data Integrity Constraints** | N/A | ✅ | 0 | FK CASCADE, ENUMs, NOT NULL, UNIQUE — all in migration |
+| **Email Service** (BrianN 1.1–1.7) | 7 | 0 | 7 | P0 blocker — not started |
+| **Production Infra** (Mohamed 2.1–2.7) | 7 | 0 | 7 | P0 blocker — not started |
+| **Onboarding Flow** (Annamarie 5.1–5.6) | 6 | 0 | 6 | Not started |
+| **Legal & Docs** (Rezene 6.1–6.7) | 7 | 0 | 7 | Not started |
+| **Backend Test Expansion** (BrianK 3.5–3.7) | 3 | 0 | 3 | Not started |
+
+**Net effect:** ~15 of ~48 Week 1–2 tasks pre-completed. BrianK and Bhagath have significant Week 1 capacity freed up for additional backend/component testing work.
+
+---
+
 ## Starting Point
 
 The codebase is **feature-complete for development**. This plan covers exclusively the work required to go from dev-complete to production-launched:
@@ -14,14 +34,16 @@ The codebase is **feature-complete for development**. This plan covers exclusive
 | Already Done | Still Required |
 |---|---|
 | All 15 routers registered, 64 endpoints | Email service (password reset broken) |
-| 14 DB tables, full DDL | SMTP password encryption at rest |
-| Facebook automation pipeline complete | Alembic initial migration body empty |
-| 38 React components, WCAG 2.1 AA | Production infrastructure (zero cloud config) |
-| Real-time WebSocket updates | CI/CD pipeline (no `.github/workflows`) |
-| JWT rotation, Argon2, Stripe webhooks | Testing (only 2 backend test files, 0 frontend) |
-| Docker Compose dev environment | Chrome Web Store listing + privacy policy |
-| | User onboarding flow |
-| | User documentation |
+| 14 DB tables, Alembic migrations | SMTP password encryption at rest |
+| Facebook automation pipeline complete | Production infrastructure (zero cloud config) |
+| 34 React components, WCAG 2.1 AA | CI/CD pipeline (no `.github/workflows`) |
+| Real-time WebSocket updates | Backend testing expansion (only 4 unit tests in 2 files) |
+| JWT rotation, Argon2, Stripe webhooks | Chrome Web Store listing + privacy policy |
+| Docker Compose dev environment | User onboarding flow |
+| ~~Alembic initial migration body empty~~ ✅ Resolved (Feb 27) | User documentation |
+| 214 extension tests across 11 files (95 unit + 119 component) ✅ | |
+| Comprehensive Alembic migration fully populated (14 tables, ENUMs, indexes, FK CASCADE, unique constraints) ✅ | |
+| Data integrity constraints in place (FK CASCADE, NOT NULL, UNIQUE, ENUMs) ✅ | |
 
 ---
 
@@ -67,42 +89,49 @@ The codebase is **feature-complete for development**. This plan covers exclusive
 | 2.3 | Register domain and point DNS | Required for HTTPS and Chrome Web Store privacy policy URL |
 | 2.4 | Obtain TLS certificate | Render/Fly handle this automatically; otherwise Let's Encrypt via Caddy |
 | 2.5 | Create `.env.production` template (do NOT commit values) | Based on `.env.example`; document all required values |
-| 2.6 | Apply `ddl.sql` to production PostgreSQL | Verify all 14 tables and 5 enums created; spot-check indexes |
+| 2.6 | Run `alembic upgrade head` against production PostgreSQL | Verify all 14 tables and 5 enums created; spot-check indexes. Migration `78efe19bc04e_initial_schema.py` is fully populated and ready. |
 | 2.7 | Build production Docker image locally and verify it starts against prod DB | Document any build differences from dev |
 
 **Definition of Done:** Production PostgreSQL is live with schema applied; domain resolves; TLS cert valid; `.env.production` template documented.
 
 ---
 
-### BrianK — Alembic Migration & Test Infrastructure
+### BrianK — ~~Alembic Migration &~~ Test Infrastructure
 
 | # | Task | File(s) | Notes |
 |---|------|---------|-------|
-| 3.1 | Populate `a32e3aa11961_initial_tables.py` `upgrade()` with full DDL from `models.py` — all 14 tables, 5 enums, indexes | `alembic/versions/a32e3aa11961_initial_tables.py` | Use `op.create_table()` / `op.execute()` for enum types; mirror `ddl.sql` exactly |
-| 3.2 | Implement matching `downgrade()` — drop all tables and enums in reverse order | Same file | Order matters: child tables before parents |
-| 3.3 | Verify `20260218_add_post_font_fields.py` chain is correct (`down_revision = 'a32e3aa11961'`) | Already fixed Feb 24 — just verify | |
-| 3.4 | Test `alembic upgrade head` and `alembic downgrade base` against a clean local DB | `docker-compose` | Must complete without errors |
+| ~~3.1~~ | ~~Populate initial migration `upgrade()` with full DDL from `models.py`~~ | ~~`alembic/versions/`~~ | ✅ **DONE** — Consolidated into single comprehensive migration `78efe19bc04e_initial_schema.py` (289 lines, Feb 27). Creates all 14 tables, 5 ENUMs, indexes, FK CASCADE constraints, and unique constraints. Both `upgrade()` and `downgrade()` fully implemented. |
+| ~~3.2~~ | ~~Implement matching `downgrade()`~~ | ~~Same file~~ | ✅ **DONE** — Included in `78efe19bc04e_initial_schema.py`. Drops all tables, indexes, and ENUMs in correct order. |
+| ~~3.3~~ | ~~Verify migration chain~~ | | ✅ **DONE** — Old fragmented migrations (`a32e3aa11961` + `20260218_add_post_font_fields.py`) replaced by single migration. No chain to verify. |
+| ~~3.4~~ | ~~Test `alembic upgrade head` / `downgrade base`~~ | `docker-compose` | ✅ **DONE** — Migration runs cleanly (verified Feb 27). |
 | 3.5 | Set up pytest infrastructure for Phase 2 routers — shared fixtures (test DB, auth headers, test client) | `app/tests/conftest.py` | Inherit patterns from existing `test_auth.py` |
 | 3.6 | Write tests for `contacts` router (create, list, get, update, delete, bulk import) | `app/tests/test_contacts.py` | |
 | 3.7 | Write tests for `message_groups` router (CRUD) | `app/tests/test_message_groups.py` | |
 
-**Definition of Done:** `alembic upgrade head` / `downgrade base` pass cleanly; contacts and message_groups tests pass with >80% router coverage.
+**Definition of Done:** ~~`alembic upgrade head` / `downgrade base` pass cleanly~~ ✅ Done; contacts and message_groups tests pass with >80% router coverage.
 
 ---
 
-### Bhagath — Frontend Test Infrastructure
+### Bhagath — ~~Frontend Test Infrastructure~~ ✅ COMPLETE
+
+> **All Week 1 frontend test tasks completed ahead of schedule.** 214 tests across 11 files, all passing (verified Mar 1, 2026).
 
 | # | Task | File(s) | Notes |
 |---|------|---------|-------|
-| 4.1 | Add Vitest + React Testing Library to `extension/package.json` | `extension/package.json`, `vite.config.ts` | Also add `jsdom` environment |
-| 4.2 | Create `extension/src/__tests__/` directory structure | Mirror `src/` structure | |
-| 4.3 | Write unit tests for `utils/message.ts` — `selectTemplate`, `selectPost`, `resolveKeywords`, `assembleMessageFromTemplate` | `__tests__/utils/message.test.ts` | Pure functions; no mocks needed |
-| 4.4 | Write unit tests for `utils/errors.ts` — `validateEmail`, `validatePassword`, `parseApiError` | `__tests__/utils/errors.test.ts` | |
-| 4.5 | Write unit tests for `utils/automation.ts` — `getSentToday`, `addToSentToday`, `clearSentToday` | `__tests__/utils/automation.test.ts` | Mock `chrome.storage` |
-| 4.6 | Set up `chrome` global mock for `chrome.storage`, `chrome.runtime`, `chrome.tabs` | `__tests__/setup/chrome-mock.ts` | Required for all extension tests |
-| 4.7 | Confirm `npm test` runs and all 3 utility test suites pass | | |
+| ~~4.1~~ | ~~Add Vitest + React Testing Library~~ | `extension/package.json`, `vitest.config.ts` | ✅ **DONE** — Vitest + jsdom + @testing-library/react installed; `vitest.config.ts` configured with 70% coverage thresholds |
+| ~~4.2~~ | ~~Create test directory structure~~ | `src/api/__tests__/`, `src/utils/__tests__/`, `src/popup/__tests__/` | ✅ **DONE** — 3 test directories with 11 test files |
+| ~~4.3~~ | ~~Unit tests for `utils/message.ts`~~ | `src/utils/__tests__/message.test.ts` | ✅ **DONE** — 26 tests covering shufflePick, composeMessage, selectTemplate, selectPost, resolveKeywords, assembleMessageFromTemplate |
+| ~~4.4~~ | ~~Unit tests for `utils/errors.ts`~~ | `src/utils/__tests__/errors.test.ts` | ✅ **DONE** — 31 tests covering error hierarchy, parseApiError, getErrorMessage, isRetryableError, validation |
+| ~~4.5~~ | ~~Unit tests for `utils/automation.ts`~~ | `src/utils/__tests__/automation.test.ts` | ✅ **DONE** — 22 tests covering config, dedup, alarms, delays |
+| ~~4.6~~ | ~~Chrome global mock~~ | `src/test-setup.ts` | ✅ **DONE** — Global Chrome API stub (storage.local Promise + callback dual-mode, alarms, runtime) |
+| ~~4.7~~ | ~~Confirm `npm test` runs~~ | | ✅ **DONE** — `npm test`, `npm run test:watch`, `npm run test:coverage` all configured and passing |
 
-**Definition of Done:** `npm test` runs cleanly; all utility unit tests pass; chrome mock infrastructure in place for component tests in Week 2.
+**Also completed (beyond original scope):**
+- `src/api/__tests__/client.test.ts` — 7 tests (ApiError, login, auth headers)
+- `src/utils/__tests__/storage.test.ts` — 9 tests (tokens, backend URL)
+- 6 component test files (see Week 2 updates)
+
+**Definition of Done:** ✅ All criteria met. `npm test` runs cleanly; 214 tests pass; chrome mock infrastructure in place.
 
 ---
 
@@ -186,17 +215,23 @@ The codebase is **feature-complete for development**. This plan covers exclusive
 
 ---
 
-### Bhagath — Extension Component Tests
+### Bhagath — Extension Component Tests (Partially Complete)
 
-| # | Task | File(s) |
-|---|------|---------|
-| 4.8 | Component tests for `AuthForm` — login/register modes, validation errors, loading state | `__tests__/components/AuthForm.test.tsx` |
-| 4.9 | Component tests for `Dashboard` — stats render, loading state, error state | `__tests__/components/Dashboard.test.tsx` |
-| 4.10 | Component tests for `TemplateCreator` — form submit, validation, cancel | `__tests__/components/TemplateCreator.test.tsx` |
-| 4.11 | Component tests for `ScheduleSettings` — add/edit/delete schedule, enable toggle | `__tests__/components/ScheduleSettings.test.tsx` |
-| 4.12 | Component tests for `ContactForm` — gender selector values, create/update payloads | `__tests__/components/ContactForm.test.tsx` |
-| 4.13 | Component tests for `AutomationSettings` — max messages input, clear sent-today button | `__tests__/components/AutomationSettings.test.tsx` |
-| 4.14 | Mock `api/client.ts` with Vitest `vi.mock` for all component tests — avoid real network calls | `__tests__/setup/api-mock.ts` |
+| # | Task | File(s) | Status |
+|---|------|---------|--------|
+| ~~4.8~~ | ~~Component tests for `AuthForm`~~ | `src/popup/__tests__/components.test.tsx` | ✅ **DONE** — Login/register toggle, inputs, validation, spinner on submit, message display |
+| ~~4.9~~ | ~~Component tests for `Dashboard`~~ | `src/popup/__tests__/Dashboard.test.tsx` | ✅ **DONE** — 12 tests: loading/error/stats/automation-status/refresh |
+| ~~4.10~~ | ~~Component tests for `TemplateCreator`~~ | `src/popup/__tests__/TemplateCreator.test.tsx` | ✅ **DONE** — 15 tests: form fields, validation, submit/cancel/preview, gender select, initialData |
+| 4.11 | Component tests for `ScheduleSettings` — add/edit/delete, enable toggle | `__tests__/ScheduleSettings.test.tsx` | ⬜ Not started |
+| 4.12 | Component tests for `ContactForm` — gender selector, create/update payloads | `__tests__/ContactForm.test.tsx` | ⬜ Not started |
+| 4.13 | Component tests for `AutomationSettings` — max messages, clear sent-today | `__tests__/AutomationSettings.test.tsx` | ⬜ Not started |
+| ~~4.14~~ | ~~Mock `api/client.ts` with Vitest `vi.mock`~~ | `src/test-setup.ts` | ✅ **DONE** — Chrome API mocks in global test setup; API mocking patterns established in existing component tests |
+
+**Also completed (beyond original scope):**
+- `MessageQueue.test.tsx` — 20 tests (empty/loading/list/badges/counts/cancel/retry/expand/refresh)
+- `MessageHistory.test.tsx` — 28 tests (filter/search/expand, status badges)
+- `TemplateGallery.test.tsx` — 22 tests (template rendering, badges, edit/delete actions)
+- `components.test.tsx` — 22 tests (Spinner, Toast, ErrorBoundary, AuthForm)
 
 ---
 
@@ -422,7 +457,7 @@ Rezene (privacy policy URL, Week 1) ──────────────�
 BrianK (full test suite green, Week 4) ────────────────► Rezene (soft launch go/no-go, Week 4)
 Bhagath (E2E suite green, Week 4) ──────────────────────► Rezene (soft launch go/no-go, Week 4)
 ```
-
+**Resolved dependency:** ~~BrianK (Alembic migration, Week 1) → Mohamed (alembic upgrade head, Week 1)~~ ✅ Migration fully populated (Feb 27).
 ---
 
 ## Definition of Done for Soft Launch (Week 4 Gate)
@@ -434,7 +469,7 @@ All of the following must be true before soft launch proceeds:
 - [ ] Backend deployed to production with HTTPS, verified by `curl`
 - [ ] All 14 DB tables queryable in production
 - [ ] Stripe live-mode webhook verified (manual test event)
-- [ ] `alembic upgrade head` passes on a clean DB
+- [ ] `alembic upgrade head` passes on a clean DB ✅ *(Migration verified locally Feb 27; needs production verification)*
 - [ ] Backend test coverage ≥ 80% (`pytest --cov`)
 - [ ] All Playwright E2E tests pass against staging
 - [ ] No high/critical npm audit vulnerabilities
@@ -454,7 +489,7 @@ All of the following must be true before soft launch proceeds:
 Items explicitly deferred from this plan:
 
 - Image upload/storage (S3/R2) — currently URL-based only
-- Alembic migration for initial schema — still using `ddl.sql` for fresh deploys (migration added in future sprint)
+- ~~Alembic migration for initial schema~~ ✅ **Resolved Feb 27** — comprehensive migration `78efe19bc04e_initial_schema.py` (289 lines) fully populates all 14 tables, ENUMs, indexes, FK CASCADE constraints, unique constraints
 - Advanced analytics (time-series, CSV export, success rate breakdown)
 - Full internationalization (i18n)
 - Interactive product tour (Shepherd.js or similar)
@@ -468,4 +503,4 @@ Items explicitly deferred from this plan:
 
 ---
 
-**Last Updated:** February 24, 2026
+**Last Updated:** March 1, 2026
