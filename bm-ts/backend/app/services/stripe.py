@@ -15,9 +15,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Mapping
+from urllib.parse import urlparse
 from uuid import UUID
 
 import stripe
+from fastapi import HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +28,29 @@ from app.core.config import settings
 from app.db.models import SubscriptionRecord, User
 
 stripe.api_key = settings.stripe_api_key
+
+
+def _validate_redirect_url(url: str, label: str = "URL") -> None:
+    """Validate that a Stripe redirect URL points to an allowed domain."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid {label}: malformed URL",
+        )
+    if parsed.scheme not in ("https", "http"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid {label}: scheme must be http or https",
+        )
+    hostname = parsed.hostname or ""
+    allowed = settings.stripe_redirect_allowed_domains
+    if not any(hostname == d or hostname.endswith(f".{d}") for d in allowed):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid {label}: domain not in allowlist",
+        )
 
 
 def _timestamp(value: int | None) -> datetime | None:
@@ -59,7 +84,13 @@ async def create_checkout_session(
 
     If the user does not yet have a ``stripe_customer_id``, a Stripe Customer
     is created and the ID is persisted before the session is created.
+
+    Redirect URLs are validated against an allowlist to prevent open-redirect attacks.
     """
+    # Validate redirect URLs against the configured allowlist
+    _validate_redirect_url(success_url, "success_url")
+    _validate_redirect_url(cancel_url, "cancel_url")
+
     if not user.stripe_customer_id:
         customer = await run_in_threadpool(stripe.Customer.create, email=user.email)
         user.stripe_customer_id = customer["id"]

@@ -695,7 +695,16 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
   }
 }
 
-chrome.runtime.onMessage.addListener((request: BackgroundMessage, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendResponse) => {
+  // Security: reject messages from other extensions or unexpected senders
+  if (sender.id !== chrome.runtime.id) {
+    sendResponse({
+      success: false,
+      error: { status: 403, message: 'Forbidden: sender not recognized' },
+    });
+    return false;
+  }
+
   logger.debug('Received message:', request.type);
 
   // Hard 15 s guard — guarantees sendResponse is always called so Chrome never

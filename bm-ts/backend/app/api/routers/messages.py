@@ -227,7 +227,8 @@ async def list_message_history(
     base_query = select(MessageHistory).where(MessageHistory.user_id == current_user.id)
 
     if search:
-        base_query = base_query.where(MessageHistory.friend_name.ilike(f"%{search}%"))
+        safe_search = search.replace("%", r"\%").replace("_", r"\_")
+        base_query = base_query.where(MessageHistory.friend_name.ilike(f"%{safe_search}%", escape="\\"))
 
     if status_filter:
         base_query = base_query.where(MessageHistory.status == status_filter)

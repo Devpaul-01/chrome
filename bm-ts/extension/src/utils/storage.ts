@@ -71,8 +71,28 @@ export async function getBackendUrl(): Promise<string> {
   });
 }
 
-/** Persists a custom backend URL so the extension points to the right server instance. */
+/**
+ * Validates that a backend URL uses an allowed scheme.
+ * HTTPS is always allowed; HTTP is only allowed for localhost (development).
+ * Returns `true` if the URL is safe to use.
+ */
+function isValidBackendUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'https:') return true;
+    if (parsed.protocol === 'http:' && (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Persists a custom backend URL so the extension points to the right server instance.
+ *  Validates the URL scheme first — only HTTPS or HTTP-to-localhost are accepted. */
 export async function setBackendUrl(url: string): Promise<void> {
+  if (!isValidBackendUrl(url)) {
+    throw new Error('Invalid backend URL: only https:// URLs (or http://localhost for development) are allowed');
+  }
   return new Promise((resolve) => {
     chrome.storage.local.set({ [STORAGE_KEYS.backendUrl]: url }, () => resolve());
   });

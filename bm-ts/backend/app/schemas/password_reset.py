@@ -7,7 +7,7 @@ schemas/password_reset.py — Pydantic schemas for password-reset and change-pas
   MessageResponse              — generic ``{"message": str}`` response reused across several routes
 """
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, constr
 
 
 class RequestPasswordResetRequest(BaseModel):
@@ -16,12 +16,12 @@ class RequestPasswordResetRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     token: str
-    new_password: str
+    new_password: constr(min_length=8) = ...  # Enforce minimum length
 
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
-    new_password: str
+    new_password: constr(min_length=8) = ...  # Enforce minimum length
 
 
 class MessageResponse(BaseModel):

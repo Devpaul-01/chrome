@@ -12,7 +12,7 @@ This should be masked or omitted before the API is made public.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -32,7 +32,7 @@ class SMTPConfigOut(BaseModel):
     host: str
     port: int
     username: str
-    password: str  # In production, don't return this or mask it
+    password: str = ""  # Masked in serialization — never expose the real password
     use_tls: bool
     from_email: str
     from_name: Optional[str]
@@ -40,6 +40,11 @@ class SMTPConfigOut(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    def model_post_init(self, __context: Any) -> None:
+        """Mask the SMTP password so it is never returned via the API."""
+        if self.password:
+            object.__setattr__(self, "password", "••••••••")
 
 
 class UserProfileUpdate(BaseModel):

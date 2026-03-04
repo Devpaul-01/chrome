@@ -82,18 +82,18 @@ async def mark_token_used(raw_token: str, db: AsyncSession) -> None:
 
 
 async def send_reset_email(email: str, token: str) -> None:
-    """Send a password reset email
-    
-    TODO: Implement actual email sending logic
-    For now, this is a placeholder that logs the token
+    """Send a password reset email.
+
+    TODO: Implement actual email sending logic using SendGrid, AWS SES, etc.
+    The token is intentionally NOT logged to prevent credential leakage.
     """
-    # In production, you would use an email service like SendGrid, AWS SES, etc.
     reset_url = f"chrome-extension://YOUR_EXTENSION_ID/popup.html?token={token}"
-    
-    print(f"Password reset requested for {email}")
-    print(f"Reset URL: {reset_url}")
-    print(f"Token: {token}")
-    
+
+    # Log that a reset was requested, but NEVER log the token itself
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("Password reset email requested for %s", email)
+
     # TODO: Replace with actual email sending
     # Example with SendGrid:
     # from sendgrid import SendGridAPIClient

@@ -1,8 +1,8 @@
 # BirthdayMessaging bm-ts MVP Checklist
 
 
-**Last Updated:** March 3, 2026  
-**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (280 tests across 13 files, Mar 3, 2026)
+**Last Updated:** March 4, 2026  
+**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (280 tests across 13 files, Mar 3, 2026), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026)
 
 ---
 
@@ -78,7 +78,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - ✅ Chrome extension with React UI, 34 components, real-time updates, and accessibility
 - ✅ Docker-based development environment (Dockerfile + docker-compose.yml with PostgreSQL)
 - ✅ Database schema and models complete for all Phase 1 and Phase 2
-- ✅ Strong security (JWT rotation, Argon2, Stripe webhooks)
+- ✅ Strong security (JWT rotation + secret validation, Argon2, Stripe webhooks, rate limiting on login/register, XSS/SQL injection hardening, WebSocket token-in-message auth, SMTP password masking)
 - ✅ Accessibility (WCAG 2.1 AA)
 - ✅ Documentation is comprehensive and up to date
 - ✅ **Facebook automation pipeline fully implemented** — birthday scraping, gender-aware DM + timeline post, advance/follow-up modes, deduplication, archiving
@@ -86,7 +86,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 **Remaining Gaps:**
 - ⚠️ No email service configured (password reset not functional for users — tokens log to console only)
 - ⚠️ `/send-birthday-message` backend endpoint is a non-functional stub (extension content scripts handle actual sending)
-- ⚠️ SMTP passwords stored as plaintext in database (security risk for production)
+- ⚠️ SMTP passwords stored as plaintext in database (API responses now mask passwords via `SMTPConfigOut.model_post_init`; at-rest encryption still needed for production)
 - ⚠️ No production deployment infrastructure
 - ⚠️ Limited backend testing (only 4 unit tests in 2 files; no integration or API tests)
 - ✅ Extension testing: 280 tests across 13 files (95 unit + 185 component), all passing
@@ -95,9 +95,9 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 **Actionable Next Steps:**
 1. Implement email service for password reset (critical user recovery path)
-2. Encrypt SMTP passwords at rest before production
-4. Increase test coverage (Phase 2 backend, extension, E2E)
-5. Set up production deployment, CI/CD, and monitoring
+2. Encrypt SMTP passwords at rest before production (API-level masking done — `SMTPConfigOut` replaces password with `••••••••`)
+3. Increase test coverage (Phase 2 backend, extension, E2E)
+4. Set up production deployment, CI/CD, and monitoring
 6. Prepare documentation and onboarding for production users
 
 ---
@@ -560,7 +560,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Backend API endpoint for account deletion ✅ (`DELETE /auth/account` implemented)
 - [ ] Test profile update flow
 - [ ] Test SMTP configuration end-to-end
-- [ ] Test account deletion with confirmation
+- [x] Test account deletion with confirmation ✅ (account deletion now requires `current_password` for security)
 
 ### Extension Quality
 - [x] Add loading states for all API calls (implemented with Spinner component)
@@ -1125,7 +1125,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 8. ~~No user onboarding or interactive tutorials~~ ✅ Resolved — OnboardingWizard (5-step) + HelpTooltip contextual help implemented (Mar 3, 2026)
 9. No comprehensive help documentation or FAQ
 10. No video tutorials or training materials
-11. SMTP passwords stored as plaintext in database (security risk for production)
+11. SMTP passwords stored as plaintext in database (API responses now masked; at-rest encryption still needed for production)
 12. `/send-birthday-message` backend endpoint is a non-functional stub (extension content scripts handle actual sending)
 13. No content script or background service worker tests (780-line background/index.ts untested)
 
@@ -1180,4 +1180,4 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - Iterate quickly based on user needs
 - Consider soft launch with beta testers before public launch
 
-**Last Updated:** March 3, 2026
+**Last Updated:** March 4, 2026
