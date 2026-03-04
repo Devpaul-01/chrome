@@ -10,9 +10,23 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "Docker is running" -ForegroundColor Green
 
+# Ensure .env exists (required by docker-compose for DB credentials)
+$backendDir = Join-Path $PSScriptRoot "backend"
+$envFile = Join-Path $backendDir ".env"
+$envExample = Join-Path $backendDir ".env.example"
+if (-not (Test-Path $envFile)) {
+    if (Test-Path $envExample) {
+        Copy-Item $envExample $envFile
+        Write-Host "Created .env from .env.example — review and update secrets before deploying." -ForegroundColor Yellow
+    } else {
+        Write-Host ".env.example not found. Cannot create .env — docker-compose will fail." -ForegroundColor Red
+        exit 1
+    }
+}
+
 # Start backend (DB + API)
 Write-Host "Starting backend..." -ForegroundColor Yellow
-Push-Location (Join-Path $PSScriptRoot "backend")
+Push-Location $backendDir
 docker-compose up -d --build
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to start backend containers" -ForegroundColor Red

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Spinner from './Spinner';
 import { getErrorMessage, logError } from '../../utils/errors';
+import HelpTooltip from './HelpTooltip';
 
 const ACTION_DELAY_KEY = 'bm_action_delay_minutes';
 
@@ -246,7 +247,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
           {/* Max Messages */}
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">
-              Max Messages Per Run
+              Max Messages Per Run{' '}<HelpTooltip label="Set to 0 for unlimited. Limits how many birthday messages are sent per automation run to stay within safe activity levels." />
             </label>
             <div className="flex gap-2 items-center">
               <input

@@ -218,7 +218,7 @@ describe('MessageQueue', () => {
     render(<MessageQueue onClose={vi.fn()} />);
 
     // Should be exactly one Retry button — for the failed message
-    const retryBtns = screen.getAllByRole('button', { name: /retry/i });
+    const retryBtns = screen.getAllByRole('button', { name: /^retry$/i });
     expect(retryBtns).toHaveLength(1);
   });
 
@@ -229,7 +229,7 @@ describe('MessageQueue', () => {
     mockHook({ messages: [msg], expandedId: 'xyz' });
     render(<MessageQueue onClose={vi.fn()} />);
 
-    await user.click(screen.getByRole('button', { name: /retry/i }));
+    await user.click(screen.getByRole('button', { name: /^retry$/i }));
     expect(mockRetryMessage).toHaveBeenCalledWith('xyz');
   });
 
@@ -255,13 +255,13 @@ describe('MessageQueue', () => {
 
   // --- Expand / collapse details -------------------------------------------
 
-  it('calls setExpandedId when the Details toggle is clicked', async () => {
+  it('calls setExpandedId when the Edit toggle is clicked', async () => {
     const user = userEvent.setup();
     mockHook({ messages: [makeMessage({ id: 'msg-x' })] });
     render(<MessageQueue onClose={vi.fn()} />);
 
-    const detailsBtn = screen.getByRole('button', { name: /details/i });
-    await user.click(detailsBtn);
+    const editBtn = screen.getByRole('button', { name: /^edit$/i });
+    await user.click(editBtn);
     expect(mockSetExpandedId).toHaveBeenCalledWith('msg-x');
   });
 
@@ -286,5 +286,192 @@ describe('MessageQueue', () => {
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.getByText('Carol')).toBeInTheDocument();
+  });
+
+  // --- Status filter --------------------------------------------------------
+
+  it('shows a status filter dropdown in full mode', () => {
+    mockHook({ messages: [makeMessage()] });
+    render(<MessageQueue onClose={vi.fn()} />);
+    expect(screen.getByRole('combobox', { name: /filter by status/i })).toBeInTheDocument();
+  });
+
+  it('hides non-matching messages when a status filter is applied', async () => {
+    const user = userEvent.setup();
+    mockHook({
+      messages: [
+        makeMessage({ id: '1', friend_name: 'Alice', status: 'pending' }),
+        makeMessage({ id: '2', friend_name: 'Bob', status: 'failed' }),
+      ],
+    });
+    render(<MessageQueue onClose={vi.fn()} />);
+
+    const filter = screen.getByRole('combobox', { name: /filter by status/i });
+    await user.selectOptions(filter, 'failed');
+
+    expect(screen.queryByText('Alice')).not.toBeInTheDocument();
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+  });
+
+  it('shows empty-state text when filter matches no messages', async () => {
+    const user = userEvent.setup();
+    mockHook({ messages: [makeMessage({ status: 'pending' })] });
+    render(<MessageQueue onClose={vi.fn()} />);
+
+    const filter = screen.getByRole('combobox', { name: /filter by status/i });
+    await user.selectOptions(filter, 'failed');
+
+    expect(screen.getByText(/no messages match this filter/i)).toBeInTheDocument();
+  });
+
+  // --- Sort toggle ----------------------------------------------------------
+
+  it('shows a sort toggle button in full mode', () => {
+    mockHook({ messages: [makeMessage()] });
+    render(<MessageQueue onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /sort/i })).toBeInTheDocument();
+  });
+
+  it('toggles sort direction label when sort button is clicked', async () => {
+    const user = userEvent.setup();
+    mockHook({ messages: [makeMessage()] });
+    render(<MessageQueue onClose={vi.fn()} />);
+
+    const sortBtn = screen.getByRole('button', { name: /sort descending/i });
+    expect(sortBtn).toBeInTheDocument(); // starts asc
+    await user.click(sortBtn);
+    expect(screen.getByRole('button', { name: /sort ascending/i })).toBeInTheDocument();
+  });
+
+  // --- Retry All Failed -----------------------------------------------------
+
+  it('shows "Retry All Failed" button when there are failed messages', () => {
+    mockHook({ messages: [makeMessage({ status: 'failed' })] });
+    render(<MessageQueue onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /retry all failed/i })).toBeInTheDocument();
+  });
+
+  it('does not show "Retry All Failed" when no failed messages', () => {
+    mockHook({ messages: [makeMessage({ status: 'pending' })] });
+    render(<MessageQueue onClose={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /retry all failed/i })).not.toBeInTheDocument();
+  });
+
+  it('calls retryMessage for every failed message when "Retry All Failed" is clicked', async () => {
+    const user = userEvent.setup();
+    mockHook({
+      messages: [
+        makeMessage({ id: 'f1', status: 'failed' }),
+        makeMessage({ id: 'f2', friend_name: 'Bob', status: 'failed' }),
+        makeMessage({ id: 'p1', friend_name: 'Carol', status: 'pending' }),
+      ],
+    });
+    render(<MessageQueue onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /retry all failed/i }));
+    expect(mockRetryMessage).toHaveBeenCalledWith('f1');
+    expect(mockRetryMessage).toHaveBeenCalledWith('f2');
+    expect(mockRetryMessage).not.toHaveBeenCalledWith('p1');
+  });
+
+  // --- Checkbox selection & bulk action bar --------------------------------
+
+  it('shows a select-all checkbox', () => {
+    mockHook({ messages: [makeMessage()] });
+    render(<MessageQueue onClose={vi.fn()} />);
+    expect(screen.getByRole('checkbox', { name: /select all/i })).toBeInTheDocument();
+  });
+
+  it('shows per-row checkboxes for each message', () => {
+    mockHook({
+      messages: [
+        makeMessage({ id: '1', friend_name: 'Alice' }),
+        makeMessage({ id: '2', friend_name: 'Bob' }),
+      ],
+    });
+    render(<MessageQueue onClose={vi.fn()} />);
+    const checkboxes = screen.getAllByRole('checkbox');
+    // select-all + 2 row checkboxes = 3
+    expect(checkboxes).toHaveLength(3);
+  });
+
+  it('shows bulk action bar after selecting a message', async () => {
+    const user = userEvent.setup();
+    mockHook({ messages: [makeMessage({ id: '1' })] });
+    render(<MessageQueue onClose={vi.fn()} />);
+
+    const rowCheckbox = screen.getByRole('checkbox', { name: /select alice smith/i });
+    await user.click(rowCheckbox);
+
+    expect(screen.getByRole('toolbar', { name: /bulk actions/i })).toBeInTheDocument();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+  });
+
+  it('calls cancelMessage for each selected id when "Cancel Selected" is clicked', async () => {
+    const user = userEvent.setup();
+    mockHook({ messages: [makeMessage({ id: 'sel-1' })] });
+    render(<MessageQueue onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole('checkbox', { name: /select alice smith/i }));
+    await user.click(screen.getByRole('button', { name: /cancel selected/i }));
+    expect(mockCancelMessage).toHaveBeenCalledWith('sel-1');
+  });
+
+  it('calls retryMessage for each selected id when "Retry Selected" is clicked', async () => {
+    const user = userEvent.setup();
+    mockHook({ messages: [makeMessage({ id: 'sel-2', status: 'failed' })] });
+    render(<MessageQueue onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole('checkbox', { name: /select alice smith/i }));
+    await user.click(screen.getByRole('button', { name: /retry selected/i }));
+    expect(mockRetryMessage).toHaveBeenCalledWith('sel-2');
+  });
+
+  it('clears selection and hides bulk bar when ✕ is clicked', async () => {
+    const user = userEvent.setup();
+    mockHook({ messages: [makeMessage({ id: '1' })] });
+    render(<MessageQueue onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole('checkbox', { name: /select alice smith/i }));
+    expect(screen.getByRole('toolbar', { name: /bulk actions/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /clear selection/i }));
+    expect(screen.queryByRole('toolbar', { name: /bulk actions/i })).not.toBeInTheDocument();
+  });
+
+  // --- Preview modal --------------------------------------------------------
+
+  it('opens preview modal when Preview button is clicked', async () => {
+    const user = userEvent.setup();
+    mockHook({ messages: [makeMessage()] });
+    render(<MessageQueue onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /preview message to alice smith/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText(/message preview — alice smith/i)).toBeInTheDocument();
+    expect(screen.getByText('Happy Birthday Alice!')).toBeInTheDocument();
+  });
+
+  it('closes preview modal when Close button is clicked', async () => {
+    const user = userEvent.setup();
+    mockHook({ messages: [makeMessage()] });
+    render(<MessageQueue onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /preview message to alice smith/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /close preview/i }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows Retry button inside preview modal for failed messages', async () => {
+    const user = userEvent.setup();
+    mockHook({ messages: [makeMessage({ status: 'failed', error_message: 'Timeout' })] });
+    render(<MessageQueue onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /preview message to alice smith/i }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('button', { name: /^retry$/i })).toBeInTheDocument();
+    expect(within(dialog).getByText(/timeout/i)).toBeInTheDocument();
   });
 });

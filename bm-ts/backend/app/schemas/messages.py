@@ -56,3 +56,12 @@ class MessageHistoryItem(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class MessageHistoryPage(BaseModel):
+    """Paginated response wrapper for GET /api/messages/history."""
+
+    items: list[MessageHistoryItem]
+    total: int
+    page: int
+    page_size: int

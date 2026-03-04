@@ -60,11 +60,24 @@ async function request<T>(
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
-  const response = await fetch(`${baseUrl}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000); // 10 s hard limit
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (fetchErr) {
+    if ((fetchErr as Error).name === 'AbortError') {
+      throw new Error(`Request timed out: ${method} ${path}`);
+    }
+    throw fetchErr;
+  } finally {
+    clearTimeout(timeoutId);
+  }
   const text = await response.text();
   const data = text ? JSON.parse(text) : undefined;
   if (!response.ok) {
@@ -367,11 +380,36 @@ export interface MessageHistoryItem {
   error_message?: string;
 }
 
+export interface MessageHistoryPage {
+  items: MessageHistoryItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ListHistoryParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  status_filter?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
 export async function listMessageHistory(
   baseUrl: string,
   accessToken: string,
-): Promise<MessageHistoryItem[]> {
-  return request(baseUrl, '/api/messages/history', 'GET', undefined, accessToken);
+  params: ListHistoryParams = {},
+): Promise<MessageHistoryPage> {
+  const qs = new URLSearchParams();
+  if (params.page) qs.set('page', String(params.page));
+  if (params.page_size) qs.set('page_size', String(params.page_size));
+  if (params.search) qs.set('search', params.search);
+  if (params.status_filter) qs.set('status_filter', params.status_filter);
+  if (params.start_date) qs.set('start_date', params.start_date);
+  if (params.end_date) qs.set('end_date', params.end_date);
+  const path = `/api/messages/history${qs.toString() ? `?${qs}` : ''}`;
+  return request(baseUrl, path, 'GET', undefined, accessToken);
 }
 
 export async function deleteMessageHistory(

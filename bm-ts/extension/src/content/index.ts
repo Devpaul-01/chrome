@@ -116,7 +116,9 @@ function renderFriendList() {
     row.style.border = '1px solid #ccc';
     row.style.padding = '6px';
     row.style.marginBottom = '4px';
-    row.innerHTML = `<strong>${friend.name}</strong>`;
+    const strong = document.createElement('strong');
+    strong.textContent = friend.name;  // textContent — safe against XSS
+    row.appendChild(strong);
     if (friend.profileUrl) {
       const link = document.createElement('a');
       link.href = friend.profileUrl;

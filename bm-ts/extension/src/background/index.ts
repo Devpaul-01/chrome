@@ -497,7 +497,9 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       );
     }
     case 'messages.listHistory': {
-      return runAuthAware((accessToken, url) => listMessageHistory(url, accessToken));
+      return runAuthAware((accessToken, url) =>
+        listMessageHistory(url, accessToken, message.payload ?? {}),
+      );
     }
     case 'messages.deleteHistory': {
       return runAuthAware((accessToken, url) =>
@@ -693,34 +695,67 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
   }
 }
 
-chrome.runtime.onMessage.addListener((request: BackgroundMessage, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendResponse) => {
+  // Security: reject messages from other extensions or unexpected senders
+  if (sender.id !== chrome.runtime.id) {
+    sendResponse({
+      success: false,
+      error: { status: 403, message: 'Forbidden: sender not recognized' },
+    });
+    return false;
+  }
+
   logger.debug('Received message:', request.type);
+
+  // Hard 15 s guard — guarantees sendResponse is always called so Chrome never
+  // silently kills the MV3 service worker while we hold a `return true` port.
+  // (Chrome can kill the SW at ~30 s even with an open sendResponse handle in
+  // some versions; capping at 15 s keeps us well inside that window.)
+  let responded = false;
+  const guardTimer = setTimeout(() => {
+    if (!responded) {
+      responded = true;
+      logger.warn(`Message handler timed out after 15 s: ${request.type}`);
+      sendResponse({
+        success: false,
+        error: { status: 504, message: 'Background message timed out' },
+      });
+    }
+  }, 15_000);
 
   handleMessage(request)
     .then((response) => {
-      logger.success('Message handled successfully:', request.type);
-      sendResponse({ success: true, data: response });
+      if (!responded) {
+        responded = true;
+        clearTimeout(guardTimer);
+        logger.success('Message handled successfully:', request.type);
+        sendResponse({ success: true, data: response });
+      }
     })
     .catch((error) => {
-      logger.error(`Message handler error for ${request.type}:`, error);
+      if (!responded) {
+        responded = true;
+        clearTimeout(guardTimer);
+        logger.error(`Message handler error for ${request.type}:`, error);
 
-      if (error instanceof ApiError) {
-        sendResponse({
-          success: false,
-          error: {
-            status: error.status,
-            message: error.message,
-            data: error.data,
-          },
-        });
-      } else {
-        sendResponse({
-          success: false,
-          error: {
-            status: 500,
-            message: error?.message ?? 'Unknown error',
-          },
-        });
+        if (error instanceof ApiError) {
+          sendResponse({
+            success: false,
+            error: {
+              status: error.status,
+              message: error.message,
+              data: error.data,
+            },
+          });
+        } else {
+          sendResponse({
+            success: false,
+            error: {
+              status: 500,
+              message: error?.message ?? 'Unknown error',
+            },
+          });
+        }
       }
     });
   return true; // Indicates async response

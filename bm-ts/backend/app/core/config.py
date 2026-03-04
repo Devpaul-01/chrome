@@ -37,9 +37,25 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = Field(default="whsec_placeholder", alias="STRIPE_WEBHOOK_SECRET")
     stripe_price_monthly: str = Field(default="price_monthly_placeholder", alias="STRIPE_PRICE_MONTHLY")
     stripe_price_yearly: str = Field(default="price_yearly_placeholder", alias="STRIPE_PRICE_YEARLY")
+    stripe_redirect_allowed_domains: list[str] = Field(
+        default_factory=lambda: ["localhost"],
+        alias="STRIPE_REDIRECT_ALLOWED_DOMAINS",
+    )
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     log_level: str = Field(default="INFO")
-    
+
+    @field_validator("jwt_secret_key", mode="after")
+    @classmethod
+    def validate_jwt_secret(cls, v: str) -> str:
+        _INSECURE_DEFAULTS = {"change-me-super-secret", "secret", "changeme", ""}
+        if v in _INSECURE_DEFAULTS or len(v) < 32:
+            import warnings
+            warnings.warn(
+                "JWT_SECRET_KEY is insecure or too short (< 32 chars). "
+                "Set a strong random value in .env before deploying.",
+                stacklevel=2,
+            )
+        return v
 
     @field_validator("cors_origins", mode="before")
     @classmethod

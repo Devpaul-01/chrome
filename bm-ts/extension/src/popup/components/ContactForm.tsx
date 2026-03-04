@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react';
 import type { Contact } from './ContactList';
+import HelpTooltip from './HelpTooltip';
 
 type ContactFormProps = {
   contact?: Contact; // If editing existing contact
@@ -152,7 +153,7 @@ export default function ContactForm({
         {/* Gender */}
         <div>
           <label htmlFor="gender" className="block text-sm font-medium mb-1">
-            Gender
+            Gender{' '}<HelpTooltip label="Gender is used to select gender-appropriate templates and timeline posts during automation." />
           </label>
           <select
             id="gender"
