@@ -18,9 +18,9 @@ Our accessibility implementation follows:
 
 #### Keyboard Shortcuts
 - **Alt + H** - Navigate to home/main view
-- **Alt + D** - Open dashboard
+- **Alt + D** - Open dashboard (analytics view)
 - **Alt + L** - Logout
-- **Esc** - Close modal views
+- **Esc** - Return to main view
 
 #### Tab Navigation
 - All interactive elements are keyboard accessible via Tab/Shift+Tab
@@ -37,10 +37,13 @@ Our accessibility implementation follows:
 ✅ Proper ARIA roles on all interactive elements
 ✅ `aria-label` for all buttons and inputs
 ✅ `aria-invalid` for form validation errors
-✅ `aria-busy` for loading states
+✅ `aria-busy` for loading states (all async submit buttons)
 ✅ `aria-pressed` for toggle buttons
 ✅ `aria-describedby` linking inputs to error messages
 ✅ `aria-live` regions for dynamic content updates
+✅ `role="tablist"` / `role="tab"` / `aria-selected` on tab navigation
+✅ `role="tabpanel"` + `aria-labelledby` on active content panel
+✅ `role="dialog"` + `aria-modal="true"` + `aria-labelledby` on overlay modals
 
 #### Live Regions
 - Toast notifications announced via `aria-live="polite"` or `aria-live="assertive"`
@@ -54,6 +57,8 @@ Utility function `announceToScreenReader()` used for:
 - Form submissions
 - Success/error messages
 - State updates
+
+`assertive` priority (errors) fires immediately. `polite` priority announcements are **debounced to 500 ms** to prevent flooding during rapid WebSocket updates.
 
 ### 3. Semantic HTML
 
@@ -320,7 +325,6 @@ useEffect(() => {
 ## Future Improvements
 
 ### Planned Enhancements
-- [ ] Add focus trap for modal dialogs (MessageQueue, MessageHistory, Dashboard)
 - [ ] Implement roving tabindex for template lists
 - [ ] Add more keyboard shortcuts for common actions
 - [ ] Improve mobile screen reader support
@@ -363,13 +367,12 @@ We are committed to ensuring digital accessibility for people with disabilities.
 
 ### Feedback
 If you encounter accessibility barriers, please contact us:
-- GitHub Issues: [Link to repo issues]
 - Email: [Support email]
 
 We welcome your feedback on the accessibility of this extension. Please let us know if you encounter accessibility barriers and we will work to address them.
 
 ---
 
-**Last Updated**: February 10, 2026  
+**Last Updated**: February 23, 2026  
 **Tested With**: NVDA 2024, Chrome 120, Keyboard-only navigation  
 **Status**: ✅ Production Ready

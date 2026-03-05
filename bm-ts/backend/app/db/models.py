@@ -1,3 +1,31 @@
+"""
+db/models.py — SQLAlchemy ORM models for all database tables.
+
+Table / model mapping
+---------------------
+Phase 1 (core auth & messaging):
+  users                   → User
+  subscription_records    → SubscriptionRecord
+  template_segments       → TemplateSegment     (legacy greeting/body/closing)
+  birthday_schedules      → BirthdaySchedule
+  message_queue           → MessageQueue
+  message_history         → MessageHistory
+  password_reset_tokens   → PasswordResetToken
+
+Phase 2 (contact & automation):
+  contacts                → Contact
+  message_groups          → MessageGroup
+  posts                   → Post               (timeline posts)
+  user_images             → UserImage
+  birthday_configs        → BirthdayConfig
+  smtp_configs            → SMTPConfig
+  message_templates       → MessageTemplate    (full greeting+sentiment+closing template)
+
+All UUID primary keys use PostgreSQL's native ``UUID`` type.
+Database-managed ENUMs (created by Alembic migrations) are referenced with
+``create_type=False`` to avoid duplicate-type errors on startup.
+"""
+
 from __future__ import annotations
 
 import uuid
@@ -40,6 +68,13 @@ subscription_status_enum = ENUM(
 
 
 class User(Base):
+    """
+    Core user account record.
+
+    ``metadata_payload`` is a free-form JSON column reserved for future
+    per-user configuration without requiring schema migrations.
+    """
+
     __tablename__ = "users"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -60,6 +95,15 @@ class User(Base):
 
 
 class SubscriptionRecord(Base):
+    """
+    Stripe subscription snapshot for a user.
+
+    One record per Stripe subscription lifecycle event; the most recently
+    updated record (latest ``updated_at``) is treated as the current status.
+    The partial unique index ``uniq_active_subscription_per_user`` ensures
+    at most one ``ACTIVE`` row per user at the database level.
+    """
+
     __tablename__ = "subscription_records"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -94,6 +138,13 @@ class SubscriptionRecord(Base):
 
 
 class TemplateSegment(Base):
+    """
+    Legacy three-part message template segment (GREETING / BODY / CLOSING).
+
+    Soft-deleted via ``deleted_at`` so existing message history still
+    references the original content even after the user removes a segment.
+    """
+
     __tablename__ = "template_segments"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -119,6 +170,14 @@ class TemplateSegment(Base):
 
 
 class BirthdaySchedule(Base):
+    """
+    Per-user rule for sending advance/follow-up messages.
+
+    ``days_before`` is the number of days before (positive) or after
+    (negative) a contact's birthday on which to send the message.
+    The unique index prevents duplicate offsets for the same user.
+    """
+
     __tablename__ = "birthday_schedules"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -137,6 +196,14 @@ class BirthdaySchedule(Base):
 
 
 class MessageQueue(Base):
+    """
+    Pending outbound message waiting to be sent by the Chrome extension.
+
+    Status lifecycle: ``pending`` → ``processing`` → ``sent`` | ``failed``.
+    Failed messages may be retried (status reset to ``pending``) by the
+    extension's retry endpoint.
+    """
+
     __tablename__ = "message_queue"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -160,6 +227,12 @@ class MessageQueue(Base):
 
 
 class MessageHistory(Base):
+    """
+    Immutable audit log of every message that was attempted, delivered, or failed.
+
+    Records are never updated in place; a new row is appended for each send attempt.
+    """
+
     __tablename__ = "message_history"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -182,6 +255,14 @@ class MessageHistory(Base):
 
 
 class PasswordResetToken(Base):
+    """
+    Single-use password reset token emailed to the user.
+
+    ``used_at`` is set when the token is consumed so it cannot be replayed.
+    Tokens also have a hard expiry (``expires_at``) enforced at the
+    application level.
+    """
+
     __tablename__ = "password_reset_tokens"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -200,6 +281,9 @@ class PasswordResetToken(Base):
 
 
 # ========== Phase 2 Models ==========
+# Models added in Phase 2 to support the full automation and contact-management
+# features.  They are created by Alembic migrations and share the same
+# declarative Base as the Phase 1 models above.
 
 gender_enum = ENUM(
     "MALE",
@@ -220,6 +304,14 @@ birthday_mode_enum = ENUM(
 
 
 class Contact(Base):
+    """
+    A Facebook friend stored by the user for birthday automation.
+
+    ``birthday`` is stored as a timezone-aware datetime; only the month/day
+    (and optionally year) portion is meaningful.  ``gender`` drives
+    pronoun/template selection during automation runs.
+    """
+
     __tablename__ = "contacts"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -241,6 +333,13 @@ class Contact(Base):
 
 
 class MessageGroup(Base):
+    """
+    Named collection of template segment IDs used to compose a birthday message.
+
+    ``segment_ids`` is a JSON array of ``TemplateSegment.id`` UUIDs (stored as
+    strings) that the extension assembles into a full message at send-time.
+    """
+
     __tablename__ = "message_groups"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -259,6 +358,15 @@ class MessageGroup(Base):
 
 
 class Post(Base):
+    """
+    Timeline post template that can accompany a birthday DM.
+
+    ``image_url`` may contain a Nifty Images URL with merge-tag placeholders
+    (e.g. ``{{name}}``) that are resolved by the extension before posting.
+    Font columns (``font_family``, ``font_size``, ``font_color``) control the
+    text overlay when the extension composites the image on a canvas.
+    """
+
     __tablename__ = "posts"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -283,6 +391,8 @@ class Post(Base):
 
 
 class UserImage(Base):
+    """Image asset uploaded by the user and stored in the image library."""
+
     __tablename__ = "user_images"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -300,6 +410,14 @@ class UserImage(Base):
 
 
 class BirthdayConfig(Base):
+    """
+    Automation rule that ties a mode (EARLY / ON_DAY / BELATED), a day offset,
+    an optional message group, an optional post, and a gender filter together.
+
+    The unique index ``uniq_birthday_config_user_mode_offset`` prevents
+    duplicate rules for the same user / mode / offset combination.
+    """
+
     __tablename__ = "birthday_configs"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -326,6 +444,14 @@ class BirthdayConfig(Base):
 
 
 class SMTPConfig(Base):
+    """
+    Per-user SMTP configuration for outbound email notifications.
+
+    Exactly one row per user (enforced by a unique constraint on ``user_id``).
+    The ``password`` field is stored in plaintext for now — it should be
+    encrypted at rest in production before this feature is publicly released.
+    """
+
     __tablename__ = "smtp_configs"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

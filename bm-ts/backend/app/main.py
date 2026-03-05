@@ -1,5 +1,8 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.routers import (
     auth,
@@ -19,7 +22,7 @@ from app.api.routers import (
     smtp,
 )
 from app.core.config import settings
-from app.core.logging import setup_logging
+from app.core.app_logging import setup_logging
 from app.core.rate_limiter import init_rate_limiter, limiter
 
 setup_logging()
@@ -30,6 +33,8 @@ app = FastAPI(
     description="Backend API for the BirthdayMessaging Chrome Extension",
 )
 
+init_rate_limiter(app)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -38,7 +43,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-init_rate_limiter(app)
+logger = logging.getLogger(__name__)
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all so that 500 responses still carry CORS headers."""
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    origin = request.headers.get("origin", "")
+    headers: dict[str, str] = {}
+    if origin in settings.cors_origins:
+        headers["access-control-allow-origin"] = origin
+        headers["access-control-allow-credentials"] = "true"
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+        headers=headers,
+    )
 
 # Auth and core endpoints
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -70,7 +91,7 @@ app.include_router(birthday_configs.router, prefix="/api", tags=["birthday-confi
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
-# function needs to be finished
+# TODO: Implement actual birthday message sending logic (currently a stub)
 @app.post("/send-birthday-message")
 @limiter.limit("1/45seconds")
 async def send_message(request: Request):

@@ -1,6 +1,10 @@
 import { useState, FormEvent, useRef } from 'react';
 import Spinner from './Spinner';
 import FacebookPostPreview from './FacebookPostPreview';
+import { useImageLibrary } from '../hooks/useImageLibrary';
+import ImageLibraryPicker from './ImageLibraryPicker';
+import SegmentEditor from './SegmentEditor';
+import HelpTooltip from './HelpTooltip';
 
 export type TemplateFormData = {
   greeting: string;
@@ -35,7 +39,13 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'create' | 'preview'>('create');
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  const [isGenerating, setIsGenerating] = useState<'greeting' | 'sentiment' | 'closing' | null>(null);
+  const [isGenerating, setIsGenerating] = useState<'greeting' | 'sentiment' | 'closing' | null>(
+    null,
+  );
+  const [isUploadingPreview, setIsUploadingPreview] = useState(false);
+  const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+  const [librarySaveMsg, setLibrarySaveMsg] = useState<string | null>(null);
+  const { images: libraryImages, isLoading: isLoadingLibrary, isFull: libraryFull, saveToLibrary } = useImageLibrary();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Optimal post dimensions
@@ -53,7 +63,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
           canvas.width = FACEBOOK_WIDTH;
           canvas.height = FACEBOOK_HEIGHT;
           const ctx = canvas.getContext('2d');
-          
+
           if (!ctx) {
             reject(new Error('Failed to get canvas context'));
             return;
@@ -62,9 +72,9 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
           // Calculate scaling to cover the canvas while maintaining aspect ratio
           const imgAspect = img.width / img.height;
           const canvasAspect = FACEBOOK_WIDTH / FACEBOOK_HEIGHT;
-          
+
           let drawWidth, drawHeight, offsetX, offsetY;
-          
+
           if (imgAspect > canvasAspect) {
             // Image is wider than canvas - fit height, crop width
             drawHeight = FACEBOOK_HEIGHT;
@@ -82,10 +92,10 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
           // Fill with white background
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, FACEBOOK_WIDTH, FACEBOOK_HEIGHT);
-          
+
           // Draw image centered and cropped
           ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-          
+
           // Convert to base64 with good quality
           resolve(canvas.toDataURL('image/jpeg', 0.9));
         };
@@ -112,7 +122,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
 
       setIsProcessingImage(true);
       setError(null);
-      
+
       try {
         const resizedImage = await resizeImageForFacebook(file);
         setFormData({
@@ -164,37 +174,37 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     try {
       // TODO: Replace with actual AI API call (OpenAI, Claude, etc.)
       // Simulating AI generation with predefined templates for now
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       const suggestions = {
         greeting: [
-          "Hey [name], hope your day is as awesome as you are!",
-          "Happy Birthday [name]! 🎉",
-          "Wishing you the happiest of birthdays, [name]!",
-          "Hey [name]! Another year older and even more amazing!",
+          'Hey [name], hope your day is as awesome as you are!',
+          'Happy Birthday [name]! 🎉',
+          'Wishing you the happiest of birthdays, [name]!',
+          'Hey [name]! Another year older and even more amazing!',
         ],
         sentiment: [
-          "Your birthday reminds me of all the wonderful qualities that make you so special. You bring joy to everyone around you.",
+          'Your birthday reminds me of all the wonderful qualities that make you so special. You bring joy to everyone around you.',
           "I'm so grateful to have you in my life. You make every day brighter with your kindness and humor.",
           "Another year of amazing memories together! You're one of a kind and I hope this year brings you everything you wish for.",
           "Celebrating you today! Your friendship means the world to me and I can't wait to see what this year brings you.",
         ],
         closing: [
-          "Wishing you a wonderful day filled with joy and celebration!",
-          "Have an amazing birthday! 🎂🎈",
-          "Hope your special day is filled with love and laughter!",
-          "Wishing you the best and happy birthday to you!",
-          "Cheers to another great year ahead! 🥳",
+          'Wishing you a wonderful day filled with joy and celebration!',
+          'Have an amazing birthday! 🎂🎈',
+          'Hope your special day is filled with love and laughter!',
+          'Wishing you the best and happy birthday to you!',
+          'Cheers to another great year ahead! 🥳',
         ],
       };
 
-      const randomSuggestion = suggestions[type][Math.floor(Math.random() * suggestions[type].length)];
-      
+      const randomSuggestion =
+        suggestions[type][Math.floor(Math.random() * suggestions[type].length)];
+
       setFormData({
         ...formData,
         [type]: randomSuggestion,
       });
-
     } catch (err) {
       setError('Failed to generate text. Please try again.');
     } finally {
@@ -203,135 +213,126 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
   };
 
   const renderPreview = () => {
-    // Combine greeting, sentiment, and closing into complete message
-    const completeMessage = [
-      formData.greeting,
-      formData.sentiment,
-      formData.closing
-    ].filter(Boolean).join('\n\n');
+    const completeMessage = [formData.greeting, formData.sentiment, formData.closing]
+      .filter(Boolean)
+      .join('\n\n');
 
-    return (
-      <div className="space-y-4">
-        {/* Facebook-style preview with text overlay */}
-        <FacebookPostPreview
-          imageUrl={formData.imageUrl}
-          text={completeMessage || 'Add greeting, sentiment, and closing to see preview'}
-        />
+    const hasImageKeyword = completeMessage.includes('[Image]');
+    const libraryPreviewUrl = libraryImages.length > 0 ? libraryImages[0].url : null;
 
-        {/* Template metadata */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-xs font-semibold text-gray-700 mb-3">📋 Template Settings</div>
-          <div className="space-y-2 text-sm text-gray-600">
-            <div className="flex justify-between">
-              <span className="font-medium">Title:</span>
-              <span>{formData.templateTitle || '(empty)'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Send:</span>
-              <span>
-                {formData.daysInAdvance === 0
-                  ? 'On birthday'
-                  : `${Math.abs(formData.daysInAdvance)} day${Math.abs(formData.daysInAdvance) !== 1 ? 's' : ''} ${
-                      formData.daysInAdvance > 0 ? 'early' : 'late'
-                    }`}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Gender:</span>
-              <span className="capitalize">{formData.gender === 'all' ? 'All' : formData.gender}</span>
-            </div>
+    const handleAddToLibrary = async () => {
+      if (!formData.imageUrl) return;
+      setIsUploadingPreview(true);
+      setLibrarySaveMsg(null);
+      try {
+        await saveToLibrary(formData.imageUrl, `template_${Date.now()}.jpg`);
+        setLibrarySaveMsg('✓ Image saved to library');
+      } catch (err) {
+        setLibrarySaveMsg(`Error: ${(err as Error).message}`);
+      } finally {
+        setIsUploadingPreview(false);
+      }
+    };
+
+    if (formData.imageUrl) {
+      return (
+        <div className="space-y-3">
+          <div className="relative">
+            <img
+              src={formData.imageUrl}
+              alt="Preview"
+              className="w-full rounded-lg shadow-md"
+              style={{ maxHeight: '400px', objectFit: 'contain' }}
+            />
+            <div className="mt-2 text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
+          </div>
+          {librarySaveMsg && (
+            <p className={`text-xs font-medium ${librarySaveMsg.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
+              {librarySaveMsg}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleAddToLibrary}
+              disabled={isUploadingPreview || libraryFull}
+              className="btn-primary flex-1"
+              title={libraryFull ? 'Library full (20/20)' : undefined}
+            >
+              {isUploadingPreview ? 'Saving...' : 'Add to Library'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, imageUrl: null })}
+              disabled={isUploadingPreview}
+              className="btn-secondary flex-1"
+            >
+              Remove
+            </button>
           </div>
         </div>
+      );
+    }
 
-        {/* Individual segments for reference */}
-        <details className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <summary className="text-xs font-semibold text-gray-700 cursor-pointer hover:text-gray-900">
-            📝 View Message Segments
-          </summary>
-          <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
-            <div>
-              <div className="text-xs font-medium text-gray-600 mb-1">Greeting:</div>
-              <p className="text-sm text-gray-700">{formData.greeting || '(empty)'}</p>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-gray-600 mb-1">Sentiment:</div>
-              <p className="text-sm text-gray-700">{formData.sentiment || '(empty)'}</p>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-gray-600 mb-1">Closing:</div>
-              <p className="text-sm text-gray-700">{formData.closing || '(empty)'}</p>
-            </div>
-          </div>
-        </details>
-      </div>
-    );
+    if (hasImageKeyword && libraryPreviewUrl) {
+      return (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500 italic">
+            Preview uses first library image — a random image will be picked when sending.
+          </p>
+          <FacebookPostPreview
+            imageUrl={libraryPreviewUrl}
+            text={completeMessage.replace(/\[Image\]/g, '')}
+          />
+        </div>
+      );
+    }
+
+    if (hasImageKeyword && libraryImages.length === 0) {
+      return (
+        <div className="text-xs text-amber-600 bg-amber-50 rounded p-3">
+          ⚠️ [Image] keyword found but your library is empty. Upload images in Image Library first.
+        </div>
+      );
+    }
+
+    return <FacebookPostPreview imageUrl={null} text={completeMessage} />;
   };
 
   return (
     <div className="bg-white rounded-lg shadow-lg">
-      {/* Header with Tabs */}
-      <div className="border-b flex items-center justify-between px-6 py-4">
-        <h2 className="text-xl font-bold text-gray-900">
-          {initialData ? 'Edit Template' : 'Create Template'}
-        </h2>
-        <div className="flex space-x-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab('create')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'create'
-                ? 'bg-orangeBrand text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Create
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('preview')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'preview'
-                ? 'bg-orangeBrand text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Preview
-          </button>
-        </div>
-      </div>
-
       {/* Form Content */}
       <form onSubmit={handleSubmit} className="p-6">
         {activeTab === 'create' ? (
           <div className="space-y-6">
-            <p className="text-sm text-gray-600 pb-2 border-b border-gray-200">Fields marked * are required.</p>
+            <p className="text-sm text-gray-600 pb-2 border-b border-gray-200">
+              Fields marked * are required.
+            </p>
 
             {/* Greeting */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Greeting <span className="text-red-500">*</span>
+                  {' '}<HelpTooltip label="Use merge tags like [Tag Person] to insert the friend's name, [Today] for today's date, and [Image] for an image URL." />
                 </label>
                 <button
                   type="button"
                   onClick={() => generateAIText('greeting')}
                   disabled={isGenerating === 'greeting'}
-                  className="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 disabled:opacity-50 flex items-center gap-1"
+                  className="btn-outline-orange"
                 >
-                  {isGenerating === 'greeting' ? (
-                    <>⏳ Generating...</>
-                  ) : (
-                    <>✨ Generate</>
-                  )}
+                  {isGenerating === 'greeting' ? <>⏳ Generating...</> : <>✨ Generate</>}
                 </button>
               </div>
-              <textarea
-                value={formData.greeting}
-                onChange={(e) => setFormData({ ...formData, greeting: e.target.value })}
+              <SegmentEditor
+                content={formData.greeting}
+                onChange={(c) => setFormData({ ...formData, greeting: c })}
                 placeholder="Hey [name], hope your day is as awesome as you are!"
                 rows={2}
-                className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
-                required
+                ariaLabel="Greeting"
+                showKeywordInserter={true}
+                maxLength={300}
               />
             </div>
 
@@ -345,22 +346,19 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                   type="button"
                   onClick={() => generateAIText('sentiment')}
                   disabled={isGenerating === 'sentiment'}
-                  className="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 disabled:opacity-50 flex items-center gap-1"
+                  className="btn-outline-orange"
                 >
-                  {isGenerating === 'sentiment' ? (
-                    <>⏳ Generating...</>
-                  ) : (
-                    <>✨ Generate</>
-                  )}
+                  {isGenerating === 'sentiment' ? <>⏳ Generating...</> : <>✨ Generate</>}
                 </button>
               </div>
-              <textarea
-                value={formData.sentiment}
-                onChange={(e) => setFormData({ ...formData, sentiment: e.target.value })}
+              <SegmentEditor
+                content={formData.sentiment}
+                onChange={(c) => setFormData({ ...formData, sentiment: c })}
                 placeholder="Your birthday reminds me of all the wonderful qualities that make you so special."
                 rows={3}
-                className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
-                required
+                ariaLabel="Sentiment"
+                showKeywordInserter={true}
+                maxLength={1000}
               />
             </div>
 
@@ -374,84 +372,19 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                   type="button"
                   onClick={() => generateAIText('closing')}
                   disabled={isGenerating === 'closing'}
-                  className="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 disabled:opacity-50 flex items-center gap-1"
+                  className="btn-outline-orange"
                 >
-                  {isGenerating === 'closing' ? (
-                    <>⏳ Generating...</>
-                  ) : (
-                    <>✨ Generate</>
-                  )}
+                  {isGenerating === 'closing' ? <>⏳ Generating...</> : <>✨ Generate</>}
                 </button>
               </div>
-              <textarea
-                value={formData.closing}
-                onChange={(e) => setFormData({ ...formData, closing: e.target.value })}
+              <SegmentEditor
+                content={formData.closing}
+                onChange={(c) => setFormData({ ...formData, closing: c })}
                 placeholder="Wishing you a wonderful day filled with joy and celebration!"
                 rows={2}
-                className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
-                required
-              />
-            </div>
-
-            {/* Message Image */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Message Image
-                <span className="text-xs text-gray-500 ml-2">(Auto-resized to 1080x1350px)</span>
-              </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                {isProcessingImage ? (
-                  <div className="py-8">
-                    <div className="text-4xl mb-2">⏳</div>
-                    <p className="text-sm text-gray-600">Optimizing image...</p>
-                  </div>
-                ) : formData.imageUrl ? (
-                  <div className="relative">
-                    <img
-                      src={formData.imageUrl}
-                      alt="Template preview"
-                      className="w-full max-w-md mx-auto rounded shadow-sm"
-                      style={{ maxHeight: '300px', objectFit: 'contain' }}
-                    />
-                    <p className="text-xs text-gray-500 mt-2">1080x1350px (Optimized)</p>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, imageUrl: null, imageFile: null })}
-                      className="mt-2 text-sm text-red-600 hover:text-red-800"
-                    >
-                      Remove Image
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-5xl mb-2">🖼️</div>
-                    <p className="text-sm text-gray-600 mb-1">Click to add an image</p>
-                    <p className="text-xs text-gray-500 mb-3">Will be automatically resized to 1080x1350px</p>
-                    <div className="space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="btn-outline-orange text-sm"
-                      >
-                        Upload Image
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleGenerateAI}
-                        className="btn-outline-orange text-sm"
-                      >
-                        Generate with AI
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
-                className="hidden"
+                ariaLabel="Closing"
+                showKeywordInserter={true}
+                maxLength={300}
               />
             </div>
 
@@ -509,6 +442,72 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                 <option value="female">Female</option>
               </select>
             </div>
+
+            {/* Attach Image */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Attach Image{' '}
+                <span className="text-gray-400 font-normal text-xs">(optional — or use [Image] for random)</span>
+              </label>
+              {formData.imageUrl ? (
+                <div>
+                  <img
+                    src={formData.imageUrl}
+                    alt="Attached"
+                    className="w-full rounded-lg shadow-sm mb-2"
+                    style={{ maxHeight: '180px', objectFit: 'contain' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, imageUrl: null })}
+                    className="btn-secondary text-xs py-1 px-3"
+                  >
+                    Remove Image
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isProcessingImage}
+                      className="btn flex-1"
+                    >
+                      {isProcessingImage ? 'Processing...' : 'Upload'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowLibraryPicker(!showLibraryPicker)}
+                      className="btn flex-1"
+                    >
+                      From Library
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="sr-only"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  {showLibraryPicker && (
+                    <ImageLibraryPicker
+                      images={libraryImages}
+                      isLoading={isLoadingLibrary}
+                      onSelect={(img) => {
+                        setFormData({ ...formData, imageUrl: img.url });
+                        setShowLibraryPicker(false);
+                      }}
+                      onClose={() => setShowLibraryPicker(false)}
+                      selectedUrl={formData.imageUrl ?? undefined}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           renderPreview()
@@ -530,12 +529,24 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
           >
             Preview
           </button>
-          <button type="button" className="flex-1 btn-secondary">
+          <button type="button" className="flex-1 btn-outline-orange">
             Send Test
           </button>
           <button
             type="button"
-            onClick={onCancel}
+            onClick={() => {
+              setFormData({
+                greeting: '',
+                sentiment: '',
+                closing: '',
+                imageUrl: null,
+                imageFile: null,
+                templateTitle: '',
+                daysInAdvance: 0,
+                gender: 'all',
+              });
+              setActiveTab('create');
+            }}
             className="flex-1 btn-outline-orange"
             disabled={isSubmitting}
           >
@@ -545,6 +556,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             type="submit"
             className="flex-1 btn-orange flex items-center justify-center gap-2"
             disabled={isSubmitting}
+            aria-busy={isSubmitting ? 'true' : 'false'}
+            aria-disabled={isSubmitting ? 'true' : 'false'}
           >
             {isSubmitting && <Spinner size="sm" />}
             <span>{isSubmitting ? 'Saving...' : 'Save'}</span>

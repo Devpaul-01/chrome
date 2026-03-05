@@ -1,3 +1,13 @@
+"""
+schemas/birthday_config.py — Pydantic schemas for birthday automation configuration.
+
+  BirthdayModeEnum      — advance / normal / followup message timing modes
+  BirthdayConfigCreate  — POST /api/birthday-configs body (includes mode-aware offset validator)
+  BirthdayConfigUpdate  — PUT  /api/birthday-configs/{id} body (all fields optional)
+  BirthdayConfigToggle  — PATCH /api/birthday-configs/{id}/toggle body (enable/disable only)
+  BirthdayConfigOut     — full config response (ORM-mapped)
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -7,18 +17,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, validator
 
+from app.schemas.enums import GenderEnum
+
 
 class BirthdayModeEnum(str, Enum):
     ADVANCE = "advance"
     NORMAL = "normal"
     FOLLOWUP = "followup"
-
-
-class GenderEnum(str, Enum):
-    MALE = "MALE"
-    FEMALE = "FEMALE"
-    NEUTRAL = "NEUTRAL"
-    ALL = "ALL"
 
 
 class BirthdayConfigCreate(BaseModel):

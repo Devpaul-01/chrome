@@ -1,5 +1,7 @@
 # Real-Time Features Documentation
 
+**Last Updated:** March 1, 2026
+
 ## Overview
 
 The BirthdayMessaging extension now includes WebSocket-based real-time updates to provide instant feedback across all components without requiring manual refresh.

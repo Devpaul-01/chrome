@@ -37,10 +37,13 @@ export default function ContactList({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Action buttons */}
       <div className="flex gap-3">
-        <button onClick={onImportContacts} className="btn-orange flex-1 flex items-center justify-center gap-2">
+        <button
+          onClick={onImportContacts}
+          className="btn-orange flex-1 flex items-center justify-center gap-2"
+        >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -51,32 +54,27 @@ export default function ContactList({
           </svg>
           Import Contacts
         </button>
-        <button onClick={onAddContact} className="btn flex-1 flex items-center justify-center gap-2">
+        <button
+          onClick={onAddContact}
+          className="btn flex-1 flex items-center justify-center gap-2"
+        >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Add New Contact
         </button>
       </div>
 
-      <div className="h-4" />
-
       <h2 className="text-xl font-bold text-blueStrong">My Contacts</h2>
 
       {/* Search bar */}
-      <div className="relative">
+      <div className="w-full min-w-0">
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search contacts by name"
-          className="w-full px-3 py-2 focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
-          style={{ borderRadius: '0.5rem' }}
+          className="w-full min-w-0 contact-search-input"
         />
       </div>
 
@@ -90,29 +88,39 @@ export default function ContactList({
           {filteredContacts.map((contact) => (
             <div
               key={contact.id}
-              className="card p-4 flex justify-between items-start hover:shadow-md transition-shadow"
+              className="card p-3 flex justify-between items-start gap-3 hover:shadow-md transition-shadow"
             >
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg">{contact.name}</h3>
-                {contact.gender && (
-                  <p className="text-sm text-gray-600">Gender: {contact.gender}</p>
-                )}
-                <p className="text-sm font-medium text-orangeBrand mt-1">
-                  Birthday: {formatBirthday(contact.birthday)}
-                </p>
-                {contact.notes && <p className="text-sm text-gray-600 mt-1">Notes: {contact.notes}</p>}
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <h3 className="font-semibold text-sm text-textPrimary break-words">{contact.name}</h3>
+                <div className="mt-1 space-y-0.5">
+                  <p className="text-xs font-semibold text-orangeBrand">
+                    🎂 {formatBirthday(contact.birthday)}
+                  </p>
+                  {contact.gender && (
+                    <p className="text-xs text-textMuted">
+                      <span className="font-medium">Gender:</span> {contact.gender}
+                    </p>
+                  )}
+                  {contact.notes && (
+                    <div className="text-xs text-textMuted break-words">
+                      {contact.notes.split('|').map((line, i) => (
+                        <p key={i}>{line.trim()}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-1.5 flex-shrink-0">
                 <button
                   onClick={() => onEditContact(contact)}
-                  className="btn-secondary text-xs py-1 px-3"
+                  className="btn-sm-blue"
                   aria-label={`Edit ${contact.name}`}
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => onDeleteContact(contact.id)}
-                  className="btn-danger text-xs py-1 px-3"
+                  className="btn-sm-danger"
                   aria-label={`Delete ${contact.name}`}
                 >
                   Delete

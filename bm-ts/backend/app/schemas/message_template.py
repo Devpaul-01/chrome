@@ -1,16 +1,21 @@
+"""
+schemas/message_template.py — Pydantic schemas for user-authored message templates.
+
+  MessageTemplateCreate  — POST /api/message-templates body
+  MessageTemplateUpdate  — PUT  /api/message-templates/{id} body (all fields optional)
+  MessageTemplateOut     — full template response (ORM-mapped)
+
+``GenderEnum`` controls which contacts the template is targeted at when
+the scheduler selects templates for a given birthday run.
+"""
+
 from datetime import datetime
-from enum import Enum
 from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-
-class GenderEnum(str, Enum):
-    MALE = "MALE"
-    FEMALE = "FEMALE"
-    NEUTRAL = "NEUTRAL"
-    ALL = "ALL"
+from app.schemas.enums import GenderEnum
 
 
 class MessageTemplateCreate(BaseModel):

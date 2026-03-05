@@ -1,17 +1,20 @@
 import { FormEvent, useState } from 'react';
+import Spinner from './Spinner';
+import HelpTooltip from './HelpTooltip';
 
 export type SMTPConfig = {
   host: string;
   port: number;
   username: string;
   password: string;
-  fromEmail?: string;
+  use_tls: boolean;
+  from_email: string;
+  from_name?: string;
 };
 
 type SMTPSettingsProps = {
   config?: SMTPConfig;
   onSave: (config: SMTPConfig) => Promise<void>;
-  onBack: () => void;
   isSubmitting: boolean;
   message: string | null;
 };
@@ -19,7 +22,6 @@ type SMTPSettingsProps = {
 export default function SMTPSettings({
   config,
   onSave,
-  onBack,
   isSubmitting,
   message,
 }: SMTPSettingsProps) {
@@ -27,7 +29,8 @@ export default function SMTPSettings({
   const [port, setPort] = useState(config?.port?.toString() || '587');
   const [username, setUsername] = useState(config?.username || '');
   const [password, setPassword] = useState(config?.password || '');
-  const [fromEmail, setFromEmail] = useState(config?.fromEmail || '');
+  const [fromEmail, setFromEmail] = useState(config?.from_email || '');
+  const [useTls, setUseTls] = useState(config?.use_tls ?? true);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -37,17 +40,13 @@ export default function SMTPSettings({
       port: parseInt(port, 10),
       username: username.trim(),
       password: password.trim(),
-      fromEmail: fromEmail.trim() || undefined,
+      use_tls: useTls,
+      from_email: fromEmail.trim(),
     });
   };
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-blueStrong hover:underline">
-        <span className="text-xl">‹</span>
-        <span>Back</span>
-      </button>
-
       <div className="card">
         <h2 className="text-xl font-bold text-blueStrong mb-4">Email SMTP Settings</h2>
 
@@ -62,7 +61,7 @@ export default function SMTPSettings({
           {/* Host */}
           <div>
             <label htmlFor="host" className="block text-sm font-medium mb-1">
-              Host
+              Host{' '}<HelpTooltip label="Your SMTP server hostname. Contact your email provider for this detail — e.g. smtp.gmail.com for Google, smtp.office365.com for Microsoft." />
             </label>
             <input
               type="text"
@@ -94,6 +93,20 @@ export default function SMTPSettings({
             <p className="text-xs text-gray-500 mt-1">
               Common ports: 587 (TLS), 465 (SSL), 25 (non-encrypted)
             </p>
+          </div>
+
+          {/* Use TLS */}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="useTls"
+              checked={useTls}
+              onChange={(e) => setUseTls(e.target.checked)}
+              className="w-4 h-4 accent-blueStrong"
+            />
+            <label htmlFor="useTls" className="text-sm font-medium">
+              Use TLS/SSL
+            </label>
           </div>
 
           {/* SMTP Username */}
@@ -174,11 +187,15 @@ export default function SMTPSettings({
 
           {/* Actions */}
           <div className="flex gap-2 justify-end pt-2">
-            <button type="button" onClick={onBack} className="btn-secondary" disabled={isSubmitting}>
-              Cancel
-            </button>
-            <button type="submit" className="btn" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Settings'}
+            <button
+              type="submit"
+              className="btn flex items-center justify-center gap-2"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting ? 'true' : 'false'}
+              aria-disabled={isSubmitting ? 'true' : 'false'}
+            >
+              {isSubmitting && <Spinner size="sm" />}
+              <span>{isSubmitting ? 'Saving...' : 'Save Settings'}</span>
             </button>
           </div>
         </form>

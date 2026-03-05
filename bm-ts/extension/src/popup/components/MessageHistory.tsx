@@ -1,88 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Spinner from './Spinner';
-import { getErrorMessage, logError } from '../../utils/errors';
-import wsClient from '../../api/websocket';
-
-export interface MessageHistoryItem {
-  id: string;
-  friend_name: string;
-  friend_profile_url: string;
-  birthday_date: string;
-  message_content: string;
-  sent_at: string;
-  status: 'sent' | 'delivered' | 'failed';
-  error_message?: string;
-}
+import { useMessageHistory, MessageHistoryItem } from '../hooks/useMessages';
 
 interface MessageHistoryProps {
   onClose: () => void;
+  compact?: boolean;
 }
 
-export default function MessageHistory({ onClose }: MessageHistoryProps) {
-  const [messages, setMessages] = useState<MessageHistoryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'sent' | 'delivered' | 'failed'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+export default function MessageHistory({ onClose, compact = false }: MessageHistoryProps) {
+  const {
+    isLoading,
+    error,
+    filterStatus,
+    setFilterStatus,
+    searchQuery,
+    setSearchQuery,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    expandedId,
+    setExpandedId,
+    loadHistory,
+    deleteMessage,
+    filteredMessages,
+    stats,
+    page,
+    pageSize,
+    totalItems,
+    totalPages,
+    goToPage,
+  } = useMessageHistory();
 
-  useEffect(() => {
-    loadHistory();
-
-    // Subscribe to real-time message history updates
-    const unsubscribe = wsClient.on('message_history_update', (data) => {
-      console.log('[MessageHistory] Real-time update:', data);
-
-      if (data.action === 'deleted') {
-        // Remove the message from the list
-        setMessages((prev) => prev.filter((m) => m.id !== data.message.id));
-      } else if (data.action === 'created') {
-        // Reload history to get the new message
-        loadHistory();
-      }
-    });
-
-    // Cleanup: unsubscribe when component unmounts
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  async function loadHistory() {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await chrome.runtime.sendMessage({
-        type: 'messages.listHistory',
-      });
-      setMessages(Array.isArray(data) ? data : []);
-    } catch (err) {
-      const errorMessage = getErrorMessage(err);
-      logError(err, 'MessageHistory:loadHistory');
-      setError(errorMessage);
-      setMessages([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function handleDeleteMessage(id: string) {
-    if (!confirm('Are you sure you want to delete this history item?')) {
-      return;
-    }
-    setError(null);
-    try {
-      await chrome.runtime.sendMessage({
-        type: 'messages.deleteHistory',
-        payload: { id },
-      });
-      setMessages((prev) => prev.filter((m) => m.id !== id));
-    } catch (err) {
-      const errorMessage = getErrorMessage(err);
-      logError(err, 'MessageHistory:handleDeleteMessage');
-      setError(errorMessage);
-    }
-  }
+  const [detailMessage, setDetailMessage] = useState<MessageHistoryItem | null>(null);
 
   function formatDateTime(dateString: string): string {
     const date = new Date(dateString);
@@ -115,71 +65,131 @@ export default function MessageHistory({ onClose }: MessageHistoryProps) {
     );
   }
 
-  const filteredMessages = messages
-    .filter((m) => filterStatus === 'all' || m.status === filterStatus)
-    .filter(
-      (m) => searchQuery === '' || m.friend_name.toLowerCase().includes(searchQuery.toLowerCase()),
-    )
-    .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
-
-  const stats = {
-    total: messages.length,
-    sent: messages.filter((m) => m.status === 'sent').length,
-    delivered: messages.filter((m) => m.status === 'delivered').length,
-    failed: messages.filter((m) => m.status === 'failed').length,
-  };
+  function exportCsv() {
+    const header = ['Name', 'Status', 'Sent At', 'Birthday', 'Message', 'Error'];
+    const rows = filteredMessages.map((m) => [
+      m.friend_name,
+      m.status,
+      new Date(m.sent_at).toLocaleString(),
+      new Date(m.birthday_date).toLocaleDateString(),
+      `"${(m.message_content ?? '').replace(/"/g, '""')}"`,
+      m.error_message ?? '',
+    ]);
+    const csv = [header, ...rows].map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `message-history-page${page}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-3">Message History</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold">Message History</h2>
+        {!compact && filteredMessages.length > 0 && (
+          <button
+            onClick={exportCsv}
+            className="text-xs text-blueStrong hover:text-orangeStrong underline"
+            aria-label="Export current page to CSV"
+          >
+            Export CSV
+          </button>
+        )}
+      </div>
 
       {error && <div className="error mb-3">{error}</div>}
 
       {/* Stats summary */}
-      <div className="grid grid-cols-4 gap-2 mb-4 text-center">
-        <div className="p-2 bg-gray-50 rounded">
-          <div className="text-xl font-bold text-blueStrong">{stats.total}</div>
-          <div className="text-xs text-gray-600">Total</div>
+      {!compact && (
+        <div className="grid grid-cols-4 gap-2 mb-4 text-center">
+          <div className="p-2 bg-gray-50 rounded">
+            <div className="text-xl font-bold text-blueStrong">{stats.total}</div>
+            <div className="text-xs text-gray-600">Total</div>
+          </div>
+          <div className="p-2 bg-blue-50 rounded">
+            <div className="text-xl font-bold text-blue-600">{stats.sent}</div>
+            <div className="text-xs text-gray-600">Sent</div>
+          </div>
+          <div className="p-2 bg-green-50 rounded">
+            <div className="text-xl font-bold text-green-600">{stats.delivered}</div>
+            <div className="text-xs text-gray-600">Delivered</div>
+          </div>
+          <div className="p-2 bg-red-50 rounded">
+            <div className="text-xl font-bold text-red-600">{stats.failed}</div>
+            <div className="text-xs text-gray-600">Failed</div>
+          </div>
         </div>
-        <div className="p-2 bg-blue-50 rounded">
-          <div className="text-xl font-bold text-blue-600">{stats.sent}</div>
-          <div className="text-xs text-gray-600">Sent</div>
-        </div>
-        <div className="p-2 bg-green-50 rounded">
-          <div className="text-xl font-bold text-green-600">{stats.delivered}</div>
-          <div className="text-xs text-gray-600">Delivered</div>
-        </div>
-        <div className="p-2 bg-red-50 rounded">
-          <div className="text-xl font-bold text-red-600">{stats.failed}</div>
-          <div className="text-xs text-gray-600">Failed</div>
-        </div>
-      </div>
+      )}
 
       {/* Filters */}
-      <div className="mb-3 space-y-2">
-        <input
-          type="text"
-          placeholder="Search by name..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="input-field"
-        />
-        <div className="flex gap-2">
-          {(['all', 'sent', 'delivered', 'failed'] as const).map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              className={`flex-1 text-xs py-2 rounded ${
-                filterStatus === status
-                  ? 'bg-orangeStrong text-white'
-                  : 'bg-gray-100 hover:bg-gray-200'
-              }`}
-            >
-              {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
-          ))}
+      {!compact && (
+        <div className="mb-3 space-y-2">
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="input-field"
+            aria-label="Search by name"
+          />
+
+          {/* Date range */}
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="text-xs text-gray-500 block mb-0.5">From</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full text-xs border rounded px-2 py-1.5 bg-white"
+                aria-label="Start date"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-gray-500 block mb-0.5">To</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full text-xs border rounded px-2 py-1.5 bg-white"
+                aria-label="End date"
+              />
+            </div>
+            {(startDate || endDate) && (
+              <button
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className="self-end text-xs text-gray-400 hover:text-gray-600 px-1 pb-1"
+                aria-label="Clear date range"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Status buttons */}
+          <div className="flex gap-2">
+            {(['all', 'sent', 'delivered', 'failed'] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`flex-1 text-xs py-2 rounded ${
+                  filterStatus === status
+                    ? 'bg-orangeStrong text-white'
+                    : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
+                {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
@@ -188,80 +198,154 @@ export default function MessageHistory({ onClose }: MessageHistoryProps) {
       ) : filteredMessages.length === 0 ? (
         <div className="text-center py-6">
           <p className="text-gray-500 mb-2">
-            {searchQuery || filterStatus !== 'all' ? 'No matching messages' : 'No message history'}
+            {searchQuery || filterStatus !== 'all' || startDate || endDate
+              ? 'No matching messages'
+              : 'No message history'}
           </p>
           <p className="text-xs text-gray-400">
-            {searchQuery || filterStatus !== 'all'
+            {searchQuery || filterStatus !== 'all' || startDate || endDate
               ? 'Try adjusting your filters'
               : 'Sent messages will appear here'}
           </p>
         </div>
       ) : (
-        <div className="space-y-2 max-h-80 overflow-y-auto">
+        <div
+          className={
+            compact ? 'space-y-1 max-h-72 overflow-y-auto' : 'space-y-2 max-h-72 overflow-y-auto'
+          }
+        >
           {filteredMessages.map((message) => (
             <div
               key={message.id}
-              className="border rounded p-3 bg-white hover:shadow-sm transition"
+              className={`border rounded p-3 bg-white hover:shadow-sm transition ${
+                compact ? 'py-2 px-3' : ''
+              }`}
             >
-              {/* Header */}
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm">{message.friend_name}</span>
-                    {getStatusBadge(message.status)}
-                  </div>
-                  <div className="text-xs text-gray-500">{formatDateTime(message.sent_at)}</div>
-                </div>
-                <button
-                  onClick={() => setExpandedId(expandedId === message.id ? null : message.id)}
-                  className="text-blueStrong hover:text-orangeStrong text-xs"
-                >
-                  {expandedId === message.id ? 'Hide' : 'Details'}
-                </button>
-              </div>
-
-              {/* Expanded details */}
-              {expandedId === message.id && (
-                <div className="mt-3 pt-3 border-t space-y-2">
-                  <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">Message:</label>
-                    <div className="text-sm p-2 bg-gray-50 rounded whitespace-pre-wrap">
-                      {message.message_content}
+              {compact ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{message.friend_name}</span>
+                      {getStatusBadge(message.status)}
                     </div>
+                    <div className="text-xs text-gray-500">{formatDateTime(message.sent_at)}</div>
                   </div>
-
-                  <div className="text-xs text-gray-600">
-                    <strong>Birthday:</strong>{' '}
-                    {new Date(message.birthday_date).toLocaleDateString()}
-                  </div>
-
-                  {message.error_message && (
-                    <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
-                      Error: {message.error_message}
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <a
                       href={message.friend_profile_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 bg-blue-500 text-white text-xs py-2 px-3 rounded hover:bg-blue-600 text-center"
+                      className="text-xs bg-blue-500 text-white px-2 py-1 rounded"
                     >
-                      View Profile
+                      View
                     </a>
                     <button
-                      onClick={() => handleDeleteMessage(message.id)}
-                      className="flex-1 bg-red-500 text-white text-xs py-2 px-3 rounded hover:bg-red-600"
+                      onClick={() => deleteMessage(message.id)}
+                      className="text-xs bg-red-500 text-white px-2 py-1 rounded"
                     >
-                      Delete
+                      Del
                     </button>
                   </div>
                 </div>
+              ) : (
+                <>
+                  {/* Header */}
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm">{message.friend_name}</span>
+                        {getStatusBadge(message.status)}
+                      </div>
+                      <div className="text-xs text-gray-500">{formatDateTime(message.sent_at)}</div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setDetailMessage(message)}
+                        className="text-blueStrong hover:text-orangeStrong text-xs"
+                        aria-label={`View details for ${message.friend_name}`}
+                      >
+                        Details
+                      </button>
+                      <button
+                        onClick={() => setExpandedId(expandedId === message.id ? null : message.id)}
+                        className="text-blueStrong hover:text-orangeStrong text-xs"
+                      >
+                        {expandedId === message.id ? 'Hide' : 'Expand'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expanded inline panel */}
+                  {expandedId === message.id && (
+                    <div className="mt-3 pt-3 border-t space-y-2">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">
+                          Message:
+                        </label>
+                        <div className="text-sm p-2 bg-gray-50 rounded whitespace-pre-wrap">
+                          {message.message_content}
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-gray-600">
+                        <strong>Birthday:</strong>{' '}
+                        {new Date(message.birthday_date).toLocaleDateString()}
+                      </div>
+
+                      {message.error_message && (
+                        <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                          Error: {message.error_message}
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <a
+                          href={message.friend_profile_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 bg-blue-500 text-white text-xs py-2 px-3 rounded hover:bg-blue-600 text-center"
+                        >
+                          View Profile
+                        </a>
+                        <button
+                          onClick={() => deleteMessage(message.id)}
+                          className="flex-1 bg-red-500 text-white text-xs py-2 px-3 rounded hover:bg-red-600"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination controls */}
+      {!compact && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-3 text-xs text-gray-600">
+          <button
+            onClick={() => goToPage(page - 1)}
+            disabled={page <= 1 || isLoading}
+            className="px-2 py-1 border rounded disabled:opacity-40 hover:bg-gray-50"
+            aria-label="Previous page"
+          >
+            ← Prev
+          </button>
+          <span aria-live="polite">
+            Page {page} of {totalPages} ({totalItems} total)
+          </span>
+          <button
+            onClick={() => goToPage(page + 1)}
+            disabled={page >= totalPages || isLoading}
+            className="px-2 py-1 border rounded disabled:opacity-40 hover:bg-gray-50"
+            aria-label="Next page"
+          >
+            Next →
+          </button>
         </div>
       )}
 
@@ -269,10 +353,84 @@ export default function MessageHistory({ onClose }: MessageHistoryProps) {
         <button onClick={loadHistory} className="btn-secondary flex-1">
           Refresh
         </button>
-        <button onClick={onClose} className="btn-primary flex-1">
-          Close
-        </button>
       </div>
+
+      {/* Details modal */}
+      {detailMessage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="history-detail-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDetailMessage(null);
+          }}
+        >
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 id="history-detail-title" className="font-semibold text-sm">
+                Message Details — {detailMessage.friend_name}
+              </h3>
+              <button
+                onClick={() => setDetailMessage(null)}
+                className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                aria-label="Close details"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto space-y-3 flex-1">
+              <div className="flex items-center gap-2">
+                {getStatusBadge(detailMessage.status)}
+                <span className="text-xs text-gray-500">
+                  Sent: {new Date(detailMessage.sent_at).toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-600 mb-1">Message</p>
+                <div className="text-sm p-3 bg-gray-50 rounded whitespace-pre-wrap border">
+                  {detailMessage.message_content}
+                </div>
+              </div>
+              <div className="text-xs text-gray-600">
+                <strong>Birthday:</strong> {new Date(detailMessage.birthday_date).toLocaleDateString()}
+              </div>
+              {detailMessage.error_message && (
+                <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                  <strong>Error:</strong> {detailMessage.error_message}
+                </div>
+              )}
+              <div className="text-xs">
+                <a
+                  href={detailMessage.friend_profile_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blueStrong underline"
+                >
+                  View Facebook profile ↗
+                </a>
+              </div>
+            </div>
+            <div className="p-4 border-t flex gap-2">
+              <button
+                onClick={() => {
+                  deleteMessage(detailMessage.id);
+                  setDetailMessage(null);
+                }}
+                className="flex-1 bg-red-500 text-white text-xs py-2 rounded hover:bg-red-600"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setDetailMessage(null)}
+                className="flex-1 btn-secondary text-xs py-2"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

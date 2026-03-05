@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import Spinner from './Spinner';
 
 export type UserProfile = {
   email: string;
@@ -31,7 +32,9 @@ export default function AccountManagement({
   const [lastName, setLastName] = useState(user.lastName || '');
   const [email, setEmail] = useState(user.email);
   const [phone, setPhone] = useState(user.phone || '');
-  const [timezone, setTimezone] = useState(user.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [timezone, setTimezone] = useState(
+    user.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+  );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleProfileSubmit = async (e: FormEvent) => {
@@ -141,8 +144,15 @@ export default function AccountManagement({
           </div>
 
           {/* Submit */}
-          <button type="submit" className="btn w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Updating...' : 'Update Profile'}
+          <button
+            type="submit"
+            className="btn w-full flex items-center justify-center gap-2"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting ? 'true' : 'false'}
+            aria-disabled={isSubmitting ? 'true' : 'false'}
+          >
+            {isSubmitting && <Spinner size="sm" />}
+            <span>{isSubmitting ? 'Updating...' : 'Update Profile'}</span>
           </button>
         </form>
       </div>
@@ -171,8 +181,13 @@ export default function AccountManagement({
               This timezone is used for scheduling birthday messages
             </p>
           </div>
-          <button onClick={handleTimezoneUpdate} className="btn w-full" disabled={isSubmitting}>
-            Update Time Zone
+          <button
+            onClick={handleTimezoneUpdate}
+            className="btn w-full flex items-center justify-center gap-2"
+            disabled={isSubmitting}
+          >
+            {isSubmitting && <Spinner size="sm" />}
+            <span>Update Time Zone</span>
           </button>
         </div>
       </div>
@@ -202,10 +217,11 @@ export default function AccountManagement({
         {!showDeleteConfirm ? (
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="btn-danger w-full"
+            className="btn-danger w-full flex items-center justify-center gap-2"
             disabled={isSubmitting}
           >
-            Delete Account
+            {isSubmitting && <Spinner size="sm" />}
+            <span>Delete Account</span>
           </button>
         ) : (
           <div className="space-y-3">
@@ -222,10 +238,11 @@ export default function AccountManagement({
               </button>
               <button
                 onClick={handleDeleteConfirm}
-                className="btn-danger flex-1"
+                className="btn-danger flex-1 flex items-center justify-center gap-2"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Deleting...' : 'Confirm Delete'}
+                {isSubmitting && <Spinner size="sm" />}
+                <span>{isSubmitting ? 'Deleting...' : 'Confirm Delete'}</span>
               </button>
             </div>
           </div>

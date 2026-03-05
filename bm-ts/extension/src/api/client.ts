@@ -1,3 +1,25 @@
+/**
+ * api/client.ts — HTTP client layer for the BirthdayMessaging backend API.
+ *
+ * All requests are proxied through the background service worker
+ * (`background/index.ts`) rather than being made directly from the popup or
+ * content scripts, because Chrome MV3 restricts cross-origin fetch in those
+ * contexts.  This module therefore runs ONLY in the background context and
+ * is imported exclusively by `background/index.ts`.
+ *
+ * Architecture:
+ *   popup / content  ──chrome.runtime.sendMessage──►  background
+ *   background       ──fetch()──►  backend API
+ *
+ * Every exported function follows the same signature convention:
+ *   (baseUrl: string, accessToken?: string, ...args) ⇒ Promise<ResponseType>
+ */
+
+/**
+ * Structured error thrown by `request()` when the server returns a non-2xx
+ * status code.  The `status` field mirrors the HTTP status and `data` carries
+ * the parsed response body (e.g. FastAPI's `{detail: string}` shape).
+ */
 export class ApiError extends Error {
   constructor(public status: number, public data: unknown) {
     const detail =
@@ -8,10 +30,23 @@ export class ApiError extends Error {
   }
 }
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null | undefined;
 
+/**
+ * Central HTTP dispatcher for all backend requests.
+ *
+ * Handles `Authorization: Bearer` injection, JSON serialisation/deserialisation,
+ * and translates non-2xx responses into `ApiError` instances so callers receive
+ * a consistent error type regardless of which endpoint failed.
+ *
+ * @param baseUrl - Backend base URL (e.g. `http://localhost:8000`).
+ * @param path    - API path starting with `/` (e.g. `/auth/login`).
+ * @param method  - HTTP verb.
+ * @param body    - Optional request body; will be JSON-stringified.
+ * @param accessToken - If provided, attached as `Authorization: Bearer <token>`.
+ */
 async function request<T>(
   baseUrl: string,
   path: string,
@@ -25,11 +60,24 @@ async function request<T>(
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
-  const response = await fetch(`${baseUrl}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000); // 10 s hard limit
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (fetchErr) {
+    if ((fetchErr as Error).name === 'AbortError') {
+      throw new Error(`Request timed out: ${method} ${path}`);
+    }
+    throw fetchErr;
+  } finally {
+    clearTimeout(timeoutId);
+  }
   const text = await response.text();
   const data = text ? JSON.parse(text) : undefined;
   if (!response.ok) {
@@ -38,17 +86,20 @@ async function request<T>(
   return data as T;
 }
 
+/** Registration / login request body. */
 export interface RegisterPayload {
   email: string;
   password: string;
 }
 
+/** Token pair returned by register, login, and refresh endpoints. */
 export interface TokenResponse {
   access_token: string;
   refresh_token: string;
   token_type: string;
 }
 
+/** Legacy three-part template segment (greeting / body / closing). */
 export interface TemplateSegment {
   id: string;
   segment_type: 'GREETING' | 'BODY' | 'CLOSING';
@@ -58,14 +109,18 @@ export interface TemplateSegment {
   updated_at: string;
 }
 
+/** Authenticated user's profile document. */
 export interface UserProfile {
   id: string;
   email: string;
   created_at: string;
+  name?: string;
+  timezone?: string;
 }
 
 export type SegmentType = TemplateSegment['segment_type'];
 
+/** User's Stripe subscription status. */
 export interface SubscriptionStatus {
   is_active: boolean;
   plan?: 'monthly' | 'yearly';
@@ -84,18 +139,22 @@ export interface CheckoutSessionResponse {
   checkout_url: string;
 }
 
+/** Register a new account and return a token pair. */
 export async function register(baseUrl: string, payload: RegisterPayload): Promise<TokenResponse> {
   return request<TokenResponse>(baseUrl, '/auth/register', 'POST', payload as unknown as JsonValue);
 }
 
+/** Authenticate with email + password and return a token pair. */
 export async function login(baseUrl: string, payload: RegisterPayload): Promise<TokenResponse> {
   return request<TokenResponse>(baseUrl, '/auth/login', 'POST', payload as unknown as JsonValue);
 }
 
+/** Exchange a valid refresh token for a new access/refresh token pair. */
 export async function refreshToken(baseUrl: string, refresh_token: string): Promise<TokenResponse> {
   return request<TokenResponse>(baseUrl, '/auth/refresh', 'POST', { refresh_token });
 }
 
+/** Return the currently-authenticated user's profile (‘/auth/me’). */
 export async function me(baseUrl: string, accessToken: string): Promise<UserProfile> {
   return request(baseUrl, '/auth/me', 'GET', undefined, accessToken);
 }
@@ -321,11 +380,36 @@ export interface MessageHistoryItem {
   error_message?: string;
 }
 
+export interface MessageHistoryPage {
+  items: MessageHistoryItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ListHistoryParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  status_filter?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
 export async function listMessageHistory(
   baseUrl: string,
   accessToken: string,
-): Promise<MessageHistoryItem[]> {
-  return request(baseUrl, '/api/messages/history', 'GET', undefined, accessToken);
+  params: ListHistoryParams = {},
+): Promise<MessageHistoryPage> {
+  const qs = new URLSearchParams();
+  if (params.page) qs.set('page', String(params.page));
+  if (params.page_size) qs.set('page_size', String(params.page_size));
+  if (params.search) qs.set('search', params.search);
+  if (params.status_filter) qs.set('status_filter', params.status_filter);
+  if (params.start_date) qs.set('start_date', params.start_date);
+  if (params.end_date) qs.set('end_date', params.end_date);
+  const path = `/api/messages/history${qs.toString() ? `?${qs}` : ''}`;
+  return request(baseUrl, path, 'GET', undefined, accessToken);
 }
 
 export async function deleteMessageHistory(
@@ -356,6 +440,11 @@ export async function getDashboardStats(
 }
 
 // ========== Contact Management ==========
+/**
+ * A stored contact representing a Facebook friend.
+ * `gender` drives pronoun/template selection during automation.
+ * `birthday` is stored as `YYYY-MM-DD` or `MM-DD`.
+ */
 export interface Contact {
   id: string;
   name: string;
@@ -478,6 +567,11 @@ export async function deleteMessageGroup(
 }
 
 // ========== Posts ==========
+/**
+ * Timeline post that can be attached to a birthday automation run.
+ * `gender` is used to pick the most appropriate post for the recipient.
+ * `image_url` may reference a Nifty Images URL with merge-tag placeholders.
+ */
 export interface Post {
   id: string;
   content: string;
@@ -553,7 +647,7 @@ export async function listImages(
   baseUrl: string,
   accessToken: string,
 ): Promise<UserImage[]> {
-  return request(baseUrl, '/api/images/', 'GET', undefined, accessToken);
+  return request(baseUrl, '/api/images', 'GET', undefined, accessToken);
 }
 
 export async function createImage(
@@ -561,7 +655,21 @@ export async function createImage(
   accessToken: string,
   payload: CreateImagePayload,
 ): Promise<UserImage> {
-  return request(baseUrl, '/api/images/', 'POST', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, '/api/images/upload', 'POST', payload as unknown as JsonValue, accessToken);
+}
+
+export interface UploadImageFilePayload {
+  filename: string;
+  data: string;  // base64 data URL
+  size: number;  // decoded byte count
+}
+
+export async function uploadImageFile(
+  baseUrl: string,
+  accessToken: string,
+  payload: UploadImageFilePayload,
+): Promise<UserImage> {
+  return request(baseUrl, '/api/images/upload-file', 'POST', payload as unknown as JsonValue, accessToken);
 }
 
 export async function deleteImage(
@@ -573,6 +681,7 @@ export async function deleteImage(
 }
 
 // ========== SMTP Settings ==========
+/** SMTP configuration for outbound email notifications (stored server-side). */
 export interface SMTPConfig {
   host: string;
   port: number;
@@ -630,6 +739,11 @@ export async function deleteUserAccount(
 }
 
 // ========== Message Templates ==========
+/**
+ * A full message template composed of greeting / sentiment / closing segments.
+ * `days_in_advance` controls when the DM is sent relative to the birthday:
+ *   > 0 = N days BEFORE,  0 = ON the day,  < 0 = N days AFTER.
+ */
 export interface MessageTemplate {
   id: string;
   user_id: string;
@@ -704,4 +818,45 @@ export async function deleteMessageTemplate(
   templateId: string,
 ): Promise<void> {
   return request(baseUrl, `/api/message-templates/${templateId}`, 'DELETE', undefined, accessToken);
+}
+
+// ========== Birthday Configs ==========
+/**
+ * Birthday automation config doc.  Each entry ties together a mode
+ * (advance / normal / follow-up), an optional message group, an optional post,
+ * a day offset, and a gender filter.
+ */
+export interface BirthdayConfig {
+  id: string;
+  mode: 'advance' | 'normal' | 'followup';
+  days_offset: number;
+  message_group_id?: string | null;
+  post_id?: string | null;
+  gender_filter: 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL';
+  archive_enabled: boolean;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listBirthdayConfigs(
+  baseUrl: string,
+  accessToken: string,
+): Promise<BirthdayConfig[]> {
+  return request(baseUrl, '/api/birthday-configs', 'GET', undefined, accessToken);
+}
+
+export async function toggleBirthdayConfig(
+  baseUrl: string,
+  accessToken: string,
+  id: string,
+  enabled: boolean,
+): Promise<BirthdayConfig> {
+  return request(
+    baseUrl,
+    `/api/birthday-configs/${id}/toggle`,
+    'PATCH',
+    { enabled },
+    accessToken,
+  );
 }

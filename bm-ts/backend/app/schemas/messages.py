@@ -1,3 +1,12 @@
+"""
+schemas/messages.py — Pydantic schemas for the message queue and history endpoints.
+
+  MessageQueueCreate   — POST /api/messages/queue body
+  MessageQueueUpdate   — PUT  /api/messages/queue/{id} body (fields optional)
+  MessageQueue         — full queue item response (ORM-mapped)
+  MessageHistoryItem   — history record response (ORM-mapped)
+"""
+
 from datetime import datetime
 from uuid import UUID
 
@@ -47,3 +56,12 @@ class MessageHistoryItem(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class MessageHistoryPage(BaseModel):
+    """Paginated response wrapper for GET /api/messages/history."""
+
+    items: list[MessageHistoryItem]
+    total: int
+    page: int
+    page_size: int

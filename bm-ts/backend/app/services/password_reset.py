@@ -1,3 +1,14 @@
+"""
+services/password_reset.py — Password reset token lifecycle management.
+
+Tokens are generated as URL-safe random bytes (``secrets.token_urlsafe``),
+then stored as a SHA-256 hash so that the raw token value is never persisted
+in the database (defence-in-depth: a DB leak does not expose usable tokens).
+
+Token expiry: 30 minutes from creation.
+Rate limiting on the endpoint is handled upstream in the auth router.
+"""
+
 import hashlib
 import os
 import secrets
@@ -44,7 +55,7 @@ async def verify_reset_token(raw_token: str, db: AsyncSession) -> User | None:
         .join(User, PasswordResetToken.user_id == User.id)
         .where(
             and_(
-                PasswordResetToken.hash_token == hash_token,
+                PasswordResetToken.token == hash_token,
                 PasswordResetToken.expires_at > datetime.now(timezone.utc),
                 PasswordResetToken.used_at.is_(None),
             )
@@ -64,7 +75,7 @@ async def mark_token_used(raw_token: str, db: AsyncSession) -> None:
     hash_token = hashlib.sha256(raw_token.encode()).hexdigest()
 
     result = await db.execute(
-        select(PasswordResetToken).where(PasswordResetToken.hash_token == hash_token)
+        select(PasswordResetToken).where(PasswordResetToken.token == hash_token)
     )
     
     reset_token = result.scalar_one_or_none()
@@ -74,18 +85,28 @@ async def mark_token_used(raw_token: str, db: AsyncSession) -> None:
 
 
 async def send_reset_email(email: str, token: str) -> None:
+    """Send a password reset email
+    
+    TODO: Implement actual email sending logic
+    For now, this is a placeholder that logs the token
+    """
+    # In production, you would use an email service like SendGrid, AWS SES, etc.
     reset_url = f"chrome-extension://YOUR_EXTENSION_ID/popup.html?token={token}"
     
     print(f"Password reset requested for {email}")
     print(f"Reset URL: {reset_url}")
     print(f"Token: {token}")
     
-    message = Mail(
-        from_email="noreply@yourdomain.com",
-        to_emails=email,
-        subject="Password Reset Request",
-        html_content=f"<p>Click <a href='{reset_url}'>here</a> to reset your password.</p>"
-    )
-
-    sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
-    sg.send(message)
+    # TODO: Replace with actual email sending
+    # Example with SendGrid:
+    # from sendgrid import SendGridAPIClient
+    # from sendgrid.helpers.mail import Mail
+    # 
+    # message = Mail(
+    #     from_email='noreply@yourdomain.com',
+    #     to_emails=email,
+    #     subject='Password Reset Request',
+    #     html_content=f'<p>Click <a href="{reset_url}">here</a> to reset your password.</p>'
+    # )
+    # sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+    # sg.send(message)

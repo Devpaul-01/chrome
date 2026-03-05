@@ -1,3 +1,16 @@
+"""
+routers/message_groups.py — CRUD endpoints for message groups.
+
+  POST   /message-groups          create a message group
+  GET    /message-groups          list groups (optional gender filter)
+  GET    /message-groups/{id}     retrieve a single group
+  PUT    /message-groups/{id}     update name, gender, or segment list
+  DELETE /message-groups/{id}     delete a group
+
+Message groups collect template-segment UUIDs and a gender filter so the
+scheduler can pick the right group when composing birthday messages.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime

@@ -1,18 +1,23 @@
+"""
+schemas/message_group.py — Pydantic schemas for message-group CRUD endpoints.
+
+  MessageGroupCreate  — POST /api/message-groups body
+  MessageGroupUpdate  — PUT  /api/message-groups/{id} body (all fields optional)
+  MessageGroupOut     — full group response including resolved segment_ids (ORM-mapped)
+
+A ``MessageGroup`` bundles a named set of template-segment UUIDs together so
+the scheduler can pick a random combination for a given gender filter.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
 from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
-class GenderEnum(str, Enum):
-    MALE = "MALE"
-    FEMALE = "FEMALE"
-    NEUTRAL = "NEUTRAL"
-    ALL = "ALL"
+from app.schemas.enums import GenderEnum
 
 
 class MessageGroupCreate(BaseModel):

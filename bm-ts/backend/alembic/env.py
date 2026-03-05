@@ -1,3 +1,13 @@
+"""
+alembic/env.py — Alembic migration environment configuration.
+
+Configures both offline (URL-only, no live DB connection) and online
+(async engine + live connection) migration modes.  The async engine uses
+``NullPool`` to avoid persistent connections during migration runs.
+
+All application models are pulled in via ``app.db.base.Base.metadata`` so
+Alembic autogenerate can diff them against the live schema.
+"""
 from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
@@ -25,6 +35,7 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+config.set_main_option("sqlalchemy.url", settings.database_url)
 
 
 def run_migrations_offline() -> None:
@@ -59,17 +70,16 @@ async def run_migrations_online() -> None:
     """
     connectable = create_async_engine(settings.database_url, poolclass=pool.NullPool)
 
-    async with connectable.connect() as connection:
-        await connection.run_sync(
-            lambda sync_conn: context.configure(
-                connection=sync_conn,
-                target_metadata=target_metadata,
-            )
+    def do_run_migrations(connection: Connection) -> None:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
         )
+        with context.begin_transaction():
+            context.run_migrations()
 
-        await connection.run_sync(
-            lambda sync_conn: context.run_migrations()
-        )
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
 
     await connectable.dispose()
 

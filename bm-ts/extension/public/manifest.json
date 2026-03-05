@@ -9,7 +9,8 @@
     "default_title": "BirthdayMessaging"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -19,7 +20,9 @@
     }
   ],
   "host_permissions": [
-    "https://*.facebook.com/*"
+    "https://*.facebook.com/*",
+    "http://localhost/*",
+    "https://localhost/*"
   ],
   "web_accessible_resources": [
     {

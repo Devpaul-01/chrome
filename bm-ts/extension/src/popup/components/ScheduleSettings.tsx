@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Spinner from './Spinner';
 import { getErrorMessage, logError } from '../../utils/errors';
+import HelpTooltip from './HelpTooltip';
 
 export interface BirthdaySchedule {
   id: string;
@@ -12,18 +13,27 @@ export interface BirthdaySchedule {
 
 interface ScheduleSettingsProps {
   onClose: () => void;
+  showClose?: boolean;
 }
 
-export default function ScheduleSettings({ onClose }: ScheduleSettingsProps) {
+export default function ScheduleSettings({ onClose, showClose = true }: ScheduleSettingsProps) {
   const [schedules, setSchedules] = useState<BirthdaySchedule[]>([]);
   const [daysBeforeInput, setDaysBeforeInput] = useState('0');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [utcTime, setUtcTime] = useState(() =>
+    new Date().toUTCString().replace(' GMT', ' UTC'),
+  );
 
   useEffect(() => {
     loadSchedules();
+    const timer = setInterval(
+      () => setUtcTime(new Date().toUTCString().replace(' GMT', ' UTC')),
+      1000,
+    );
+    return () => clearInterval(timer);
   }, []);
 
   async function loadSchedules() {
@@ -120,9 +130,13 @@ export default function ScheduleSettings({ onClose }: ScheduleSettingsProps) {
   return (
     <div className="card">
       <h2 className="text-lg font-semibold mb-3">Birthday Message Schedule</h2>
-      <p className="text-sm text-gray-600 mb-4">
+      <p className="text-sm text-gray-600 mb-3">
         Configure when to send birthday messages relative to the actual birthday date.
       </p>
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-xs text-textMuted font-medium">Current UTC time:</span>
+        <span className="utc-clock">{utcTime}</span>
+      </div>
 
       {error && <div className="error mb-3">{error}</div>}
       {message && <div className="success mb-3">{message}</div>}
@@ -136,7 +150,7 @@ export default function ScheduleSettings({ onClose }: ScheduleSettingsProps) {
           {/* Add new schedule */}
           <form onSubmit={handleAddSchedule} className="mb-4">
             <label htmlFor="daysBefore" className="block text-sm font-medium mb-1">
-              Send messages
+              Send messages{' '}<HelpTooltip label="Positive numbers = days before birthday (e.g. 3 = 3 days before). 0 = on the birthday. Negative numbers = days after (e.g. -1 = 1 day after)." />
             </label>
             <div className="flex gap-2 items-center mb-2">
               <input
@@ -156,6 +170,8 @@ export default function ScheduleSettings({ onClose }: ScheduleSettingsProps) {
             <button
               type="submit"
               disabled={isSubmitting}
+              aria-busy={isSubmitting ? 'true' : 'false'}
+              aria-disabled={isSubmitting ? 'true' : 'false'}
               className="btn-primary btn-block flex items-center justify-center gap-2"
             >
               {isSubmitting && <Spinner size="sm" />}
@@ -189,6 +205,7 @@ export default function ScheduleSettings({ onClose }: ScheduleSettingsProps) {
                           checked={schedule.enabled}
                           onChange={(e) => handleToggleSchedule(schedule.id, e.target.checked)}
                           className="w-4 h-4"
+                          aria-label={`Enable schedule ${formatScheduleText(schedule.days_before)}`}
                         />
                         <span className="text-sm font-medium">
                           {formatScheduleText(schedule.days_before)}
@@ -208,9 +225,11 @@ export default function ScheduleSettings({ onClose }: ScheduleSettingsProps) {
         </>
       )}
 
-      <button onClick={onClose} className="btn-secondary btn-block mt-4">
-        Close
-      </button>
+      {showClose && (
+        <button onClick={onClose} className="btn-secondary btn-block mt-4">
+          Close
+        </button>
+      )}
     </div>
   );
 }

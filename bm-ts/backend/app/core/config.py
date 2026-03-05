@@ -1,13 +1,30 @@
+"""
+core/config.py — Application settings loaded from environment variables / .env file.
+
+All settings are read by ``pydantic_settings.BaseSettings``, which first checks
+actual environment variables (overriding .env values), making it easy to inject
+production secrets via the container environment without modifying files on disk.
+
+Sensitive defaults (JWT secret, Stripe keys) are intentional placeholders that
+cause the app to work in development but should ALWAYS be overridden in any
+deployed environment.
+"""
+
 from __future__ import annotations
 
-from typing import Iterable
+import json
+from typing import Any, Iterable
 
 from pydantic import ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    model_config = ConfigDict(env_file=".env", case_sensitive=False)
+    model_config = ConfigDict(
+    env_file=".env", 
+    case_sensitive=False,
+    extra="ignore"
+    )
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/birthdaymessaging",
         alias="DATABASE_URL",
@@ -20,13 +37,44 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = Field(default="whsec_placeholder", alias="STRIPE_WEBHOOK_SECRET")
     stripe_price_monthly: str = Field(default="price_monthly_placeholder", alias="STRIPE_PRICE_MONTHLY")
     stripe_price_yearly: str = Field(default="price_yearly_placeholder", alias="STRIPE_PRICE_YEARLY")
-    cors_origins: list[str] = Field(default_factory=lambda: ["chrome-extension://*", "http://localhost:3000"])
+    stripe_redirect_allowed_domains: list[str] = Field(
+        default_factory=lambda: ["localhost"],
+        alias="STRIPE_REDIRECT_ALLOWED_DOMAINS",
+    )
+    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     log_level: str = Field(default="INFO")
 
+    @field_validator("jwt_secret_key", mode="after")
+    @classmethod
+    def validate_jwt_secret(cls, v: str) -> str:
+        _INSECURE_DEFAULTS = {"change-me-super-secret", "secret", "changeme", ""}
+        if v in _INSECURE_DEFAULTS or len(v) < 32:
+            import warnings
+            warnings.warn(
+                "JWT_SECRET_KEY is insecure or too short (< 32 chars). "
+                "Set a strong random value in .env before deploying.",
+                stacklevel=2,
+            )
+        return v
+
     @field_validator("cors_origins", mode="before")
-    def parse_cors(cls, value: Iterable[str] | str) -> list[str]:
+    @classmethod
+    def parse_cors(cls, value: Any) -> list[str]:
+        # pydantic-settings may pass a pre-parsed list or a raw string
+        if isinstance(value, list):
+            return [str(o).strip() for o in value if str(o).strip()]
         if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
-        return list(value)
+            stripped = value.strip()
+            # JSON array format: ["origin1","origin2"]
+            if stripped.startswith("["):
+                try:
+                    parsed = json.loads(stripped)
+                    if isinstance(parsed, list):
+                        return [str(o).strip() for o in parsed if str(o).strip()]
+                except json.JSONDecodeError:
+                    pass
+            # Comma-separated fallback
+            return [item.strip() for item in stripped.split(",") if item.strip()]
+        return list(value)  # type: ignore[arg-type]
 
 settings = Settings()

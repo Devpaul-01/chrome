@@ -1,10 +1,25 @@
+"""
+services/stripe.py — Stripe API integration helpers.
+
+Handles:
+  - Creating Stripe Checkout Sessions for monthly and yearly subscription plans.
+  - Constructing and validating incoming Stripe webhook events.
+  - Upserting ``SubscriptionRecord`` rows from webhook payloads so the local
+    database always mirrors Stripe's subscription state.
+
+The Stripe SDK calls are wrapped in ``run_in_threadpool`` because the SDK is
+not async-native; wrapping prevents them from blocking the async event loop.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Mapping
+from urllib.parse import urlparse
 from uuid import UUID
 
 import stripe
+from fastapi import HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,13 +30,38 @@ from app.db.models import SubscriptionRecord, User
 stripe.api_key = settings.stripe_api_key
 
 
+def _validate_redirect_url(url: str, label: str = "URL") -> None:
+    """Validate that a Stripe redirect URL points to an allowed domain."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid {label}: malformed URL",
+        )
+    if parsed.scheme not in ("https", "http"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid {label}: scheme must be http or https",
+        )
+    hostname = parsed.hostname or ""
+    allowed = settings.stripe_redirect_allowed_domains
+    if not any(hostname == d or hostname.endswith(f".{d}") for d in allowed):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid {label}: domain not in allowlist",
+        )
+
+
 def _timestamp(value: int | None) -> datetime | None:
+    """Convert a Unix timestamp integer to a UTC-aware ``datetime``, or ``None`` if the value is absent."""
     if value is None:
         return None
     return datetime.fromtimestamp(value, tz=timezone.utc)
 
 
 def get_price_id(plan: str) -> str:
+    """Map ``"monthly"`` / ``"yearly"`` to the corresponding Stripe price ID from settings."""
     mapping = {
         "monthly": settings.stripe_price_monthly,
         "yearly": settings.stripe_price_yearly,
@@ -39,6 +79,18 @@ async def create_checkout_session(
     cancel_url: str,
     db: AsyncSession,
 ) -> str:
+    """
+    Create a Stripe Checkout Session for the given ``plan`` and return its URL.
+
+    If the user does not yet have a ``stripe_customer_id``, a Stripe Customer
+    is created and the ID is persisted before the session is created.
+
+    Redirect URLs are validated against an allowlist to prevent open-redirect attacks.
+    """
+    # Validate redirect URLs against the configured allowlist
+    _validate_redirect_url(success_url, "success_url")
+    _validate_redirect_url(cancel_url, "cancel_url")
+
     if not user.stripe_customer_id:
         customer = await run_in_threadpool(stripe.Customer.create, email=user.email)
         user.stripe_customer_id = customer["id"]
@@ -59,6 +111,7 @@ async def create_checkout_session(
 
 
 def construct_event(payload: bytes, signature: str) -> stripe.Event:
+    """Verify the Stripe-Signature header and return a parsed ``stripe.Event``. Raises on invalid signature."""
     return stripe.Webhook.construct_event(
         payload=payload,
         sig_header=signature,
@@ -69,6 +122,13 @@ def construct_event(payload: bytes, signature: str) -> stripe.Event:
 async def sync_subscription_record(
     db: AsyncSession, user_id: UUID, data: Mapping[str, Any], metadata: Mapping[str, Any]
 ) -> SubscriptionRecord:
+    """
+    Upsert a ``SubscriptionRecord`` from a Stripe subscription object.
+
+    If the incoming status is ``ACTIVE`` any other active subscriptions for the
+    same user are transitioned to ``PAST_DUE`` first, enforcing the one-active-
+    subscription-per-user invariant at the application level as a safety net.
+    """
     if data.get("status") == "ACTIVE":
         await db.execute(
             update(SubscriptionRecord)

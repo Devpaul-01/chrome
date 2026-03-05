@@ -13,7 +13,7 @@ export type WebSocketEventType =
 
 export interface WebSocketMessage {
   type: WebSocketEventType;
-  data: any;
+  data: unknown;
   timestamp: string;
 }
 
@@ -25,7 +25,7 @@ export interface WebSocketConfig {
   onError?: (error: Error) => void;
 }
 
-type EventCallback = (data: any) => void;
+type EventCallback = (data: unknown) => void;
 
 class WebSocketClient {
   private ws: WebSocket | null = null;
@@ -87,8 +87,9 @@ class WebSocketClient {
     if (!this.config) return;
 
     try {
-      const wsUrl = `${this.config.url}?token=${this.config.token}`;
-      this.ws = new WebSocket(wsUrl);
+      // Connect WITHOUT the token in the URL to avoid leaking it to logs/proxies.
+      // Authentication is performed via the first message after the connection opens.
+      this.ws = new WebSocket(this.config.url);
 
       this.ws.onopen = () => this.handleOpen();
       this.ws.onmessage = (event) => this.handleMessage(event);
@@ -106,6 +107,12 @@ class WebSocketClient {
   private handleOpen(): void {
     console.log('[WebSocket] Connected');
     this.reconnectAttempts = 0;
+
+    // Send the JWT as the first message instead of in the query string
+    if (this.config?.token) {
+      this.ws?.send(JSON.stringify({ type: 'auth', token: this.config.token }));
+    }
+
     this.config?.onConnect?.();
     this.startPingTimer();
   }
@@ -123,6 +130,7 @@ class WebSocketClient {
       if (listeners) {
         listeners.forEach((callback) => {
           try {
+            // If you expect a specific type, cast here or add type guards
             callback(message.data);
           } catch (error) {
             logError(error, 'WebSocketClient:eventCallback');

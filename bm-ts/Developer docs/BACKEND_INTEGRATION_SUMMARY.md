@@ -1,389 +1,256 @@
-# Backend Integration - Implementation Summary
+# Backend Integration Summary
 
-> ✅ **Backend-Frontend Integration Complete (Phases 1-3)** — As of February 14, 2026, all routers are registered, models are defined, and the database schema is fully aligned with the codebase. Standardized DELETE responses and API consistency achieved. Fresh `docker-compose up` deployments initialize the full schema correctly.
+**Last Updated:** March 1, 2026  
+**Version:** 1.1.0  
+**Scope:** How the Chrome extension integrates with the FastAPI backend — covering every API route, its corresponding `client.ts` function, and the background service worker message type that triggers it.
 
-## Overview
-This document outlines the backend implementation for the BirthdayMessaging Chrome Extension, covering Phases 1 and 2. All features are now integrated, including password reset, scheduling, message queue management, message history, dashboard analytics, posts, message groups, user images, birthday configs, SMTP configs, and message templates.
-
-## Database Schema Changes
-
-### Enum Types
-- `message_status_enum`: Values: `pending`, `processing`, `sent`, `delivered`, `failed`
-- `gender_enum`: Values: `MALE`, `FEMALE`, `NEUTRAL`, `ALL`
-
-### Tables (Phases 1 & 2)
-- users
-- subscription_records
-- template_segments
-- birthday_schedules
-- message_queue
-- message_history
-- password_reset_tokens
-- birthday_configs
-- posts
-- message_groups
-- user_images
-- smtp_configs
-- message_templates
-
-All tables, indexes, and constraints are defined in `ddl.sql` and models are present in `app/db/models.py`. Fresh deployments initialize the full schema.
-## API Endpoints
-
-All routers are registered and endpoints are active for:
-- Authentication (register, login, refresh, change password, password reset)
-- Schedules (CRUD)
-- Messages (queue management, history, retry)
-- Dashboard (stats)
-- Posts (CRUD)
-- Message Groups (CRUD)
-- User Images (upload, list, delete)
-- Birthday Configs (CRUD, toggle)
-- SMTP Configs (CRUD)
-- Message Templates (CRUD)
-
-All DELETE endpoints return standardized responses (200 + {"status": "deleted"}). API consistency and schema alignment are achieved.
-## Migration
-
-**Current State:** ✅ Complete
-- `ddl.sql` contains all tables for Phases 1 & 2 (users, subscription_records, template_segments, birthday_schedules, message_queue, message_history, password_reset_tokens, birthday_configs, posts, message_groups, user_images, smtp_configs, message_templates)
-- `models.py` defines all matching models
-- Docker compose initializes the full schema on first run via `/docker-entrypoint-initdb.d/`
-
-For fresh installs, `ddl.sql` already includes everything.
-# Backend Integration - Implementation Summary
-
-> ✅ **DDL Complete** — As of February 12, 2026, `ddl.sql` contains all 7 tables, 3 enums, and 2 extensions. Fresh `docker-compose up` deployments initialize the full schema correctly.
+---
 
 ## Overview
-This document outlines the backend implementation for the BirthdayMessaging Chrome Extension Phase 1, adding support for password reset, scheduling, message queue management, message history, and dashboard analytics.
 
-## Database Schema Changes
+The Chrome extension communicates with the backend exclusively through the background service worker (`background/index.ts`). The popup and content scripts never call the backend directly; they send typed `BackgroundMessage` objects via `chrome.runtime.sendMessage`. The background worker resolves them by calling functions from `api/client.ts`, which are plain `fetch`-based wrappers around the HTTP API.
 
-### New Enum Type
-- `message_status_enum`: Values: `pending`, `processing`, `sent`, `delivered`, `failed`
-
-### New Tables
-
-#### 1. birthday_schedules
-Stores user-defined schedules for when to send birthday messages.
-- **Columns:**
-  - `id` (UUID, PK)
-  - `user_id` (UUID, FK → users)
-  - `days_before` (INTEGER) - Negative = days after, 0 = on birthday, Positive = days before
-  - `enabled` (BOOLEAN)
-  - `created_at`, `updated_at` (TIMESTAMPTZ)
-- **Constraints:**
-  - Unique constraint on (user_id, days_before)
-- **Indexes:**
-  - `idx_birthday_schedules_user` on (user_id)
-  - `idx_birthday_schedules_user_enabled` on (user_id, enabled)
-
-#### 2. message_queue
-Queue of birthday messages pending or in-progress for sending.
-- **Columns:**
-  - `id` (UUID, PK)
-  - `user_id` (UUID, FK → users)
-  - `friend_name` (TEXT)
-  - `friend_profile_url` (TEXT)
-  - `birthday_date` (TIMESTAMPTZ)
-  - `scheduled_send_time` (TIMESTAMPTZ)
-  - `message_content` (TEXT)
-  - `status` (message_status_enum)
-  - `error_message` (TEXT, nullable)
-  - `created_at`, `updated_at` (TIMESTAMPTZ)
-- **Indexes:**
-  - `idx_message_queue_user_status` on (user_id, status)
-  - `idx_message_queue_scheduled_time` on (scheduled_send_time)
-
-#### 3. message_history
-Historical record of all birthday messages sent.
-- **Columns:**
-  - `id` (UUID, PK)
-  - `user_id` (UUID, FK → users)
-  - `friend_name` (TEXT)
-  - `friend_profile_url` (TEXT)
-  - `birthday_date` (TIMESTAMPTZ)
-  - `message_content` (TEXT)
-  - `sent_at` (TIMESTAMPTZ)
-  - `status` (message_status_enum)
-  - `error_message` (TEXT, nullable)
-  - `created_at` (TIMESTAMPTZ)
-- **Indexes:**
-  - `idx_message_history_user_sent` on (user_id, sent_at DESC)
-  - `idx_message_history_user_status` on (user_id, status)
-
-#### 4. password_reset_tokens
-Tokens for password reset functionality.
-- **Columns:**
-  - `id` (UUID, PK)
-  - `user_id` (UUID, FK → users)
-  - `token` (VARCHAR(255), UNIQUE)
-  - `expires_at` (TIMESTAMPTZ)
-  - `used_at` (TIMESTAMPTZ, nullable)
-  - `created_at` (TIMESTAMPTZ)
-- **Indexes:**
-  - `idx_password_reset_token_expires` on (token, expires_at)
-  - `idx_password_reset_user_created` on (user_id, created_at)
-
-## API Endpoints
-
-### Authentication (Extended)
-**Router:** `/auth`
-
-1. **POST /auth/request-password-reset**
-   - Request a password reset email
-   - Body: `{ "email": "user@example.com" }`
-   - Response: `{ "message": "..." }`
-   - Always returns success (prevents email enumeration)
-
-2. **POST /auth/reset-password**
-   - Reset password using token
-   - Body: `{ "token": "...", "new_password": "..." }`
-   - Response: `{ "message": "Password has been reset successfully" }`
-   - Returns 400 if token is invalid/expired
-
-3. **POST /auth/change-password**
-   - Change password for authenticated user
-   - Requires: Bearer token
-   - Body: `{ "current_password": "...", "new_password": "..." }`
-   - Response: `{ "message": "Password changed successfully" }`
-   - Returns 400 if current password is incorrect
-
-### Schedules
-**Router:** `/api/schedules`
-
-1. **GET /api/schedules**
-   - List all birthday schedules for current user
-   - Requires: Bearer token
-   - Response: Array of schedule objects
-
-2. **POST /api/schedules**
-   - Create a new birthday schedule
-   - Requires: Bearer token
-   - Body: `{ "days_before": 1, "enabled": true }`
-   - Response: Created schedule object
-   - Returns 400 if duplicate exists
-
-3. **PATCH /api/schedules/{schedule_id}**
-   - Update an existing schedule
-   - Requires: Bearer token
-   - Body: `{ "enabled": false }`
-   - Response: Updated schedule object
-   - Returns 404 if not found
-
-4. **DELETE /api/schedules/{schedule_id}**
-   - Delete a schedule
-   - Requires: Bearer token
-   - Response: 204 No Content
-   - Returns 404 if not found
-
-### Messages
-**Router:** `/api/messages`
-
-#### Queue Management
-
-1. **GET /api/messages/queue**
-   - List all queued messages for current user
-   - Requires: Bearer token
-   - Response: Array of queued message objects
-
-2. **POST /api/messages/queue**
-   - Create a new queued message
-   - Requires: Bearer token
-   - Body: `{ "friend_name": "...", "friend_profile_url": "...", "birthday_date": "...", "scheduled_send_time": "...", "message_content": "..." }`
-   - Response: Created message object
-
-3. **PATCH /api/messages/queue/{message_id}**
-   - Update a queued message
-   - Requires: Bearer token
-   - Body: `{ "message_content": "...", "scheduled_send_time": "..." }`
-   - Response: Updated message object
-   - Returns 400 if message is not pending/failed
-
-4. **DELETE /api/messages/queue/{message_id}**
-   - Cancel (delete) a queued message
-   - Requires: Bearer token
-   - Response: 204 No Content
-   - Returns 400 if message is not pending/failed
-
-5. **POST /api/messages/queue/{message_id}/retry**
-   - Retry a failed message
-   - Requires: Bearer token
-   - Response: Updated message object (status changed to pending)
-   - Returns 400 if message is not failed
-
-#### History
-
-6. **GET /api/messages/history**
-   - List message history with filters
-   - Requires: Bearer token
-   - Query params:
-     - `search` (optional): Search by friend name
-     - `status_filter` (optional): Filter by status
-     - `start_date` (optional): Filter by start date
-     - `end_date` (optional): Filter by end date
-   - Response: Array of message history objects
-
-7. **DELETE /api/messages/history/{message_id}**
-   - Delete a message from history
-   - Requires: Bearer token
-   - Response: 204 No Content
-   - Returns 404 if not found
-
-### Dashboard
-**Router:** `/api/dashboard`
-
-1. **GET /api/dashboard/stats**
-   - Get dashboard statistics
-   - Requires: Bearer token
-   - Response:
-     ```json
-     {
-       "total_messages_sent": 0,
-       "messages_sent_today": 0,
-       "messages_sent_this_week": 0,
-       "messages_sent_this_month": 0,
-       "success_rate": 0.0,
-       "friends_with_upcoming_birthdays": 0,
-       "queued_messages": 0
-     }
-     ```
-
-## Pydantic Schemas
-
-### schedules.py
-- `BirthdayScheduleBase`, `BirthdayScheduleCreate`, `BirthdayScheduleUpdate`, `BirthdaySchedule`
-
-### messages.py
-- `MessageQueueBase`, `MessageQueueCreate`, `MessageQueueUpdate`, `MessageQueue`
-- `MessageHistoryItem`
-
-### password_reset.py
-- `RequestPasswordResetRequest`, `ResetPasswordRequest`, `ChangePasswordRequest`
-- `MessageResponse`
-
-### dashboard.py
-- `DashboardStats`
-
-## Services
-
-### password_reset.py
-Helper functions for password reset functionality:
-- `create_reset_token(user, db)` - Generate secure token with 1-hour expiration
-- `verify_reset_token(token, db)` - Verify token and return user
-- `mark_token_used(token, db)` - Mark token as used
-- `send_reset_email(email, token)` - Send password reset email (TODO: implement actual email service)
-
-## Migration
-
-**Current State:** ✅ Complete
-- `ddl.sql` contains all 7 tables (users, subscription_records, template_segments, birthday_schedules, message_queue, message_history, password_reset_tokens)
-- `models.py` defines 7 matching models
-- Docker compose initializes the full schema on first run via `/docker-entrypoint-initdb.d/`
-
-**If your database is already running (from an earlier version with only 3 tables):**
-The following SQL can be applied as a one-time migration to add the missing tables:
-
-```sql
--- Message status enum
-CREATE TYPE message_status_enum AS ENUM ('pending', 'processing', 'sent', 'delivered', 'failed');
-
--- Birthday schedules table
-CREATE TABLE birthday_schedules (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    days_before INTEGER NOT NULL,
-    enabled BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX idx_schedule_user_enabled ON birthday_schedules (user_id, enabled);
-CREATE UNIQUE INDEX uniq_schedule_user_days ON birthday_schedules (user_id, days_before);
-
--- Message queue table
-CREATE TABLE message_queue (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    friend_name TEXT NOT NULL,
-    friend_profile_url TEXT NOT NULL,
-    birthday_date TIMESTAMPTZ NOT NULL,
-    scheduled_send_time TIMESTAMPTZ NOT NULL,
-    message_content TEXT NOT NULL,
-    status message_status_enum NOT NULL DEFAULT 'pending',
-    error_message TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX idx_queue_user_status ON message_queue (user_id, status);
-CREATE INDEX idx_queue_scheduled_time ON message_queue (scheduled_send_time);
-
--- Message history table
-CREATE TABLE message_history (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    friend_name TEXT NOT NULL,
-    friend_profile_url TEXT NOT NULL,
-    birthday_date TIMESTAMPTZ NOT NULL,
-    message_content TEXT NOT NULL,
-    sent_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    status message_status_enum NOT NULL DEFAULT 'sent',
-    error_message TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX idx_history_user_sent ON message_history (user_id, sent_at DESC);
-CREATE INDEX idx_history_user_status ON message_history (user_id, status);
-
--- Password reset tokens table
-CREATE TABLE password_reset_tokens (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token VARCHAR(255) NOT NULL UNIQUE,
-    expires_at TIMESTAMPTZ NOT NULL,
-    used_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX idx_reset_token_expires ON password_reset_tokens (token, expires_at);
-CREATE INDEX idx_reset_user_created ON password_reset_tokens (user_id, created_at);
+```
+Popup / Content Script
+        │  chrome.runtime.sendMessage({ type: "..." })
+        ▼
+Background Service Worker (background/index.ts, 780 lines)
+        │  calls api/client.ts functions
+        ▼
+FastAPI Backend  (http://localhost:8000 in dev)
+        │  reads/writes via SQLAlchemy async
+        ▼
+PostgreSQL 15
 ```
 
-**If your database is already running (from an earlier version with only 3 tables):**
-You can apply the SQL above as a one-time migration. For fresh installs, `ddl.sql` already includes everything.
+---
 
-## Files Created/Modified
+## Authentication & Token Management
 
-### Created:
-- `app/schemas/schedules.py`
-- `app/schemas/messages.py`
-- `app/schemas/password_reset.py`
-- `app/schemas/dashboard.py`
-- `app/api/routers/schedules.py`
-- `app/api/routers/messages.py`
-- `app/api/routers/dashboard.py`
-- `app/services/password_reset.py`
+| Background Message | `client.ts` Function | HTTP Method + Path | Notes |
+|---|---|---|---|
+| `auth.register` | `register(payload)` | `POST /auth/register` | Returns `{ access_token, refresh_token, token_type }` |
+| `auth.login` | `login(payload)` | `POST /auth/login` | Same response shape |
+| `auth.refresh` | `refreshToken(token)` | `POST /auth/refresh` | Rotates both tokens; stored in `chrome.storage.local` |
+| `auth.logout` | *(local only)* | — | Clears `chrome.storage.local`; no backend call |
+| `auth.me` | `me()` | `GET /auth/me` | Returns user profile |
+| `auth.requestPasswordReset` | `requestPasswordReset(email)` | `POST /auth/request-password-reset` | Rate-limited 1/min & 5/hr per IP |
+| `auth.resetPassword` | `resetPassword(payload)` | `POST /auth/reset-password` | Token validated server-side |
+| `auth.changePassword` | `changePassword(payload)` | `POST /auth/change-password` | Requires bearer token |
+| `auth.updateProfile` | `updateUserProfile(payload)` | `PUT /auth/profile` | Updates `name` / `timezone` stored in JSON metadata |
+| `auth.deleteAccount` | `deleteUserAccount()` | `DELETE /auth/account` | Cascades to all user data |
 
-### Modified:
-- `app/db/models.py` - Added 4 new model classes and 1 enum
-- `app/api/routers/auth.py` - Added 3 password reset endpoints
-- `app/main.py` - Registered new routers
+**Token storage:** Access and refresh tokens are stored in `chrome.storage.local`. On every authenticated request `client.ts` reads the access token; if a 401 is returned the background worker fires `auth.refresh` automatically, stores the new pair, and retries the original request.
 
-## Next Steps
+---
 
-1. **Configure Email Service:**
-   - Update `app/services/password_reset.py` with actual email provider (SendGrid, AWS SES, etc.)
-   - Add email credentials to environment variables
+## SMTP Configuration
 
-2. **Test Endpoints:**
-   - Use the Chrome extension frontend to test all new endpoints
-   - Verify authentication, authorization, and data validation
+| Background Message | `client.ts` Function | HTTP Method + Path |
+|---|---|---|
+| `smtp.getConfig` | `getSMTPConfig()` | `GET /smtp/config` |
+| `smtp.updateConfig` | `updateSMTPConfig(payload)` | `PUT /smtp/config` |
 
-3. **Optional Enhancements:**
-   - Add rate limiting for password reset requests
-   - Implement cleanup job for expired password reset tokens
-   - Add email notifications for successful password changes
-   - Implement friends tracking for "upcoming birthdays" dashboard stat
+The backend uses an upsert pattern — `PUT /smtp/config` creates the row on first call and updates it on subsequent calls. Password is stored **unencrypted** in the current dev build (tracked production gap).
 
-## API Documentation
+---
 
-After starting the server, interactive API documentation is available at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+## Template Segments
+
+| Background Message | `client.ts` Function | HTTP Method + Path |
+|---|---|---|
+| `templates.list` | `listTemplates(type?)` | `GET /templates/` |
+| `templates.create` | `createTemplate(payload)` | `POST /templates/` |
+| `templates.update` | `updateTemplate(id, payload)` | `PUT /templates/{id}` |
+| `templates.delete` | `deleteTemplate(id)` | `DELETE /templates/{id}` |
+
+Segment types: `GREETING`, `BODY`, `CLOSING`. Records are soft-deleted (`deleted_at` timestamp); the list endpoint filters them out by default.
+
+---
+
+## Birthday Schedules
+
+| Background Message | `client.ts` Function | HTTP Method + Path |
+|---|---|---|
+| `schedules.list` | `listSchedules()` | `GET /api/schedules` |
+| `schedules.create` | `createSchedule(payload)` | `POST /api/schedules` |
+| `schedules.update` | `updateSchedule(id, payload)` | `PUT /api/schedules/{id}` |
+| `schedules.delete` | `deleteSchedule(id)` | `DELETE /api/schedules/{id}` |
+
+`days_before` must be unique per user — a duplicate value returns HTTP 400.
+
+---
+
+## Message Queue & History
+
+| Background Message | `client.ts` Function | HTTP Method + Path |
+|---|---|---|
+| `messages.listQueue` | `listQueuedMessages()` | `GET /api/messages/queue` |
+| `messages.updateQueued` | `updateQueuedMessage(id, payload)` | `PUT /api/messages/queue/{id}` |
+| `messages.cancelQueued` | `cancelQueuedMessage(id)` | `DELETE /api/messages/queue/{id}` |
+| `messages.retryQueued` | `retryQueuedMessage(id)` | `POST /api/messages/queue/{id}/retry` |
+| `messages.listHistory` | `listMessageHistory(params?)` | `GET /api/messages/history` |
+| `messages.deleteHistory` | `deleteMessageHistory(id)` | `DELETE /api/messages/history/{id}` |
+
+The backend broadcasts a WebSocket event whenever the queue or history changes, so the popup updates without polling.
+
+---
+
+## Dashboard Analytics
+
+| Background Message | `client.ts` Function | HTTP Method + Path |
+|---|---|---|
+| `dashboard.getStats` | `getDashboardStats()` | `GET /api/dashboard/stats` |
+
+The `DashboardStats` interface in `client.ts` includes two fields that are **not** returned by the backend: `automation_enabled` and `next_scheduled_check`. The background worker merges these from `chrome.storage.local` before returning the response to the popup.
+
+---
+
+## Contacts
+
+| Background Message | `client.ts` Function | HTTP Method + Path |
+|---|---|---|
+| `contacts.list` | `listContacts()` | `GET /api/contacts/` |
+| `contacts.create` | `createContact(payload)` | `POST /api/contacts/` |
+| `contacts.update` | `updateContact(id, payload)` | `PUT /api/contacts/{id}` |
+| `contacts.delete` | `deleteContact(id)` | `DELETE /api/contacts/{id}` |
+| `contacts.bulkCreate` | `bulkCreateContacts(payload)` | `POST /api/contacts/bulk` |
+| `contacts.scrapeFromFacebook` | *(content script)* | — | Handled locally by content script; synced via `contacts.bulkCreate` |
+
+---
+
+## Message Groups
+
+| Background Message | `client.ts` Function | HTTP Method + Path |
+|---|---|---|
+| `messageGroups.list` | `listMessageGroups()` | `GET /api/message-groups/` |
+| `messageGroups.create` | `createMessageGroup(payload)` | `POST /api/message-groups/` |
+| `messageGroups.update` | `updateMessageGroup(id, payload)` | `PUT /api/message-groups/{id}` |
+| `messageGroups.delete` | `deleteMessageGroup(id)` | `DELETE /api/message-groups/{id}` |
+
+---
+
+## Posts
+
+| Background Message | `client.ts` Function | HTTP Method + Path |
+|---|---|---|
+| `posts.list` | `listPosts(gender?)` | `GET /api/posts/` |
+| `posts.create` | `createPost(payload)` | `POST /api/posts/` |
+| `posts.update` | `updatePost(id, payload)` | `PUT /api/posts/{id}` |
+| `posts.delete` | `deletePost(id)` | `DELETE /api/posts/{id}` |
+
+Posts include optional font fields (`font_family`, `font_size`, `font_color`) for styled timeline posts.
+
+---
+
+## User Images
+
+| Background Message | `client.ts` Function | HTTP Method + Path | Notes |
+|---|---|---|---|
+| `images.list` | `listImages()` | `GET /api/images/` | |
+| `images.create` | `createImage(payload)` | `POST /api/images/upload` | `{ url: string }` — stores a URL reference |
+| `images.uploadFile` | `uploadImageFile(payload)` | `POST /api/images/upload-file` | `{ data: string, mimeType: string, size: number }` base64; max 10 MB; stored as data URI |
+| `images.delete` | `deleteImage(id)` | `DELETE /api/images/{id}` | |
+
+---
+
+## Birthday Configs
+
+| Background Message | `client.ts` Function | HTTP Method + Path |
+|---|---|---|
+| `dashboard.getConfigs` | `listBirthdayConfigs(params?)` | `GET /api/birthday-configs` |
+| `dashboard.toggleConfig` | `toggleBirthdayConfig(id)` | `PATCH /api/birthday-configs/{id}/toggle` |
+
+Full CRUD is available through the API but only `list` and `toggle` are wired to background message types. Direct creation/editing is handled via the `BirthdayConfigsView` component which calls `client.ts` functions directly through the background message layer.
+
+---
+
+## Message Templates
+
+| Background Message | `client.ts` Function | HTTP Method + Path |
+|---|---|---|
+| `messageTemplates.list` | `listMessageTemplates(gender?)` | `GET /api/message-templates` |
+| `messageTemplates.create` | `createMessageTemplate(payload)` | `POST /api/message-templates` |
+| `messageTemplates.get` | `getMessageTemplate(id)` | `GET /api/message-templates/{id}` |
+| `messageTemplates.update` | `updateMessageTemplate(id, payload)` | `PUT /api/message-templates/{id}` |
+| `messageTemplates.delete` | `deleteMessageTemplate(id)` | `DELETE /api/message-templates/{id}` |
+
+---
+
+## Subscription & Payments
+
+| Background Message | `client.ts` Function | HTTP Method + Path |
+|---|---|---|
+| `subscription.status` | `subscriptionStatus()` | `GET /subscription/status` |
+| `subscription.checkout` | `createCheckoutSession(payload)` | `POST /subscription/create-checkout-session` |
+
+Stripe webhooks hit `POST /stripe/webhook` directly — the backend verifies the signature with `STRIPE_WEBHOOK_SECRET` and updates `subscription_records`.
+
+---
+
+## Automation (Local — No Backend Calls)
+
+These messages are handled entirely within the extension and do **not** call the backend:
+
+| Background Message | Storage Layer | Description |
+|---|---|---|
+| `automation.getConfig` | `chrome.storage.local` | Read `{ enabled, intervalMinutes, maxMessages }` |
+| `automation.setEnabled` | `chrome.storage.local` | Toggle automation on/off |
+| `automation.setInterval` | `chrome.storage.local` | Set check frequency (minutes) |
+| `automation.setMaxMessages` | `chrome.storage.local` | Cap max sends per run |
+| `automation.clearSentToday` | `chrome.storage.local` | Reset `SentTodayRecord` deduplication list |
+| `automation.recordSent` | `chrome.storage.local` | Mark a profile URL as sent today |
+| `automation.scanFacebook` | content script | Dispatch `automation.runFull` payload to active Facebook tab |
+
+---
+
+## Configuration
+
+| Background Message | Description |
+|---|---|
+| `config.getBackendUrl` | Read stored backend base URL from `chrome.storage.local` |
+| `config.setBackendUrl` | Persist custom backend URL (defaults to `http://localhost:8000`) |
+| `config.getWSConfig` | Read WebSocket connection config |
+
+---
+
+## Real-Time WebSocket
+
+The background service worker maintains a persistent WebSocket connection to `ws://<backend>/ws?token=<access_token>`. On disconnect it retries with exponential back-off. Incoming events are forwarded to the popup via `chrome.runtime.sendMessage`.
+
+| WS Event | Triggered by |
+|---|---|
+| `queue_updated` | Any `/api/messages/queue` mutation |
+| `history_updated` | Any `/api/messages/history` mutation |
+| `dashboard_updated` | Any stat change on the backend |
+| `notification` | Server-pushed alert |
+
+See [REALTIME_FEATURES.md](REALTIME_FEATURES.md) for full connection lifecycle details.
+
+---
+
+## Error Handling Conventions
+
+All `client.ts` functions throw on non-2xx responses. The thrown object is an `ApiError` with `status: number` and `message: string`. The background worker catches these and forwards `{ success: false, error: string }` to the sender.
+
+| HTTP Status | Meaning |
+|---|---|
+| 401 | Token expired/invalid → auto-refresh attempted once |
+| 404 | Resource not found |
+| 400 | Business logic error (e.g. duplicate schedule `days_before`) |
+| 422 | Pydantic validation failure (field type/constraint mismatch) |
+| 429 | Rate limit hit (password-reset endpoint) |
+| 500 | Unhandled server error |
+
+---
+
+## Integration Totals
+
+| Layer | Count |
+|---|---|
+| HTTP endpoints | 65 |
+| WebSocket endpoints | 1 |
+| `client.ts` exported functions | 52 |
+| Background message types that call the backend | 47 |
+| Background message types that are local-only | 17 *(automation × 7, config × 3, logout × 1, scrape × 1, others × 5)* |
+| **Total background message types** | **64** |

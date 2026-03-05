@@ -4,10 +4,10 @@ WORKDIR /app
 
 COPY pyproject.toml .
 COPY README.md .
-COPY .env.example .
 
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir .
+RUN apt-get update && apt-get install -y postgresql-client
 
 COPY . .
 

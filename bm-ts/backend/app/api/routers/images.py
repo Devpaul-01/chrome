@@ -69,11 +69,8 @@ async def upload_image_file(
                 detail=f"Size mismatch: declared {data.size} bytes, actual {len(image_bytes)} bytes"
             )
         
-        # In production, you would:
-        # 1. Upload to cloud storage (S3, GCS, etc.)
-        # 2. Get the public URL
-        # 3. Store that URL
-        # For now, we'll store the data URI directly (not recommended for production)
+        # TODO: Upload to cloud storage (S3, GCS) instead of storing base64 in DB
+        # Currently stores the data URI directly (not recommended for production)
         url = data.data if data.data.startswith("data:") else f"data:image/jpeg;base64,{base64_data}"
         
         user_image = UserImage(
@@ -107,7 +104,7 @@ async def list_images(
     """List all images for the current user."""
     stmt = select(UserImage).where(
         UserImage.user_id == current_user.id
-    ).order_by(UserImage.uploaded_at.desc())
+    ).order_by(UserImage.created_at.desc())
     
     result = await db.execute(stmt)
     return result.scalars().all()

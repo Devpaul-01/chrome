@@ -24,21 +24,16 @@ export default function GenderFilter({
 
   if (inline) {
     return (
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '14px', fontWeight: 'bold' }}>{label}:</span>
+      <div className="flex gap-2 items-center flex-wrap">
+        <span className="text-sm font-bold">{label}:</span>
         {options.map((option) => (
           <button
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
-            className={value === option.value ? 'button-primary' : 'button-secondary'}
-            style={{
-              fontSize: '13px',
-              padding: '4px 8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
+            className={value === option.value ? 'btn-primary btn-pill' : 'btn-secondary btn-pill'}
+            aria-pressed={value === option.value ? 'true' : 'false'}
+            aria-label={option.label}
           >
             {option.label}
           </button>
@@ -49,11 +44,15 @@ export default function GenderFilter({
 
   return (
     <div>
-      <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>{label}</label>
+      <label htmlFor="gender-select" className="block mb-1 font-bold">
+        {label}
+      </label>
       <select
+        id="gender-select"
         value={value}
         onChange={(e) => onChange(e.target.value as GenderOption)}
-        style={{ width: '100%', padding: '8px' }}
+        className="input-field"
+        aria-label="Gender selection"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
