@@ -90,23 +90,19 @@ async def send_reset_email(email: str, token: str) -> None:
     TODO: Implement actual email sending logic
     For now, this is a placeholder that logs the token
     """
-    # In production, you would use an email service like SendGrid, AWS SES, etc.
-    reset_url = f"chrome-extension://YOUR_EXTENSION_ID/popup.html?token={token}"
-    
-    print(f"Password reset requested for {email}")
-    print(f"Reset URL: {reset_url}")
-    print(f"Token: {token}")
-    
-    # TODO: Replace with actual email sending
-    # Example with SendGrid:
-    # from sendgrid import SendGridAPIClient
-    # from sendgrid.helpers.mail import Mail
-    # 
-    # message = Mail(
-    #     from_email='noreply@yourdomain.com',
-    #     to_emails=email,
-    #     subject='Password Reset Request',
-    #     html_content=f'<p>Click <a href="{reset_url}">here</a> to reset your password.</p>'
-    # )
-    # sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
-    # sg.send(message)
+    reset_url = f"chrome-extension://doiajjfbpaopmocbahnaaajehmdoniic/popup.html?token={token}"
+
+    message = Mail(
+        from_email="bmllegacy@birthdaymessaging.io",
+        to_emails=email,
+        subject="Password Reset Request",
+        html_content=f'<p>Click <a href="{reset_url}">here</a> to reset your password.</p>'
+    )
+
+    try:
+        sg = SendGridAPIClient(os.environ["SENDGRID_API_KEY"])
+        await asyncio.to_thread(sg.send, message)
+        print(f"Password reset email sent to {email}")
+    except Exception as e:
+        print(f"Failed to send reset email to {email}: {e}")
+        
