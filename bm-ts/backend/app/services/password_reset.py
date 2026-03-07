@@ -90,10 +90,13 @@ async def send_reset_email(email: str, token: str) -> None:
     TODO: Implement actual email sending logic
     For now, this is a placeholder that logs the token
     """
+
+    # NOTICE: password for bm email is Dcoagt1* on SendGrid due to security requirements
+
     reset_url = f"chrome-extension://doiajjfbpaopmocbahnaaajehmdoniic/popup.html?token={token}"
 
     message = Mail(
-        from_email="bmllegacy@birthdaymessaging.io",
+        from_email="bmlegacy@birthdaymessaging.com",
         to_emails=email,
         subject="Password Reset Request",
         html_content=f'<p>Click <a href="{reset_url}">here</a> to reset your password.</p>'
