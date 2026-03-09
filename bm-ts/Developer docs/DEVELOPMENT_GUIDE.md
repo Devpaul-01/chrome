@@ -45,7 +45,7 @@ cd bm-ts
 Before starting, ensure you have:
 
 - **Docker Desktop** - Must be running (shows steady whale icon in system tray)
-- **Node.js 18+** - For building the Chrome extension  
+- **Node.js 18+** - For building the Chrome extension (ensure that "Add to PATH" is selected when installing node.js)
 - **Chrome Browser** - For running the extension
 
 **No Python installation needed** - All Python dependencies run inside Docker.
