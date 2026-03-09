@@ -9,6 +9,7 @@ Token expiry: 30 minutes from creation.
 Rate limiting on the endpoint is handled upstream in the auth router.
 """
 
+import asyncio
 import hashlib
 import os
 import secrets
@@ -17,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.db.models import User, PasswordResetToken
 
 from sendgrid import SendGridAPIClient
@@ -85,25 +87,26 @@ async def mark_token_used(raw_token: str, db: AsyncSession) -> None:
 
 
 async def send_reset_email(email: str, token: str) -> None:
-    """Send a password reset email
-    
-    TODO: Implement actual email sending logic
-    For now, this is a placeholder that logs the token
+    """Send a password reset email via SendGrid.
+
+    Constructs a reset URL pointing to the Chrome extension popup and
+    dispatches the email asynchronously using ``asyncio.to_thread``.
     """
 
-    # NOTICE: password for bm email is Dcoagt1* on SendGrid due to security requirements
+    if not settings.password_reset_url_base:
+        raise ValueError("PASSWORD_RESET_URL_BASE is not configured. Set it in .env.")
 
-    reset_url = f"chrome-extension://doiajjfbpaopmocbahnaaajehmdoniic/popup.html?token={token}"
+    reset_url = f"{settings.password_reset_url_base}?token={token}"
 
     message = Mail(
-        from_email="bmlegacy@birthdaymessaging.com",
+        from_email=settings.email_from_address,
         to_emails=email,
         subject="Password Reset Request",
         html_content=f'<p>Click <a href="{reset_url}">here</a> to reset your password.</p>'
     )
 
     try:
-        sg = SendGridAPIClient(os.environ["SENDGRID_API_KEY"])
+        sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY", ""))
         await asyncio.to_thread(sg.send, message)
         print(f"Password reset email sent to {email}")
     except Exception as e:

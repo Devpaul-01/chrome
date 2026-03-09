@@ -2,12 +2,12 @@
 
 
 **Generated:** February 1, 2026  
-**Last Updated:** March 1, 2026  
-**Version:** 1.1.0  
+**Last Updated:** March 9, 2026  
+**Version:** 1.2.0  
 **System Type:** Full-Stack Web Application with Browser Extension
 
 
-> **Implementation Status:** ✅ **Phase 1, Phase 2 & Facebook Automation Complete** — Backend runs fully containerized in Docker with 15 registered routers (+ 2 inline app routes), 14 database models, and 14 tables defined in `models.py`. Extension has 34 React component files (22 imported in App.tsx, App.tsx at 668 lines with 7 extracted hook files + AppContext) with real-time WebSocket updates, comprehensive accessibility, and a fully implemented Facebook automation pipeline: gender-aware DM sending, timeline posting, advance/follow-up modes, contact sync, and per-day deduplication. Background service worker handles **64 message types** across 15 categories. Extension test suite: **214 tests** across 11 files (95 unit + 119 component).
+> **Implementation Status:** ✅ **Phase 1, Phase 2 & Facebook Automation Complete** — Backend runs fully containerized in Docker with 15 registered routers (+ 2 inline app routes), 14 database models, and 14 tables defined in `models.py`. Extension has 36 React component files (25 imported in App.tsx, App.tsx at 570 lines with 7 extracted hook files + AppContext) with real-time WebSocket updates, comprehensive accessibility, and a fully implemented Facebook automation pipeline: gender-aware DM sending, timeline posting, advance/follow-up modes, contact sync, and per-day deduplication. Background service worker handles **64 message types** across 15 categories. Extension test suite: **266 tests** across 13 files (95 unit + 171 component).
 
 ---
 
@@ -24,23 +24,23 @@
 
 **Key Gaps and Risks:**
 
-- **Testing coverage is incomplete**: Only 2 backend test files exist (auth and templates); extension has 214 tests (11 files) covering utilities and components, but no E2E or backend Phase 2 tests.
-- **Email service not configured**: Password reset tokens are logged to console only — users cannot recover accounts without a configured email provider.
+- **Testing coverage is incomplete**: Only 2 backend test files exist (auth and templates); extension has 266 tests (13 files) covering utilities, API client, and 8 component suites, but no E2E or backend Phase 2 tests.
+- **Email service configured**: SendGrid SDK integrated in `password_reset.py` (`asyncio` import bug fixed Mar 9, 2026); `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` now loaded via `config.py` Settings.
 - **SMTP passwords stored in plaintext**: `smtp_configs.password` is stored unencrypted in the database — must be encrypted before any production deployment.
 - **`/send-birthday-message` is a stub**: Backend `POST /send-birthday-message` returns `{"status": "sent"}` without logic. Actual sending is handled client-side by the content script automation pipeline.
 - **Production infrastructure absent**: No CI/CD, monitoring, HTTPS configuration, or Chrome Web Store listing.
 
 **Actionable Recommendations:**
 
-1. **Implement email delivery**: Replace the console-log placeholder in `app/services/password_reset.py` with SendGrid, SES, or real SMTP sending.
+1. ~~**Implement email delivery**~~: ✅ SendGrid SDK integrated (Mar 9, 2026). `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` added to `config.py` Settings class.
 2. **Encrypt SMTP passwords**: Add encryption at rest for `smtp_configs.password` before first production user.
-3. **Increase test coverage**: Add pytest tests for all Phase 2 routers; extend Vitest suite to cover background handlers and hooks; add Playwright E2E.
+3. **Increase test coverage**: Add pytest tests for all Phase 2 routers; extend Vitest suite to cover background handlers and hooks; add Playwright E2E. Current: 266 extension tests (13 files) + 4 backend tests (2 files).
 4. **Productionize deployment**: Managed PostgreSQL, HTTPS reverse proxy, CI/CD, and monitoring.
 5. **Prepare Chrome Web Store listing**: Complete manifest metadata, screenshots, and privacy policy.
 
 **Overall Assessment:**
 
-bm-ts is a feature-complete, development-ready system with a fully operational automation pipeline. Both Phase 1 and Phase 2 are fully implemented with all 15 routers registered (plus 2 inline app routes), all 14 models and tables active, and the full frontend wired to every backend feature. The Facebook automation pipeline is end-to-end: the content script scrapes the birthday feed, selects gender-appropriate templates from the backend, sends DMs and timeline posts, archives conversations, syncs contacts, and enforces per-day deduplication. The architecture is solid — async FastAPI, type-safe TypeScript, WCAG 2.1 AA accessibility, and WebSocket real-time updates. The primary remaining work is production hardening (email, encryption, testing, deployment) rather than feature development.
+bm-ts is a feature-complete, development-ready system with a fully operational automation pipeline. Both Phase 1 and Phase 2 are fully implemented with all 15 routers registered (plus 2 inline app routes), all 14 models and tables active, and the full frontend wired to every backend feature. The Facebook automation pipeline is end-to-end: the content script scrapes the birthday feed, selects gender-appropriate templates from the backend, sends DMs and timeline posts, archives conversations, syncs contacts, and enforces per-day deduplication. The architecture is solid — async FastAPI, type-safe TypeScript, WCAG 2.1 AA accessibility, and WebSocket real-time updates. SendGrid email service is integrated for password reset. The primary remaining work is production hardening (encryption, testing, deployment, configuration hardening) rather than feature development.
 
 ### Version History
 
@@ -57,6 +57,7 @@ bm-ts is a feature-complete, development-ready system with a fully operational a
 | 0.9.0 | February 23, 2026 | **Documentation Audit & Correction** — Full code audit correcting all stale counts. `dashboard.getConfigs` and `dashboard.toggleConfig` confirmed fully implemented (call `listBirthdayConfigs`/`toggleBirthdayConfig`). App.tsx refactored from 1477 → 698 lines with 8 extracted hook files (`useContacts`, `useSMTPConfig`, `useMessageTemplates`, `usePostComposer`, `useApi`, `useImageLibrary`, `useMessages`, `useTemplateSegments`) + `AppContext.tsx`. Corrected counts: background/index.ts 750 lines / 64 message types; client.ts 760 lines / 52 functions; content/index.ts 618 lines; navigation refactored to 4 tabs (Home/Contacts/Messages/Account) with 17 view modes. Removed stale TODO flags for dashboard config handlers. |
 | 1.0.0 | February 24, 2026 | **Full Accuracy Audit** — Second code audit correcting remaining stale metrics. Model and table count corrected: 13 → **14** (models.py and ddl.sql both contain 14 entries; the 0.6.0 count of 13 was an off-by-one). Component count corrected: 35 → **38** (three previously undocumented components added to inventory: `HomeControls.tsx`, `ImageLibraryPicker.tsx`, `MessagesHub.tsx`; sub-component count updated from 12 → 15). Line counts corrected: background/index.ts 750 → **715**; client.ts 760 → **667**; content/index.ts 618 → **613**; App.tsx 698 → **651**. Images endpoint URL corrected in § 2.3 and BACKEND_INTEGRATION_SUMMARY (`POST /api/images/` → `POST /api/images/upload`). Evaluation summary and all metric tables updated to reflect verified counts. |
 | 1.1.0 | March 1, 2026 | **Comprehensive Code Audit** — Full codebase re-verification corrected 30+ stale metrics across all documentation. Router count clarified: **15** `include_router()` calls + **2** inline app routes (not "17 routers"). `ddl.sql` confirmed removed from codebase — schema managed via `models.py` + Alembic. Component count corrected: 38 → **34** (4 phantom entries removed: `Config.tsx`, `MessageTemplates.tsx`, `TabbedDashboard.tsx`, `TemplateList.tsx`). Hook files corrected: 8 → **7** (`useApi` does not exist). Line counts corrected: App.tsx 651 → **668**; background/index.ts 715 → **780**; client.ts 667 → **825**; content/index.ts 613 → **741**; timeline.ts 575 → **562**; messenger.ts 511 → **483**; models.py 373 → **499**; accessibility.ts 216 → **237**. API client functions corrected: 52 → **52** (confirmed). Messages queue endpoint corrected: `PATCH` → **`PUT`**. Extension test suite documented: **214 tests** across 11 files (95 unit + 119 component). `db/` directory listing corrected: removed nonexistent `database.py`, `connect_db.py`, `db_config.py`; confirmed actual files: `base.py`, `models.py`, `session.py`. Removed phantom `async_test_db.py` from test listing. Python dependency count corrected: 13 → **14**. |
+| 1.2.0 | March 9, 2026 | **Full Codebase Audit & Bug Fixes** — Fixed critical `import asyncio` bug in `password_reset.py` that caused `NameError` at runtime (reset emails silently failed). Removed hardcoded SendGrid credentials from source code comment. Updated stale TODO docstring to reflect actual SendGrid implementation. Component count corrected: 34 → **36** (35 in `components/` + `Toast.tsx`). Line counts re-verified: App.tsx 668 → **570**; background/index.ts 780 → **1,131**; client.ts 825 → **783**; content/index.ts 741 → **1,130**; timeline.ts 562 → **660**; messenger.ts 483 → **620**; models.py 499 → **589**; accessibility.ts 237 → **226**. Extension test suite corrected: 214/11 → **266 tests across 13 files** (95 unit + 171 component). Email service status upgraded from "not configured" to "SendGrid integrated". Python dependency count corrected: 14 → **15** (`sendgrid>=6.11` added). API client functions confirmed: **52**. Background message types confirmed: **64**. |
 
 ---
 
@@ -97,10 +98,10 @@ The system follows a client-server architecture where the extension acts as a th
 - ✅ **User Images**: URL/base64 image library (`/api/images`)
 - ✅ **Birthday Configs**: Advanced automation (EARLY/ON_DAY/BELATED modes, gender filter, archive) (`/api/birthday-configs`)
 - ✅ **SMTP Configuration**: Per-user SMTP settings (`/smtp/config`)
-- ✅ **Frontend UI**: 34 React component files (22 directly imported in App.tsx, 668 lines; logic extracted to 7 hook files + `AppContext.tsx`)
+- ✅ **Frontend UI**: 36 React component files (25 imported in App.tsx, 570 lines; logic extracted to 7 hook files + `AppContext.tsx`)
 - ✅ **Accessibility**: WCAG 2.1 Level AA — keyboard shortcuts, screen reader support, focus management, live regions
-- ✅ **Content Scripts**: Full Facebook automation pipeline — birthday feed scraping, gender-aware DM sending, timeline posting, conversation archiving, contact sync, advance/follow-up modes, per-day deduplication (5 files, 1,839 lines)
-- ✅ **Extension Testing**: 214 tests across 11 files (Vitest + Testing Library) covering utilities, API client, and 6 component suites
+- ✅ **Content Scripts**: Full Facebook automation pipeline — birthday feed scraping, gender-aware DM sending, timeline posting, conversation archiving, contact sync, advance/follow-up modes, per-day deduplication (5 files, ~3,530 lines)
+- ✅ **Extension Testing**: 266 tests across 13 files (Vitest + Testing Library) covering utilities, API client, and 8 component suites
 - ✅ **Automation Orchestration**: `handleAutomationScan` fetches templates/posts/contacts, groups by `days_in_advance`, opens `/birthdays` tab, dispatches `automation.runFull` payload to content script
 - ⏳ **Build Status**: Extension source complete; `dist/` gitignored (build with `npm run build`)
 
@@ -108,16 +109,17 @@ The system follows a client-server architecture where the extension acts as a th
 
 | Gap | Detail |
 |-----|--------|
-| Email service | Password reset tokens are logged to console only — no email is sent |
+| Email service | SendGrid integrated (Mar 9, 2026); `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` now configurable via `config.py` Settings |
 | SMTP password encryption | Stored in plaintext in `smtp_configs` — must encrypt before production |
 | `POST /send-birthday-message` | Backend stub returns `{"status":"sent"}`; actual sending is handled by the content script automation pipeline |
-| Test coverage | Backend: only `test_auth.py` and `test_templates.py` (2 files); extension: 214 tests across 11 files; no E2E tests |
+| Test coverage | Backend: only `test_auth.py` and `test_templates.py` (2 files); extension: 266 tests across 13 files; no E2E tests |
 | CI/CD and monitoring | Not configured |
 
 **System Status:**
 - ✅ Development-ready with Docker Compose
-- ⏳ Email service needs configuration (password reset currently logs to console)
+- ✅ SendGrid email service integrated for password reset (Mar 9, 2026)
 - ⏳ SMTP passwords need encryption before production
+- ✅ `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` added to `config.py` for configurability
 - ⏳ Production deployment pending infrastructure setup
 
 ---
@@ -257,7 +259,7 @@ backend/
 │   │   └── rate_limiter.py        # slowapi rate limiter; per-IP key function
 │   ├── db/
 │   │   ├── base.py                # SQLAlchemy declarative_base()
-│   │   ├── models.py              # 14 ORM models (499 lines)
+│   │   ├── models.py              # 14 ORM models (589 lines)
 │   │   └── session.py             # AsyncSession factory, get_db() dependency
 │   ├── schemas/
 │   │   ├── auth.py                # RegisterRequest, LoginRequest, TokenResponse, UserProfile
@@ -275,7 +277,7 @@ backend/
 │   │   ├── smtp.py                # SMTPConfig schemas + UserProfileUpdate
 │   │   └── message_template.py    # Complete message template schemas
 │   ├── services/
-│   │   ├── password_reset.py      # Token creation/verification, email placeholder (console log)
+│   │   ├── password_reset.py      # Token creation/verification, SendGrid email sending
 │   │   ├── stripe.py              # Stripe checkout, webhook handling
 │   │   └── templates.py           # Message composition from segments
 │   └── tests/                     # Pytest test suite
@@ -638,19 +640,19 @@ extension/
 │       └── Birthday_messaging-logo.png
 ├── src/
 │   ├── api/
-│   │   ├── client.ts              # Type-safe HTTP client (825 lines, 52 functions)
+│   │   ├── client.ts              # Type-safe HTTP client (783 lines, 52 functions)
 │   │   └── websocket.ts           # WebSocket singleton client (225 lines)
 │   ├── background/
-│   │   └── index.ts               # Service worker (780 lines, 64 message types)
+│   │   └── index.ts               # Service worker (1,131 lines, 64 message types)
 │   ├── content/
-│   │   ├── index.ts               # Content script coordinator (741 lines)
+│   │   ├── index.ts               # Content script coordinator (1,130 lines)
 │   │   ├── api.ts                 # Content→background bridge (20 lines)
 │   │   ├── dom-helpers.ts         # waitForElement, delay (33 lines)
-│   │   ├── messenger.ts           # Messenger automation (483 lines)
-│   │   └── timeline.ts            # Timeline posting automation (562 lines)
+│   │   ├── messenger.ts           # Messenger automation (620 lines)
+│   │   └── timeline.ts            # Timeline posting automation (660 lines)
 │   ├── popup/
 │   │   ├── main.tsx               # React entry point
-│   │   ├── App.tsx                # Main SPA orchestrator (668 lines, 4 tabs, 17+ view modes)
+│   │   ├── App.tsx                # Main SPA orchestrator (570 lines, 4 tabs, 17+ view modes)
 │   │   ├── api.ts                 # Popup→background bridge (7 lines)
 │   │   ├── popup.css              # Component styles + brand theme (1,190 lines)
 │   │   ├── context/
@@ -663,9 +665,9 @@ extension/
 │   │   │   ├── usePostComposer.ts  # Post creation state (100 lines)
 │   │   │   ├── useSMTPConfig.ts    # SMTP config state (56 lines)
 │   │   │   └── useTemplateSegments.ts # Segment CRUD state (182 lines)
-│   │   └── components/            # 34 component files (22 imported in App.tsx)
+│   │   └── components/            # 36 component files (25 imported in App.tsx)
 │   └── utils/
-│       ├── accessibility.ts       # A11y utilities (237 lines, 9 functions)
+│       ├── accessibility.ts       # A11y utilities (226 lines, 9 functions)
 │       ├── automation.ts          # Chrome storage config, alarms scheduling (139 lines)
 │       ├── bridge.ts              # chrome.runtime.sendMessage typed wrapper (55 lines)
 │       ├── errors.ts              # Error hierarchy (AppError, NetworkError, etc.) (163 lines)
@@ -758,7 +760,7 @@ extension/
 - **Messages** (5 dropdown items): Message Templates, Timeline Posts, Scheduling, Analytics, Image Library
 - **Account** (4 dropdown items): Profile, Change Password, SMTP Settings, Subscription, Sign Out
 
-### 3.5 Background Service Worker (780 lines)
+### 3.5 Background Service Worker (1,131 lines)
 
 **64 message types** handled via switch/case dispatch:
 
@@ -784,7 +786,7 @@ extension/
 - Auto-refresh on 401 errors (transparent to callers)
 - `config.getWSConfig` converts HTTP URL to WebSocket URL for popup connection
 
-### 3.6 API Client (825 lines)
+### 3.6 API Client (783 lines)
 
 **52 exported functions:**
 
@@ -808,7 +810,7 @@ Plus `ApiError` class and 20+ exported interfaces/types.
 
 ### 3.7 Content Scripts
 
-**index.ts (741 lines)** — Main coordinator + full automation loop:
+**index.ts (1,130 lines)** — Main coordinator + full automation loop:
 - Overlay UI on Facebook pages (friend list, send-all button, status p)
 - Birthday friend detection via DOM scraping (`div[data-pagelet*="Birthday"]`)
 - `runFullAutomation(AutomationRunPayload)` — 2-phase loop:
@@ -821,12 +823,12 @@ Plus `ApiError` class and 20+ exported interfaces/types.
 - Max messages cap, per-day deduplication guard (sentToday array)
 - Responds to messages: `automation.scan`, `automation.runFull`, `contacts.scrapeFromPage`
 
-**messenger.ts (483 lines)** — Messenger automation:
+**messenger.ts (620 lines)** — Messenger automation:
 - Archive/unarchive conversations
 - MutationObserver for reply monitoring
 - Programmatic message sending
 
-**timeline.ts (562 lines)** — Timeline posting:
+**timeline.ts (660 lines)** — Timeline posting:
 - Facebook composer interaction
 - Nifty Images merge tag support
 - Clipboard image paste
@@ -989,7 +991,7 @@ Backend auto-reloads on Python file saves. Frontend requires `npm run reload` + 
 - Landmarks: `<header>`, `<main>`, `<nav>`, `<footer>`
 - Proper heading hierarchy, form labels, required field indicators
 
-### 7.2 Accessibility Utilities (`utils/accessibility.ts`, 237 lines)
+### 7.2 Accessibility Utilities (`utils/accessibility.ts`, 226 lines)
 
 | Function | Purpose |
 |----------|---------|
@@ -1076,7 +1078,7 @@ docker-compose exec backend pytest --cov=app --cov-report=html
 **Extension:**
 ```bash
 cd extension
-npm test              # Run all 214 tests
+npm test              # Run all 266 tests
 npm run test:watch    # Watch mode
 npm run test:coverage # Coverage report (70% thresholds)
 ```
@@ -1117,11 +1119,10 @@ All features are registered and implemented. The following are gaps within the e
 | E2E tests | ❌ None | No Playwright/Puppeteer |
 
 ### 10.3 Production Infrastructure Gaps
-- No email service configured (SendGrid, SES, or SMTP)
-- No CI/CD pipeline (no GitHub Actions)
+- No CI/CD pipeline (no Gitea Actions)
 - No monitoring or alerting
 - No HTTPS configuration or reverse proxy
-- No Chrome Web Store listing
+- No Chrome Web Store listing (New extension to replace existing extension in chrome store as new version- Speak to Alex)
 - Production deployment script (`deploy.sh`) present but not verified
 - Alembic configured but migration workflow not documented
 
@@ -1185,7 +1186,7 @@ All features are registered and implemented. The following are gaps within the e
 | **Password Hashing** | Werkzeug | Argon2 (passlib) |
 | **Database** | 4 tables, integer PKs | 14 tables, UUID PKs, soft-delete |
 | **Payments** | None | Full Stripe integration + webhooks |
-| **Frontend** | 12 HTML pages, minified jQuery (~3.5MB) | 1-page React SPA, 34 components (~210KB) |
+| **Frontend** | 12 HTML pages, minified jQuery (~3.5MB) | 1-page React SPA, 36 components (~210KB) |
 | **Types** | None | Full TypeScript + Pydantic |
 | **Build** | Committed minified bundles | Vite source build (reproducible) |
 | **Real-Time** | None | WebSocket live updates |
@@ -1205,16 +1206,16 @@ All features are registered and implemented. The following are gaps within the e
 | Extension LOC | ~15,000 TypeScript + 1,190 CSS |
 | Database | 14 tables, 5 enums, 25+ indexes |
 | API Endpoints | 65 HTTP + 1 WebSocket (15 routers + 2 inline routes) |
-| Component Files | 34 (22 directly in App.tsx) |
+| Component Files | 36 (25 directly in App.tsx) |
 | Background Message Types | 64 |
 | API Client Functions | 52 |
 | Custom Hooks | 7 (1,013 lines) |
-| Content Script Files | 5 (1,839 lines) |
+| Content Script Files | 5 (~3,530 lines) |
 | Utility Files | 9 (1,086 lines) |
-| Accessibility Utilities | 9 functions (237 lines) |
-| Extension Tests | 214 (11 files) |
+| Accessibility Utilities | 9 functions (226 lines) |
+| Extension Tests | 266 (13 files) |
 | Backend Tests | 4 (2 files) |
-| Runtime Dependencies | 14 Python + 3 npm |
+| Runtime Dependencies | 15 Python + 3 npm |
 
 ### Strengths
 1. **Type Safety**: TypeScript + Pydantic catches errors at compile time
