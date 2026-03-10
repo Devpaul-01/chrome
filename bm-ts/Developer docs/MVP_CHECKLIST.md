@@ -1,8 +1,8 @@
 # BirthdayMessaging bm-ts MVP Checklist
 
 
-**Last Updated:** March 9, 2026  
-**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (266 tests across 13 files), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026), SendGrid email service integrated for password reset (asyncio import bug fixed Mar 9, 2026), full codebase audit with metric corrections (Mar 9, 2026)
+**Last Updated:** March 10, 2026  
+**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (266 tests across 13 files), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026), SendGrid email service integrated for password reset (asyncio import bug fixed Mar 9, 2026), full codebase audit with metric corrections (Mar 9, 2026), Help & Tips panel + OnboardingWizard UI polish: glassmorphism, brand-consistent text, improved spacing, removed redundant Help & Shortcuts footer section (Mar 10, 2026)
 
 ---
 
@@ -438,7 +438,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
   - [ ] Tour progress indicator
   - [ ] Re-trigger tour from help menu
 - [x] In-App Help System (partial ✅)
-  - [ ] Help icon/button in header/navigation
+  - [x] Help icon/button in header/navigation ✅ (❓ Help & Tips footer button in App.tsx, Mar 10, 2026)
   - [x] Contextual help tooltips (? icons) ✅ (HelpTooltip component, Mar 3, 2026)
   - [ ] Search help articles (in-app)
 - [ ] Tutorial Components
@@ -624,12 +624,12 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
   - [ ] Highlight key features on dashboard
   - [ ] Show where to find templates
   - [ ] Show where to view message queue/history
-  - [ ] Re-trigger tour option in settings
-- [ ] Add help center link in extension
-  - [ ] Link to online documentation
-  - [ ] Link to video tutorials
-  - [ ] Link to FAQ
-  - [ ] Contact support option
+  - [x] Re-trigger tour option in settings ✅ (🔄 Restart Welcome Tour button in HelpPanel.tsx, Mar 10, 2026)
+- [x] Add help center link in extension ✅ (Resources section in HelpPanel.tsx, Mar 10, 2026)
+  - [x] Link to online documentation ✅ (Video Tutorial link → youtube.com/@birthdaymessaging)
+  - [x] Link to video tutorials ✅
+  - [x] Link to FAQ ✅ (birthdaymessaging.com/faq)
+  - [x] Contact support option ✅ (birthdaymessaging.com/support + Facebook Group links)
 
 ---
 
@@ -1123,7 +1123,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 5. **Domain Name** - Required for production API (if using custom domain)
 
 ### Technical Debt
-1. ~~No automated testing for frontend~~ ✅ Resolved — 214 extension tests across 11 files (95 unit + 119 component), all passing
+1. ~~No automated testing for frontend~~ ✅ Resolved — 266 extension tests across 13 files (95 unit + 171 component), all passing
 2. Minimal backend test coverage (only 4 unit tests across 2 files; no integration or API tests against database)
 3. No CI/CD pipeline
 4. No production monitoring
