@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import Spinner from './Spinner';
 import { getErrorMessage, logError, validateEmail } from '../../utils/errors';
+import { sendExtensionMessage } from '../../utils/bridge';
 
 interface ForgotPasswordProps {
   onBack: () => void;
@@ -26,8 +27,12 @@ export default function ForgotPassword({ onBack, onRequestSent }: ForgotPassword
     }
     try {
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setMessage('Password reset link sent!');
+      await sendExtensionMessage<{message:string}>({
+        type:'auth.requestPasswordReset',
+        payload:{email},
+      });
+
+      setMessage("If an account exists for that email, a reset link has been sent.");
       onRequestSent();
     } catch (err) {
       logError(err);

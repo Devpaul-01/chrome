@@ -45,7 +45,7 @@ cd bm-ts
 Before starting, ensure you have:
 
 - **Docker Desktop** - Must be running (shows steady whale icon in system tray)
-- **Node.js 18+** - For building the Chrome extension  
+- **Node.js 18+** - For building the Chrome extension (ensure that "Add to PATH" is selected when installing node.js)
 - **Chrome Browser** - For running the extension
 
 **No Python installation needed** - All Python dependencies run inside Docker.
@@ -165,26 +165,6 @@ Stops all Docker containers cleanly.
 
 ## 🐛 Troubleshooting
 
-### Common Questions
-
-**Q: What happens if I restart my computer?**
-
-A: Everything persists! Just run `.\startup.ps1` again and you're ready to go.
-
-**What persists:**
-- ✅ All database data (users, templates, messages)
-- ✅ Extension loaded in Chrome
-- ✅ Docker volumes
-
-**What doesn't:**
-- ❌ Running containers (need to restart them)
-
-**After restart:** Open VSCode → Run `.\startup.ps1` → Wait 5-10 seconds → Ready!
-
-**Q: Do I need to reload the extension in Chrome after computer restart?**
-
-A: No! Chrome remembers loaded extensions. The extension stays loaded between restarts.
-
 ---
 
 ### "Message port closed before a response was received"
@@ -267,20 +247,6 @@ docker-compose up -d
 3. Run `.\startup.ps1` again
 
 ### Port Already in Use
-
-**Port 8000 conflict:**
-```powershell
-# Find and kill process using port 8000
-netstat -ano | findstr :8000
-# Note the PID, then:
-Stop-Process -Id <PID> -Force
-```
-
-**Port 5432 conflict:**
-```powershell
-# Check what's using PostgreSQL port
-netstat -ano | findstr :5432
-```
 
 ---
 
