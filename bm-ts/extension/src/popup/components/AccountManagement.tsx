@@ -15,6 +15,7 @@ type AccountManagementProps = {
   onUpdateTimezone: (timezone: string) => Promise<void>;
   onDeleteAccount: () => Promise<void>;
   onLogout: () => void;
+  onRestartTour?: () => void;
   isSubmitting: boolean;
   message: string | null;
 };
@@ -25,6 +26,7 @@ export default function AccountManagement({
   onUpdateTimezone,
   onDeleteAccount,
   onLogout,
+  onRestartTour,
   isSubmitting,
   message,
 }: AccountManagementProps) {
@@ -202,6 +204,19 @@ export default function AccountManagement({
           }`}
         >
           {message}
+        </div>
+      )}
+
+      {/* Restart Welcome Tour */}
+      {onRestartTour && (
+        <div className="card">
+          <button
+            type="button"
+            onClick={onRestartTour}
+            className="btn-outline-orange w-full text-sm"
+          >
+            🔄 Restart Welcome Tour
+          </button>
         </div>
       )}
 
