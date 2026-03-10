@@ -8,7 +8,7 @@ export type SavedTemplate = {
   imageUrl: string | null;
   templateTitle: string;
   daysInAdvance: number;
-  gender: 'male' | 'female' | 'all';
+  gender: 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL';
   createdAt: string;
   updatedAt: string;
 };
@@ -88,7 +88,7 @@ export default function TemplateGallery({
                 <div className="absolute top-2 right-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs font-medium">
                   {getDaysText(template.daysInAdvance)}
                 </div>
-                {template.gender !== 'all' && (
+                {template.gender !== 'ALL' && (
                   <div className="absolute top-2 left-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs font-medium capitalize">
                     {template.gender}
                   </div>

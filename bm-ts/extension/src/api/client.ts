@@ -753,7 +753,7 @@ export interface MessageTemplate {
   closing: string;
   image_url: string | null;
   days_in_advance: number;
-  gender: 'all' | 'male' | 'female';
+  gender: 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL';
   created_at: string;
   updated_at: string;
 }
@@ -765,7 +765,7 @@ export interface CreateMessageTemplatePayload {
   closing: string;
   image_url?: string | null;
   days_in_advance?: number;
-  gender?: 'all' | 'male' | 'female';
+  gender?: 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL';
 }
 
 export interface UpdateMessageTemplatePayload {
@@ -775,7 +775,7 @@ export interface UpdateMessageTemplatePayload {
   closing?: string;
   image_url?: string | null;
   days_in_advance?: number;
-  gender?: 'all' | 'male' | 'female';
+  gender?: 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL';
 }
 
 export async function createMessageTemplate(

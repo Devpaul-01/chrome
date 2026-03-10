@@ -154,13 +154,13 @@ describe('TemplateCreator', () => {
         initialData={{
           templateTitle: 'Pre-filled Title',
           greeting: 'Hey friend!',
-          gender: 'female',
+          gender: 'FEMALE',
         }}
       />,
     );
     expect(getTitleInput()).toHaveValue('Pre-filled Title');
     expect(getGreetingArea()).toHaveValue('Hey friend!');
-    expect(getGenderSelect()).toHaveValue('female');
+    expect(getGenderSelect()).toHaveValue('FEMALE');
   });
 
   // --- Validation -----------------------------------------------------------
@@ -261,8 +261,8 @@ describe('TemplateCreator', () => {
   it('allows changing the gender selection', async () => {
     const user = userEvent.setup();
     render(<TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
-    await user.selectOptions(getGenderSelect(), 'male');
-    expect(getGenderSelect()).toHaveValue('male');
+    await user.selectOptions(getGenderSelect(), 'MALE');
+    expect(getGenderSelect()).toHaveValue('MALE');
   });
 
   // --- Preview tab ----------------------------------------------------------

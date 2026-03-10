@@ -14,7 +14,7 @@ export type TemplateFormData = {
   imageFile: File | null;
   templateTitle: string;
   daysInAdvance: number;
-  gender: 'male' | 'female' | 'all';
+  gender: 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL';
 };
 
 type Props = {
@@ -32,7 +32,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     imageFile: null,
     templateTitle: initialData?.templateTitle || '',
     daysInAdvance: initialData?.daysInAdvance || 0,
-    gender: initialData?.gender || 'all',
+    gender: initialData?.gender || 'ALL',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -433,13 +433,14 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               <select
                 value={formData.gender}
                 onChange={(e) =>
-                  setFormData({ ...formData, gender: e.target.value as 'male' | 'female' | 'all' })
+                  setFormData({ ...formData, gender: e.target.value as 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL' })
                 }
                 className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
               >
-                <option value="all">All Genders</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
+                <option value="ALL">All Genders</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="NEUTRAL">Neutral</option>
               </select>
             </div>
 
@@ -543,7 +544,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                 imageFile: null,
                 templateTitle: '',
                 daysInAdvance: 0,
-                gender: 'all',
+                gender: 'ALL',
               });
               setActiveTab('create');
             }}

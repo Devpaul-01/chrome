@@ -30,7 +30,7 @@ export default function ContactList({
   const formatBirthday = (isoDate: string) => {
     try {
       const date = new Date(isoDate);
-      return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long' });
+      return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', timeZone: 'UTC' });
     } catch {
       return isoDate;
     }

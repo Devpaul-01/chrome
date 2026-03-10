@@ -46,7 +46,12 @@ function normalizeContactFields(
   if (name) mapped.name = name;
   if (facebook_profile_url) mapped.facebook_profile_url = facebook_profile_url;
   if (birthday) mapped.birthday = birthday;
-  if (notesParts.length) mapped.notes = notesParts.join(' | ');
+  // Prefer c.notes if already packed by the form; otherwise build from individual fields
+  if (c.notes !== undefined) {
+    if (c.notes) mapped.notes = c.notes;
+  } else if (notesParts.length) {
+    mapped.notes = notesParts.join(' | ');
+  }
   if (c.gender) {
     const g = String(c.gender).toUpperCase();
     mapped.gender = g === 'MALE' || g === 'FEMALE' || g === 'NEUTRAL' ? g : undefined;

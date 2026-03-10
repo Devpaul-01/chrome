@@ -44,7 +44,7 @@ export default function ContactForm({
     }
   }
   const [relationship, setRelationship] = useState(parsedRelationship);
-  const [birthday, setBirthday] = useState(contact?.birthday || '');
+  const [birthday, setBirthday] = useState(contact?.birthday ? contact.birthday.slice(0, 10) : '');
   const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'NEUTRAL'>(contact?.gender ?? 'NEUTRAL');
   const [phone, setPhone] = useState(parsedPhone);
   const [email, setEmail] = useState(parsedEmail);

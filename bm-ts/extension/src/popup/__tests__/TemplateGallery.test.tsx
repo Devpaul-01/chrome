@@ -23,7 +23,7 @@ function makeTemplate(overrides: Partial<SavedTemplate> = {}): SavedTemplate {
     imageUrl: null,
     templateTitle: 'Classic Wish',
     daysInAdvance: 0,
-    gender: 'all',
+    gender: 'ALL',
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-15T00:00:00Z',
     ...overrides,
@@ -133,20 +133,20 @@ describe('TemplateGallery', () => {
 
   // --- Gender badge ---------------------------------------------------------
 
-  it('does not show a gender badge when gender is "all"', () => {
-    render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ gender: 'all' })]} />);
-    expect(screen.queryByText(/^male$/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/^female$/i)).not.toBeInTheDocument();
+  it('does not show a gender badge when gender is "ALL"', () => {
+    render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ gender: 'ALL' })]} />);
+    expect(screen.queryByText(/^MALE$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^FEMALE$/)).not.toBeInTheDocument();
   });
 
-  it('shows a "male" gender badge when gender is "male"', () => {
-    render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ gender: 'male' })]} />);
-    expect(screen.getByText('male')).toBeInTheDocument();
+  it('shows a "MALE" gender badge when gender is "MALE"', () => {
+    render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ gender: 'MALE' })]} />);
+    expect(screen.getByText('MALE')).toBeInTheDocument();
   });
 
-  it('shows a "female" gender badge when gender is "female"', () => {
-    render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ gender: 'female' })]} />);
-    expect(screen.getByText('female')).toBeInTheDocument();
+  it('shows a "FEMALE" gender badge when gender is "FEMALE"', () => {
+    render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ gender: 'FEMALE' })]} />);
+    expect(screen.getByText('FEMALE')).toBeInTheDocument();
   });
 
   // --- Image rendering ------------------------------------------------------
