@@ -38,6 +38,8 @@ import MessagesHub from './components/MessagesHub';
 import HomeControls from './components/HomeControls';
 import AccountManagement from './components/AccountManagement';
 import OnboardingWizard from './components/OnboardingWizard';
+import HelpPanel from './components/HelpPanel';
+import FeatureTip from './components/FeatureTip';
 import Spinner from './components/Spinner';
 import ErrorBoundary from './components/ErrorBoundary';
 import './popup.css';
@@ -87,6 +89,7 @@ function AppShell() {
 
   // ---- Onboarding wizard --------------------------------------------------
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showHelpPanel, setShowHelpPanel] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -99,6 +102,11 @@ function AppShell() {
   function handleOnboardingDismiss() {
     setOnboardingComplete(true);
     setShowOnboarding(false);
+  }
+
+  function handleRestartTour() {
+    setOnboardingComplete(false);
+    setShowOnboarding(true);
   }
 
   // ---- Auth local state (only needed while unauthenticated) ----------
@@ -466,6 +474,7 @@ function AppShell() {
           onUpdateTimezone={handleUpdateTimezone}
           onDeleteAccount={handleDeleteAccount}
           onLogout={handleLogout}
+          onRestartTour={handleRestartTour}
           isSubmitting={isAccountSubmitting}
           message={accountMessage}
         />
@@ -479,17 +488,27 @@ function AppShell() {
     switch (activeTab) {
       case 'home':
         return (
-          <HomeControls
-            contactCount={contactsHook.contacts.length}
-            userName={user?.email?.split('@')[0] || 'User'}
-            onViewCalendar={() => setViewMode('birthday-calendar')}
-            onViewAnalytics={() => setViewMode('analytics')}
-          />
+          <>
+            <FeatureTip
+              tipId="home_automation"
+              message="Enable automation on this page to start sending birthday messages automatically."
+            />
+            <HomeControls
+              contactCount={contactsHook.contacts.length}
+              userName={user?.email?.split('@')[0] || 'User'}
+              onViewCalendar={() => setViewMode('birthday-calendar')}
+              onViewAnalytics={() => setViewMode('analytics')}
+            />
+          </>
         );
 
       case 'contacts':
         return (
           <div role="tabpanel" id="contacts-panel" className="tab-content">
+            <FeatureTip
+              tipId="contacts_import"
+              message="Import contacts from Facebook to quickly populate your friends list."
+            />
             <ContactList
               contacts={contactsHook.contacts}
               onAddContact={() => setViewMode('add-contact')}
@@ -510,7 +529,15 @@ function AppShell() {
         );
 
       case 'messages':
-        return <MessagesHub onNavigate={setViewMode} />;
+        return (
+          <>
+            <FeatureTip
+              tipId="messages_templates"
+              message="Create your first message template to start sending personalised birthday wishes."
+            />
+            <MessagesHub onNavigate={setViewMode} />
+          </>
+        );
 
       case 'account':
         return (
@@ -613,31 +640,14 @@ function AppShell() {
 
       {isAuthenticated && (
         <footer role="contentinfo" className="mt-10">
-          <details className="card text-xs">
-            <summary className="cursor-pointer font-semibold text-textPrimary hover:text-blueStrong">
-              Help &amp; Shortcuts
-            </summary>
-            <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap justify-center gap-x-5 gap-y-1.5">
-              <a href="https://www.youtube.com/@birthdaymessaging" target="_blank" rel="noreferrer" className="font-semibold text-textPrimary hover:text-blueStrong">
-                📺 Tutorial
-              </a>
-              <a href="https://birthdaymessaging.com/faq" target="_blank" rel="noreferrer" className="font-semibold text-textPrimary hover:text-blueStrong">
-                ❓ FAQ
-              </a>
-              <a href="https://birthdaymessaging.com/support" target="_blank" rel="noreferrer" className="font-semibold text-textPrimary hover:text-blueStrong">
-                🛟 Support
-              </a>
-              <a href="https://www.facebook.com/groups/birthdaymessaging" target="_blank" rel="noreferrer" className="font-semibold text-textPrimary hover:text-blueStrong">
-                👥 FB Group
-              </a>
-            </div>
-            <ul className="mt-2 pt-2 border-t border-gray-100 space-y-1 text-gray-600">
-              <li><kbd className="px-1 py-0.5 bg-gray-200 rounded">Alt+H</kbd> - Home</li>
-              <li><kbd className="px-1 py-0.5 bg-gray-200 rounded">Alt+D</kbd> - Dashboard</li>
-              <li><kbd className="px-1 py-0.5 bg-gray-200 rounded">Alt+L</kbd> - Logout</li>
-              <li><kbd className="px-1 py-0.5 bg-gray-200 rounded">Esc</kbd> - Close modal</li>
-            </ul>
-          </details>
+          <button
+            type="button"
+            onClick={() => setShowHelpPanel(true)}
+            className="btn-outline-orange w-full text-xs py-1.5"
+            aria-label="Open help panel"
+          >
+            ❓ Help &amp; Tips
+          </button>
         </footer>
       )}
 
@@ -680,6 +690,13 @@ function AppShell() {
         </div>
       )}
       
+      {/* Help panel */}
+      <HelpPanel
+        open={showHelpPanel}
+        onClose={() => setShowHelpPanel(false)}
+        onRestartTour={handleRestartTour}
+      />
+
       {/* Onboarding wizard — shown once after first login */}
       {showOnboarding && (
         <OnboardingWizard

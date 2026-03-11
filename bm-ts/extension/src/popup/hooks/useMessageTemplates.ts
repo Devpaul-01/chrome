@@ -15,7 +15,7 @@ function toSavedTemplate(t: MessageTemplate): SavedTemplate {
     imageUrl: t.image_url,
     templateTitle: t.title,
     daysInAdvance: t.days_in_advance,
-    gender: t.gender as 'male' | 'female' | 'all',
+    gender: t.gender as 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL',
     createdAt: t.created_at,
     updatedAt: t.updated_at,
   };
