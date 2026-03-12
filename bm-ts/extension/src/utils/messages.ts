@@ -151,4 +151,13 @@ export type BackgroundMessage =
   | { type: 'messageTemplates.create'; payload: CreateMessageTemplatePayload }
   | { type: 'messageTemplates.get'; payload: { id: string } }
   | { type: 'messageTemplates.update'; payload: { id: string } & UpdateMessageTemplatePayload }
-  | { type: 'messageTemplates.delete'; payload: { id: string } };
+  | { type: 'messageTemplates.delete'; payload: { id: string } }
+  // Fail-safe messages
+  | { type: 'failsafe.getEmergencyStop' }
+  | { type: 'failsafe.triggerEmergencyStop'; payload: { cooldownHours?: number } }
+  | { type: 'failsafe.clearEmergencyStop' }
+  | { type: 'failsafe.getActivityLog' }
+  | { type: 'failsafe.clearActivityLog' }
+  | { type: 'failsafe.getRateLimits' }
+  | { type: 'failsafe.getConfirmationMode' }
+  | { type: 'failsafe.setConfirmationMode'; payload: { mode: string } };

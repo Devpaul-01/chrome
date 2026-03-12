@@ -89,6 +89,23 @@ import {
   clearSentToday,
   updateMaxMessages,
 } from '../utils/automation';
+import {
+  getEmergencyStopState,
+  triggerEmergencyStop,
+  clearEmergencyStop,
+  isEmergencyStopActive,
+  getActivityLog,
+  clearActivityLog,
+  addActivityLogEntry,
+  getRateLimitSummary,
+  checkRateLimit,
+  isBackoffPaused,
+  getConfirmationMode,
+  setConfirmationMode,
+  ensureAlarmsPermission,
+  setShouldAbort,
+} from '../utils/failsafe';
+import type { ConfirmationMode } from '../utils/failsafe';
 import logger from '../utils/logger';
 
 /**
@@ -186,17 +203,19 @@ function getContactsForDaysInAdvance(contacts: Contact[], days: number): Contact
 /**
  * Opens https://www.facebook.com/birthdays in a background tab (or focuses an
  * existing one) and resolves once the page is ready.
+ *
+ * If no such tab is currently open, the returned promise is rejected. This
+ * enforces the invariant that automation only runs when the user has already
+ * opened the birthdays page, and avoids returning `null` to signal failure.
  */
 async function openOrFocusFacebookBirthdaysTab(): Promise<chrome.tabs.Tab> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     chrome.tabs.query({ url: '*://*.facebook.com/birthdays*' }, (tabs) => {
       if (tabs.length > 0 && tabs[0].id !== undefined) {
-        chrome.tabs.update(tabs[0].id, { active: false }, (tab) => resolve(tab!));
+        resolve(tabs[0]);
       } else {
-        chrome.tabs.create(
-          { url: 'https://www.facebook.com/birthdays', active: false },
-          (tab) => resolve(tab),
-        );
+        // Do NOT auto-open a Facebook tab — requires user to have the page open
+        reject(new Error('Facebook birthdays tab is not open; user action is required.'));
       }
     });
   });
@@ -208,6 +227,29 @@ async function openOrFocusFacebookBirthdaysTab(): Promise<chrome.tabs.Tab> {
  * dispatches the full automation payload to the content script.
  */
 async function handleAutomationScan(): Promise<{ success: boolean }> {
+  // Fail-safe checks before proceeding
+  if (await isEmergencyStopActive()) {
+    logger.warn('handleAutomationScan: emergency stop is active, skipping');
+    await addActivityLogEntry('warning', 'Automation scan skipped — emergency stop active');
+    return { success: false };
+  }
+
+  if (await isBackoffPaused()) {
+    logger.warn('handleAutomationScan: backoff pause active, skipping');
+    await addActivityLogEntry('warning', 'Automation scan skipped — failure backoff active');
+    return { success: false };
+  }
+
+  const rateLimit = await checkRateLimit();
+  if (!rateLimit.allowed) {
+    logger.warn('handleAutomationScan: rate limit reached', rateLimit.reason);
+    await addActivityLogEntry('warning', `Automation scan skipped — ${rateLimit.reason}`);
+    return { success: false };
+  }
+
+  // Reset abort flag for this new run
+  await setShouldAbort(false);
+
   let templates: MessageTemplate[] = [];
   let posts: Post[] = [];
   let contacts: Contact[] = [];
@@ -262,8 +304,9 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
   };
 
   const tab = await openOrFocusFacebookBirthdaysTab();
-  if (!tab.id) {
-    logger.error('handleAutomationScan: could not open Facebook birthdays tab');
+  if (!tab || !tab.id) {
+    logger.info('handleAutomationScan: no Facebook birthdays tab open — user must navigate to facebook.com/birthdays');
+    await addActivityLogEntry('info', 'Automation skipped — no Facebook birthdays tab open');
     return { success: false };
   }
 
@@ -459,6 +502,12 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return getAutomationConfig();
     }
     case 'automation.setEnabled': {
+      if (message.payload.enabled) {
+        const hasAlarms = await ensureAlarmsPermission();
+        if (!hasAlarms) {
+          throw new ApiError(403, { detail: 'Alarms permission is required to enable automation. Please grant the permission and try again.' });
+        }
+      }
       return updateAutomationEnabled(message.payload.enabled);
     }
     case 'automation.setInterval': {
@@ -690,6 +739,41 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       await clearTokens();
       return { message: 'Account deleted successfully' };
     }
+    // Fail-safe message handlers
+    case 'failsafe.getEmergencyStop': {
+      return await getEmergencyStopState() as unknown as BackgroundResponse;
+    }
+    case 'failsafe.triggerEmergencyStop': {
+      const hours = message.payload?.cooldownHours ?? 24;
+      await triggerEmergencyStop(hours);
+      await setShouldAbort(true);
+      // Disable automation
+      await updateAutomationEnabled(false);
+      return { success: true };
+    }
+    case 'failsafe.clearEmergencyStop': {
+      await clearEmergencyStop();
+      await setShouldAbort(false);
+      return { success: true };
+    }
+    case 'failsafe.getActivityLog': {
+      return await getActivityLog() as unknown as BackgroundResponse;
+    }
+    case 'failsafe.clearActivityLog': {
+      await clearActivityLog();
+      return { success: true };
+    }
+    case 'failsafe.getRateLimits': {
+      return await getRateLimitSummary() as unknown as BackgroundResponse;
+    }
+    case 'failsafe.getConfirmationMode': {
+      const mode = await getConfirmationMode();
+      return { mode } as unknown as BackgroundResponse;
+    }
+    case 'failsafe.setConfirmationMode': {
+      await setConfirmationMode(message.payload.mode as ConfirmationMode);
+      return { success: true };
+    }
     default:
       throw new ApiError(400, { detail: 'Unknown action' });
   }
@@ -788,20 +872,29 @@ async function initializeAuthState(): Promise<void> {
 
 void initializeAuthState();
 
-// Chrome Alarms listener for automation
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === 'birthday-check-alarm') {
-    const config = await getAutomationConfig();
-    if (config.enabled) {
+// Chrome Alarms listener for automation (alarms is an optional permission)
+if (chrome.alarms) {
+  chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name === 'birthday-check-alarm') {
+      const config = await getAutomationConfig();
+      if (!config.enabled) return;
+
+      // Only run if user has an active Facebook tab open (no background automation)
+      const fbTabs = await chrome.tabs.query({ url: '*://*.facebook.com/*' });
+      if (fbTabs.length === 0) {
+        logger.info('Alarm fired but no active Facebook tab — skipping automation');
+        return;
+      }
+
       await handleAutomationScan();
     }
-  }
-});
+  });
+}
 
 // Initialize automation on startup
 async function initializeAutomation(): Promise<void> {
   const config = await getAutomationConfig();
-  if (config.enabled) {
+  if (config.enabled && chrome.alarms) {
     // Reschedule alarms on extension startup
     await chrome.alarms.clear('birthday-check-alarm');
     await chrome.alarms.create('birthday-check-alarm', {

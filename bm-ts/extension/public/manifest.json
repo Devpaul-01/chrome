@@ -2,8 +2,10 @@
   "manifest_version": 3,
   "name": "BirthdayMessaging",
   "version": "0.1.0",
-  "description": "Chrome extension that automates birthday messages using the BirthdayMessaging backend.",
-  "permissions": ["storage", "scripting", "activeTab", "tabs", "alarms"],
+  "description": "Helps you remember and send personalized birthday wishes to your Facebook friends.",
+  "homepage_url": "https://birthdaymessaging.app/privacy",
+  "permissions": ["storage", "scripting", "activeTab", "tabs"],
+  "optional_permissions": ["alarms"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "BirthdayMessaging"
@@ -14,20 +16,26 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.facebook.com/*"],
+      "matches": [
+        "https://www.facebook.com/birthdays*",
+        "https://www.facebook.com/messages/*",
+        "https://www.facebook.com/profile.php*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
   ],
   "host_permissions": [
-    "https://*.facebook.com/*",
+    "https://www.facebook.com/birthdays*",
+    "https://www.facebook.com/messages/*",
+    "https://www.facebook.com/profile.php*",
     "http://localhost/*",
     "https://localhost/*"
   ],
   "web_accessible_resources": [
     {
       "resources": ["assets/*"],
-      "matches": ["https://*.facebook.com/*"]
+      "matches": ["https://www.facebook.com/*"]
     }
   ],
   "icons": {
