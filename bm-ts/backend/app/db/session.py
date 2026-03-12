@@ -25,10 +25,10 @@ from app.core.config import settings
 engine = create_async_engine(
     settings.database_url,
     future=True,
-    max_overflow=0,  # Temporary value, change once we know our hardware requirements. Sample comment: Don't create more than pool_size connections.
-    pool_size=10,  # Temporary value, change once we know our hardware requirements. Sample comment: Limit the number of connections in the pool.
-    pool_recycle=3600,  # Temporary value, change once we know our hardware requirements. Sample comment: Recycle connections after 1 hour to prevent stale connections.
-    pool_timeout=30,  # Temporary value, change once we know our hardware requirements. Sample comment: Wait up to 30 seconds for a connection before raising an error.
+    max_overflow=0,  # Temporary value, change once we know our hardware requirements. Add more permanent comment later.
+    pool_size=10,  # Temporary value. PostgreSQL wiki recommends "((core_count * 2) + effective_spindle_count)" as a formula for the number of active connections.
+    pool_recycle=3600,  # Temporary value, change once we know our hardware requirements. Add more permanent comment later.
+    pool_timeout=30,  # Temporary value, change once we know our hardware requirements. Add more permanent comment later.
     pool_pre_ping=True  # Recycle stale connections transparently.
 )
 
