@@ -43,14 +43,7 @@ class Settings(BaseSettings):
     )
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     log_level: str = Field(default="INFO")
-    email_from_address: str = Field(
-        default="bmlegacy@birthdaymessaging.com",
-        alias="EMAIL_FROM_ADDRESS",
-    )
-    password_reset_url_base: str = Field(
-        default="",
-        alias="PASSWORD_RESET_URL_BASE",
-    )
+    smtp_encryption_key: str = Field(default="generate-with-fernet", alias="SMTP_ENCRYPTION_KEY")
 
     @field_validator("jwt_secret_key", mode="after")
     @classmethod
