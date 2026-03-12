@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from jose import JWTError, jwt
 
@@ -38,6 +38,9 @@ def _build_payload(subject: UUID, token_type: str, expires_delta: timedelta) -> 
         "iat": now,
         "exp": now + expires_delta,
     }
+    # Add a JTI to refresh tokens so they can be revoked individually.
+    if token_type == TokenType.REFRESH:
+        payload["jti"] = str(uuid4())
     return payload
 
 
