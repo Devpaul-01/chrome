@@ -387,6 +387,8 @@ export function isUserActive(): boolean {
 // Alarms permission helper (since alarms is now optional)
 // ---------------------------------------------------------------------------
 
+export async function requestAlarmsPermission(): Promise<boolean> {
+  return new Promise((resolve) => {
     try {
       // Ensure the permissions API is available before using it.
       if (
@@ -425,7 +427,8 @@ export function isUserActive(): boolean {
       // Any synchronous error (e.g., API not available) results in a safe fallback.
       resolve(false);
     }
-      });
-    });
   });
 }
+
+/** Alias kept for backwards-compatibility with background/index.ts */
+export const ensureAlarmsPermission = requestAlarmsPermission;
