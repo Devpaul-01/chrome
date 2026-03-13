@@ -6,7 +6,7 @@ COPY pyproject.toml .
 COPY README.md .
 
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir ".[test]"
 RUN apt-get update && apt-get install -y postgresql-client
 
 COPY . .

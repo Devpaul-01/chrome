@@ -41,7 +41,7 @@ class Settings(BaseSettings):
         default_factory=lambda: ["localhost"],
         alias="STRIPE_REDIRECT_ALLOWED_DOMAINS",
     )
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    cors_origins: list[str] = Field(default_factory=lambda: ["chrome-extension://doiajjfbpaopmocbahnaaajehmdoniic"])
     log_level: str = Field(default="INFO")
     smtp_encryption_key: str = Field(default="generate-with-fernet", alias="SMTP_ENCRYPTION_KEY")
 
@@ -49,13 +49,23 @@ class Settings(BaseSettings):
     @classmethod
     def validate_jwt_secret(cls, v: str) -> str:
         _INSECURE_DEFAULTS = {"change-me-super-secret", "secret", "changeme", ""}
-        if v in _INSECURE_DEFAULTS or len(v) < 32:
+        
+        # Raise error if using a known default placeholder
+        if v in _INSECURE_DEFAULTS:
+            raise ValueError(
+                f"JWT_SECRET_KEY cannot be a default placeholder. "
+                f"Generate a secure random value (>= 32 chars) with: python -c \"import secrets; print(secrets.token_hex(16))\""
+            )
+        
+        # Warn if too short
+        if len(v) < 32:
             import warnings
             warnings.warn(
-                "JWT_SECRET_KEY is insecure or too short (< 32 chars). "
-                "Set a strong random value in .env before deploying.",
+                "JWT_SECRET_KEY is too short (< 32 chars). "
+                "Generate a secure random value with: python -c \"import secrets; print(secrets.token_hex(16))\"",
                 stacklevel=2,
             )
+        
         return v
 
     @field_validator("cors_origins", mode="before")
