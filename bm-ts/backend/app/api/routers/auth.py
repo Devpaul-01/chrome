@@ -37,7 +37,7 @@ from app.core.jwt import (
     ensure_token_type,
 )
 from app.core.security import hash_password, verify_password
-from app.db.models import User
+from app.db.models import User, RevokedToken
 from app.db.session import get_db
 from app.schemas.auth import (
     DeleteAccountRequest,
@@ -120,6 +120,8 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> T
         payload = decode_token(data.refresh_token)
         ensure_token_type(payload, TokenType.REFRESH)
         user_id = UUID(payload.get("sub"))
+        jti = payload.get("jti")
+        exp = payload.get("exp")
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
 
@@ -128,7 +130,66 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> T
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
 
+    # If jti present, ensure it hasn't been revoked already
+    if jti:
+        stmt = select(RevokedToken).where(RevokedToken.refresh_token_jti == jti)
+        result = await db.execute(stmt)
+        if result.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+    # Rotation: mark the old refresh token JTI as revoked so it cannot be replayed
+    if jti and exp:
+        try:
+            # exp can be timestamp (int) or datetime; coerce to datetime
+            if isinstance(exp, (int, float)):
+                expires_at = datetime.fromtimestamp(int(exp), timezone.utc)
+            else:
+                expires_at = exp if isinstance(exp, datetime) else datetime.fromtimestamp(int(exp), timezone.utc)
+        except Exception:
+            expires_at = datetime.now(timezone.utc)
+
+        revoked = RevokedToken(refresh_token_jti=jti, user_id=user_id, expires_at=expires_at)
+        db.add(revoked)
+        try:
+            await db.commit()
+        except Exception:
+            # Integrity error means another request may have revoked it concurrently
+            await db.rollback()
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
     return _build_token_response(user_id)
+
+
+@router.post("/revoke", response_model=MessageResponse)
+async def revoke(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> MessageResponse:
+    """Revoke (logout) a refresh token by recording its JTI in the revoked_tokens table."""
+    try:
+        payload = decode_token(data.refresh_token)
+        ensure_token_type(payload, TokenType.REFRESH)
+        jti = payload.get("jti")
+        user_id = UUID(payload.get("sub"))
+        exp = payload.get("exp")
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+    if not jti:
+        return MessageResponse(message="Token revoked")
+
+    try:
+        if isinstance(exp, (int, float)):
+            expires_at = datetime.fromtimestamp(int(exp), timezone.utc)
+        else:
+            expires_at = exp if isinstance(exp, datetime) else datetime.fromtimestamp(int(exp), timezone.utc)
+    except Exception:
+        expires_at = datetime.now(timezone.utc)
+
+    revoked = RevokedToken(refresh_token_jti=jti, user_id=user_id, expires_at=expires_at)
+    db.add(revoked)
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+    return MessageResponse(message="Token revoked")
 
 
 @router.get("/me", response_model=UserProfile)

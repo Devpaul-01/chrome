@@ -280,6 +280,27 @@ class PasswordResetToken(Base):
     )
 
 
+class RevokedToken(Base):
+    """Records revoked refresh-token JTIs so refresh tokens can be individually invalidated.
+
+    Each row stores the JTI, owning user, and the token expiry so rows may be
+    cleaned up after expiration.
+    """
+
+    __tablename__ = "revoked_tokens"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    refresh_token_jti = Column(String(64), nullable=False, unique=True)
+    user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+
+    __table_args__ = (
+        Index("idx_revoked_jti", "refresh_token_jti", unique=True),
+        Index("idx_revoked_expires", "expires_at"),
+    )
+
+
 # ========== Phase 2 Models ==========
 # Models added in Phase 2 to support the full automation and contact-management
 # features.  They are created by Alembic migrations and share the same
