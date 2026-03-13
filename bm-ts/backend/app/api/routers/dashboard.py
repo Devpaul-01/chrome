@@ -5,7 +5,7 @@ from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
-from app.db.models import User, MessageHistory, MessageQueue
+from app.db.models import User, MessageHistory, MessageQueue, Contact
 from app.db.session import get_db
 from app.schemas.dashboard import DashboardStats
 
@@ -87,9 +87,18 @@ async def get_dashboard_stats(
     )
     queued_messages = queued_result.scalar() or 0
 
-    # TODO: Implement upcoming birthdays count using contacts table
-    # Currently returns 0 — query contacts.birthday within next 30 days
-    friends_with_upcoming_birthdays = 0
+    # TODO: Implement upcoming birthdays count using contacts table (if not yet done in the code below)
+    # Before change, this returned 0 — query contacts.birthday within next 30 days
+    friends_with_upcoming_birthdays = await db.execute(
+        select(func.count(Contact.id)).where(
+            and_(
+                Contact.user_id == current_user.id,
+                Contact.birthday >= today_start,
+                Contact.birthday <= today_start + timedelta(days=30),
+            )
+        )
+    )
+    # Suggested by VSCode (not sure if it's good): friends_with_upcoming_birthdays = friends_with_upcoming_birthdays.scalar() or 0
 
     return DashboardStats(
         total_messages_sent=total_messages_sent,
