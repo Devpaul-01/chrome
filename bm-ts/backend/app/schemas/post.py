@@ -16,8 +16,9 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, constr
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, constr, field_validator
 
+from app.core.validators import sanitize_text
 from app.schemas.enums import GenderEnum
 
 
@@ -26,6 +27,13 @@ class PostCreate(BaseModel):
     gender: GenderEnum = GenderEnum.NEUTRAL
     image_url: Optional[str] = None
     label: Optional[str] = Field(None, max_length=255)
+
+    _sanitize_content = field_validator("content", mode="after")(sanitize_text)
+
+    @field_validator("label", mode="after")
+    @classmethod
+    def sanitize_label(cls, v: Optional[str]) -> Optional[str]:
+        return sanitize_text(v) if v is not None else v
     font_family: Optional[str] = Field("Arial", max_length=100)
     font_size: Optional[int] = Field(48, ge=24, le=96)
     font_color: Optional[str] = Field("#ffffff", max_length=20)
@@ -36,6 +44,11 @@ class PostUpdate(BaseModel):
     gender: Optional[GenderEnum] = None
     image_url: Optional[str] = None
     label: Optional[str] = None
+
+    @field_validator("content", "label", mode="after")
+    @classmethod
+    def sanitize_optional(cls, v: Optional[str]) -> Optional[str]:
+        return sanitize_text(v) if v is not None else v
     font_family: Optional[str] = Field(None, max_length=100)
     font_size: Optional[int] = Field(None, ge=24, le=96)
     font_color: Optional[str] = Field(None, max_length=20)

@@ -24,6 +24,7 @@ from app.api.routers import (
 from app.core.config import settings
 from app.core.app_logging import setup_logging
 from app.core.rate_limiter import init_rate_limiter, limiter
+from app.core.security_headers import SecurityHeadersMiddleware
 
 setup_logging()
 
@@ -42,6 +43,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 logger = logging.getLogger(__name__)
 

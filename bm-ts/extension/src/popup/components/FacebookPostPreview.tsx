@@ -167,7 +167,7 @@ export default function FacebookPostPreview({
 
   if (!imageUrl) {
     return (
-      <div className="bg-white border border-gray-300 rounded-lg p-6">
+      <div className="bg-white rounded-lg p-6">
         <div className="prose max-w-none">
           <p className="text-sm whitespace-pre-wrap">{text || '(empty)'}</p>
         </div>
@@ -177,74 +177,31 @@ export default function FacebookPostPreview({
 
   if (!text) {
     return (
-      <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
+      <div className="bg-white rounded-lg overflow-hidden">
         <img src={imageUrl} alt="Preview" className="w-full facebook-preview-img" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Facebook-style preview header */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-4 flex items-center gap-3 border-b border-gray-200">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
-            🎂
-          </div>
-          <div className="flex-1">
-            <div className="font-semibold text-sm text-gray-900">Your Birthday Post</div>
-            <div className="text-xs text-gray-500">Facebook · Timeline</div>
-          </div>
-        </div>
-
-        {/* Preview image with text overlay */}
-        <div className="relative bg-gray-50">
-          {previewUrl ? (
-            <img
-              src={previewUrl}
-              alt="Facebook post preview with text overlay"
-              className="w-full facebook-preview-img-overlay"
-            />
-          ) : (
-            <div className="flex items-center justify-center p-12">
-              <div className="text-center">
-                <div className="text-4xl mb-2">⏳</div>
-                <p className="text-sm text-gray-600">Generating preview...</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Facebook-style actions */}
-        <div
-          className="p-3 border-t border-gray-200 flex gap-4 justify-around text-xs text-gray-600"
-          role="group"
-          aria-label="Facebook actions"
-        >
-          <div className="flex items-center gap-1" role="button" tabIndex={0} aria-label="Like">
-            <span aria-hidden="true">👍</span> Like
-          </div>
-          <div className="flex items-center gap-1" role="button" tabIndex={0} aria-label="Comment">
-            <span aria-hidden="true">💬</span> Comment
-          </div>
-          <div className="flex items-center gap-1" role="button" tabIndex={0} aria-label="Share">
-            <span aria-hidden="true">↗️</span> Share
+    <div>
+      {previewUrl ? (
+        <img
+          src={previewUrl}
+          alt="Facebook post preview with text overlay"
+          className="w-full rounded-lg"
+        />
+      ) : (
+        <div className="flex items-center justify-center p-12 bg-gray-50 rounded-lg">
+          <div className="text-center">
+            <div className="text-4xl mb-2">⏳</div>
+            <p className="text-sm text-gray-600">Generating preview...</p>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Hidden canvas for rendering */}
       <canvas ref={canvasRef} className="hidden-canvas" />
-
-      {/* Text-only version for reference */}
-      <details className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-        <summary className="text-xs font-semibold text-gray-700 cursor-pointer hover:text-gray-900">
-          📝 View Text Only
-        </summary>
-        <div className="mt-3 pt-3 border-t border-gray-200">
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{text}</p>
-        </div>
-      </details>
     </div>
   );
 }

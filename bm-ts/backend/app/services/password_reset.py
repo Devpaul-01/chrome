@@ -11,7 +11,6 @@ Rate limiting on the endpoint is handled upstream in the auth router.
 
 import asyncio
 import hashlib
-import os
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -106,7 +105,7 @@ async def send_reset_email(email: str, token: str) -> None:
     )
 
     try:
-        sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY", ""))
+        sg = SendGridAPIClient(settings.sendgrid_api_key)
         await asyncio.to_thread(sg.send, message)
         print(f"Password reset email sent to {email}")
     except Exception as e:

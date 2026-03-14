@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(default_factory=lambda: ["chrome-extension://doiajjfbpaopmocbahnaaajehmdoniic"])
     log_level: str = Field(default="INFO")
     smtp_encryption_key: str = Field(default="generate-with-fernet", alias="SMTP_ENCRYPTION_KEY")
+    sendgrid_api_key: str = Field(default="", alias="SENDGRID_API_KEY")
+    email_from_address: str = Field(default="", alias="EMAIL_FROM_ADDRESS")
+    password_reset_url_base: str = Field(default="", alias="PASSWORD_RESET_URL_BASE")
 
     @field_validator("jwt_secret_key", mode="after")
     @classmethod
@@ -66,6 +69,17 @@ class Settings(BaseSettings):
                 stacklevel=2,
             )
         
+        return v
+
+    @field_validator("smtp_encryption_key", mode="after")
+    @classmethod
+    def validate_smtp_encryption_key(cls, v: str) -> str:
+        if v == "generate-with-fernet":
+            raise ValueError(
+                "SMTP_ENCRYPTION_KEY cannot be the default placeholder. "
+                "Generate a valid Fernet key with: "
+                'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+            )
         return v
 
     @field_validator("cors_origins", mode="before")

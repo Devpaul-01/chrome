@@ -40,7 +40,7 @@ async def get_smtp_config(
         host=config.host,
         port=config.port,
         username=config.username,
-        password=decrypt_value(config.password),
+        password="••••••••",
         use_tls=config.use_tls,
         from_email=config.from_email,
         from_name=config.from_name,
@@ -89,7 +89,7 @@ async def update_smtp_config(
         host=config.host,
         port=config.port,
         username=config.username,
-        password=data.password, # return decrypted value
+        password="••••••••",
         use_tls=config.use_tls,
         from_email=config.from_email,
         from_name=config.from_name,
