@@ -13,6 +13,33 @@ interface AutomationConfig {
   maxMessages: number; // 0 = unlimited
 }
 
+interface RateLimitBucket {
+  used: number;
+  cap: number;
+}
+
+interface RateLimitStatus {
+  allowed: boolean;
+  reason?: string;
+  hourly: RateLimitBucket;
+  daily: RateLimitBucket;
+  weekly: RateLimitBucket;
+}
+
+interface ActivityLogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+}
+
+interface EmergencyStopState {
+  active: boolean;
+  triggeredAt: string | null;
+  cooldownUntil: string | null;
+}
+
+type ConfirmationMode = 'each' | 'session';
+
 interface AutomationSettingsProps {
   onClose: () => void;
   showClose?: boolean;
@@ -31,6 +58,11 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionDelayMinutes, setActionDelayMinutes] = useState(1);
+  const [rateLimits, setRateLimits] = useState<RateLimitStatus | null>(null);
+  const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
+  const [emergencyStop, setEmergencyStop] = useState<EmergencyStopState>({ active: false, triggeredAt: null, cooldownUntil: null });
+  const [confirmMode, setConfirmMode] = useState<ConfirmationMode>('each');
+  const [showLog, setShowLog] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -40,9 +72,10 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
     setIsLoading(true);
     setError(null);
     try {
-      const data = await chrome.runtime.sendMessage({
+      const response = await chrome.runtime.sendMessage({
         type: 'automation.getConfig',
       });
+      const data = response?.data ?? response;
       if (data) {
         setConfig(data);
       }
@@ -50,6 +83,22 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
       if (typeof stored[ACTION_DELAY_KEY] === 'number') {
         setActionDelayMinutes(stored[ACTION_DELAY_KEY] as number);
       }
+
+      // Load fail-safe state
+      const [rlResult, logResult, esResult, cmResult] = await Promise.all([
+        chrome.runtime.sendMessage({ type: 'failsafe.getRateLimits' }),
+        chrome.runtime.sendMessage({ type: 'failsafe.getActivityLog' }),
+        chrome.runtime.sendMessage({ type: 'failsafe.getEmergencyStop' }),
+        chrome.runtime.sendMessage({ type: 'failsafe.getConfirmationMode' }),
+      ]);
+      const rl = rlResult?.data ?? rlResult;
+      const log = logResult?.data ?? logResult;
+      const es = esResult?.data ?? esResult;
+      const cm = cmResult?.data ?? cmResult;
+      if (rl?.hourly) setRateLimits(rl);
+      if (Array.isArray(log)) setActivityLog(log);
+      if (es) setEmergencyStop(es);
+      if (cm?.mode) setConfirmMode(cm.mode);
     } catch (err) {
       const errorMessage = getErrorMessage(err);
       logError(err, 'AutomationSettings:loadConfig');
@@ -132,11 +181,63 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
     setMessage(null);
     setError(null);
     try {
-      const result = await chrome.runtime.sendMessage({
+      const response = await chrome.runtime.sendMessage({
         type: 'automation.scanFacebook',
       });
-      setMessage(result.success ? 'Scan triggered successfully' : 'No Facebook tab found');
+      const result = response?.data ?? response;
+      setMessage(result?.success ? 'Scan triggered successfully' : 'No Facebook tab found');
       await loadConfig(); // Refresh to get updated lastCheck
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function handleEmergencyStop() {
+    setMessage(null);
+    setError(null);
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'failsafe.triggerEmergencyStop',
+        payload: { cooldownHours: 24 },
+      });
+      setEmergencyStop({ active: true, triggeredAt: new Date().toISOString(), cooldownUntil: null });
+      setConfig((prev) => ({ ...prev, enabled: false }));
+      setMessage('Emergency stop activated — all automation paused for 24 hours');
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function handleClearEmergencyStop() {
+    setMessage(null);
+    setError(null);
+    try {
+      await chrome.runtime.sendMessage({ type: 'failsafe.clearEmergencyStop' });
+      setEmergencyStop({ active: false, triggeredAt: null, cooldownUntil: null });
+      setMessage('Emergency stop cleared');
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function handleConfirmModeChange(mode: ConfirmationMode) {
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'failsafe.setConfirmationMode',
+        payload: { mode },
+      });
+      setConfirmMode(mode);
+      setMessage(`Confirmation mode set to "${mode}"`);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function handleClearActivityLog() {
+    try {
+      await chrome.runtime.sendMessage({ type: 'failsafe.clearActivityLog' });
+      setActivityLog([]);
+      setMessage('Activity log cleared');
     } catch (err) {
       setError((err as Error).message);
     }
@@ -239,6 +340,94 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
             </div>
           </div>
 
+          {/* Emergency Stop */}
+          <div className="mb-4">
+            {emergencyStop.active ? (
+              <div className="p-3 bg-red-50 border border-red-300 rounded mb-2">
+                <p className="text-sm font-semibold text-red-700 mb-1">⚠️ Emergency Stop Active</p>
+                <p className="text-xs text-red-600 mb-2">
+                  All automation is paused.
+                  {emergencyStop.cooldownUntil && (
+                    <> Cooldown until {formatDate(emergencyStop.cooldownUntil)}.</>
+                  )}
+                </p>
+                <button
+                  onClick={handleClearEmergencyStop}
+                  className="px-3 py-1.5 text-sm bg-white border border-red-300 text-red-700 rounded hover:bg-red-50"
+                >
+                  Clear Emergency Stop
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleEmergencyStop}
+                className="w-full px-4 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
+              >
+                🛑 Pause All Activity
+              </button>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Immediately stops all automation and sets a 24-hour cooldown.
+            </p>
+          </div>
+
+          {/* Confirmation Mode */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">
+              Send Confirmation Mode{' '}
+              <HelpTooltip label="Controls whether you're asked to confirm messages before they're sent. 'Each message' is safest and asks every time. 'Per session' asks once per automation run. 'Auto' may send without asking each time and carries higher ban risk." />
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: 'each' as const, label: 'Each message' },
+                { value: 'session' as const, label: 'Per session' },
+                { value: 'auto' as const, label: 'Auto (riskier)' },
+              ]).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleConfirmModeChange(opt.value)}
+                  className={`px-3 py-2 text-xs rounded ${
+                    confirmMode === opt.value
+                      ? 'bg-orangeStrong text-white'
+                      : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Rate Limits */}
+          {rateLimits && (
+            <div className="mb-4 p-3 bg-gray-50 rounded">
+              <h3 className="text-sm font-semibold mb-2">Rate Limits</h3>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Hourly:</span>
+                  <span className={rateLimits.hourly.used >= rateLimits.hourly.cap ? 'text-red-600 font-medium' : 'text-textPrimary'}>
+                    {rateLimits.hourly.used} / {rateLimits.hourly.cap}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Daily:</span>
+                  <span className={rateLimits.daily.used >= rateLimits.daily.cap ? 'text-red-600 font-medium' : 'text-textPrimary'}>
+                    {rateLimits.daily.used} / {rateLimits.daily.cap}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Weekly:</span>
+                  <span className={rateLimits.weekly.used >= rateLimits.weekly.cap ? 'text-red-600 font-medium' : 'text-textPrimary'}>
+                    {rateLimits.weekly.used} / {rateLimits.weekly.cap}
+                  </span>
+                </div>
+              </div>
+              {!rateLimits.allowed && rateLimits.reason && (
+                <p className="text-xs text-red-600 mt-2 font-medium">{rateLimits.reason}</p>
+              )}
+            </div>
+          )}
+
           {/* Manual Trigger */}
           <button onClick={handleRunNow} className="btn-primary btn-block mb-3">
             Run Check Now
@@ -306,6 +495,51 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
           <p className="text-xs text-gray-500 mb-4">
             Resets the deduplication list so automation can re-send to contacts already processed today.
           </p>
+
+          {/* Activity Log */}
+          <div className="mb-4">
+            <button
+              onClick={() => setShowLog(!showLog)}
+              className="w-full text-left text-sm font-medium text-gray-700 flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100"
+            >
+              <span>Activity Log ({activityLog.length})</span>
+              <span className="text-xs">{showLog ? '▲' : '▼'}</span>
+            </button>
+            {showLog && (
+              <div className="mt-2">
+                {activityLog.length === 0 ? (
+                  <p className="text-xs text-gray-500 p-2">No activity recorded yet.</p>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto border rounded">
+                    {activityLog.map((entry, i) => (
+                      <div key={i} className={`px-3 py-2 text-xs border-b last:border-b-0 ${
+                        entry.level === 'emergency' ? 'bg-red-50 text-red-700' :
+                        entry.level === 'warning' ? 'bg-yellow-50 text-yellow-700' :
+                        entry.level === 'error' ? 'bg-red-50 text-red-600' :
+                        entry.level === 'send' || entry.level === 'post' ? 'bg-green-50 text-green-700' :
+                        'bg-white text-gray-600'
+                      }`}>
+                        <div className="flex justify-between items-start gap-2">
+                          <span className="flex-1">{entry.message}</span>
+                          <span className="text-gray-400 whitespace-nowrap">
+                            {new Date(entry.timestamp).toLocaleTimeString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {activityLog.length > 0 && (
+                  <button
+                    onClick={handleClearActivityLog}
+                    className="mt-2 text-xs text-gray-500 hover:text-gray-700 underline"
+                  >
+                    Clear log
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
           {showClose && (
             <button onClick={onClose} className="btn-secondary btn-block">

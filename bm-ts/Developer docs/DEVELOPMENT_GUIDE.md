@@ -313,7 +313,7 @@ npm run reload
 # Build and watch for changes
 npm run build:watch
 
-# Run extension tests (214 tests)
+# Run extension tests (283 tests)
 npm test
 
 # Run tests in watch mode

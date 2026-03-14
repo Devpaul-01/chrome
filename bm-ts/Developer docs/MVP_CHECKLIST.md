@@ -1,8 +1,8 @@
 # BirthdayMessaging bm-ts MVP Checklist
 
 
-**Last Updated:** March 10, 2026  
-**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (266 tests across 13 files), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026), SendGrid email service integrated for password reset (asyncio import bug fixed Mar 9, 2026), full codebase audit with metric corrections (Mar 9, 2026), Help & Tips panel + OnboardingWizard UI polish: glassmorphism, brand-consistent text, improved spacing, removed redundant Help & Shortcuts footer section (Mar 10, 2026)
+**Last Updated:** March 13, 2026  
+**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (283 tests across 13 files), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026), SendGrid email service integrated for password reset (asyncio import bug fixed Mar 9, 2026), full codebase audit with metric corrections (Mar 13, 2026), Help & Tips panel + OnboardingWizard UI polish: glassmorphism, brand-consistent text, improved spacing, removed redundant Help & Shortcuts footer section (Mar 10, 2026)
 
 ---
 
@@ -75,7 +75,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 **Current Strengths:**
 - ✅ Core backend API with 15 routers and 64 HTTP endpoints + 1 WebSocket (all Phase 1 and Phase 2 routers registered; 2 additional inline app routes: `/health`, `/send-birthday-message`)
-- ✅ Chrome extension with React UI, 34 components, real-time updates, and accessibility
+- ✅ Chrome extension with React UI, 38 components, real-time updates, and accessibility
 - ✅ Docker-based development environment (Dockerfile + docker-compose.yml with PostgreSQL)
 - ✅ Database schema and models complete for all Phase 1 and Phase 2
 - ✅ Strong security (JWT rotation + secret validation, Argon2, Stripe webhooks, rate limiting on login/register, XSS/SQL injection hardening, WebSocket token-in-message auth, SMTP password masking)
@@ -88,15 +88,15 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - ⚠️ `/send-birthday-message` backend endpoint is a non-functional stub (extension content scripts handle actual sending)
 - ⚠️ SMTP passwords stored as plaintext in database (API responses now mask passwords via `SMTPConfigOut.model_post_init`; at-rest encryption still needed for production)
 - ⚠️ No production deployment infrastructure
-- ⚠️ Limited backend testing (only 4 unit tests in 2 files; no integration or API tests)
-- ✅ Extension testing: 266 tests across 13 files (95 unit + 171 component), all passing
-- ✅ Alembic migration fully populated — single comprehensive migration creates all 14 tables with ENUMs, indexes, FK CASCADE, unique constraints
+- ⚠️ Limited backend testing (only 7 unit tests in 2 files; no integration or API tests)
+- ✅ Extension testing: 283 tests across 13 files (97 unit + 186 component), all passing
+- ✅ Alembic migration fully populated — single comprehensive migration creates all 14 tables with ENUMs, indexes, FK CASCADE, unique constraints; separate migration `a1b2c3d4e5f6_create_revoked_tokens.py` adds `revoked_tokens` table (15 tables total)
 - ⚠️ No CI/CD pipeline or monitoring
-- ✅ ~~`EMAIL_FROM_ADDRESS` env var exists in `.env` but is not loaded via `config.py` Settings~~ — now loaded via `config.py` Settings and used in `password_reset.py`
-- ✅ ~~Password reset URL hardcodes extension ID~~ — now configurable via `PASSWORD_RESET_URL_BASE` env var in `config.py` (no default; must be set in `.env`)
+- ❌ ~~`EMAIL_FROM_ADDRESS` env var exists in `.env` but is not loaded via `config.py` Settings~~ — **STILL NOT in `config.py` Settings** despite previous claims; `password_reset.py` references `settings.email_from_address` which will raise `AttributeError`
+- ❌ ~~Password reset URL hardcodes extension ID~~ — `PASSWORD_RESET_URL_BASE` is referenced in `password_reset.py` but **NOT defined in `config.py` Settings**; will raise `AttributeError` at runtime
 
 **Actionable Next Steps:**
-1. ~~Implement email service for password reset~~ ✅ SendGrid integrated (Mar 9, 2026) — ✅ `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` added to `config.py`
+1. ~~Implement email service for password reset~~ 🟡 SendGrid integrated (Mar 9, 2026) — ❌ `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` are **NOT in `config.py` Settings** despite previous claims — `send_reset_email()` will crash with `AttributeError`
 2. Encrypt SMTP passwords at rest before production (API-level masking done — `SMTPConfigOut` replaces password with `••••••••`)
 3. Increase test coverage (Phase 2 backend, extension, E2E)
 4. Set up production deployment, CI/CD, and monitoring
@@ -110,7 +110,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 **Priority:** ~~P0~~ — Resolved  
 **Status:** ✅ Complete (February 12, 2026)
 
-**Resolution:** Database schema is now maintained via `models.py` (14 ORM models) and applied via Alembic migrations (`alembic upgrade head` runs on container startup). The original `ddl.sql` file has been superseded and removed from the codebase.
+**Resolution:** Database schema is now maintained via `models.py` (15 ORM models including RevokedToken) and applied via Alembic migrations (`alembic upgrade head` runs on container startup). The original `ddl.sql` file has been superseded and removed from the codebase.
 
 **Tasks:**
 - [x] Add `birthday_schedules` table to ddl.sql
@@ -119,7 +119,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Add `password_reset_tokens` table to ddl.sql
 - [x] Add `message_status_enum` type definition
 - [ ] Test fresh deployment: `docker-compose down -v && docker-compose up -d`
-- [ ] Verify all 14 models can query their tables without errors
+- [ ] Verify all 15 models can query their tables without errors
 - [x] Update BACKEND_INTEGRATION_SUMMARY.md to remove critical warning
 
 ---
@@ -134,8 +134,8 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Choose email provider (SendGrid, AWS SES, Mailgun, or SMTP) ✅ SendGrid (`sendgrid>=6.11` in pyproject.toml)
 - [x] Add email service configuration to .env.example: ✅ `SENDGRID_API_KEY` present
   - [x] `EMAIL_SERVICE_API_KEY` → `SENDGRID_API_KEY` ✅
-  - [x] `EMAIL_FROM_ADDRESS` — ✅ loaded via `config.py` Settings; used in `password_reset.py`
-  - [x] `PASSWORD_RESET_URL_BASE` — ✅ loaded via `config.py` Settings; used to construct reset URLs
+  - [ ] `EMAIL_FROM_ADDRESS` — ❌ **NOT in `config.py` Settings**; referenced in `password_reset.py` but will crash at runtime
+  - [ ] `PASSWORD_RESET_URL_BASE` — ❌ **NOT in `config.py` Settings**; referenced in `password_reset.py` but will crash at runtime
 - [x] Implement email sending in `app/services/password_reset.py` ✅ (`send_reset_email()` uses `SendGridAPIClient` + `asyncio.to_thread()`)
 - [x] Create HTML email template for password reset ✅ (inline HTML in `send_reset_email()`)
 - [ ] Test email delivery in development
@@ -143,8 +143,8 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [ ] Document email setup in DEVELOPMENT_GUIDE.md
 
 **Remaining hardening (pre-production):**
-- [x] Add `EMAIL_FROM_ADDRESS` field to `app/core/config.py` Settings class and use it in `password_reset.py` ✅
-- [x] Add `PASSWORD_RESET_URL_BASE` field to `app/core/config.py` and use it to construct reset URLs ✅
+- [ ] Add `EMAIL_FROM_ADDRESS` field to `app/core/config.py` Settings class and use it in `password_reset.py` ❌ **NOT YET DONE**
+- [ ] Add `PASSWORD_RESET_URL_BASE` field to `app/core/config.py` and use it to construct reset URLs ❌ **NOT YET DONE**
 - [ ] Verify email delivery end-to-end in development with real SendGrid API key
 - [ ] Improve HTML email template (branding, responsive design)
 
@@ -155,7 +155,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 ## 🗄️ Database Layer
 
 ### Schema & Migrations
-- [x] Define 14 models in models.py (User, SubscriptionRecord, TemplateSegment, BirthdaySchedule, MessageQueue, MessageHistory, PasswordResetToken — Phase 1; Contact, MessageGroup, Post, UserImage, BirthdayConfig, SMTPConfig, MessageTemplate — Phase 2)
+- [x] Define 15 models in models.py (User, SubscriptionRecord, TemplateSegment, BirthdaySchedule, MessageQueue, MessageHistory, PasswordResetToken, RevokedToken — Phase 1; Contact, MessageGroup, Post, UserImage, BirthdayConfig, SMTPConfig, MessageTemplate — Phase 2)
 - [x] Complete ddl.sql with all tables ✅ (14 tables including Phase 2: posts, message_groups, user_images, birthday_configs, smtp_configs, message_templates)
 - [x] Add database indexes for performance:
   - [x] Index on `message_queue.user_id` (idx_queue_user_status)
@@ -540,7 +540,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Add alarm-based scheduling ✅ (chrome.alarms.create/onAlarm.addListener implemented in background/index.ts and utils/automation.ts)
 - [x] **Sent-today deduplication** ✅ (getSentToday, addToSentToday, clearSentToday in utils/automation.ts)
 - [x] **Max messages config** ✅ (maxMessages field in AutomationConfig, updateMaxMessages helper, threaded into automation payload)
-- [x] **New background message types** ✅ (automation.recordSent, automation.setMaxMessages, automation.clearSentToday — 62 total message types)
+- [x] **New background message types** ✅ (automation.recordSent, automation.setMaxMessages, automation.clearSentToday; failsafe category with 8 message types — 72 total message types)
 - [ ] Add notification for automation status
 - [ ] Add offline support (queue requests)
 - [ ] Add crash recovery
@@ -825,14 +825,14 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 ### Frontend/Extension Testing
 **Priority:** P1 - USER EXPERIENCE CRITICAL  
-**Status:** ✅ Comprehensive — 266 tests across 13 files, all passing (verified Mar 9, 2026)
+**Status:** ✅ Comprehensive — 283 tests across 13 files, all passing (verified Mar 13, 2026)
 
 **Setup complete (Feb 25, 2026):**
 - ✅ Vitest + jsdom + @testing-library/react installed
 - ✅ `vitest.config.ts` configured with jsdom environment, coverage thresholds (70% lines/functions)
 - ✅ `src/test-setup.ts` — global Chrome API stub (storage.local Promise + callback dual-mode, alarms, runtime)
 - ✅ Test scripts added: `npm test`, `npm run test:watch`, `npm run test:coverage`
-- ✅ 13 test files, 266 tests, all passing (verified Mar 9, 2026)
+- ✅ 13 test files, 283 tests, all passing (verified Mar 13, 2026)
 
 #### Unit Tests
 - [x] Add Jest/Vitest configuration ✅ (Vitest + jsdom, Feb 25, 2026)
@@ -1111,7 +1111,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 ### Critical Blockers
 1. ~~**Database Schema**~~ ✅ Resolved — DDL complete with all tables including Phase 2
 2. ~~**Backend-Frontend Integration**~~ ✅ Resolved — All 11 issues fixed across Phases 1-3
-3. ~~**Alembic Migrations**~~ ✅ Resolved — Comprehensive migration (`78efe19bc04e_initial_schema.py`) fully populates all 14 tables (Feb 27, 2026)
+3. ~~**Alembic Migrations**~~ ✅ Resolved — Comprehensive migration (`78efe19bc04e_initial_schema.py`) fully populates all 14 tables; separate migration for `revoked_tokens` table (15 tables total, Feb 27, 2026)
 4. ~~**Email Service**~~ ✅ Resolved — SendGrid integrated (Mar 9, 2026); remaining: configuration hardening
 5. **Production Infrastructure** - Affects launch timeline
 
@@ -1123,19 +1123,19 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 5. **Domain Name** - Required for production API (if using custom domain)
 
 ### Technical Debt
-1. ~~No automated testing for frontend~~ ✅ Resolved — 266 extension tests across 13 files (95 unit + 171 component), all passing
-2. Minimal backend test coverage (only 4 unit tests across 2 files; no integration or API tests against database)
+1. ~~No automated testing for frontend~~ ✅ Resolved — 283 extension tests across 13 files (97 unit + 186 component), all passing
+2. Minimal backend test coverage (only 7 unit tests across 2 files; no integration or API tests against database)
 3. No CI/CD pipeline
 4. No production monitoring
 5. No error tracking service
-6. ~~Alembic migrations incomplete~~ ✅ Resolved — single comprehensive migration (`78efe19bc04e_initial_schema.py`, 289 lines) creates all 14 tables with ENUMs, indexes, FK CASCADE constraints, and unique constraints; both `upgrade()` and `downgrade()` fully implemented (Feb 27, 2026)
+6. ~~Alembic migrations incomplete~~ ✅ Resolved — single comprehensive migration (`78efe19bc04e_initial_schema.py`, 289 lines) creates all 14 tables; separate migration adds `revoked_tokens` (15 total); both `upgrade()` and `downgrade()` fully implemented (Feb 27, 2026)
 7. Image upload/storage not implemented (URL-based currently)
 8. ~~No user onboarding or interactive tutorials~~ ✅ Resolved — OnboardingWizard (5-step) + HelpTooltip contextual help implemented (Mar 3, 2026)
 9. No comprehensive help documentation or FAQ
 10. No video tutorials or training materials
 11. SMTP passwords stored as plaintext in database (API responses now masked; at-rest encryption still needed for production)
 12. `/send-birthday-message` backend endpoint is a non-functional stub (extension content scripts handle actual sending)
-13. No content script or background service worker tests (780-line background/index.ts untested)
+13. No content script or background service worker tests (865-line background/index.ts untested)
 
 ---
 
@@ -1147,7 +1147,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 3. [x] Test password reset flow end-to-end ✅
 4. [x] Build extension and test in Chrome ✅
 5. [x] Implement Facebook automation pipeline ✅ (Phase 4 complete)
-6. [x] Implement extension test suite ✅ (266 tests, 13 files, all passing — verified Mar 9, 2026)
+6. [x] Implement extension test suite ✅ (283 tests, 13 files, all passing — verified Mar 13, 2026)
 7. [x] Consolidate Alembic migrations ✅ (single comprehensive migration, Feb 27)
 8. [x] Add data integrity constraints ✅ (FK CASCADE, ENUMs, NOT NULL, UNIQUE)
 

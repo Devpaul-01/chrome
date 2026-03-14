@@ -37,7 +37,7 @@ export async function updateAutomationEnabled(enabled: boolean): Promise<Automat
     config.nextCheck = calculateNextCheck(config.checkInterval);
   } else {
     // Clear alarm
-    await chrome.alarms.clear(ALARM_NAME);
+    if (chrome.alarms) await chrome.alarms.clear(ALARM_NAME);
     config.nextCheck = null;
   }
 
@@ -60,6 +60,7 @@ export async function updateCheckInterval(minutes: number): Promise<AutomationCo
 }
 
 export async function scheduleNextCheck(intervalMinutes: number): Promise<void> {
+  if (!chrome.alarms) return;
   await chrome.alarms.create(ALARM_NAME, {
     delayInMinutes: intervalMinutes,
     periodInMinutes: intervalMinutes,

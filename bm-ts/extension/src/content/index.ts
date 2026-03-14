@@ -28,6 +28,20 @@ import type { TemplateSegment, MessageTemplate, Contact, Post } from '../api/cli
 import type { AutomationRunPayload } from '../utils/messages';
 import { postToTimeline } from './timeline';
 import { archiveConversation } from './messenger';
+import {
+  checkRateLimit,
+  recordMessageSent,
+  shouldAbort,
+  setShouldAbort,
+  detectFacebookRestriction,
+  initUserActivityTracking,
+  isUserActive,
+  addActivityLogEntry,
+  recordSendFailure,
+  recordSendSuccess,
+  getConfirmationMode,
+  triggerEmergencyStop,
+} from '../utils/failsafe';
 
 /** Maximum messages the manual "Send to all" flow will send per session (safety cap). */
 const MAX_MESSAGES_PER_SESSION = 5;
@@ -339,6 +353,86 @@ function showClipboardPermissionBanner(): void {
 
 void initContentScript();
 
+// Start tracking user activity for the user-active fail-safe check.
+initUserActivityTracking();
+
+// ============================================================
+// HUMAN-IN-THE-LOOP CONFIRMATION UI
+// ============================================================
+
+/**
+ * Shows an in-page confirmation modal before sending a message.
+ * Returns a promise that resolves with the user's choice.
+ */
+function showSendConfirmation(
+  friendName: string,
+  messagePreview: string,
+): Promise<'send' | 'skip' | 'sendAll' | 'pause'> {
+  return new Promise((resolve) => {
+    const modalId = 'bm-confirm-modal';
+    // Remove any existing modal
+    document.getElementById(modalId)?.remove();
+
+    const modal = document.createElement('div');
+    modal.id = modalId;
+    modal.style.cssText = [
+      'position:fixed', 'inset:0', 'z-index:2147483647',
+      'background:rgba(0,0,0,0.6)',
+      'display:flex', 'align-items:center', 'justify-content:center',
+      'font-family:system-ui,sans-serif',
+    ].join(';');
+
+    const truncated = messagePreview.length > 120
+      ? messagePreview.slice(0, 120) + '…'
+      : messagePreview;
+
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:12px;padding:24px 28px;max-width:420px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+        <p style="font-size:16px;font-weight:700;margin:0 0 8px;color:#1a1a2e;">
+          🎂 It's ${friendName}'s birthday!
+        </p>
+        <p style="font-size:13px;color:#555;margin:0 0 12px;">
+          Send your prepared message?
+        </p>
+        <div style="background:#f5f5f5;border-radius:8px;padding:10px 12px;margin:0 0 16px;font-size:13px;color:#333;max-height:80px;overflow-y:auto;">
+          ${truncated}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button data-action="send" style="flex:1;padding:10px 16px;background:#4CAF50;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">
+            Send
+          </button>
+          <button data-action="skip" style="flex:1;padding:10px 16px;background:#e0e0e0;color:#333;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">
+            Skip
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button data-action="sendAll" style="flex:1;padding:8px 12px;background:#2196F3;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
+            Send All Remaining
+          </button>
+          <button data-action="pause" style="flex:1;padding:8px 12px;background:#f44336;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
+            Pause Automation
+          </button>
+        </div>
+      </div>
+    `;
+
+    const cleanup = (action: 'send' | 'skip' | 'sendAll' | 'pause') => {
+      modal.remove();
+      resolve(action);
+    };
+
+    modal.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const action = target.dataset.action;
+      if (action === 'send' || action === 'skip' || action === 'sendAll' || action === 'pause') {
+        cleanup(action);
+      }
+    });
+
+    document.body.appendChild(modal);
+  });
+}
+
 // ============================================================
 // AUTOMATION OVERLAY  (full-screen dimmer shown during a run)
 // ============================================================
@@ -477,6 +571,8 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
     maxMessages,
   } = payload;
   let sent = 0;
+  /** When set to true by "Send All Remaining", skip per-message confirmation. */
+  let skipConfirmation = false;
 
   // Read user-configured per-action delay and feature flags from storage.
   const stored = await chrome.storage.local.get(['bm_action_delay_minutes', 'bm_feature_flags']);
@@ -490,8 +586,122 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
   const flags = (stored['bm_feature_flags'] as { makePost: boolean; sendMessage: boolean } | undefined) ??
     { makePost: true, sendMessage: true };
 
+  // Get confirmation mode
+  const confirmMode = await getConfirmationMode();
+  let sessionConfirmed = false;
+
   // Check clipboard permission and warn if denied.
   await checkClipboardPermission();
+
+  // --- Fail-safe: check rate limits ---
+  const rateLimit = await checkRateLimit();
+  if (!rateLimit.allowed) {
+    setStatus(rateLimit.reason ?? 'Rate limit reached');
+    await addActivityLogEntry('warning', rateLimit.reason ?? 'Rate limit reached');
+    return;
+  }
+
+  // --- Fail-safe: check user activity ---
+  if (!isUserActive()) {
+    setStatus('Waiting for user activity before sending...');
+    await addActivityLogEntry('info', 'Automation deferred — user not active on page');
+    return;
+  }
+
+  // --- Fail-safe: check for Facebook restrictions ---
+  const restriction = detectFacebookRestriction();
+  if (restriction.restricted) {
+    setStatus('Facebook restriction detected — automation paused');
+    await addActivityLogEntry('emergency', `Facebook restriction detected: ${restriction.reason}`);
+    await triggerEmergencyStop(24);
+    return;
+  }
+
+  // Helper: perform all pre-send checks before each message
+  type PreSendDecision = 'send' | 'skip' | 'abort';
+  async function preSendChecks(friendName: string, dmText: string): Promise<PreSendDecision> {
+    // Check abort flag
+    if (await shouldAbort()) {
+      await addActivityLogEntry('info', 'Automation aborted by user');
+      return 'abort';
+    }
+
+    // Check rate limit again before each send
+    const rl = await checkRateLimit();
+    if (!rl.allowed) {
+      setStatus(rl.reason ?? 'Rate limit reached');
+      await addActivityLogEntry('warning', rl.reason ?? 'Rate limit reached during run');
+      return 'abort';
+    }
+
+    // Check for Facebook restriction after each send
+    const fbCheck = detectFacebookRestriction();
+    if (fbCheck.restricted) {
+      await addActivityLogEntry('emergency', `Facebook restriction detected: ${fbCheck.reason}`);
+      await triggerEmergencyStop(24);
+      return 'abort';
+    }
+
+    // Check user activity
+    if (!isUserActive()) {
+      await addActivityLogEntry('info', 'Automation paused — user went inactive');
+      return 'abort';
+    }
+
+    // Handle common confirmation outcomes
+    async function handleConfirmationChoice(
+      choice: string,
+    ): Promise<'continue' | 'skip' | 'abort' | 'sendAll'> {
+      if (choice === 'pause') {
+        await addActivityLogEntry('info', 'Automation paused by user via confirmation dialog');
+        await setShouldAbort(true);
+        return 'abort';
+      }
+      if (choice === 'skip') {
+        return 'skip';
+      }
+      if (choice === 'sendAll') {
+        return 'sendAll';
+      }
+      // 'send' and any other non-special values fall through
+      return 'continue';
+    }
+
+    // Human-in-the-loop confirmation
+    if (!skipConfirmation) {
+      if (confirmMode === 'each') {
+        const choice = await showSendConfirmation(friendName, dmText);
+        const outcome = await handleConfirmationChoice(choice);
+        if (outcome === 'abort') {
+          return 'abort';
+        }
+        if (outcome === 'skip') {
+          return 'skip';
+        }
+        if (outcome === 'sendAll') {
+          skipConfirmation = true;
+        }
+        // 'continue' falls through
+      } else if (confirmMode === 'session' && !sessionConfirmed) {
+        const choice = await showSendConfirmation(friendName, dmText);
+        const outcome = await handleConfirmationChoice(choice);
+        if (outcome === 'abort') {
+          return 'abort';
+        }
+        if (outcome === 'skip') {
+          return 'skip';
+        }
+        sessionConfirmed = true;
+        if (outcome === 'sendAll') {
+          skipConfirmation = true;
+        }
+        // 'continue' falls through
+      }
+    }
+    // All modes require confirmation (no auto-send without user interaction)
+
+    return 'send';
+  }
 
   // ----- PHASE 1: Current-day friends from live birthday feed -----
   if (currentDayTemplates.length > 0) {
@@ -508,6 +718,11 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
 
       const dmText = assembleMessageFromTemplate(template, { name: friend.name });
 
+      // --- Fail-safe pre-send checks ---
+      const decision = await preSendChecks(friend.name, dmText);
+      if (decision === 'abort') break;
+      if (decision === 'skip') continue;
+
       showAutomationOverlay(friend.name);
       try {
         if (flags.sendMessage) {
@@ -523,6 +738,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
               content: resolveKeywords(post.content, { name: friend.name }),
               imageUrl: post.image_url,
             });
+            await addActivityLogEntry('post', `Posted on ${friend.name}'s timeline`);
           }
         }
 
@@ -533,11 +749,22 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
           payload: { friendId: dedupKey, friendName: friend.name },
         });
 
+        // Record success for rate limiting and backoff reset
+        await recordMessageSent();
+        await recordSendSuccess();
+        await addActivityLogEntry('send', `Sent DM to ${friend.name}`);
+
         sent++;
         setStatus(`Sent ${sent} message(s) this run`);
         await randomDelay(delayMin, delayMax);
       } catch (err) {
         console.error(`[BM] Error processing ${friend.name}:`, err);
+        const { shouldPause } = await recordSendFailure();
+        await addActivityLogEntry('error', `Failed to send to ${friend.name}: ${(err as Error).message}`);
+        if (shouldPause) {
+          setStatus('Send failure detected — automation paused');
+          break;
+        }
       } finally {
         hideAutomationOverlay();
       }
@@ -560,6 +787,11 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
 
       const dmText = assembleMessageFromTemplate(entry.template, { name: contact.name });
 
+      // --- Fail-safe pre-send checks ---
+      const decision = await preSendChecks(contact.name, dmText);
+      if (decision === 'abort') break;
+      if (decision === 'skip') continue;
+
       showAutomationOverlay(contact.name);
       try {
         if (flags.sendMessage) {
@@ -575,6 +807,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
               content: resolveKeywords(post.content, { name: contact.name }),
               imageUrl: post.image_url,
             });
+            await addActivityLogEntry('post', `Posted on ${contact.name}'s timeline`);
           }
         }
 
@@ -585,17 +818,29 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
           payload: { friendId: dedupKey, friendName: contact.name },
         });
 
+        // Record success for rate limiting and backoff reset
+        await recordMessageSent();
+        await recordSendSuccess();
+        await addActivityLogEntry('send', `Sent DM to ${contact.name}`);
+
         sent++;
         setStatus(`Sent ${sent} message(s) this run`);
         await randomDelay(delayMin, delayMax);
       } catch (err) {
         console.error(`[BM] Error processing advance/follow-up for ${contact.name}:`, err);
+        const { shouldPause } = await recordSendFailure();
+        await addActivityLogEntry('error', `Failed to send to ${contact.name}: ${(err as Error).message}`);
+        if (shouldPause) {
+          setStatus('Send failure detected — automation paused');
+          break;
+        }
       } finally {
         hideAutomationOverlay();
       }
     }
   }
 
+  await addActivityLogEntry('info', `Automation run complete. Total sent: ${sent}`);
   console.log(`[BM] Automation run complete. Total sent: ${sent}`);
 }
 
