@@ -17,8 +17,8 @@ All changes in `extension/public/manifest.json`:
 | Change | Before | After |
 |--------|--------|-------|
 | `host_permissions` | `"https://*.facebook.com/*"` (all Facebook) | `birthdays*`, `messages/*`, `profile.php*` (3 narrow paths) |
-| `content_scripts.matches` | `"https://*.facebook.com/*"` (all pages) | `birthdays*`, `messages/*` (2 specific pages) |
-| `web_accessible_resources.matches` | `"https://*.facebook.com/*"` | `birthdays*`, `messages/*` |
+| `content_scripts.matches` | `"https://*.facebook.com/*"` (all pages) | `birthdays*`, `messages/*`, `profile.php*` (3 specific pages) |
+| `web_accessible_resources.matches` | `"https://*.facebook.com/*"` | `"https://www.facebook.com/*"` (unchanged — broad scope needed for assets on any FB page) |
 | `description` | "Chrome extension that automates birthday messages…" | "Helps you remember and send personalized birthday wishes to your Facebook friends." |
 | `homepage_url` | Not present | `"https://birthdaymessaging.app/privacy"` |
 | `alarms` | In `permissions` (always granted) | Moved to `optional_permissions` (requested on demand) |
@@ -207,10 +207,10 @@ ALARM FIRES
 
 | # | Test | Status |
 |---|------|--------|
-| 1 | Load unpacked extension → content script only injects on `/birthdays` and `/messages/*` | Ready to test |
+| 1 | Load unpacked extension → content script only injects on `/birthdays`, `/messages/*`, and `/profile.php*` | Ready to test |
 | 2 | Navigate to `facebook.com/marketplace` → confirm NO content script injection | Ready to test |
 | 3 | Enable automation → trigger alarm → confirmation modal appears before any send | Ready to test |
-| 4 | Send 10 messages → 11th blocked with "Daily limit reached" | Ready to test |
+| 4 | Send 3 messages → 4th blocked with "Daily limit reached" | Ready to test |
 | 5 | Simulate 3 consecutive failures → 24-hour auto-pause activates | Ready to test |
 | 6 | Click "Pause All Activity" mid-run → loop aborts within 1 action | Ready to test |
 | 7 | Switch Facebook tab to background → automation defers until tab visible + user active | Ready to test |
@@ -222,7 +222,7 @@ ALARM FIRES
 
 - **In-page modal over Chrome notifications** — avoids adding `notifications` permission; uses existing DOM overlay approach
 - **Human-in-the-loop is default** — `each` confirmation mode is the default; `auto` mode shows explicit ban-risk warning
-- **Rate limits are hard-coded conservatively** — 3/hour, 10/day, 25/week; typical human behavior is 3–5 birthday wishes per day
+- **Rate limits are hard-coded conservatively** — 1/hour, 3/day, 5/week (constants: `HOURLY_CAP=1`, `DAILY_CAP=3`, `WEEKLY_CAP=5` in `utils/failsafe.ts`); typical human behavior is 3–5 birthday wishes per day
 - **Emergency stop has auto-expiry** — 24-hour cooldown expires automatically so users don't get permanently locked out
 - **Abort flag is storage-based** — allows background → content script communication for mid-run abort
 - **`alarms` moved to optional_permissions** — requested programmatically only when user enables automation
@@ -231,7 +231,7 @@ ALARM FIRES
 
 ### P1 — Should implement before Chrome Web Store submission:
 - Host privacy policy at `https://birthdaymessaging.app/privacy` (the URL declared in manifest)
-- Add programmatic injection via `chrome.scripting.executeScript()` for timeline posting on profile pages (required since profiles are no longer in `content_scripts.matches`)
+- ~~Add programmatic injection via `chrome.scripting.executeScript()` for timeline posting on profile pages (required since profiles are no longer in `content_scripts.matches`)~~ ✅ **RESOLVED** — `profile.php*` is now in `content_scripts.matches`, so content scripts inject automatically on profile pages
 - Add message variation enforcement (warn if < 3 templates configured)
 
 ### P2 — Nice to have for anti-detection:

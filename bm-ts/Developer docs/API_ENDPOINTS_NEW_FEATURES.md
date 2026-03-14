@@ -766,7 +766,7 @@ curl -X GET http://localhost:8000/api/posts \
 
 **Note:** The endpoints documented above are now ACTIVE. The current database schema (applied via docker-compose) includes all tables for Phase 1 and Phase 2 features.
 
-### Current Active Schema (14 Tables)
+### Current Active Schema (15 Tables)
 
 The active schema includes:
 - users
@@ -776,6 +776,7 @@ The active schema includes:
 - message_queue
 - message_history
 - password_reset_tokens
+- revoked_tokens
 - birthday_configs
 - posts
 - message_groups
