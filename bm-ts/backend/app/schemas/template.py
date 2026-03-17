@@ -17,7 +17,9 @@ from enum import Enum
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, constr
+from pydantic import BaseModel, ConfigDict, Field, constr, field_validator
+
+from app.core.validators import sanitize_text
 
 
 class SegmentTypeEnum(str, Enum):
@@ -31,10 +33,22 @@ class TemplateSegmentCreate(BaseModel):
     content: constr(strip_whitespace=True, min_length=1)
     label: Optional[str] = Field(None, max_length=64)
 
+    _sanitize_content = field_validator("content", mode="after")(sanitize_text)
+
+    @field_validator("label", mode="after")
+    @classmethod
+    def sanitize_label(cls, v: Optional[str]) -> Optional[str]:
+        return sanitize_text(v) if v is not None else v
+
 
 class TemplateSegmentUpdate(BaseModel):
-    content: Optional[constr(strip_whitespace=True, min_length=1)]
+    content: Optional[constr(strip_whitespace=True, min_length=1)] = None
     label: Optional[str] = Field(None, max_length=64)
+
+    @field_validator("content", "label", mode="after")
+    @classmethod
+    def sanitize_optional(cls, v: Optional[str]) -> Optional[str]:
+        return sanitize_text(v) if v is not None else v
 
 
 class TemplateSegmentOut(BaseModel):

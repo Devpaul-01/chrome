@@ -43,6 +43,7 @@ export type ViewMode =
   | 'history'
   | 'analytics'
   | 'posts'
+  | 'postLibrary'
   | 'post-list'
   | 'groups'
   | 'images'

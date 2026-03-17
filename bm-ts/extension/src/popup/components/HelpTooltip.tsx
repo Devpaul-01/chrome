@@ -48,14 +48,24 @@ export default function HelpTooltip({ label, id }: HelpTooltipProps) {
         <span
           id={tooltipId}
           role="tooltip"
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 w-56 max-w-xs rounded bg-gray-800 text-white text-xs px-3 py-2 shadow-lg leading-relaxed pointer-events-none"
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 w-56 max-w-xs rounded-lg text-xs px-3 py-2 leading-relaxed pointer-events-none"
+          style={{
+            background: 'rgba(229, 103, 23, 0.15)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: '1px solid #CA4F02',
+            borderLeft: '4px solid #CA4F02',
+            color: '#574232',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1)',
+          }}
           onMouseEnter={show}
           onMouseLeave={hide}
         >
           {label}
           {/* Caret pointing downward */}
           <span
-            className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"
+            className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent"
+            style={{ borderTopColor: '#CA4F02' }}
             aria-hidden="true"
           />
         </span>

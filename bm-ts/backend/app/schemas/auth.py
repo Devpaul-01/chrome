@@ -14,7 +14,9 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, constr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, constr, field_validator
+
+from app.core.validators import sanitize_text
 
 
 class RegisterRequest(BaseModel):
@@ -57,5 +59,9 @@ class UserProfile(BaseModel):
 
 class DeleteAccountRequest(BaseModel):
     """Payload for DELETE /auth/account — requires password confirmation."""
+
+    current_password: str
+
+    _sanitize = field_validator("current_password", mode="after")(sanitize_text)
 
     current_password: str

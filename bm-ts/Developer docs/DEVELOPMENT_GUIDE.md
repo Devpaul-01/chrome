@@ -335,6 +335,53 @@ docker-compose down -v    # -v removes volumes (deletes data!)
 docker-compose up -d      # Recreates database with fresh schema
 ```
 
+### Database Migrations (Alembic)
+
+All schema changes must go through Alembic migrations so that
+every environment stays in sync.
+
+```powershell
+# Run inside the backend Docker container:
+docker exec -it backend-backend-1 bash
+
+# Apply all pending migrations
+alembic upgrade head
+
+# Check current migration version
+alembic current
+
+# Auto-generate a migration after modifying models.py
+alembic revision --autogenerate -m "describe_your_change"
+
+# Roll back the last migration
+alembic downgrade -1
+```
+
+**Workflow for schema changes:**
+
+1. Edit `backend/app/db/models.py` with your new columns / tables.
+2. Run `alembic revision --autogenerate -m "short_description"` inside the container.
+3. Review the generated file under `alembic/versions/` — auto-gen is not perfect.
+4. Apply with `alembic upgrade head`.
+5. Commit the migration file alongside the model change.
+
+### Email / SendGrid Setup
+
+Password reset emails are sent via the [SendGrid](https://sendgrid.com/) API.
+To enable email sending in development:
+
+1. Create a free SendGrid account and generate an API key.
+2. Add the following to `backend/.env`:
+
+```dotenv
+SENDGRID_API_KEY=SG.your_key_here
+EMAIL_FROM_ADDRESS=noreply@yourdomain.com
+PASSWORD_RESET_URL_BASE=http://localhost:5173/reset-password
+```
+
+3. Verify your sender identity in the SendGrid dashboard (required by SendGrid).
+4. Password reset tokens expire after **30 minutes** and are stored as SHA-256 hashes.
+
 ---
 
 ## 🔍 Debugging

@@ -13,8 +13,9 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
+from app.core.validators import sanitize_text
 from app.schemas.enums import GenderEnum
 
 
@@ -23,6 +24,8 @@ class MessageTemplateCreate(BaseModel):
     greeting: str = Field(..., min_length=1, max_length=500)
     sentiment: str = Field(..., min_length=1, max_length=1000)
     closing: str = Field(..., min_length=1, max_length=500)
+
+    _sanitize = field_validator("title", "greeting", "sentiment", "closing", mode="after")(sanitize_text)
     image_url: Optional[str] = None
     days_in_advance: int = Field(default=0, ge=-30, le=30)
     gender: GenderEnum = Field(default=GenderEnum.ALL)
@@ -33,6 +36,11 @@ class MessageTemplateUpdate(BaseModel):
     greeting: Optional[str] = Field(None, min_length=1, max_length=500)
     sentiment: Optional[str] = Field(None, min_length=1, max_length=1000)
     closing: Optional[str] = Field(None, min_length=1, max_length=500)
+
+    @field_validator("title", "greeting", "sentiment", "closing", mode="after")
+    @classmethod
+    def sanitize_optional(cls, v: Optional[str]) -> Optional[str]:
+        return sanitize_text(v) if v is not None else v
     image_url: Optional[str] = None
     days_in_advance: Optional[int] = Field(None, ge=-30, le=30)
     gender: Optional[GenderEnum] = None

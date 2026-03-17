@@ -19,6 +19,7 @@ type Props = {
   onSubmit: (e: FormEvent<HTMLFormElement>) => Promise<void>;
   isSubmitting: boolean;
   message: string | null;
+  onViewPosts?: () => void;
 };
 
 export default function PostEditor({
@@ -27,6 +28,7 @@ export default function PostEditor({
   onSubmit,
   isSubmitting,
   message,
+  onViewPosts,
 }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -34,10 +36,8 @@ export default function PostEditor({
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'create' | 'preview'>('create');
-  const [isUploadingPreview, setIsUploadingPreview] = useState(false);
-  const [librarySaveMsg, setLibrarySaveMsg] = useState<string | null>(null);
   const [showLibraryPicker, setShowLibraryPicker] = useState(false);
-  const { images: libraryImages, isLoading: isLoadingLibrary, isFull: libraryFull, saveToLibrary } = useImageLibrary();
+  const { images: libraryImages, isLoading: isLoadingLibrary } = useImageLibrary();
 
   // Optimal post dimensions
   const FACEBOOK_WIDTH = 1080;
@@ -170,54 +170,24 @@ export default function PostEditor({
     const hasImageKeyword = postForm.content.includes('[Image]');
     const libraryPreviewUrl = libraryImages.length > 0 ? libraryImages[0].url : null;
 
-    const handleUploadToLibraryLocal = async () => {
-      if (!previewImage) return;
-      setIsUploadingPreview(true);
-      setLibrarySaveMsg(null);
-      try {
-        await saveToLibrary(previewImage, `post_${Date.now()}.jpg`);
-        setLibrarySaveMsg('✓ Image saved to library');
-      } catch (err) {
-        setLibrarySaveMsg(`Error: ${(err as Error).message}`);
-      } finally {
-        setIsUploadingPreview(false);
-      }
-    };
-
     if (previewImage) {
       return (
         <div className="space-y-3">
-          <div className="relative">
-            <img
-              src={previewImage}
-              alt="Preview"
-              className="w-full rounded-lg shadow-md"
-              style={{ maxHeight: '400px', objectFit: 'contain' }}
-            />
-            <div className="mt-2 text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
-          </div>
-          {librarySaveMsg && (
-            <p className={`text-xs font-medium ${librarySaveMsg.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
-              {librarySaveMsg}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleUploadToLibraryLocal}
-              disabled={isUploadingPreview || libraryFull}
-              className="btn-primary flex-1"
-              title={libraryFull ? 'Library full (20/20)' : undefined}
-            >
-              {isUploadingPreview ? 'Saving...' : 'Add to Library'}
-            </button>
+          <FacebookPostPreview
+            imageUrl={previewImage}
+            text={previewText}
+            fontFamily={postForm.fontFamily}
+            fontSize={postForm.fontSize}
+            fontColor={postForm.fontColor}
+          />
+          <div className="text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
+          <div className="flex justify-center">
             <button
               type="button"
               onClick={() => setPostForm({ ...postForm, image_url: '' })}
-              disabled={isUploadingPreview}
-              className="btn-secondary flex-1"
+              className="btn-secondary text-xs py-1.5 px-4"
             >
-              Remove
+              Remove Image
             </button>
           </div>
         </div>
@@ -397,8 +367,8 @@ export default function PostEditor({
           {/* Image */}
           <div className="mb-6">
             <label className="text-xs font-semibold text-textPrimary mb-2 block">
-              \ud83d\uddbc\ufe0f Attach Image{' '}
-              <span className="text-gray-400 font-normal">(optional \u2014 or use [Image] for random)</span>
+              🖼️ Attach Image{' '}
+              <span className="text-gray-400 font-normal">(optional — or use [Image] for random)</span>
             </label>
             {postForm.image_url ? (
               <div>
@@ -518,10 +488,20 @@ export default function PostEditor({
         disabled={isSubmitting || contentEmpty}
         aria-busy={isSubmitting ? 'true' : 'false'}
         aria-disabled={isSubmitting || contentEmpty ? 'true' : 'false'}
-        className="btn-primary btn-block mb-5 py-3 font-semibold"
+        className="btn-primary btn-block mb-3 py-3 font-semibold"
       >
         {isSubmitting ? 'Saving...' : 'Save Post'}
       </button>
+
+      {onViewPosts && (
+        <button
+          type="button"
+          onClick={onViewPosts}
+          className="btn-secondary btn-block mb-5 py-3 font-semibold"
+        >
+          View Birthday Posts
+        </button>
+      )}
     </form>
   );
 }

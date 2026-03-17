@@ -2,11 +2,11 @@
 schemas/smtp.py — Pydantic schemas for SMTP configuration and user-profile update.
 
   SMTPConfigUpdate   — POST/PUT /smtp/config body
-  SMTPConfigOut      — GET  /smtp/config response (ORM-mapped)
+  SMTPConfigOut      — GET  /smtp/config response (password masked)
   UserProfileUpdate  — PATCH /auth/profile body
 
-Note: ``SMTPConfigOut`` currently exposes the plaintext password field.
-This should be masked or omitted before the API is made public.
+Passwords are encrypted at rest via Fernet (see ``core/encryption.py``)
+and masked to ``••••••••`` in all API responses.
 """
 
 from __future__ import annotations
@@ -15,7 +15,9 @@ from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from app.core.validators import sanitize_text
 
 
 class SMTPConfigUpdate(BaseModel):
@@ -26,6 +28,13 @@ class SMTPConfigUpdate(BaseModel):
     use_tls: bool = True
     from_email: EmailStr
     from_name: Optional[str] = None
+
+    _sanitize = field_validator("host", "username", mode="after")(sanitize_text)
+
+    @field_validator("from_name", mode="after")
+    @classmethod
+    def sanitize_from_name(cls, v: Optional[str]) -> Optional[str]:
+        return sanitize_text(v) if v is not None else v
 
 
 class SMTPConfigOut(BaseModel):

@@ -237,15 +237,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     if (formData.imageUrl) {
       return (
         <div className="space-y-3">
-          <div className="relative">
-            <img
-              src={formData.imageUrl}
-              alt="Preview"
-              className="w-full rounded-lg shadow-md"
-              style={{ maxHeight: '400px', objectFit: 'contain' }}
-            />
-            <div className="mt-2 text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
-          </div>
+          <FacebookPostPreview imageUrl={formData.imageUrl} text={completeMessage} />
+          <div className="text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
           {librarySaveMsg && (
             <p className={`text-xs font-medium ${librarySaveMsg.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
               {librarySaveMsg}

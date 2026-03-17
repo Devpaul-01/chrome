@@ -84,6 +84,8 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     last_login_at = Column(DateTime(timezone=True))
+    failed_login_count = Column(Integer, nullable=False, server_default=text("0"))
+    locked_until = Column(DateTime(timezone=True))
     metadata_payload = Column("metadata", JSON(), nullable=False, server_default=text("'{}'::json"))
 
     subscription_records = relationship("SubscriptionRecord", back_populates="user", cascade="all, delete-orphan")
@@ -469,8 +471,10 @@ class SMTPConfig(Base):
     Per-user SMTP configuration for outbound email notifications.
 
     Exactly one row per user (enforced by a unique constraint on ``user_id``).
-    The ``password`` field is stored in plaintext for now — it should be
-    encrypted at rest in production before this feature is publicly released.
+    The ``password`` field is encrypted at rest using Fernet symmetric
+    encryption (see ``core/encryption.py``).  The SMTP router calls
+    ``encrypt_value()`` before writing and never returns the real password
+    via the API (responses use a masked placeholder).
     """
 
     __tablename__ = "smtp_configs"
@@ -480,7 +484,7 @@ class SMTPConfig(Base):
     host = Column(Text(), nullable=False)
     port = Column(Integer, nullable=False)
     username = Column(Text(), nullable=False)
-    password = Column(Text(), nullable=False)  # Should be encrypted in production
+    password = Column(Text(), nullable=False)  # Fernet-encrypted at rest (see core/encryption.py)
     use_tls = Column(Boolean(), nullable=False, server_default=text("true"))
     from_email = Column(Text(), nullable=False)
     from_name = Column(Text())

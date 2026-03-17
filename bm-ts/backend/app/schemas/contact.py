@@ -12,8 +12,9 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
+from app.core.validators import sanitize_text
 from app.schemas.enums import GenderEnum
 
 
@@ -24,6 +25,13 @@ class ContactCreate(BaseModel):
     gender: Optional[GenderEnum] = None
     notes: Optional[str] = None
 
+    _sanitize = field_validator("name", "facebook_profile_url", mode="after")(sanitize_text)
+
+    @field_validator("notes", mode="after")
+    @classmethod
+    def sanitize_notes(cls, v: Optional[str]) -> Optional[str]:
+        return sanitize_text(v) if v is not None else v
+
 
 class ContactUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -31,6 +39,11 @@ class ContactUpdate(BaseModel):
     birthday: Optional[datetime] = None
     gender: Optional[GenderEnum] = None
     notes: Optional[str] = None
+
+    @field_validator("name", "facebook_profile_url", "notes", mode="after")
+    @classmethod
+    def sanitize_optional(cls, v: Optional[str]) -> Optional[str]:
+        return sanitize_text(v) if v is not None else v
 
 
 class ContactOut(BaseModel):

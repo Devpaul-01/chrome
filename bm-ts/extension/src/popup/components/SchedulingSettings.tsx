@@ -1,11 +1,7 @@
 import ScheduleSettings from './ScheduleSettings';
 import AutomationSettings from './AutomationSettings';
 
-interface SchedulingSettingsProps {
-  onClose: () => void;
-}
-
-export default function SchedulingSettings({ onClose }: SchedulingSettingsProps) {
+export default function SchedulingSettings() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -17,11 +13,6 @@ export default function SchedulingSettings({ onClose }: SchedulingSettingsProps)
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <button onClick={onClose} className="btn-secondary">
-          Close
-        </button>
-      </div>
     </div>
   );
 }

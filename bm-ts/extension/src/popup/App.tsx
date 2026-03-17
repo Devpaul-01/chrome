@@ -306,7 +306,7 @@ function AppShell() {
     if (viewMode === 'scheduling') {
       return (
         <div>
-          <SchedulingSettings onClose={() => setViewMode('main')} />
+          <SchedulingSettings />
           <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
             ← Back to Messages
           </button>
@@ -375,9 +375,9 @@ function AppShell() {
     if (viewMode === 'posts') {
       return (
         <div>
-          <h2 className="text-lg font-bold text-blueStrong mb-3">Timeline Posts</h2>
+          <h2 className="text-lg font-bold text-blueStrong mb-3">Create Timeline Post</h2>
           <p className="text-xs text-gray-600 mb-4">
-            Create and manage your timeline post templates in one place.
+            Design a birthday post to be sent to friends' timelines on their special day.
           </p>
           <PostEditor
             postForm={post.postForm}
@@ -385,13 +385,18 @@ function AppShell() {
             onSubmit={post.handlePostSubmit}
             isSubmitting={post.isSubmitting}
             message={null}
+            onViewPosts={() => setViewMode('postLibrary')}
           />
-          <div className="mt-4">
-            <PostList onClose={() => setViewMode('main')} showClose={false} />
-          </div>
           <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
             ← Back to Messages
           </button>
+        </div>
+      );
+    }
+    if (viewMode === 'postLibrary') {
+      return (
+        <div>
+          <PostList onClose={() => setViewMode('posts')} />
         </div>
       );
     }

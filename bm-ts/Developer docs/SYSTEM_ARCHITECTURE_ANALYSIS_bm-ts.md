@@ -2,8 +2,8 @@
 
 
 **Generated:** February 1, 2026  
-**Last Updated:** March 13, 2026  
-**Version:** 1.3.0  
+**Last Updated:** March 14, 2026  
+**Version:** 1.4.0  
 **System Type:** Full-Stack Web Application with Browser Extension
 
 
@@ -16,7 +16,7 @@
 **bm-ts** is a robust, modernized system for automating Facebook birthday messages, with a fully implemented automation pipeline. The project demonstrates:
 
 - **High code quality and maintainability**: TypeScript and Pydantic enforce type safety; async FastAPI and SQLAlchemy 2.0 provide scalable backend performance.
-- **Security best practices**: JWT rotation, Argon2 password hashing, and Stripe webhook verification are implemented.
+- **Security best practices**: JWT rotation, Argon2 password hashing, Stripe webhook verification, security headers middleware (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy), and input sanitization on all text schemas.
 - **Accessibility**: The extension meets WCAG 2.1 AA, with keyboard navigation, screen reader support, and focus management.
 - **Real-time features**: WebSocket-based updates for queue, history, and dashboard are fully functional.
 - **Developer experience**: Docker Compose, Vite, and comprehensive documentation support rapid onboarding and development.
@@ -25,15 +25,15 @@
 **Key Gaps and Risks:**
 
 - **Testing coverage is incomplete**: Only 2 backend test files exist (auth and templates); extension has 283 tests (13 files) covering utilities, API client, and 8 component suites, but no E2E or backend Phase 2 tests.
-- **Email service partially configured**: SendGrid SDK integrated in `password_reset.py` (`asyncio` import bug fixed Mar 9, 2026); however, `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` are referenced in `password_reset.py` but **NOT defined** in `config.py` Settings — `send_reset_email()` will raise `AttributeError` at runtime.
+- **Email service fully configured**: SendGrid SDK integrated in `password_reset.py` (`asyncio` import bug fixed Mar 9, 2026); `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` all defined in `config.py` Settings (Mar 14, 2026). `SMTP_ENCRYPTION_KEY` validator rejects placeholder values at startup.
 - **SMTP passwords stored in plaintext**: `smtp_configs.password` is stored unencrypted in the database — must be encrypted before any production deployment.
 - **`/send-birthday-message` is a stub**: Backend `POST /send-birthday-message` returns `{"status": "sent"}` without logic. Actual sending is handled client-side by the content script automation pipeline.
 - **Production infrastructure absent**: No CI/CD, monitoring, HTTPS configuration, or Chrome Web Store listing.
 
 **Actionable Recommendations:**
 
-1. **Fix email delivery config**: SendGrid SDK is integrated but `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` fields must be added to `config.py` Settings class — currently causes `AttributeError` at runtime.
-2. **Encrypt SMTP passwords**: Add encryption at rest for `smtp_configs.password` before first production user.
+1. ~~**Fix email delivery config**~~: ✅ RESOLVED (Mar 14, 2026) — `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` added to `config.py` Settings.
+2. **Encrypt SMTP passwords**: Add encryption at rest for `smtp_configs.password` before first production user. (API-level masking done — GET and PUT endpoints return `"••••••••"`.)
 3. **Increase test coverage**: Add pytest tests for all Phase 2 routers; extend Vitest suite to cover background handlers and hooks; add Playwright E2E. Current: 283 extension tests (13 files) + 7 backend tests (2 files).
 4. **Productionize deployment**: Managed PostgreSQL, HTTPS reverse proxy, CI/CD, and monitoring.
 5. **Prepare Chrome Web Store listing**: Complete manifest metadata, screenshots, and privacy policy.
@@ -59,6 +59,7 @@ bm-ts is a feature-complete, development-ready system with a fully operational a
 | 1.1.0 | March 1, 2026 | **Comprehensive Code Audit** — Full codebase re-verification corrected 30+ stale metrics across all documentation. Router count clarified: **15** `include_router()` calls + **2** inline app routes (not "17 routers"). `ddl.sql` confirmed removed from codebase — schema managed via `models.py` + Alembic. Component count corrected: 38 → **34** (4 phantom entries removed: `Config.tsx`, `MessageTemplates.tsx`, `TabbedDashboard.tsx`, `TemplateList.tsx`). Hook files corrected: 8 → **7** (`useApi` does not exist). Line counts corrected: App.tsx 651 → **668**; background/index.ts 715 → **780**; client.ts 667 → **825**; content/index.ts 613 → **741**; timeline.ts 575 → **562**; messenger.ts 511 → **483**; models.py 373 → **499**; accessibility.ts 216 → **237**. API client functions corrected: 52 → **52** (confirmed). Messages queue endpoint corrected: `PATCH` → **`PUT`**. Extension test suite documented: **214 tests** across 11 files (95 unit + 119 component). `db/` directory listing corrected: removed nonexistent `database.py`, `connect_db.py`, `db_config.py`; confirmed actual files: `base.py`, `models.py`, `session.py`. Removed phantom `async_test_db.py` from test listing. Python dependency count corrected: 13 → **14**. |
 | 1.2.0 | March 9, 2026 | **Full Codebase Audit & Bug Fixes** — Fixed critical `import asyncio` bug in `password_reset.py` that caused `NameError` at runtime (reset emails silently failed). Removed hardcoded SendGrid credentials from source code comment. Updated stale TODO docstring to reflect actual SendGrid implementation. Component count corrected: 34 → **36** (35 in `components/` + `Toast.tsx`). Line counts re-verified: App.tsx 668 → **570**; background/index.ts 780 → **1,131**; client.ts 825 → **783**; content/index.ts 741 → **1,130**; timeline.ts 562 → **660**; messenger.ts 483 → **620**; models.py 499 → **589**; accessibility.ts 237 → **226**. Extension test suite corrected: 214/11 → **266 tests across 13 files** (95 unit + 171 component). Email service status upgraded from "not configured" to "SendGrid integrated". Python dependency count corrected: 14 → **15** (`sendgrid>=6.11` added). API client functions confirmed: **52**. Background message types confirmed: **64**. |
 | 1.3.0 | March 13, 2026 | **Comprehensive Accuracy Audit** — Full line-by-line verification of every metric against actual codebase. Model/table count corrected: 14 → **15** (RevokedToken was undocumented, confirmed via separate Alembic migration `a1b2c3d4e5f6_create_revoked_tokens.py`). Component count corrected: 36 → **38** (38 .tsx files in `components/`). Background message types corrected: 64 → **72** across **15 categories** (added failsafe category with 8 message types). Line counts re-verified against terminal: App.tsx → **673**; background/index.ts → **865**; client.ts → **767**; content/index.ts → **892**; timeline.ts → **467**; messenger.ts → **461**; models.py → **404**; accessibility.ts → **211**. Extension tests corrected: 266 → **283** across 13 files (97 unit + 186 component). Backend tests corrected: 4 → **7** (5 in test_auth.py + 2 in test_templates.py). Utility files: 9 → **10** (added failsafe.ts at 370 lines; total ~1,484 lines). Manifest section updated to match actual manifest.json (3 `content_scripts.matches` patterns including profile.php, narrowed `host_permissions`, `alarms` in `optional_permissions`, `type: "module"` on service worker). **CRITICAL BUG IDENTIFIED**: `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` are referenced in `password_reset.py` but NOT defined in `config.py` Settings — `send_reset_email()` will crash with `AttributeError`. Known code gaps and recommendations updated accordingly. |
+| 1.4.0 | March 14, 2026 | **Security Hardening & Email Config Fix** — CRITICAL BUG FIXED: `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` added to `config.py` Settings class; `password_reset.py` updated to use `settings.*` (removed `os.environ.get()`); `SMTP_ENCRYPTION_KEY` validator rejects placeholder `"generate-with-fernet"` at startup. New `SecurityHeadersMiddleware` in `security_headers.py` adds 5 OWASP headers (HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy). New `validators.py` with reusable `sanitize_text()` (strip, null-byte rejection, 10K max) applied to 6 schema files (auth, contact, post, message_template, smtp, template). SMTP GET/PUT endpoints now return masked password `"••••••••"` instead of real values. `.env.example` updated with all new env vars. |
 
 ---
 
@@ -110,16 +111,17 @@ The system follows a client-server architecture where the extension acts as a th
 
 | Gap | Detail |
 |-----|--------|
-| Email service | SendGrid integrated (Mar 9, 2026); `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` referenced in `password_reset.py` but **NOT defined** in `config.py` Settings — will cause `AttributeError` at runtime |
-| SMTP password encryption | Stored in plaintext in `smtp_configs` — must encrypt before production |
+| Email service | ✅ SendGrid fully configured (Mar 14, 2026); `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` all in `config.py` Settings |
+| SMTP password encryption | Stored in plaintext in `smtp_configs` — must encrypt before production (API-level masking done: GET/PUT return `"••••••••"`) |
 | `POST /send-birthday-message` | Backend stub returns `{"status":"sent"}`; actual sending is handled by the content script automation pipeline |
 | Test coverage | Backend: only `test_auth.py` and `test_templates.py` (2 files, 7 tests); extension: 283 tests across 13 files; no E2E tests |
 | CI/CD and monitoring | Not configured |
 
 **System Status:**
 - ✅ Development-ready with Docker Compose
-- ✅ SendGrid email service integrated for password reset (Mar 9, 2026)
-- ⚠️ `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` missing from `config.py` Settings — `send_reset_email()` will raise `AttributeError`
+- ✅ SendGrid email service fully configured for password reset (Mar 14, 2026) — all config fields in `config.py` Settings
+- ✅ Security headers middleware active (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+- ✅ Input sanitization on all text schemas (6 files)
 - ⏳ SMTP passwords need encryption before production
 - ⏳ Production deployment pending infrastructure setup
 
@@ -253,11 +255,13 @@ backend/
 │   │       ├── birthday_configs.py # Birthday automation configs ✅
 │   │       └── smtp.py            # SMTP configuration ✅
 │   ├── core/
-│   │   ├── config.py              # Pydantic Settings (env-based)
+│   │   ├── config.py              # Pydantic Settings (env-based; incl. sendgrid_api_key, email_from_address, password_reset_url_base)
 │   │   ├── jwt.py                 # JWT token creation/decoding (access + refresh)
 │   │   ├── security.py            # Argon2 password hashing (passlib CryptContext)
 │   │   ├── logging.py             # Basic logging setup (setup_logging())
-│   │   └── rate_limiter.py        # slowapi rate limiter; per-IP key function
+│   │   ├── rate_limiter.py        # slowapi rate limiter; per-IP key function
+│   │   ├── security_headers.py    # SecurityHeadersMiddleware (HSTS, X-Frame-Options, CSP, X-Content-Type-Options, Referrer-Policy)
+│   │   └── validators.py          # Reusable input sanitization (sanitize_text: strip, null-byte rejection, 10K max)
 │   ├── db/
 │   │   ├── base.py                # SQLAlchemy declarative_base()
 │   │   ├── models.py              # 15 ORM models (404 lines)
@@ -1116,8 +1120,8 @@ All features are registered and implemented. The following are gaps within the e
 
 | Gap | Location | Impact |
 |-----|----------|--------|
-| Email delivery config incomplete | `app/core/config.py` | `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` fields missing from Settings class — `send_reset_email()` in `password_reset.py` will raise `AttributeError` at runtime |
-| SMTP passwords stored in plaintext | `app/db/models.py` SMTPConfig | Security risk in production |
+| Email delivery config | ~~`app/core/config.py`~~ | ✅ RESOLVED (Mar 14, 2026) — `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` fields added to Settings class; `SMTP_ENCRYPTION_KEY` validator rejects placeholder values |
+| SMTP passwords stored in plaintext | `app/db/models.py` SMTPConfig | Security risk in production (API-level masking done — GET/PUT return `"••••••••"`) |
 | `POST /send-birthday-message` is a stub | `app/main.py` | Backend endpoint non-functional; content script handles sending directly |
 
 ### 10.2 Testing Gaps
@@ -1237,14 +1241,14 @@ All features are registered and implemented. The following are gaps within the e
 ### Strengths
 1. **Type Safety**: TypeScript + Pydantic catches errors at compile time
 2. **Async Architecture**: FastAPI + SQLAlchemy async for high concurrency
-3. **Security**: JWT rotation, Argon2 hashing, Stripe webhook verification
+3. **Security**: JWT rotation, Argon2 hashing, Stripe webhook verification, **SecurityHeadersMiddleware** (5 headers), **input sanitization** (6 schema files)
 4. **Real-Time**: WebSocket updates for queue/history/dashboard
 5. **Accessibility**: WCAG 2.1 AA with keyboard shortcuts, screen reader support
 6. **Developer Experience**: Docker Compose, Vite HMR, Swagger UI
 
 ### Remaining Work for Production
-1. **Fix email delivery config**: Add `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` fields to `config.py` Settings class — currently causes `AttributeError` at runtime in `password_reset.py`
-2. Encrypt SMTP passwords at rest before first real user
+1. ~~**Fix email delivery config**~~: ✅ RESOLVED (Mar 14, 2026) — `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` added to `config.py` Settings
+2. Encrypt SMTP passwords at rest before first real user (API-level masking done — GET/PUT return `"••••••••"`)
 3. Comprehensive test coverage (Phase 2 routes, extension background/hooks, E2E)
 4. Deploy to production infrastructure (managed DB, HTTPS, CI/CD, monitoring)
 5. Chrome Web Store listing
