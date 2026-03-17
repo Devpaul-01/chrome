@@ -421,17 +421,17 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Message sending automation (sendMessageToFriend, sendComposedMessageToFriend, sendMessageFromProfile)
 - [x] Timeline posting (timeline.ts — postToTimeline, submitPost with Enter-key fallback)
 - [x] Messenger archiving (messenger.ts — archiveConversation)
-- [x] **Full automation loop** ✅ (runFullAutomation — 2-phase: birthday feed + advance/follow-up contacts)
-- [x] **Gender-aware template + post selection** ✅ (selectTemplate, selectPost with priority: exact → neutral → any)
-- [x] **Keyword resolution** ✅ (resolveKeywords: [Tag Person] → name, [Today] → date, [Image] → stripped)
-- [x] **Advance/follow-up mode** ✅ (days_in_advance > 0 early, < 0 follow-up; contacts matched by birthday MM-DD)
-- [x] **Deduplication (sent-today guard)** ✅ (getSentToday/addToSentToday in utils/automation.ts)
-- [x] **Contact sync (upsert)** ✅ (syncContactsFromFriends — create new + update existing by profile URL)
-- [x] **Full-screen automation overlay** ✅ (showAutomationOverlay/hideAutomationOverlay)
+- [x] Full automation loop (runFullAutomation — 2-phase: birthday feed + advance/follow-up contacts)
+- [x] Gender-aware template + post selection (selectTemplate, selectPost with priority: exact → neutral → any)
+- [x] Keyword resolution (resolveKeywords: [Tag Person] → name, [Today] → date, [Image] → stripped)
+- [x] Advance/follow-up mode (days_in_advance > 0 early, < 0 follow-up; contacts matched by birthday MM-DD)
+- [x] Deduplication (sent-today guard) (getSentToday/addToSentToday in utils/automation.ts)
+- [x] Contact sync (upsert) (syncContactsFromFriends — create new + update existing by profile URL)
+- [x] Full-screen automation overlay (showAutomationOverlay/hideAutomationOverlay)
 - [x] Add anti-detection delays (randomDelay already implemented)
-- [x] Add support for Facebook birthdays page ✅ (openOrFocusFacebookBirthdaysTab opens /birthdays)
-- [x] Add image attachment for timeline posts ✅ (postToTimeline supports imageUrl)
-- [x] Add Nifty Images merge tag replacement ✅ (resolveKeywords + timeline.ts NiftyImages support)
+- [x] Add support for Facebook birthdays page  (openOrFocusFacebookBirthdaysTab opens /birthdays)
+- [x] Add image attachment for timeline posts  (postToTimeline supports imageUrl)
+- [x] Add Nifty Images merge tag replacement  (resolveKeywords + timeline.ts NiftyImages support)
 - [ ] Improve friend detection reliability (handle Facebook UI changes)
 - [ ] Add error recovery for automation failures
 - [ ] Test with various Facebook layouts (mobile, desktop, different languages)
@@ -441,11 +441,11 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 ### Background Service Worker
 - [x] API client integration (background/index.ts has all API calls)
 - [x] Token management (ensureTokens, refreshTokensFlow implemented)
-- [x] **Automation orchestration fully implemented** ✅ (handleAutomationScan: fetches templates/posts/contacts, groups by days_in_advance, opens FB birthdays tab, dispatches automation.runFull)
-- [x] Add alarm-based scheduling ✅ (chrome.alarms.create/onAlarm.addListener implemented in background/index.ts and utils/automation.ts)
-- [x] **Sent-today deduplication** ✅ (getSentToday, addToSentToday, clearSentToday in utils/automation.ts)
-- [x] **Max messages config** ✅ (maxMessages field in AutomationConfig, updateMaxMessages helper, threaded into automation payload)
-- [x] **New background message types** ✅ (automation.recordSent, automation.setMaxMessages, automation.clearSentToday; failsafe category with 8 message types — 72 total message types)
+- [x] Automation orchestration fully implemented (handleAutomationScan: fetches templates/posts/contacts, groups by days_in_advance, opens FB birthdays tab, dispatches automation.runFull)
+- [x] Add alarm-based scheduling (chrome.alarms.create/onAlarm.addListener implemented in background/index.ts and utils/automation.ts)
+- [x] Sent-today deduplication (getSentToday, addToSentToday, clearSentToday in utils/automation.ts)
+- [x] Max messages config (maxMessages field in AutomationConfig, updateMaxMessages helper, threaded into automation payload)
+- [x] New background message types (automation.recordSent, automation.setMaxMessages, automation.clearSentToday; failsafe category with 8 message types — 72 total message types)
 - [ ] Add notification for automation status
 - [ ] Add offline support (queue requests)
 - [ ] Add crash recovery
@@ -455,10 +455,10 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 ### Contact Management UI ✨ **NEW** (Scaffolded Feb 11, 2026)
 - [x] ContactList component - display, search, import, add, edit, delete
 - [x] ContactForm component - add/edit contact with validation
-- [x] **Gender selector in ContactForm** ✅ (MALE / FEMALE / NEUTRAL — used by automation for template selection)
+- [x] Gender selector in ContactForm  (MALE / FEMALE / NEUTRAL — used by automation for template selection)
 - [x] ImportContactsModal - import from JSON, VCF, CSV with drag-and-drop
 - [x] BirthdayCalendar component - calendar and list views
-- [x] Backend Contact model and router registered ✅
+- [x] Backend Contact model and router registered 
 - [ ] Test contact CRUD operations end-to-end
 - [ ] Test import functionality with sample files
 - [ ] Add contact birthday reminders
@@ -467,13 +467,13 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 ### Account Management UI ✨ **NEW** (Scaffolded Feb 11, 2026)
 - [x] AccountManagement component - profile, timezone, logout, delete account
 - [x] SMTPSettings component - SMTP configuration form
-- [x] Backend SMTP router registered and separated ✅
-- [x] Backend SMTPConfig model complete ✅
-- [x] Backend API endpoint for profile updates ✅ (`PUT /auth/profile` implemented — name/timezone stored in metadata)
-- [x] Backend API endpoint for account deletion ✅ (`DELETE /auth/account` implemented)
+- [x] Backend SMTP router registered and separated 
+- [x] Backend SMTPConfig model complete 
+- [x] Backend API endpoint for profile updates  (`PUT /auth/profile` implemented — name/timezone stored in metadata)
+- [x] Backend API endpoint for account deletion  (`DELETE /auth/account` implemented)
 - [ ] Test profile update flow
 - [ ] Test SMTP configuration end-to-end
-- [x] Test account deletion with confirmation ✅ (account deletion now requires `current_password` for security)
+- [x] Test account deletion with confirmation  (account deletion now requires `current_password` for security)
 
 ### Extension Quality
 - [x] Add loading states for all API calls (implemented with Spinner component)
@@ -501,14 +501,14 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Birthday Calendar UI scaffolded (completed Feb 11) ✨
 - [x] SMTP Settings UI scaffolded (completed Feb 11) ✨
 - [x] Account Management UI scaffolded (completed Feb 11) ✨
-- [x] MessageQueue component enhancements ✅ (bulk ops, status filter, sort, preview modal, retry all failed, Mar 3, 2026)
-- [x] MessageHistory component enhancements ✅ (pagination, date range, CSV export, details modal, Mar 3, 2026)
+- [x] MessageQueue component enhancements  (bulk ops, status filter, sort, preview modal, retry all failed, Mar 3, 2026)
+- [x] MessageHistory component enhancements  (pagination, date range, CSV export, details modal, Mar 3, 2026)
 - [ ] TemplateCreator / TemplateGallery / TemplateList component enhancements
 - [ ] AuthForm component enhancements
 - [ ] Add internationalization (i18n) support
 - [ ] Test on different screen sizes
 - [x] Test keyboard shortcuts (Alt+H, Alt+D, Alt+L, Esc implemented)
-- [x] Add user onboarding flow (first-time setup) ✅ (OnboardingWizard, Mar 3, 2026)
+- [x] Add user onboarding flow (first-time setup)  (OnboardingWizard, Mar 3, 2026)
 
 ---
 
@@ -562,7 +562,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [ ] Set production Stripe keys (live mode)
 - [ ] Configure Stripe webhook endpoint (with live secret)
 - [ ] Set production CORS_ORIGINS (published extension ID)
-- [ ] Configure email service for production ✅ SendGrid SDK integrated; needs production API key + domain verification
+- [ ] Configure email service for production  SendGrid SDK integrated; needs production API key + domain verification
 - [ ] Set LOG_LEVEL to WARNING or ERROR
 
 ### Monitoring & Observability
@@ -593,7 +593,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 **Status:** 🔴 Not Implemented (No .github/workflows directory exists)
 
 #### Backend CI/CD
-- [ ] Set up GitHub Actions (or GitLab CI, CircleCI)
+- [ ] Set up Gitea Actions (or GitLab CI, CircleCI)
 - [ ] Add automated testing on PR:
   - [ ] Run pytest for all tests
   - [ ] Run linting (ruff, black, mypy)
@@ -894,7 +894,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 8. ✅ Message history tracking (list, search, delete implemented)
 9. ✅ Subscription payment via Stripe (checkout session + webhook implemented)
 10. ✅ Basic dashboard with statistics (getDashboardStats implemented)
-11. ✅ **Backend-frontend integration** (API paths aligned, schemas consistent, DELETE standardized) ✅
+11. ✅ Backend-frontend integration (API paths aligned, schemas consistent, DELETE standardized) 
 
 **Launch Blockers (Must Complete):**
 - [x] Fix database schema (ddl.sql completeness) ✅ Resolved
