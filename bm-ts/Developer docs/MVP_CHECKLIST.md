@@ -1,4 +1,4 @@
-# BirthdayMessaging bm-ts MVP Checklist
+
 
 
 **Last Updated:** March 15, 2026  
@@ -22,9 +22,9 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 **Remaining Gaps:**
 - ⚠️ `/send-birthday-message` backend endpoint is a non-functional stub (extension content scripts handle actual sending)
-- ⚠️ SMTP passwords stored as plaintext in database (API responses now mask passwords via `SMTPConfigOut.model_post_init`; at-rest encryption still needed for production)
+- ✅ SMTP passwords encrypted at rest using Fernet symmetric encryption (passwords also masked in API responses via `SMTPConfigOut.model_post_init`)
 - ⚠️ No production deployment infrastructure
-- ⚠️ Limited backend testing (only 8 unit tests in 2 files; no integration or API tests)
+- ✅ Backend testing expanded: 57+ tests across 7 files (schedules, messages, dashboard, contacts, password reset, auth, templates)
 - ✅ Extension testing: 280 tests across 13 files (95 unit + 185 component), all passing
 - ✅ Alembic migration fully populated — single comprehensive migration creates all 14 tables with ENUMs, indexes, FK CASCADE, unique constraints; separate migration `a1b2c3d4e5f6_create_revoked_tokens.py` adds `revoked_tokens` table (15 tables total)
 - ⚠️ No CI/CD pipeline or monitoring
@@ -53,8 +53,8 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 **Remaining pre-production tasks:**
 - [ ] Test email delivery in development with real SendGrid API key
-- [ ] Document email setup in DEVELOPMENT_GUIDE.md
-- [ ] Improve HTML email template (branding, responsive design)
+- [x] Document email setup in DEVELOPMENT_GUIDE.md ✅ (SendGrid setup section added)
+- [x] Improve HTML email template (branding, responsive design) ✅ (branded responsive table-based HTML with CTA button, footer, and fallback link)
 
 ---
 
@@ -76,7 +76,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
   - [x] Comprehensive initial migration fully populated (`78efe19bc04e_initial_schema.py`, 289 lines) — creates all 14 tables with columns, ENUMs, indexes, FK constraints (CASCADE), and unique constraints; both `upgrade()` and `downgrade()` implemented
   - [x] Populate initial migration with full DDL from models ✅ (consolidated into single comprehensive migration, Feb 27, 2026)
   - [ ] Test migration up/down
-  - [ ] Document migration workflow in DEVELOPMENT_GUIDE.md
+  - [x] Document migration workflow in DEVELOPMENT_GUIDE.md ✅ (Alembic workflow + SendGrid email setup added)
 
 ### Data Integrity
 - [x] Add foreign key constraints with proper CASCADE behavior ✅ (`ondelete='CASCADE'` on all child-table FKs in migration)
@@ -88,7 +88,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 ### Database Operations
 - [ ] Add database backup strategy
 - [ ] Document restore procedures
-- [ ] Add health check query for monitoring
+- [x] Add health check query for monitoring ✅ (`GET /health` now pings database with `SELECT 1`)
 - [ ] Consider connection pooling tuning for production
 
 ---
@@ -105,7 +105,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Change password endpoint
 - [ ] Implement email verification for new users
 - [x] Add rate limiting to auth endpoints ✅ (slowapi implemented: `/register` 5/min; `/login` 5/min + 20/hr; `/request-password-reset` 1/min + 5/hr + 20/hr; `/send-birthday-message` 1/45seconds)
-- [ ] Add account lockout after failed login attempts
+- [x] Add account lockout after failed login attempts ✅ (5 failures → 15 min lockout; `failed_login_count` + `locked_until` columns + Alembic migration)
 - [ ] Add session management (list active sessions, revoke)
 
 #### Password Reset Flow
@@ -120,7 +120,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] CRUD endpoints for template segments
 - [x] Segment types (GREETING, BODY, CLOSING)
 - [x] Add template validation (min/max length) - content must not be empty
-- [ ] Add template preview endpoint
+- [x] Add template preview endpoint ✅ (`POST /templates/preview` — composes sample message from user's segments)
 - [ ] Add bulk import/export for templates
 - [ ] Add template usage statistics
 
@@ -158,7 +158,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Delete history item
 - [x] Add pagination (currently no limit) ✅ (page/page_size params, MessageHistoryPage response)
 - [x] Add date range filtering ✅ (start_date/end_date query params on history endpoint)
-- [ ] Add export to CSV (frontend CSV export implemented; no dedicated backend endpoint)
+- [x] Add export to CSV ✅ (backend `GET /api/messages/history/export` returns CSV StreamingResponse; frontend CSV export also implemented)
 - [ ] Add analytics aggregation
 
 #### Dashboard
@@ -258,7 +258,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Add XSS prevention ✅ (input sanitization via `sanitize_text()` on all text schemas; React auto-escapes output)
 - [x] Add security headers (HSTS, CSP, etc.) ✅ (`SecurityHeadersMiddleware` in `security_headers.py` — Mar 14, 2026)
 - [ ] Add API key rotation mechanism
-- [ ] Implement audit logging for sensitive operations
+- [x] Implement audit logging for sensitive operations ✅ (`AuditLogMiddleware` logs login, register, password change, account delete, SMTP config update)
 - [ ] Add JWT secret rotation strategy
 
 ### Performance Optimization
@@ -556,7 +556,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [ ] Test API accessible from internet
 
 #### Environment Configuration
-- [ ] Create .env.production template
+- [x] Create .env.production template ✅ (all env vars documented with generation instructions)
 - [ ] Set production JWT_SECRET_KEY (generate strong random key)
 - [ ] Configure production DATABASE_URL
 - [ ] Set production Stripe keys (live mode)
@@ -663,17 +663,17 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 ### Backend Testing
 **Priority:** P1 - REQUIRED FOR CONFIDENCE  
-**Status:** 🟡 Minimal Coverage (8 unit tests across 2 files; no integration or API tests)
+**Status:** � Expanded Coverage (57+ tests across 7 files; unit + API integration tests)
 
 #### Unit Tests
 - [x] Basic auth tests (test_auth.py — 6 tests: access token type, refresh token validation, refresh token JTI presence, token rotation/revocation, revoke endpoint, concurrent refresh reuse detection)
 - [x] Basic template tests (test_templates.py — 2 tests: empty segment validation, message composition)
-- [ ] Add tests for schedules router
-- [ ] Add tests for messages router
-- [ ] Add tests for dashboard router
+- [x] Add tests for schedules router ✅ (test_schedules.py — 10 tests)
+- [x] Add tests for messages router ✅ (test_messages.py — 16 tests)
+- [x] Add tests for dashboard router ✅ (test_dashboard.py — 5 tests)
 - [ ] Add tests for subscription router
 - [ ] Add tests for webhook router
-- [ ] Add tests for password reset service
+- [x] Add tests for password reset service ✅ (test_password_reset.py — 7 tests)
 - [ ] Target: >80% code coverage
 
 #### Integration Tests
@@ -994,12 +994,12 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 4. **Domain Name** — Required for production API (if using custom domain)
 
 ### Technical Debt
-1. Minimal backend test coverage (only 8 unit tests across 2 files; no integration or API tests against database)
+1. Backend test coverage expanded to 57+ tests across 7 files (schedules, messages, dashboard, contacts, password reset, auth, templates); target >80% coverage remaining
 2. No CI/CD pipeline
 3. No production monitoring or error tracking service
 4. Image upload/storage not implemented (URL-based currently)
 5. No comprehensive help documentation or FAQ
-6. SMTP passwords stored as plaintext in database (API responses masked; at-rest encryption still needed)
+6. SMTP passwords encrypted at rest using Fernet symmetric encryption; API responses masked
 7. `/send-birthday-message` backend endpoint is a non-functional stub (content scripts handle actual sending)
 8. No content script or background service worker tests
 

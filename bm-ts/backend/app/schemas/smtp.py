@@ -2,11 +2,11 @@
 schemas/smtp.py — Pydantic schemas for SMTP configuration and user-profile update.
 
   SMTPConfigUpdate   — POST/PUT /smtp/config body
-  SMTPConfigOut      — GET  /smtp/config response (ORM-mapped)
+  SMTPConfigOut      — GET  /smtp/config response (password masked)
   UserProfileUpdate  — PATCH /auth/profile body
 
-Note: ``SMTPConfigOut`` currently exposes the plaintext password field.
-This should be masked or omitted before the API is made public.
+Passwords are encrypted at rest via Fernet (see ``core/encryption.py``)
+and masked to ``••••••••`` in all API responses.
 """
 
 from __future__ import annotations

@@ -97,11 +97,52 @@ async def send_reset_email(email: str, token: str) -> None:
 
     reset_url = f"{settings.password_reset_url_base}?token={token}"
 
+    html_content = f"""\
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#f4f4f7;font-family:Arial,Helvetica,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7;padding:40px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden">
+  <tr><td style="background-color:#4f46e5;padding:30px;text-align:center">
+    <h1 style="margin:0;color:#ffffff;font-size:24px">BirthdayMessaging</h1>
+  </td></tr>
+  <tr><td style="padding:40px 30px">
+    <h2 style="margin:0 0 16px;color:#333333;font-size:20px">Password Reset Request</h2>
+    <p style="margin:0 0 24px;color:#555555;font-size:16px;line-height:1.5">
+      We received a request to reset your password. Click the button below to choose a new one.
+      This link will expire in <strong>30 minutes</strong>.
+    </p>
+    <table cellpadding="0" cellspacing="0" style="margin:0 auto 24px">
+    <tr><td style="background-color:#4f46e5;border-radius:6px;padding:14px 32px;text-align:center">
+      <a href="{reset_url}" style="color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block">
+        Reset Password
+      </a>
+    </td></tr>
+    </table>
+    <p style="margin:0 0 8px;color:#888888;font-size:13px">
+      If you didn&rsquo;t request this, you can safely ignore this email.
+    </p>
+    <p style="margin:0;color:#888888;font-size:13px">
+      Or copy this link into your browser:<br>
+      <a href="{reset_url}" style="color:#4f46e5;word-break:break-all">{reset_url}</a>
+    </p>
+  </td></tr>
+  <tr><td style="background-color:#f4f4f7;padding:20px 30px;text-align:center">
+    <p style="margin:0;color:#aaaaaa;font-size:12px">&copy; BirthdayMessaging. All rights reserved.</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>"""
+
     message = Mail(
         from_email=settings.email_from_address,
         to_emails=email,
         subject="Password Reset Request",
-        html_content=f'<p>Click <a href="{reset_url}">here</a> to reset your password.</p>'
+        html_content=html_content,
     )
 
     try:

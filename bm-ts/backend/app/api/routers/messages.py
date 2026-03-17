@@ -1,7 +1,10 @@
 from datetime import datetime
+from io import StringIO
+import csv
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select, and_, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -286,3 +289,37 @@ async def delete_message_history(
         "timestamp": datetime.utcnow().isoformat(),
     })
     return {"status": "deleted"}
+
+
+@router.get("/history/export")
+async def export_message_history(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Export the current user's full message history as a CSV file."""
+    result = await db.execute(
+        select(MessageHistory)
+        .where(MessageHistory.user_id == current_user.id)
+        .order_by(desc(MessageHistory.sent_at))
+    )
+    rows = result.scalars().all()
+
+    buf = StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["friend_name", "friend_profile_url", "status", "message_content", "sent_at", "error_message"])
+    for r in rows:
+        writer.writerow([
+            r.friend_name,
+            r.friend_profile_url,
+            r.status,
+            r.message_content,
+            r.sent_at.isoformat() if r.sent_at else "",
+            r.error_message or "",
+        ])
+
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=message_history.csv"},
+    )

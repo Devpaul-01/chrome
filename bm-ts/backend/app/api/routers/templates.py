@@ -29,6 +29,7 @@ from app.schemas.template import (
     TemplateSegmentOut,
     TemplateSegmentUpdate,
 )
+from app.services.templates import compose_message
 
 router = APIRouter()
 
@@ -114,3 +115,32 @@ async def delete_template(
     segment.deleted_at = datetime.utcnow()
     await db.commit()
     return {"status": "deleted"}
+
+
+@router.post("/preview", response_model=dict)
+async def preview_message(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Compose a sample birthday message from the user's existing segments.
+
+    Randomly selects one greeting, one body, and one closing segment and
+    returns the assembled message.  Returns 400 if any segment group is empty.
+    """
+    stmt = select(TemplateSegment).where(
+        TemplateSegment.user_id == current_user.id,
+        TemplateSegment.deleted_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    segments = result.scalars().all()
+
+    greetings = [s.content for s in segments if s.segment_type == SegmentTypeEnum.GREETING.value]
+    bodies = [s.content for s in segments if s.segment_type == SegmentTypeEnum.BODY.value]
+    closings = [s.content for s in segments if s.segment_type == SegmentTypeEnum.CLOSING.value]
+
+    try:
+        message = compose_message(greetings, bodies, closings)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    return {"message": message}

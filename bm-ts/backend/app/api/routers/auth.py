@@ -21,7 +21,7 @@ whether or not the email exists, to prevent user enumeration attacks.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -97,17 +97,42 @@ async def register(
     return _build_token_response(user.id)
 
 
+# Account lockout constants
+_MAX_FAILED_ATTEMPTS = 5
+_LOCKOUT_MINUTES = 15
+
+
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("5/minute")
 @limiter.limit("20/hour", key_func=get_remote_address)
 async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
-    """Authenticate with email + password.  Returns a token pair; 401 on invalid credentials."""
+    """Authenticate with email + password.  Returns a token pair; 401 on invalid credentials.
+
+    Accounts are temporarily locked after 5 consecutive failed login attempts.
+    The lockout lasts 15 minutes, after which the counter resets on a successful login.
+    """
     stmt = select(User).where(User.email == data.email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
+
+    if user and user.locked_until and user.locked_until > datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account temporarily locked due to too many failed login attempts. Try again later.",
+        )
+
     if not user or not verify_password(data.password, user.password_hash):
+        # Increment failed login counter (only if user exists)
+        if user:
+            user.failed_login_count = (user.failed_login_count or 0) + 1
+            if user.failed_login_count >= _MAX_FAILED_ATTEMPTS:
+                user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=_LOCKOUT_MINUTES)
+            await db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
+    # Successful login — reset lockout state
+    user.failed_login_count = 0
+    user.locked_until = None
     user.last_login_at = datetime.now(timezone.utc)
     await db.commit()
     return _build_token_response(user.id)

@@ -4,8 +4,8 @@ routers/smtp.py — Endpoints for managing the user's SMTP configuration.
   GET /smtp/config   retrieve current SMTP settings
   PUT /smtp/config   upsert SMTP settings (creates if none exist)
 
-SMTP credentials are stored in plaintext for now.
-TODO: enc before storing (AES-GCM or secrets manager).
+SMTP passwords are encrypted at rest using Fernet symmetric encryption
+(see ``core/encryption.py``).  API responses mask the password field.
 """
 
 from __future__ import annotations

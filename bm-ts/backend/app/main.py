@@ -1,8 +1,10 @@
 import logging
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.routers import (
     auth,
@@ -23,8 +25,10 @@ from app.api.routers import (
 )
 from app.core.config import settings
 from app.core.app_logging import setup_logging
+from app.core.audit_log import AuditLogMiddleware
 from app.core.rate_limiter import init_rate_limiter, limiter
 from app.core.security_headers import SecurityHeadersMiddleware
+from app.db.session import get_db
 
 setup_logging()
 
@@ -45,6 +49,7 @@ app.add_middleware(
 )
 
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(AuditLogMiddleware)
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +96,13 @@ app.include_router(birthday_configs.router, prefix="/api", tags=["birthday-confi
 
 
 @app.get("/health", summary="Service health")
-async def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+async def health_check(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
+    try:
+        await db.execute(text("SELECT 1"))
+        db_status = "ok"
+    except Exception:
+        db_status = "unavailable"
+    return {"status": "ok", "database": db_status}
 
 # TODO: Implement actual birthday message sending logic (currently a stub)
 @app.post("/send-birthday-message")
