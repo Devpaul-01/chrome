@@ -709,6 +709,7 @@ function AppShell() {
           onSkip={handleOnboardingDismiss}
         />
       )}
+
     </div>
   );
 }

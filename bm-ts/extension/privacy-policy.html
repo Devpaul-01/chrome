@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — BirthdayMessaging</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #f9f9f9;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    }
+    header { margin-bottom: 2.5rem; border-bottom: 2px solid #f0ece8; padding-bottom: 1.5rem; }
+    .logo { font-size: 1.6rem; font-weight: 800; color: #ca4f02; letter-spacing: -0.5px; }
+    .logo span { color: #1a1a2e; }
+    h1 { font-size: 2rem; font-weight: 700; color: #1a1a2e; margin-top: 0.5rem; }
+    .meta { color: #666; font-size: 0.9rem; margin-top: 0.4rem; }
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #ca4f02;
+      margin-top: 2.5rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid #f0ece8;
+    }
+    h3 { font-size: 1rem; font-weight: 600; color: #1a1a2e; margin-top: 1.25rem; margin-bottom: 0.4rem; }
+    p { margin-bottom: 0.9rem; color: #333; }
+    ul, ol { margin: 0.5rem 0 0.9rem 1.5rem; }
+    li { margin-bottom: 0.35rem; color: #333; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+    th { background: #fdf4ef; color: #ca4f02; font-weight: 700; text-align: left; padding: 0.65rem 1rem; border: 1px solid #f0ece8; }
+    td { padding: 0.6rem 1rem; border: 1px solid #f0ece8; vertical-align: top; }
+    tr:nth-child(even) td { background: #fafafa; }
+    .highlight-box {
+      background: #fdf4ef;
+      border-left: 4px solid #ca4f02;
+      border-radius: 0 8px 8px 0;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      font-size: 0.95rem;
+    }
+    a { color: #ca4f02; }
+    footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid #f0ece8; font-size: 0.85rem; color: #888; }
+    @media (max-width: 640px) {
+      .container { padding: 2rem 1.25rem; }
+      h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo">Birthday<span>Messaging</span></div>
+    <h1>Privacy Policy</h1>
+    <p class="meta">Effective date: March 18, 2026 &nbsp;·&nbsp; Last updated: March 18, 2026</p>
+  </header>
+
+  <div class="highlight-box">
+    <strong>Summary:</strong> BirthdayMessaging collects only what is needed to automate
+    birthday messages on your behalf. We never sell your data, and you can export or delete
+    everything at any time.
+  </div>
+
+  <!-- 1. Who we are -->
+  <h2>1. Who We Are</h2>
+  <p>
+    BirthdayMessaging ("we", "us", "our") is a Chrome browser extension and associated backend
+    service operated by CTM Media Group. This policy explains what personal data we collect,
+    why we collect it, and what rights you have.
+  </p>
+  <p>
+    Questions or requests: <strong>[SUPPORT_EMAIL]</strong>
+  </p>
+
+  <!-- 2. What data we collect -->
+  <h2>2. What Data We Collect</h2>
+
+  <h3>2a. Account Data</h3>
+  <ul>
+    <li><strong>Email address</strong> — used to identify your account and send service emails (e.g. password reset).</li>
+    <li><strong>Password</strong> — stored as a one-way Argon2 hash; we cannot recover or read your plaintext password.</li>
+    <li><strong>Display name and timezone</strong> — optional profile fields you may set in Account Settings.</li>
+  </ul>
+
+  <h3>2b. Facebook Contact Data</h3>
+  <ul>
+    <li><strong>Friend names and profile URLs</strong> — collected by the extension from Facebook's birthday feed when you run automation.</li>
+    <li><strong>Birthday dates (month and day)</strong> — read from Facebook to schedule messages.</li>
+    <li><strong>Gender selection</strong> — set by you in Contact Management to choose gender-aware message templates.</li>
+  </ul>
+
+  <h3>2c. Message Content</h3>
+  <ul>
+    <li><strong>Message templates</strong> — the greeting, body, and closing text you write and save.</li>
+    <li><strong>Message queue</strong> — scheduled outbound messages before they are sent.</li>
+    <li><strong>Message history</strong> — a log of every message attempt, including outcome and any error.</li>
+  </ul>
+
+  <h3>2d. Configuration Data</h3>
+  <ul>
+    <li><strong>Birthday schedules</strong> — how many days before or after a birthday to send a message.</li>
+    <li><strong>SMTP settings</strong> — optional email server credentials you provide for notification emails. Passwords are encrypted at rest using AES-256 (Fernet).</li>
+    <li><strong>Automation preferences</strong> — message limits, delays, emergency stop state — stored locally in <code>chrome.storage.local</code>.</li>
+  </ul>
+
+  <h3>2e. Subscription and Payment Data</h3>
+  <ul>
+    <li><strong>Stripe customer ID and subscription status</strong> — we store a reference to your Stripe record. We do not store card numbers; Stripe handles all payment data directly.</li>
+  </ul>
+
+  <h3>2f. Technical Data</h3>
+  <ul>
+    <li><strong>Server logs</strong> — standard HTTP access logs (IP address, request path, timestamp) retained for up to 30 days for security and debugging.</li>
+    <li><strong>Audit log entries</strong> — records of sensitive actions (login, password change, account deletion) associated with your user ID, with no message content.</li>
+  </ul>
+
+  <h3>What We Do NOT Collect</h3>
+  <ul>
+    <li>We do not read your private Facebook messages.</li>
+    <li>We do not store your Facebook login credentials.</li>
+    <li>We do not track your browsing history outside of facebook.com during automation.</li>
+    <li>We do not use cookies for analytics or advertising.</li>
+    <li>We do not collect data from any website other than facebook.com.</li>
+  </ul>
+
+  <!-- 3. How we use your data -->
+  <h2>3. How We Use Your Data</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Purpose</th>
+        <th>Data used</th>
+        <th>Legal basis (GDPR)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Authenticate your account</td>
+        <td>Email, password hash</td>
+        <td>Contract performance</td>
+      </tr>
+      <tr>
+        <td>Send birthday messages on your behalf</td>
+        <td>Contact names, birthday dates, message templates</td>
+        <td>Contract performance</td>
+      </tr>
+      <tr>
+        <td>Deliver password reset emails</td>
+        <td>Email address</td>
+        <td>Contract performance</td>
+      </tr>
+      <tr>
+        <td>Process subscription payments</td>
+        <td>Stripe customer ID, subscription status</td>
+        <td>Contract performance</td>
+      </tr>
+      <tr>
+        <td>Prevent abuse &amp; security monitoring</td>
+        <td>IP address, audit logs</td>
+        <td>Legitimate interest</td>
+      </tr>
+      <tr>
+        <td>Improve the service</td>
+        <td>Aggregate, anonymised usage metrics only</td>
+        <td>Legitimate interest</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    We do not use your personal data for advertising, profiling, or any purpose not listed above.
+  </p>
+
+  <!-- 4. Data sharing -->
+  <h2>4. Who We Share Your Data With</h2>
+  <p>We share data only with the following service providers, strictly limited to what each needs to operate:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Recipient</th>
+        <th>Purpose</th>
+        <th>Data shared</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Stripe, Inc.</strong></td>
+        <td>Subscription payment processing</td>
+        <td>Email address (for billing), Stripe customer ID</td>
+      </tr>
+      <tr>
+        <td><strong>SendGrid (Twilio)</strong></td>
+        <td>Transactional email delivery (password reset)</td>
+        <td>Your email address, reset link</td>
+      </tr>
+      <tr>
+        <td><strong>Cloud infrastructure provider</strong></td>
+        <td>Backend hosting (server &amp; database)</td>
+        <td>All data stored in the database, encrypted in transit (TLS) and at rest</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <strong>We never sell your personal data to third parties.</strong> We do not share data with
+    advertisers, data brokers, or analytics platforms.
+  </p>
+  <p>
+    We may disclose data if required by law, court order, or to protect our legal rights, but
+    only to the minimum extent required.
+  </p>
+
+  <!-- 5. Data retention -->
+  <h2>5. How Long We Keep Your Data</h2>
+  <ul>
+    <li><strong>Account data</strong> — retained until you delete your account.</li>
+    <li><strong>Message history</strong> — retained until you delete individual records or delete your account.</li>
+    <li><strong>Server logs</strong> — automatically deleted after 30 days.</li>
+    <li><strong>Revoked tokens</strong> — expired entries are purged after their token expiry date.</li>
+    <li>After account deletion, all your data is permanently removed from our database. Backups are purged within 30 days.</li>
+  </ul>
+
+  <!-- 6. User rights -->
+  <h2>6. Your Rights</h2>
+  <p>Under applicable data protection law (including GDPR) you have the right to:</p>
+  <ul>
+    <li>
+      <strong>Access your data</strong> — use <code>GET /auth/me</code> (from the extension) or
+      send a written request to <strong>[SUPPORT_EMAIL]</strong>.
+    </li>
+    <li>
+      <strong>Export your data</strong> — download a complete copy of all your data at any time via
+      <em>Account → Export My Data</em> in the extension, or by calling <code>GET /auth/data-export</code>.
+      The export includes your profile, templates, schedules, contacts, and full message history in JSON format.
+    </li>
+    <li>
+      <strong>Rectification</strong> — update your profile, contacts, and templates directly in the extension.
+    </li>
+    <li>
+      <strong>Erasure (right to be forgotten)</strong> — permanently delete your account and all
+      associated data via <em>Account → Delete Account</em> in the extension, or by calling
+      <code>DELETE /auth/account</code>. Deletion is irreversible.
+    </li>
+    <li>
+      <strong>Restrict processing</strong> — contact us at <strong>[SUPPORT_EMAIL]</strong> to
+      suspend processing of your data while a dispute is being resolved.
+    </li>
+    <li>
+      <strong>Object to processing</strong> — contact us to object to any processing based on
+      legitimate interest.
+    </li>
+    <li>
+      <strong>Lodge a complaint</strong> — if you are in the EEA, you may lodge a complaint with
+      your local data protection authority.
+    </li>
+  </ul>
+  <p>
+    We will respond to all data subject requests within 30 days.
+  </p>
+
+  <!-- 7. Chrome permissions -->
+  <h2>7. Chrome Extension Permissions</h2>
+  <p>
+    BirthdayMessaging requests the following Chrome permissions. Each permission is strictly
+    necessary for the operation of the extension:
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Permission</th>
+        <th>Why it is needed</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>storage</code></td>
+        <td>Save your authentication tokens and automation preferences locally in Chrome so you stay logged in between sessions.</td>
+      </tr>
+      <tr>
+        <td><code>scripting</code></td>
+        <td>Inject the automation content script into Facebook pages so the extension can detect birthday friends and trigger message sending.</td>
+      </tr>
+      <tr>
+        <td><code>activeTab</code></td>
+        <td>Access the currently active tab to execute automation when you trigger it manually from the popup.</td>
+      </tr>
+      <tr>
+        <td><code>tabs</code></td>
+        <td>Query open Chrome tabs to locate and reuse an existing Facebook tab during automated birthday checks, avoiding unnecessary new tab creation.</td>
+      </tr>
+      <tr>
+        <td><code>alarms</code></td>
+        <td>Schedule a periodic background check (once per day) to check for upcoming birthdays and queue messages without requiring the popup to be open.</td>
+      </tr>
+      <tr>
+        <td><code>host_permissions</code>: <code>*://*.facebook.com/*</code></td>
+        <td>The core purpose of the extension: read the Facebook birthday feed and interact with Messenger to send personalised birthday messages on your behalf.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 8. Security -->
+  <h2>8. Security</h2>
+  <p>We apply the following technical and organisational measures to protect your data:</p>
+  <ul>
+    <li>All data is encrypted in transit using TLS 1.2+.</li>
+    <li>Passwords are hashed using Argon2id (memory-hard, OWASP-recommended).</li>
+    <li>SMTP passwords are encrypted at rest using AES-256 (Fernet symmetric encryption).</li>
+    <li>JWTs use short-lived access tokens (15 minutes) with refresh token rotation and revocation.</li>
+    <li>Rate limiting is applied to all authentication endpoints to prevent brute-force attacks.</li>
+    <li>Accounts are automatically locked after 5 consecutive failed login attempts.</li>
+    <li>Security headers (HSTS, CSP, X-Frame-Options, etc.) are applied on all API responses.</li>
+    <li>Input sanitisation is applied to all user-submitted text fields to prevent injection attacks.</li>
+    <li>Sensitive operations (login, password change, account deletion) are recorded in an audit log.</li>
+  </ul>
+
+  <!-- 9. Cookies and local storage -->
+  <h2>9. Cookies and Local Storage</h2>
+  <p>
+    The extension does not set cookies in your browser. Authentication tokens and local preferences
+    are stored in <code>chrome.storage.local</code>, which is private to the extension and
+    inaccessible to websites. No data is stored in <code>localStorage</code> or <code>sessionStorage</code>.
+  </p>
+  <p>
+    The backend API does not set cookies. Authentication is handled exclusively via JWT bearer tokens
+    in the <code>Authorization</code> header.
+  </p>
+
+  <!-- 10. Children -->
+  <h2>10. Children's Privacy</h2>
+  <p>
+    BirthdayMessaging is not intended for use by persons under the age of 13 (or the applicable
+    minimum age in your country). We do not knowingly collect data from children. If you believe
+    a child has provided us with personal data, please contact us at <strong>[SUPPORT_EMAIL]</strong>.
+  </p>
+
+  <!-- 11. International transfers -->
+  <h2>11. International Data Transfers</h2>
+  <p>
+    Your data is stored on servers within the cloud provider's data centres. If those servers are
+    located outside the European Economic Area, transfers are protected by the cloud provider's
+    Standard Contractual Clauses or equivalent safeguards recognised by applicable data protection law.
+  </p>
+
+  <!-- 12. Changes -->
+  <h2>12. Changes to This Policy</h2>
+  <p>
+    We may update this policy from time to time. The effective date at the top of this page will
+    be updated when changes are made. For significant changes, we will display a notice in the extension
+    popup. Continued use of BirthdayMessaging after a change constitutes acceptance of the updated policy.
+  </p>
+
+  <!-- 13. Contact -->
+  <h2>13. Contact Us</h2>
+  <p>For privacy questions, data subject requests, or concerns, contact us at:</p>
+  <p>
+    <strong>[SUPPORT_EMAIL]</strong><br />
+    CTM Media Group
+  </p>
+
+  <footer>
+    &copy; 2026 CTM Media Group &nbsp;·&nbsp;
+    <a href="terms-of-service.html">Terms of Service</a> &nbsp;·&nbsp;
+    <a href="quick-start.html">Quick Start</a> &nbsp;·&nbsp;
+    <a href="faq.html">FAQ</a> &nbsp;·&nbsp;
+    <a href="troubleshooting.html">Troubleshooting</a> &nbsp;·&nbsp;
+    BirthdayMessaging is not affiliated with Meta Platforms, Inc.
+  </footer>
+
+</div>
+</body>
+</html>

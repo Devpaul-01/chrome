@@ -14,6 +14,7 @@ POST  /auth/reset-password         Consume a reset token and set a new password.
 POST  /auth/change-password        Change password for an authenticated user.
 PUT   /auth/profile                Update profile fields (name, timezone).
 DELETE /auth/account               Permanently delete the user's account.
+GET   /auth/data-export            Export all user data as JSON (GDPR right to portability).
 
 The password-reset flow intentionally returns an identical success response
 whether or not the email exists, to prevent user enumeration attacks.
@@ -21,10 +22,13 @@ whether or not the email exists, to prevent user enumeration attacks.
 
 from __future__ import annotations
 
+import io
+import json
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,7 +41,16 @@ from app.core.jwt import (
     ensure_token_type,
 )
 from app.core.security import hash_password, verify_password
-from app.db.models import User, RevokedToken
+from app.db.models import (
+    User,
+    RevokedToken,
+    TemplateSegment,
+    BirthdaySchedule,
+    MessageQueue,
+    MessageHistory,
+    Contact,
+    MessageTemplate,
+)
 from app.db.session import get_db
 from app.schemas.auth import (
     DeleteAccountRequest,
@@ -323,3 +336,156 @@ async def delete_account(
     await db.delete(current_user)
     await db.commit()
     return MessageResponse(message="Account deleted successfully")
+
+
+@router.get("/data-export")
+async def export_user_data(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Export all data associated with the current user as a JSON file.
+
+    Satisfies the GDPR right to data portability (Art. 20 GDPR).  The
+    download includes the user's profile, message templates, birthday
+    schedules, contacts, message queue, and full message history.
+
+    The endpoint does not expose the password hash or internal IDs.
+    """
+    # ── Profile ──────────────────────────────────────────────────────────────
+    metadata = current_user.metadata_payload or {}
+    profile = {
+        "email": current_user.email,
+        "name": metadata.get("name"),
+        "timezone": metadata.get("timezone"),
+        "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+    }
+
+    # ── Template segments ────────────────────────────────────────────────────
+    tpl_result = await db.execute(
+        select(TemplateSegment)
+        .where(
+            TemplateSegment.user_id == current_user.id,
+            TemplateSegment.deleted_at.is_(None),
+        )
+        .order_by(TemplateSegment.created_at)
+    )
+    templates = [
+        {
+            "segment_type": str(r.segment_type),
+            "label": r.label,
+            "content": r.content,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in tpl_result.scalars().all()
+    ]
+
+    # ── Message templates (Phase 2) ──────────────────────────────────────────
+    mt_result = await db.execute(
+        select(MessageTemplate)
+        .where(MessageTemplate.user_id == current_user.id)
+        .order_by(MessageTemplate.created_at)
+    )
+    message_templates = [
+        {
+            "template_title": r.template_title,
+            "greeting": r.greeting,
+            "sentiment": r.sentiment,
+            "closing": r.closing,
+            "gender": str(r.gender) if r.gender else None,
+            "days_in_advance": r.days_in_advance,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in mt_result.scalars().all()
+    ]
+
+    # ── Birthday schedules ───────────────────────────────────────────────────
+    sched_result = await db.execute(
+        select(BirthdaySchedule)
+        .where(BirthdaySchedule.user_id == current_user.id)
+        .order_by(BirthdaySchedule.days_before)
+    )
+    schedules = [
+        {
+            "days_before": r.days_before,
+            "enabled": r.enabled,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in sched_result.scalars().all()
+    ]
+
+    # ── Contacts ─────────────────────────────────────────────────────────────
+    contact_result = await db.execute(
+        select(Contact)
+        .where(Contact.user_id == current_user.id)
+        .order_by(Contact.name)
+    )
+    contacts = [
+        {
+            "name": r.name,
+            "profile_url": r.profile_url,
+            "birthday": r.birthday.isoformat() if r.birthday else None,
+            "gender": str(r.gender) if r.gender else None,
+            "notes": r.notes,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in contact_result.scalars().all()
+    ]
+
+    # ── Message queue (pending / failed) ─────────────────────────────────────
+    queue_result = await db.execute(
+        select(MessageQueue)
+        .where(MessageQueue.user_id == current_user.id)
+        .order_by(MessageQueue.scheduled_send_time)
+    )
+    queue = [
+        {
+            "friend_name": r.friend_name,
+            "friend_profile_url": r.friend_profile_url,
+            "birthday_date": r.birthday_date.isoformat() if r.birthday_date else None,
+            "scheduled_send_time": r.scheduled_send_time.isoformat() if r.scheduled_send_time else None,
+            "message_content": r.message_content,
+            "status": str(r.status),
+            "error_message": r.error_message,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in queue_result.scalars().all()
+    ]
+
+    # ── Message history ───────────────────────────────────────────────────────
+    hist_result = await db.execute(
+        select(MessageHistory)
+        .where(MessageHistory.user_id == current_user.id)
+        .order_by(MessageHistory.sent_at)
+    )
+    history = [
+        {
+            "friend_name": r.friend_name,
+            "friend_profile_url": r.friend_profile_url,
+            "birthday_date": r.birthday_date.isoformat() if r.birthday_date else None,
+            "message_content": r.message_content,
+            "sent_at": r.sent_at.isoformat() if r.sent_at else None,
+            "status": str(r.status),
+            "error_message": r.error_message,
+        }
+        for r in hist_result.scalars().all()
+    ]
+
+    # ── Assemble payload ──────────────────────────────────────────────────────
+    payload = {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "profile": profile,
+        "template_segments": templates,
+        "message_templates": message_templates,
+        "birthday_schedules": schedules,
+        "contacts": contacts,
+        "message_queue": queue,
+        "message_history": history,
+    }
+
+    buf = io.BytesIO(json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"))
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/json",
+        headers={"Content-Disposition": 'attachment; filename="my-data.json"'},
+    )
