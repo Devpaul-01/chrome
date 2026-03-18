@@ -1,0 +1,139 @@
+"""
+services/email_verification.py — Email verification token lifecycle and sending.
+
+Follows the same pattern as password_reset: tokens are URL-safe random strings,
+stored as SHA-256 hashes, single-use, and emailed via SendGrid.
+"""
+
+import asyncio
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import select, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.db.models import User, EmailVerificationToken
+
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+
+
+essential_expiry_hours = 24
+
+async def create_verification_token(user: User, db: AsyncSession) -> str:
+    raw_token = secrets.token_urlsafe(32)
+    hash_token = hashlib.sha256(raw_token.encode()).hexdigest()
+
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=essential_expiry_hours)
+
+    token_row = EmailVerificationToken(
+        user_id=user.id,
+        token=hash_token,
+        expires_at=expires_at,
+      used_at=None,
+      created_at=datetime.now(timezone.utc),
+    )
+
+    db.add(token_row)
+    await db.commit()
+
+    return raw_token
+
+
+async def verify_verification_token(raw_token: str, db: AsyncSession) -> User | None:
+    hash_token = hashlib.sha256(raw_token.encode()).hexdigest()
+
+    result = await db.execute(
+        select(EmailVerificationToken, User)
+        .join(User, EmailVerificationToken.user_id == User.id)
+        .where(
+            and_(
+                EmailVerificationToken.token == hash_token,
+                EmailVerificationToken.expires_at > datetime.now(timezone.utc),
+                EmailVerificationToken.used_at.is_(None),
+            )
+        )
+    )
+
+    row = result.first()
+    if not row:
+        return None
+
+    return row[1]
+
+
+async def mark_token_used(raw_token: str, db: AsyncSession) -> None:
+    hash_token = hashlib.sha256(raw_token.encode()).hexdigest()
+
+    result = await db.execute(
+        select(EmailVerificationToken).where(EmailVerificationToken.token == hash_token)
+    )
+
+    token_row = result.scalar_one_or_none()
+    if token_row:
+        token_row.used_at = datetime.now(timezone.utc)
+        await db.commit()
+
+
+async def send_verification_email(email: str, token: str) -> None:
+    if not settings.email_verification_url_base:
+        raise ValueError("EMAIL_VERIFICATION_URL_BASE is not configured. Set it in .env.")
+
+    verify_url = f"{settings.email_verification_url_base}?token={token}"
+
+    html_content = f"""\
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#f4f4f7;font-family:Arial,Helvetica,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7;padding:40px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden">
+  <tr><td style="background-color:#4f46e5;padding:30px;text-align:center">
+    <h1 style="margin:0;color:#ffffff;font-size:24px">BirthdayMessaging</h1>
+  </td></tr>
+  <tr><td style="padding:40px 30px">
+    <h2 style="margin:0 0 16px;color:#333333;font-size:20px">Verify Your Email</h2>
+    <p style="margin:0 0 24px;color:#555555;font-size:16px;line-height:1.5">
+      Welcome! Click the button below to verify your email address for your BirthdayMessaging account.
+      This link will expire in <strong>{essential_expiry_hours} hours</strong>.
+    </p>
+    <table cellpadding="0" cellspacing="0" style="margin:0 auto 24px">
+    <tr><td style="background-color:#4f46e5;border-radius:6px;padding:14px 32px;text-align:center">
+      <a href="{verify_url}" style="color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;display:inline-block">
+        Verify Email
+      </a>
+    </td></tr>
+    </table>
+    <p style="margin:0 0 8px;color:#888888;font-size:13px">
+      If you didn&rsquo;t create an account, you can safely ignore this email.
+    </p>
+    <p style="margin:0;color:#888888;font-size:13px">
+      Or copy this link into your browser:<br>
+      <a href="{verify_url}" style="color:#4f46e5;word-break:break-all">{verify_url}</a>
+    </p>
+  </td></tr>
+  <tr><td style="background-color:#f4f4f7;padding:20px 30px;text-align:center">
+    <p style="margin:0;color:#aaaaaa;font-size:12px">&copy; BirthdayMessaging. All rights reserved.</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>"""
+
+    message = Mail(
+        from_email=settings.email_from_address,
+        to_emails=email,
+        subject="Verify your BirthdayMessaging email",
+        html_content=html_content,
+    )
+
+    try:
+        sg = SendGridAPIClient(settings.sendgrid_api_key)
+        await asyncio.to_thread(sg.send, message)
+        print(f"Verification email sent to {email}")
+    except Exception as e:
+        print(f"Failed to send verification email to {email}: {e}")

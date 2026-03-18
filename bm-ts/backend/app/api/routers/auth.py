@@ -66,12 +66,22 @@ from app.schemas.password_reset import (
     ChangePasswordRequest,
     MessageResponse,
 )
+from app.schemas.email_verification import (
+    RequestEmailVerificationRequest,
+    VerifyEmailRequest,
+)
 from app.schemas.smtp import UserProfileUpdate
 from app.services.password_reset import (
     create_reset_token,
     verify_reset_token,
     mark_token_used,
     send_reset_email,
+)
+from app.services.email_verification import (
+    create_verification_token,
+    verify_verification_token,
+    mark_token_used as mark_verification_token_used,
+    send_verification_email,
 )
 
 from app.core.rate_limiter import limiter
@@ -107,6 +117,15 @@ async def register(
     db.add(user)
     await db.commit()
     await db.refresh(user)
+    # Send email verification if configured
+    try:
+        # Create token and send email; do not fail registration if email sending fails
+        if hasattr(send_verification_email, "__call__"):
+            token = await create_verification_token(user, db)
+            await send_verification_email(user.email, token)
+    except Exception:
+        # Swallow email errors to avoid blocking registration
+        pass
     return _build_token_response(user.id)
 
 
@@ -256,6 +275,42 @@ async def request_password_reset(
         await send_reset_email(user.email, token)
     
     return MessageResponse(message="If an account exists with that email, a password reset link has been sent.")
+
+
+@router.post("/request-email-verification", response_model=MessageResponse)
+@limiter.limit("1/minute")
+@limiter.limit("5/hour")
+@limiter.limit("20/hour", key_func=get_remote_address)
+async def request_email_verification(
+    request: Request,
+    data: RequestEmailVerificationRequest,
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """Request an email verification link for an existing account."""
+    stmt = select(User).where(User.email == data.email)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    # Always return success to avoid email enumeration
+    if user and not user.email_verified:
+        token = await create_verification_token(user, db)
+        await send_verification_email(user.email, token)
+
+    return MessageResponse(message="If an account exists with that email, a verification link has been sent.")
+
+
+@router.post("/verify-email", response_model=MessageResponse)
+async def verify_email(data: VerifyEmailRequest, db: AsyncSession = Depends(get_db)) -> MessageResponse:
+    """Consume an email verification token and mark the user's email as verified."""
+    user = await verify_verification_token(data.token, db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
+
+    user.email_verified = True
+    await mark_verification_token_used(data.token, db)
+    await db.commit()
+
+    return MessageResponse(message="Email verified successfully")
 
 
 @router.post("/reset-password", response_model=MessageResponse)
