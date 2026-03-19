@@ -17,7 +17,7 @@ export default function ContactForm({
   isSubmitting,
   message,
 }: ContactFormProps) {
-  const loosedContact = contact as Record<string, unknown>;
+  const loosedContact = contact as unknown as Record<string, unknown>;
   const [firstName, setFirstName] = useState(() => {
     if (typeof loosedContact?.firstName === 'string') return loosedContact.firstName;
     if (contact?.name) return contact.name.split(' ')[0] ?? '';

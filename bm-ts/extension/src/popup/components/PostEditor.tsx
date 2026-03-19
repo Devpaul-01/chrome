@@ -241,7 +241,7 @@ export default function PostEditor({
               onChange={(event) =>
                 setPostForm({
                   ...postForm,
-                  gender: event.target.value as 'NEUTRAL' | 'MALE' | 'FEMALE' | 'ALL',
+                  gender: event.target.value as 'NEUTRAL' | 'MALE' | 'FEMALE',
                 })
               }
               className="text-field w-full"
