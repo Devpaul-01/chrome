@@ -8,6 +8,8 @@ Endpoints
 POST  /auth/register               Register a new account, return token pair.
 POST  /auth/login                  Authenticate, return token pair.
 POST  /auth/refresh                Exchange a refresh token for a new token pair.
+GET   /auth/sessions               List active authenticated sessions.
+DELETE /auth/sessions/{id}         Revoke a specific authenticated session.
 GET   /auth/me                     Return the current user's profile.
 POST  /auth/request-password-reset Send a password-reset email (rate: 5/hour).
 POST  /auth/reset-password         Consume a reset token and set a new password.
@@ -25,6 +27,7 @@ from __future__ import annotations
 import io
 import json
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -32,7 +35,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_token_payload, get_current_user
 from app.core.jwt import (
     TokenType,
     create_access_token,
@@ -41,18 +44,10 @@ from app.core.jwt import (
     ensure_token_type,
 )
 from app.core.security import hash_password, verify_password
-from app.db.models import (
-    User,
-    RevokedToken,
-    TemplateSegment,
-    BirthdaySchedule,
-    MessageQueue,
-    MessageHistory,
-    Contact,
-    MessageTemplate,
-)
+from app.db.models import User, RevokedToken
 from app.db.session import get_db
 from app.schemas.auth import (
+    ActiveSession,
     DeleteAccountRequest,
     LoginRequest,
     RegisterRequest,
@@ -90,11 +85,98 @@ from slowapi.util import get_remote_address
 router = APIRouter()
 
 
-def _build_token_response(user_id: UUID) -> TokenResponse:
-    """Create a fresh access + refresh token pair for ``user_id``."""
-    return TokenResponse(
-        access_token=create_access_token(user_id),
-        refresh_token=create_refresh_token(user_id),
+def _coerce_expiry(expiry_value: Any) -> datetime:
+    """Normalise a JWT ``exp`` claim into a timezone-aware UTC datetime."""
+    if isinstance(expiry_value, datetime):
+        return expiry_value if expiry_value.tzinfo else expiry_value.replace(tzinfo=timezone.utc)
+    return datetime.fromtimestamp(int(expiry_value), timezone.utc)
+
+
+def _request_ip(request: Request | None) -> str | None:
+    if request is None or request.client is None:
+        return None
+    return request.client.host
+
+
+def _request_user_agent(request: Request | None) -> str | None:
+    if request is None:
+        return None
+    user_agent = request.headers.get("user-agent")
+    if not user_agent:
+        return None
+    return user_agent[:500]
+
+
+async def _ensure_revoked_token(
+    db: AsyncSession, *, jti: str | None, user_id: UUID, expires_at: datetime
+) -> None:
+    if not jti:
+        return
+    result = await db.execute(select(RevokedToken).where(RevokedToken.refresh_token_jti == jti))
+    if result.scalar_one_or_none() is None:
+        db.add(
+            RevokedToken(
+                refresh_token_jti=jti,
+                user_id=user_id,
+                expires_at=expires_at,
+                revoked_at=datetime.now(timezone.utc),
+            )
+        )
+
+
+async def _issue_session_tokens(
+    user: User,
+    db: AsyncSession,
+    request: Request | None,
+    session: UserSession | None = None,
+) -> tuple[TokenResponse, UserSession]:
+    now = datetime.now(timezone.utc)
+    if session is None:
+        session = UserSession(
+            user_id=user.id,
+            current_refresh_token_jti="pending",
+            ip_address=_request_ip(request),
+            user_agent=_request_user_agent(request),
+            created_at=now,
+            last_seen_at=now,
+            expires_at=now,
+        )
+        db.add(session)
+        await db.flush()
+    else:
+        session.ip_address = _request_ip(request) or session.ip_address
+        session.user_agent = _request_user_agent(request) or session.user_agent
+        session.last_seen_at = now
+
+    access_token = create_access_token(user.id, session.id)
+    refresh_token = create_refresh_token(user.id, session.id)
+    refresh_payload = decode_token(refresh_token)
+    session.current_refresh_token_jti = refresh_payload["jti"]
+    session.expires_at = _coerce_expiry(refresh_payload["exp"])
+
+    return (
+        TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+        ),
+        session,
+    )
+
+
+async def _revoke_session_record(
+    session: UserSession,
+    db: AsyncSession,
+    *,
+    reason: str,
+) -> None:
+    if session.revoked_at is None:
+        session.revoked_at = datetime.now(timezone.utc)
+        session.revoked_reason = reason
+    await _ensure_revoked_token(
+        db,
+        jti=session.current_refresh_token_jti,
+        user_id=session.user_id,
+        expires_at=session.expires_at,
     )
 
 
@@ -113,8 +195,13 @@ async def register(
         email=data.email,
         password_hash=hash_password(data.password),
         last_login_at=datetime.now(timezone.utc),
+        failed_login_count=0,
+        email_verified=False,
+        metadata_payload={},
     )
     db.add(user)
+    await db.flush()
+    response, _ = await _issue_session_tokens(user, db, request)
     await db.commit()
     await db.refresh(user)
     # Send email verification if configured
@@ -126,7 +213,7 @@ async def register(
     except Exception:
         # Swallow email errors to avoid blocking registration
         pass
-    return _build_token_response(user.id)
+    return response
 
 
 # Account lockout constants
@@ -166,26 +253,49 @@ async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends
     user.failed_login_count = 0
     user.locked_until = None
     user.last_login_at = datetime.now(timezone.utc)
+    response, _ = await _issue_session_tokens(user, db, request)
     await db.commit()
-    return _build_token_response(user.id)
+    return response
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def refresh(
+    request: Request,
+    data: RefreshRequest,
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
     """Exchange a valid refresh token for a fresh token pair; 401 on invalid/expired token."""
     try:
         payload = decode_token(data.refresh_token)
         ensure_token_type(payload, TokenType.REFRESH)
         user_id = UUID(payload.get("sub"))
         jti = payload.get("jti")
+        session_id = payload.get("sid")
         exp = payload.get("exp")
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
 
     # Verify the user still exists (prevents deleted users from refreshing)
     result = await db.execute(select(User).where(User.id == user_id))
-    if not result.scalar_one_or_none():
+    user = result.scalar_one_or_none()
+    if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
+
+    session: UserSession | None = None
+    if session_id is not None:
+        try:
+            session_uuid = UUID(str(session_id))
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
+
+        session_result = await db.execute(
+            select(UserSession).where(UserSession.id == session_uuid, UserSession.user_id == user_id)
+        )
+        session = session_result.scalar_one_or_none()
+        if session is None or session.revoked_at is not None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+        if session.current_refresh_token_jti != jti:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
     # If jti present, ensure it hasn't been revoked already
     if jti:
@@ -194,27 +304,16 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> T
         if result.scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
-    # Rotation: mark the old refresh token JTI as revoked so it cannot be replayed
-    if jti and exp:
-        try:
-            # exp can be timestamp (int) or datetime; coerce to datetime
-            if isinstance(exp, (int, float)):
-                expires_at = datetime.fromtimestamp(int(exp), timezone.utc)
-            else:
-                expires_at = exp if isinstance(exp, datetime) else datetime.fromtimestamp(int(exp), timezone.utc)
-        except Exception:
-            expires_at = datetime.now(timezone.utc)
+    expires_at = _coerce_expiry(exp)
+    await _ensure_revoked_token(db, jti=jti, user_id=user_id, expires_at=expires_at)
+    response, _ = await _issue_session_tokens(user, db, request, session=session)
+    try:
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
 
-        revoked = RevokedToken(refresh_token_jti=jti, user_id=user_id, expires_at=expires_at)
-        db.add(revoked)
-        try:
-            await db.commit()
-        except Exception:
-            # Integrity error means another request may have revoked it concurrently
-            await db.rollback()
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
-
-    return _build_token_response(user_id)
+    return response
 
 
 @router.post("/revoke", response_model=MessageResponse)
@@ -225,28 +324,82 @@ async def revoke(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> Me
         ensure_token_type(payload, TokenType.REFRESH)
         jti = payload.get("jti")
         user_id = UUID(payload.get("sub"))
+        session_id = payload.get("sid")
         exp = payload.get("exp")
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
-    if not jti:
-        return MessageResponse(message="Token revoked")
+    expires_at = _coerce_expiry(exp)
 
-    try:
-        if isinstance(exp, (int, float)):
-            expires_at = datetime.fromtimestamp(int(exp), timezone.utc)
-        else:
-            expires_at = exp if isinstance(exp, datetime) else datetime.fromtimestamp(int(exp), timezone.utc)
-    except Exception:
-        expires_at = datetime.now(timezone.utc)
+    if session_id is not None:
+        try:
+            session_uuid = UUID(str(session_id))
+        except ValueError:
+            session_uuid = None
 
-    revoked = RevokedToken(refresh_token_jti=jti, user_id=user_id, expires_at=expires_at)
-    db.add(revoked)
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
+        if session_uuid is not None:
+            session_result = await db.execute(
+                select(UserSession).where(UserSession.id == session_uuid, UserSession.user_id == user_id)
+            )
+            session = session_result.scalar_one_or_none()
+            if session is not None:
+                await _revoke_session_record(session, db, reason="logout")
+
+    await _ensure_revoked_token(db, jti=jti, user_id=user_id, expires_at=expires_at)
+    await db.commit()
     return MessageResponse(message="Token revoked")
+
+
+@router.get("/sessions", response_model=list[ActiveSession])
+async def list_sessions(
+    current_user: User = Depends(get_current_user),
+    token_payload: dict[str, Any] = Depends(get_current_token_payload),
+    db: AsyncSession = Depends(get_db),
+) -> list[ActiveSession]:
+    """Return the user's active sessions ordered by recent activity."""
+    current_session_id = token_payload.get("sid")
+    now = datetime.now(timezone.utc)
+    result = await db.execute(
+        select(UserSession)
+        .where(
+            UserSession.user_id == current_user.id,
+            UserSession.revoked_at.is_(None),
+            UserSession.expires_at > now,
+        )
+        .order_by(UserSession.last_seen_at.desc(), UserSession.created_at.desc())
+    )
+    sessions = result.scalars().all()
+    return [
+        ActiveSession(
+            id=session.id,
+            created_at=session.created_at,
+            last_seen_at=session.last_seen_at,
+            expires_at=session.expires_at,
+            ip_address=session.ip_address,
+            user_agent=session.user_agent,
+            is_current=str(session.id) == str(current_session_id),
+        )
+        for session in sessions
+    ]
+
+
+@router.delete("/sessions/{session_id}", response_model=MessageResponse)
+async def revoke_session(
+    session_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """Revoke one of the user's active sessions immediately."""
+    result = await db.execute(
+        select(UserSession).where(UserSession.id == session_id, UserSession.user_id == current_user.id)
+    )
+    session = result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    await _revoke_session_record(session, db, reason="user_revoke")
+    await db.commit()
+    return MessageResponse(message="Session revoked")
 
 
 @router.get("/me", response_model=UserProfile)

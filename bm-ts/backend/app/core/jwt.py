@@ -29,7 +29,12 @@ class TokenType:
     REFRESH = "refresh"
 
 
-def _build_payload(subject: UUID, token_type: str, expires_delta: timedelta) -> dict[str, Any]:
+def _build_payload(
+    subject: UUID,
+    token_type: str,
+    expires_delta: timedelta,
+    session_id: UUID | None = None,
+) -> dict[str, Any]:
     """Construct a standard JWT claims dict with ``sub``, ``type``, ``iat``, and ``exp``."""
     now = datetime.now(timezone.utc)
     payload = {
@@ -38,23 +43,25 @@ def _build_payload(subject: UUID, token_type: str, expires_delta: timedelta) -> 
         "iat": now,
         "exp": now + expires_delta,
     }
+    if session_id is not None:
+        payload["sid"] = str(session_id)
     # Add a JTI to refresh tokens so they can be revoked individually.
     if token_type == TokenType.REFRESH:
         payload["jti"] = str(uuid4())
     return payload
 
 
-def create_access_token(subject: UUID) -> str:
+def create_access_token(subject: UUID, session_id: UUID | None = None) -> str:
     """Return a signed short-lived access token for ``subject``."""
     expires = timedelta(minutes=settings.access_token_expire_minutes)
-    payload = _build_payload(subject, TokenType.ACCESS, expires)
+    payload = _build_payload(subject, TokenType.ACCESS, expires, session_id=session_id)
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
-def create_refresh_token(subject: UUID) -> str:
+def create_refresh_token(subject: UUID, session_id: UUID | None = None) -> str:
     """Return a signed long-lived refresh token for ``subject``."""
     expires = timedelta(days=settings.refresh_token_expire_days)
-    payload = _build_payload(subject, TokenType.REFRESH, expires)
+    payload = _build_payload(subject, TokenType.REFRESH, expires, session_id=session_id)
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 

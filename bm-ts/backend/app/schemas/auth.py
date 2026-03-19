@@ -47,6 +47,18 @@ class TokenResponse(BaseModel):
     token_type: str = Field(default="bearer")
 
 
+class ActiveSession(BaseModel):
+    """Authenticated session shown in the account-security UI."""
+
+    id: UUID
+    created_at: datetime
+    last_seen_at: datetime
+    expires_at: datetime
+    ip_address: str | None = None
+    user_agent: str | None = None
+    is_current: bool = False
+
+
 class UserProfile(BaseModel):
     """Public profile returned by GET /auth/me.  ORM-mapped from the ``User`` model."""
 
@@ -63,5 +75,3 @@ class DeleteAccountRequest(BaseModel):
     current_password: str
 
     _sanitize = field_validator("current_password", mode="after")(sanitize_text)
-
-    current_password: str
