@@ -61,20 +61,22 @@ describe('API request helpers (via login)', () => {
       }),
     );
 
-    await expect(login(BASE, 'bad@example.com', 'wrongpass')).rejects.toBeInstanceOf(ApiError);
+    await expect(
+      login(BASE, { email: 'bad@example.com', password: 'wrongpass' }),
+    ).rejects.toBeInstanceOf(ApiError);
   });
 
   it('resolves with token bundle on 200', async () => {
     const { login } = await import('../client');
 
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ access_token: 'acc_tok', refresh_token: 'ref_tok' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ),
+      new Response(JSON.stringify({ access_token: 'acc_tok', refresh_token: 'ref_tok' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     );
 
-    const result = await login(BASE, 'user@example.com', 'Pass1234');
+    const result = await login(BASE, { email: 'user@example.com', password: 'Pass1234' });
     expect(result.access_token).toBe('acc_tok');
     expect(result.refresh_token).toBe('ref_tok');
   });
@@ -83,13 +85,13 @@ describe('API request helpers (via login)', () => {
     const { login } = await import('../client');
 
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ access_token: 'a', refresh_token: 'b' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ),
+      new Response(JSON.stringify({ access_token: 'a', refresh_token: 'b' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     );
 
-    await login(BASE, 'user@example.com', 'Pass1234');
+    await login(BASE, { email: 'user@example.com', password: 'Pass1234' });
 
     const [calledUrl] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(calledUrl).toBe(`${BASE}/auth/login`);
@@ -100,7 +102,16 @@ describe('API request helpers (via login)', () => {
 
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       new Response(
-        JSON.stringify({ total_messages: 0, successful_messages: 0, failed_messages: 0, pending_messages: 0, success_rate: 0, total_contacts: 0, upcoming_birthdays: 0, active_schedules: 0 }),
+        JSON.stringify({
+          total_messages: 0,
+          successful_messages: 0,
+          failed_messages: 0,
+          pending_messages: 0,
+          success_rate: 0,
+          total_contacts: 0,
+          upcoming_birthdays: 0,
+          active_schedules: 0,
+        }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       ),
     );

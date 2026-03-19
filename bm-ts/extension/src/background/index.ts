@@ -8,6 +8,7 @@ import {
   BirthdaySchedule,
   QueuedMessage,
   MessageHistoryItem,
+  MessageHistoryPage,
   DashboardStats,
   Contact,
   MessageGroup,
@@ -194,8 +195,7 @@ function getContactsForDaysInAdvance(contacts: Contact[], days: number): Contact
   const target = birthdayDateOffset(days);
   return contacts.filter((c) => {
     const parts = c.birthday.split('-');
-    const mmdd =
-      parts.length >= 2 ? `${parts[parts.length - 2]}-${parts[parts.length - 1]}` : '';
+    const mmdd = parts.length >= 2 ? `${parts[parts.length - 2]}-${parts[parts.length - 1]}` : '';
     return mmdd === target;
   });
 }
@@ -305,7 +305,9 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
 
   const tab = await openOrFocusFacebookBirthdaysTab();
   if (!tab || !tab.id) {
-    logger.info('handleAutomationScan: no Facebook birthdays tab open — user must navigate to facebook.com/birthdays');
+    logger.info(
+      'handleAutomationScan: no Facebook birthdays tab open — user must navigate to facebook.com/birthdays',
+    );
     await addActivityLogEntry('info', 'Automation skipped — no Facebook birthdays tab open');
     return { success: false };
   }
@@ -348,6 +350,7 @@ type BackgroundResponse =
   | QueuedMessage
   | QueuedMessage[]
   | MessageHistoryItem[]
+  | MessageHistoryPage
   | DashboardStats
   | Contact
   | Contact[]
@@ -445,7 +448,8 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) =>
         deleteTemplate(url, accessToken, message.payload.id),
       );
-    }    case 'images.uploadFile': {
+    }
+    case 'images.uploadFile': {
       return runAuthAware((accessToken, url) =>
         uploadImageFile(url, accessToken, {
           filename: message.payload.filename,
@@ -453,7 +457,8 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
           size: message.payload.size,
         }),
       );
-    }    case 'subscription.status': {
+    }
+    case 'subscription.status': {
       return runAuthAware((accessToken, url) => subscriptionStatus(url, accessToken));
     }
     case 'subscription.checkout': {
@@ -505,7 +510,10 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       if (message.payload.enabled) {
         const hasAlarms = await ensureAlarmsPermission();
         if (!hasAlarms) {
-          throw new ApiError(403, { detail: 'Alarms permission is required to enable automation. Please grant the permission and try again.' });
+          throw new ApiError(403, {
+            detail:
+              'Alarms permission is required to enable automation. Please grant the permission and try again.',
+          });
         }
       }
       return updateAutomationEnabled(message.payload.enabled);
@@ -605,7 +613,7 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       //  1. facebook.com/birthdays  (dedicated birthday page)
       //  2. friends_with_upcoming_birthdays panel (Friends > Birthdays section)
       //  3. Any active Facebook tab
-      async function findFacebookBirthdayTab(): Promise<chrome.tabs.Tab | null> {
+      const findFacebookBirthdayTab = async (): Promise<chrome.tabs.Tab | null> => {
         // 1. Dedicated /birthdays page
         const birthdayTabs = await new Promise<chrome.tabs.Tab[]>((resolve) =>
           chrome.tabs.query({ url: '*://*.facebook.com/birthdays*' }, resolve),
@@ -616,8 +624,8 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
         const friendsBirthdayTabs = await new Promise<chrome.tabs.Tab[]>((resolve) =>
           chrome.tabs.query({ url: '*://*.facebook.com/friends*' }, resolve),
         );
-        const upcomingTab = friendsBirthdayTabs.find(
-          (t) => t.url?.includes('friends_with_upcoming_birthdays'),
+        const upcomingTab = friendsBirthdayTabs.find((t) =>
+          t.url?.includes('friends_with_upcoming_birthdays'),
         );
         if (upcomingTab?.id) return upcomingTab;
 
@@ -628,7 +636,7 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
         if (activeFbTabs.length && activeFbTabs[0].id) return activeFbTabs[0];
 
         return null;
-      }
+      };
 
       const fbTab = await findFacebookBirthdayTab();
       if (!fbTab || !fbTab.id) {
@@ -641,13 +649,18 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       const response = await new Promise<{ contacts: unknown[] } | undefined>((resolve, reject) => {
         chrome.tabs.sendMessage(tabId, { type: 'contacts.scrapeFromPage' }, (res) => {
           if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message ?? 'Content script not ready — try refreshing the Facebook page'));
+            reject(
+              new Error(
+                chrome.runtime.lastError.message ??
+                  'Content script not ready — try refreshing the Facebook page',
+              ),
+            );
           } else {
             resolve(res);
           }
         });
       });
-      return response?.contacts ?? [];
+      return (response?.contacts ?? []) as Contact[];
     }
     // Message Group handlers
     case 'messageGroups.list': {
@@ -741,7 +754,7 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
     }
     // Fail-safe message handlers
     case 'failsafe.getEmergencyStop': {
-      return await getEmergencyStopState() as unknown as BackgroundResponse;
+      return (await getEmergencyStopState()) as unknown as BackgroundResponse;
     }
     case 'failsafe.triggerEmergencyStop': {
       const hours = message.payload?.cooldownHours ?? 24;
@@ -757,14 +770,14 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return { success: true };
     }
     case 'failsafe.getActivityLog': {
-      return await getActivityLog() as unknown as BackgroundResponse;
+      return (await getActivityLog()) as unknown as BackgroundResponse;
     }
     case 'failsafe.clearActivityLog': {
       await clearActivityLog();
       return { success: true };
     }
     case 'failsafe.getRateLimits': {
-      return await getRateLimitSummary() as unknown as BackgroundResponse;
+      return (await getRateLimitSummary()) as unknown as BackgroundResponse;
     }
     case 'failsafe.getConfirmationMode': {
       const mode = await getConfirmationMode();

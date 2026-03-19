@@ -43,7 +43,9 @@ export default function FeatureTip({ tipId, message }: FeatureTipProps) {
         border: '1px solid rgba(229,103,23,0.25)',
       }}
     >
-      <span className="shrink-0 text-sm" aria-hidden="true">💡</span>
+      <span className="shrink-0 text-sm" aria-hidden="true">
+        💡
+      </span>
       <span className="flex-1 text-gray-700 leading-relaxed">{message}</span>
       <button
         type="button"

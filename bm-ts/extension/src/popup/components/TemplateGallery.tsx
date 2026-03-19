@@ -1,5 +1,3 @@
-import type { TemplateFormData } from './TemplateCreator';
-
 export type SavedTemplate = {
   id: string;
   greeting: string;

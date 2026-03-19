@@ -59,8 +59,9 @@ function attemptSend<T>(message: BackgroundMessage): Promise<T> {
         resolve(response.data as T);
       } else {
         const err = new Error(response.error?.message ?? 'Unknown error');
-        (err as any).status = response.error?.status;
-        (err as any).data = response.error?.data;
+        const typedErr = err as Error & { status?: number; data?: unknown };
+        typedErr.status = response.error?.status;
+        typedErr.data = response.error?.data;
         reject(err);
       }
     });

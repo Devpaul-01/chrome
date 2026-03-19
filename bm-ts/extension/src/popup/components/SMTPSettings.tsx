@@ -19,12 +19,7 @@ type SMTPSettingsProps = {
   message: string | null;
 };
 
-export default function SMTPSettings({
-  config,
-  onSave,
-  isSubmitting,
-  message,
-}: SMTPSettingsProps) {
+export default function SMTPSettings({ config, onSave, isSubmitting, message }: SMTPSettingsProps) {
   const [host, setHost] = useState(config?.host || '');
   const [port, setPort] = useState(config?.port?.toString() || '587');
   const [username, setUsername] = useState(config?.username || '');
@@ -61,7 +56,8 @@ export default function SMTPSettings({
           {/* Host */}
           <div>
             <label htmlFor="host" className="block text-sm font-medium mb-1">
-              Host{' '}<HelpTooltip label="Your SMTP server hostname. Contact your email provider for this detail — e.g. smtp.gmail.com for Google, smtp.office365.com for Microsoft." />
+              Host{' '}
+              <HelpTooltip label="Your SMTP server hostname. Contact your email provider for this detail — e.g. smtp.gmail.com for Google, smtp.office365.com for Microsoft." />
             </label>
             <input
               type="text"

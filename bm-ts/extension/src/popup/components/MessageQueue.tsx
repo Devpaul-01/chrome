@@ -10,7 +10,7 @@ interface MessageQueueProps {
 type StatusFilter = 'all' | QueuedMessage['status'];
 type SortDir = 'asc' | 'desc';
 
-export default function MessageQueue({ onClose, compact = false }: MessageQueueProps) {
+export default function MessageQueue({ onClose: _onClose, compact = false }: MessageQueueProps) {
   const {
     messages,
     isLoading,
@@ -49,7 +49,11 @@ export default function MessageQueue({ onClose, compact = false }: MessageQueueP
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }

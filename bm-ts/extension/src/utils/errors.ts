@@ -62,21 +62,25 @@ export function parseApiError(error: unknown): AppError {
     if (data && typeof data === 'object' && data !== null) {
       // FastAPI returns 422 with detail as an array of validation errors
       if ('detail' in data) {
-        const detail = (data as any).detail;
+        const detail = (data as { detail?: unknown }).detail;
         if (typeof detail === 'string') {
           message = detail;
         } else if (Array.isArray(detail)) {
           // Build a concise message from the validation items
           message = detail
-            .map((item: any) => {
+            .map((item: unknown) => {
               if (typeof item === 'string') return item;
-              const loc = Array.isArray(item.loc) ? item.loc.join('.') : item.loc;
-              return `${loc}: ${item.msg}`;
+              if (item !== null && typeof item === 'object') {
+                const i = item as { loc?: unknown; msg?: string };
+                const loc = Array.isArray(i.loc) ? i.loc.join('.') : String(i.loc ?? '');
+                return `${loc}: ${i.msg ?? ''}`;
+              }
+              return String(item);
             })
             .join('; ');
         }
-      } else if ('message' in data && typeof (data as any).message === 'string') {
-        message = (data as any).message;
+      } else if ('message' in data && typeof (data as { message?: unknown }).message === 'string') {
+        message = (data as { message: string }).message;
       }
     }
 

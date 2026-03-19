@@ -166,7 +166,9 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
         {/* Content */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl" aria-hidden="true">{current.icon}</span>
+            <span className="text-2xl" aria-hidden="true">
+              {current.icon}
+            </span>
             <h2 id="onboarding-title" className="font-bold text-base text-blueStrong">
               {current.title}
             </h2>

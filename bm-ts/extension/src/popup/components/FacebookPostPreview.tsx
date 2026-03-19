@@ -12,7 +12,7 @@ type FacebookPostPreviewProps = {
 export default function FacebookPostPreview({
   imageUrl,
   text,
-  showAsPost = false,
+  showAsPost: _showAsPost = false,
   fontFamily = 'Arial',
   fontSize = 48,
   fontColor = '#ffffff',
@@ -117,7 +117,7 @@ export default function FacebookPostPreview({
 
       // Calculate starting Y position to center the text block
       const totalTextHeight = lines.length * lineHeight;
-      let startY = FACEBOOK_HEIGHT - 280 - totalTextHeight / 2;
+      const startY = FACEBOOK_HEIGHT - 280 - totalTextHeight / 2;
 
       // Limit to max 6 lines
       const displayLines = lines.slice(0, 6);

@@ -40,6 +40,7 @@ import {
   MessageTemplate,
   Contact,
   Post,
+  ListHistoryParams,
 } from '../api/client';
 
 /**
@@ -115,7 +116,7 @@ export type BackgroundMessage =
     }
   | { type: 'messages.cancelQueued'; payload: { id: string } }
   | { type: 'messages.retryQueued'; payload: { id: string } }
-  | { type: 'messages.listHistory' }
+  | { type: 'messages.listHistory'; payload?: ListHistoryParams }
   | { type: 'messages.deleteHistory'; payload: { id: string } }
   // Dashboard messages
   | { type: 'dashboard.getStats' }

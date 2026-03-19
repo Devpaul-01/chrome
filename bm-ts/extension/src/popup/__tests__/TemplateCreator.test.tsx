@@ -40,6 +40,7 @@ vi.mock('../components/ImageLibraryPicker', () => ({
 // interact with its internal <textarea>.
 
 import TemplateCreator from '../components/TemplateCreator';
+import type { TemplateFormData as ComponentTemplateFormData } from '../components/TemplateCreator';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -87,7 +88,10 @@ function getGenderSelect() {
 }
 
 /** Fill all required fields with the given data. */
-async function fillForm(user: ReturnType<typeof userEvent.setup>, data: Partial<TemplateFormData> = {}) {
+async function fillForm(
+  user: ReturnType<typeof userEvent.setup>,
+  data: Partial<TemplateFormData> = {},
+) {
   const d = { ...validData, ...data };
   await user.clear(getTitleInput());
   await user.type(getTitleInput(), d.templateTitle);
@@ -104,13 +108,16 @@ async function fillForm(user: ReturnType<typeof userEvent.setup>, data: Partial<
 // ---------------------------------------------------------------------------
 
 describe('TemplateCreator', () => {
-  let mockOnSubmit: ReturnType<typeof vi.fn>;
-  let mockOnCancel: ReturnType<typeof vi.fn>;
+  let mockOnSubmit: ((data: ComponentTemplateFormData) => Promise<void>) & ReturnType<typeof vi.fn>;
+  let mockOnCancel: (() => void) & ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-    mockOnCancel = vi.fn();
+    mockOnSubmit = vi.fn().mockResolvedValue(undefined) as unknown as ((
+      data: ComponentTemplateFormData,
+    ) => Promise<void>) &
+      ReturnType<typeof vi.fn>;
+    mockOnCancel = vi.fn() as unknown as (() => void) & ReturnType<typeof vi.fn>;
   });
 
   // --- Rendering ------------------------------------------------------------
@@ -166,19 +173,21 @@ describe('TemplateCreator', () => {
   // --- Validation -----------------------------------------------------------
 
   it('shows a validation error when Save is clicked with all empty fields', async () => {
-    const { container } = render(<TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    const { container } = render(
+      <TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />,
+    );
     // Use fireEvent.submit to bypass jsdom HTML5 `required` constraint validation
     // (jsdom enforces required and blocks the onSubmit handler when a required field is empty)
     fireEvent.submit(container.querySelector('form')!);
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
   it('shows a validation error when templateTitle is blank', async () => {
     const user = userEvent.setup();
-    const { container } = render(<TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    const { container } = render(
+      <TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />,
+    );
 
     // Fill every field except templateTitle
     await user.type(getGreetingArea(), validData.greeting);
@@ -223,7 +232,11 @@ describe('TemplateCreator', () => {
   it('shows spinner on Save button while submission is in progress', async () => {
     const user = userEvent.setup();
     let resolveSubmit!: () => void;
-    mockOnSubmit.mockReturnValue(new Promise<void>((res) => { resolveSubmit = res; }));
+    mockOnSubmit.mockReturnValue(
+      new Promise<void>((res) => {
+        resolveSubmit = res;
+      }),
+    );
 
     render(<TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
     await fillForm(user);
@@ -232,9 +245,7 @@ describe('TemplateCreator', () => {
     await user.click(saveBtn);
 
     // While in-flight the button should be busy / disabled
-    await waitFor(() =>
-      expect(saveBtn).toHaveAttribute('aria-busy', 'true'),
-    );
+    await waitFor(() => expect(saveBtn).toHaveAttribute('aria-busy', 'true'));
 
     resolveSubmit();
   });
@@ -271,9 +282,7 @@ describe('TemplateCreator', () => {
     const user = userEvent.setup();
     render(<TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
     await user.click(screen.getByRole('button', { name: /preview/i }));
-    await waitFor(() =>
-      expect(screen.getByTestId('fb-post-preview')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('fb-post-preview')).toBeInTheDocument());
   });
 
   it('Cancel button returns to the create tab from preview', async () => {
@@ -284,9 +293,7 @@ describe('TemplateCreator', () => {
     await waitFor(() => expect(screen.getByTestId('fb-post-preview')).toBeInTheDocument());
     // Cancel resets form AND sets activeTab back to 'create'
     await user.click(screen.getByRole('button', { name: /cancel/i }));
-    await waitFor(() =>
-      expect(screen.queryByTestId('fb-post-preview')).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByTestId('fb-post-preview')).not.toBeInTheDocument());
     expect(getGreetingArea()).toBeInTheDocument();
   });
 

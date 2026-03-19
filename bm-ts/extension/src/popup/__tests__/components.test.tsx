@@ -9,11 +9,10 @@
  *                  submit calls onSubmit
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { within } from '@testing-library/react';
 
 import Spinner from '../components/Spinner';
 import Toast from '../components/Toast';
@@ -75,7 +74,9 @@ describe('Toast', () => {
     const onClose = vi.fn();
     render(<Toast message="Auto" type="success" onClose={onClose} duration={1000} />);
     expect(onClose).not.toHaveBeenCalled();
-    await act(async () => { vi.advanceTimersByTime(1001); });
+    await act(async () => {
+      vi.advanceTimersByTime(1001);
+    });
     expect(onClose).toHaveBeenCalledOnce();
     vi.useRealTimers();
   });
@@ -84,7 +85,9 @@ describe('Toast', () => {
     vi.useFakeTimers();
     const onClose = vi.fn();
     render(<Toast message="Sticky" type="warning" onClose={onClose} duration={0} />);
-    await act(async () => { vi.advanceTimersByTime(10000); });
+    await act(async () => {
+      vi.advanceTimersByTime(10000);
+    });
     expect(onClose).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
@@ -92,9 +95,7 @@ describe('Toast', () => {
   it('applies correct styles for each toast type', () => {
     const types = ['success', 'error', 'warning', 'info'] as const;
     for (const type of types) {
-      const { unmount } = render(
-        <Toast message="test" type={type} onClose={() => {}} />,
-      );
+      const { unmount } = render(<Toast message="test" type={type} onClose={() => {}} />);
       // alert element should be in the document
       expect(screen.getByRole('alert')).toBeInTheDocument();
       unmount();
@@ -251,9 +252,7 @@ describe('AuthForm', () => {
   });
 
   it('displays message text when message prop is provided', () => {
-    render(
-      <AuthForm {...defaultAuthFormProps({ message: 'Login failed. Try again.' })} />,
-    );
+    render(<AuthForm {...defaultAuthFormProps({ message: 'Login failed. Try again.' })} />);
     expect(screen.getByText(/login failed/i)).toBeInTheDocument();
   });
 

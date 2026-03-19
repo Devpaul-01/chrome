@@ -3,6 +3,7 @@ import { sendBackgroundMessage } from '../api';
 import { getErrorMessage, logError } from '../../utils/errors';
 import { useAppContext } from '../context/AppContext';
 import type { Contact } from '../components/ContactList';
+import type { UpdateContactPayload } from '../../api/client';
 
 // Normalises various contact shapes (frontend form or legacy) to the canonical
 // API payload.  Pass `opts.id` when building an update payload.
@@ -17,10 +18,9 @@ function normalizeContactFields(
     return c;
   }
 
-  const name = (
+  const name =
     (c.name as string | undefined) ??
-    `${(c.firstName as string) || ''} ${(c.lastName as string) || ''}`.trim()
-  );
+    `${(c.firstName as string) || ''} ${(c.lastName as string) || ''}`.trim();
 
   let facebook_profile_url: string | undefined =
     (c.facebook_profile_url as string | undefined) ??
@@ -35,7 +35,9 @@ function normalizeContactFields(
   try {
     const d = new Date(c.birthday as string);
     if (!isNaN(d.getTime())) birthday = d.toISOString();
-  } catch { /* keep raw value */ }
+  } catch {
+    /* keep raw value */
+  }
 
   const notesParts: string[] = [];
   if (c.relationship) notesParts.push(`relationship: ${c.relationship}`);
@@ -79,7 +81,10 @@ export function useContacts() {
   }, []);
 
   useEffect(() => {
-    if (!user) { setContacts([]); return; }
+    if (!user) {
+      setContacts([]);
+      return;
+    }
     void loadContacts();
   }, [user, loadContacts]);
 
@@ -111,9 +116,7 @@ export function useContacts() {
   );
 
   const handleUpdateContact = useCallback(
-    async (
-      contact: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>,
-    ): Promise<void> => {
+    async (contact: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> => {
       if (!editingContact) return;
       setIsSubmitting(true);
       setMessage(null);
@@ -121,7 +124,7 @@ export function useContacts() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mapped = normalizeContactFields(contact as Record<string, unknown>, {
           id: editingContact.id,
-        }) as any;
+        }) as unknown as { id: string } & UpdateContactPayload;
         const updated = await sendBackgroundMessage<Contact>({
           type: 'contacts.update',
           payload: mapped,
@@ -165,9 +168,7 @@ export function useContacts() {
   );
 
   const handleImportContacts = useCallback(
-    async (
-      importedContacts: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>[],
-    ): Promise<void> => {
+    async (importedContacts: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<void> => {
       try {
         const newContacts = await sendBackgroundMessage<Contact[]>({
           type: 'contacts.bulkCreate',

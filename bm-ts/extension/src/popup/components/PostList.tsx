@@ -113,8 +113,8 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
         </h2>
 
         <p className="text-xs text-gray-600 mb-5">
-          Manage your Facebook wall post templates. These will be posted to friends' timelines on
-          their birthdays.
+          Manage your Facebook wall post templates. These will be posted to friends&apos; timelines
+          on their birthdays.
         </p>
 
         <div className="card mb-5">
@@ -125,7 +125,9 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
               </span>
               <select
                 value={filterGender}
-                onChange={(e) => setFilterGender(e.target.value as any)}
+                onChange={(e) =>
+                  setFilterGender(e.target.value as 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL')
+                }
                 className="text-field w-full"
               >
                 <option value="ALL">All Genders</option>
@@ -139,7 +141,11 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
               <span className="text-xs font-semibold text-textPrimary mb-2 block">Sort by</span>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) =>
+                  setSortBy(
+                    e.target.value as 'labelAsc' | 'labelDesc' | 'createdAsc' | 'createdDesc',
+                  )
+                }
                 className="text-field w-full"
                 aria-label="Sort posts"
               >
@@ -176,8 +182,7 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
 
                   const genderLabel =
                     gender === 'MALE' ? 'Male' : gender === 'FEMALE' ? 'Female' : 'All';
-                  const genderEmoji =
-                    gender === 'MALE' ? '♂️' : gender === 'FEMALE' ? '♀️' : '✨';
+                  const genderEmoji = gender === 'MALE' ? '♂️' : gender === 'FEMALE' ? '♀️' : '✨';
 
                   return (
                     <div key={gender} className="mb-6">

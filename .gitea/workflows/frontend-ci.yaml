@@ -1,0 +1,75 @@
+name: Frontend CI
+run-name: ${{ gitea.actor }} — frontend CI (${{ gitea.ref_name }})
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  frontend-ci:
+    name: TypeScript · ESLint · Prettier · Build · Test · Audit
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: bm-ts/extension
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Node.js setup ───────────────────────────────────────────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: bm-ts/extension/package-lock.json
+
+      # ── Install dependencies ─────────────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── TypeScript compilation check ─────────────────────────────────────────
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      # ── ESLint ───────────────────────────────────────────────────────────────
+      - name: ESLint
+        run: npm run lint
+
+      # ── Prettier (check only — does not modify files) ────────────────────────
+      - name: Prettier format check
+        run: npx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
+
+      # ── Production build ─────────────────────────────────────────────────────
+      - name: Build extension
+        run: npm run build
+
+      # ── Unit / component tests ───────────────────────────────────────────────
+      - name: Run tests
+        run: npm test
+
+      # ── npm security audit (fails on high or critical severity only) ─────────
+      - name: Security audit
+        run: npm audit --audit-level=high
+
+      # ── Package extension as downloadable artifact ───────────────────────────
+      - name: Package extension zip
+        run: |
+          cd dist
+          zip -r ../extension-dist.zip .
+          cd ..
+          echo "Extension packaged: extension-dist.zip ($(du -sh extension-dist.zip | cut -f1))"
+
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: extension-dist
+          path: bm-ts/extension/extension-dist.zip
+          retention-days: 30

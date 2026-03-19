@@ -21,12 +21,12 @@ export function randomDelay(msMin = 5000, msMax = 15000): Promise<void> {
 // ---------------------------------------------------------------------------
 
 type Gender = Contact['gender']; // 'MALE' | 'FEMALE' | 'NEUTRAL' | undefined
-type TemplateGender = MessageTemplate['gender']; // 'all' | 'male' | 'female'
+type TemplateGender = MessageTemplate['gender']; // 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL'
 
 function contactGenderToTemplateGender(g: Gender): TemplateGender {
-  if (g === 'MALE') return 'male';
-  if (g === 'FEMALE') return 'female';
-  return 'all';
+  if (g === 'MALE') return 'MALE';
+  if (g === 'FEMALE') return 'FEMALE';
+  return 'ALL';
 }
 
 function pickRandom<T>(arr: T[]): T {
@@ -45,7 +45,7 @@ export function selectTemplate(
   const gKey = contactGenderToTemplateGender(gender);
   const exact = templates.filter((t) => t.gender === gKey);
   if (exact.length) return pickRandom(exact);
-  const allGender = templates.filter((t) => t.gender === 'all');
+  const allGender = templates.filter((t) => t.gender === 'ALL');
   if (allGender.length) return pickRandom(allGender);
   return pickRandom(templates);
 }
@@ -71,10 +71,7 @@ export function selectPost(posts: Post[], gender: Gender): Post | null {
 // [Image]      → stripped (image attached separately via clipboard)
 // ---------------------------------------------------------------------------
 
-export function resolveKeywords(
-  text: string,
-  friend: { name: string },
-): string {
+export function resolveKeywords(text: string, friend: { name: string }): string {
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
   return text
     .replace(/\[Tag Person\]/gi, friend.name)

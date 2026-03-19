@@ -91,8 +91,8 @@ export async function updateLastCheck(): Promise<void> {
 const SENT_TODAY_KEY = 'bm_sent_today';
 
 interface SentTodayRecord {
-  date: string;   // YYYY-MM-DD
-  ids: string[];  // facebook_profile_url values (or name if URL is absent)
+  date: string; // YYYY-MM-DD
+  ids: string[]; // facebook_profile_url values (or name if URL is absent)
 }
 
 function todayDateString(): string {

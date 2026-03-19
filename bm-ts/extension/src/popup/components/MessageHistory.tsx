@@ -7,7 +7,10 @@ interface MessageHistoryProps {
   compact?: boolean;
 }
 
-export default function MessageHistory({ onClose, compact = false }: MessageHistoryProps) {
+export default function MessageHistory({
+  onClose: _onClose,
+  compact = false,
+}: MessageHistoryProps) {
   const {
     isLoading,
     error,
@@ -26,7 +29,6 @@ export default function MessageHistory({ onClose, compact = false }: MessageHist
     filteredMessages,
     stats,
     page,
-    pageSize,
     totalItems,
     totalPages,
     goToPage,
@@ -393,7 +395,8 @@ export default function MessageHistory({ onClose, compact = false }: MessageHist
                 </div>
               </div>
               <div className="text-xs text-gray-600">
-                <strong>Birthday:</strong> {new Date(detailMessage.birthday_date).toLocaleDateString()}
+                <strong>Birthday:</strong>{' '}
+                {new Date(detailMessage.birthday_date).toLocaleDateString()}
               </div>
               {detailMessage.error_message && (
                 <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">

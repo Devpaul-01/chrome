@@ -50,35 +50,25 @@ const storageMock = {
       return Promise.resolve(result);
     },
   ),
-  set: vi.fn(
-    (
-      items: Record<string, unknown>,
-      callback?: () => void,
-    ): Promise<void> | void => {
-      for (const [k, v] of Object.entries(items)) {
-        _store.set(k, v);
-      }
-      if (typeof callback === 'function') {
-        callback();
-        return;
-      }
-      return Promise.resolve();
-    },
-  ),
-  remove: vi.fn(
-    (
-      keys: string | string[],
-      callback?: () => void,
-    ): Promise<void> | void => {
-      const keyList = typeof keys === 'string' ? [keys] : keys;
-      for (const k of keyList) _store.delete(k);
-      if (typeof callback === 'function') {
-        callback();
-        return;
-      }
-      return Promise.resolve();
-    },
-  ),
+  set: vi.fn((items: Record<string, unknown>, callback?: () => void): Promise<void> | void => {
+    for (const [k, v] of Object.entries(items)) {
+      _store.set(k, v);
+    }
+    if (typeof callback === 'function') {
+      callback();
+      return;
+    }
+    return Promise.resolve();
+  }),
+  remove: vi.fn((keys: string | string[], callback?: () => void): Promise<void> | void => {
+    const keyList = typeof keys === 'string' ? [keys] : keys;
+    for (const k of keyList) _store.delete(k);
+    if (typeof callback === 'function') {
+      callback();
+      return;
+    }
+    return Promise.resolve();
+  }),
   clear: vi.fn((callback?: () => void): Promise<void> | void => {
     _store.clear();
     if (typeof callback === 'function') {

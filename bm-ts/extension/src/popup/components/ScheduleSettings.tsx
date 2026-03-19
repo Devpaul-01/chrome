@@ -23,9 +23,7 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [utcTime, setUtcTime] = useState(() =>
-    new Date().toUTCString().replace(' GMT', ' UTC'),
-  );
+  const [utcTime, setUtcTime] = useState(() => new Date().toUTCString().replace(' GMT', ' UTC'));
 
   useEffect(() => {
     loadSchedules();
@@ -150,7 +148,8 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
           {/* Add new schedule */}
           <form onSubmit={handleAddSchedule} className="mb-4">
             <label htmlFor="daysBefore" className="block text-sm font-medium mb-1">
-              Send messages{' '}<HelpTooltip label="Positive numbers = days before birthday (e.g. 3 = 3 days before). 0 = on the birthday. Negative numbers = days after (e.g. -1 = 1 day after)." />
+              Send messages{' '}
+              <HelpTooltip label="Positive numbers = days before birthday (e.g. 3 = 3 days before). 0 = on the birthday. Negative numbers = days after (e.g. -1 = 1 day after)." />
             </label>
             <div className="flex gap-2 items-center mb-2">
               <input

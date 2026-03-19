@@ -41,7 +41,10 @@ export function useMessageTemplates() {
   }, []);
 
   useEffect(() => {
-    if (!user) { setMessageTemplates([]); return; }
+    if (!user) {
+      setMessageTemplates([]);
+      return;
+    }
     void loadMessageTemplates();
   }, [user, loadMessageTemplates]);
 

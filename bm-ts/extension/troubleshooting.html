@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Troubleshooting Guide — BirthdayMessaging</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #f9f9f9;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 3rem 3.5rem;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    }
+    header { margin-bottom: 2.5rem; border-bottom: 2px solid #f0ece8; padding-bottom: 1.5rem; }
+    .logo { font-size: 1.6rem; font-weight: 800; color: #ca4f02; letter-spacing: -0.5px; }
+    .logo span { color: #1a1a2e; }
+    h1 { font-size: 2rem; font-weight: 700; color: #1a1a2e; margin-top: 0.5rem; }
+    .meta { color: #666; font-size: 0.9rem; margin-top: 0.4rem; }
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #ca4f02;
+      margin-top: 2.5rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid #f0ece8;
+    }
+    h3 { font-size: 1rem; font-weight: 600; color: #1a1a2e; margin-top: 1.25rem; margin-bottom: 0.4rem; }
+    p { margin-bottom: 0.9rem; color: #333; }
+    ul, ol { margin: 0.5rem 0 0.9rem 1.5rem; }
+    li { margin-bottom: 0.35rem; color: #333; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+    th { background: #fdf4ef; color: #ca4f02; font-weight: 700; text-align: left; padding: 0.65rem 1rem; border: 1px solid #f0ece8; }
+    td { padding: 0.6rem 1rem; border: 1px solid #f0ece8; vertical-align: top; }
+    tr:nth-child(even) td { background: #fafafa; }
+    .highlight-box {
+      background: #fdf4ef;
+      border-left: 4px solid #ca4f02;
+      border-radius: 0 8px 8px 0;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      font-size: 0.95rem;
+    }
+    .warning-box {
+      background: #fff8f0;
+      border-left: 4px solid #e07b39;
+      border-radius: 0 8px 8px 0;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      font-size: 0.95rem;
+    }
+    code { font-family: monospace; background: #f5f0ec; padding: 0.1em 0.4em; border-radius: 3px; font-size: 0.9em; }
+    a { color: #ca4f02; }
+    footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid #f0ece8; font-size: 0.85rem; color: #888; }
+    @media (max-width: 640px) {
+      .container { padding: 2rem 1.25rem; }
+      h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo">Birthday<span>Messaging</span></div>
+    <h1>Troubleshooting Guide</h1>
+    <p class="meta">Solutions to common issues with BirthdayMessaging</p>
+  </header>
+
+  <div class="highlight-box">
+    <strong>Tip:</strong> Most issues are resolved by reloading the extension. Go to
+    <code>chrome://extensions/</code>, find BirthdayMessaging, and click the reload (↺) button,
+    then reopen the popup.
+  </div>
+
+  <!-- Extension Won't Load -->
+  <h2>Extension Won't Load / Popup Is Blank</h2>
+  <p><strong>Symptoms:</strong> Clicking the 🎂 toolbar icon opens a blank or broken popup.</p>
+  <ol>
+    <li>Go to <code>chrome://extensions/</code> and confirm BirthdayMessaging is enabled (toggle is blue).</li>
+    <li>Click <strong>Details</strong> → the reload (↺) icon to force-reload the extension.</li>
+    <li>Close and reopen the popup.</li>
+    <li>If still blank, uninstall and reinstall the extension from the Chrome Web Store.</li>
+  </ol>
+
+  <!-- Can't Log In -->
+  <h2>Can't Log In</h2>
+  <p><strong>Symptoms:</strong> Login form submits but shows an error, or the page spins indefinitely.</p>
+  <table>
+    <thead>
+      <tr><th>Error message</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>"Invalid credentials"</td><td>Double-check your email and password. Passwords are case-sensitive.</td></tr>
+      <tr><td>"Account locked"</td><td>Too many failed attempts. Wait 15 minutes, then try again.</td></tr>
+      <tr><td>"Network error"</td><td>Check your internet connection and try again in a moment.</td></tr>
+      <tr><td>Spinner never stops</td><td>The backend may be temporarily unreachable. Try again in a few minutes.</td></tr>
+    </tbody>
+  </table>
+  <p>
+    If you're unsure of your password, use <strong>Forgot password?</strong> on the login screen
+    to reset it. If the issue persists, try clearing the extension's storage: go to
+    <code>chrome://extensions/</code> → BirthdayMessaging → <strong>Details</strong> →
+    <strong>Clear site data</strong>.
+  </p>
+
+  <!-- Password Reset -->
+  <h2>Password Reset Email Never Arrives</h2>
+  <ol>
+    <li>Check your <strong>spam / junk folder</strong> — the email is sent from our SendGrid domain.</li>
+    <li>Wait up to 5 minutes; delivery can occasionally be delayed.</li>
+    <li>Make sure you entered the correct email address (the one used to register).</li>
+    <li>Request a new reset link — previous links expire after 1 hour.</li>
+    <li>If the problem persists, contact support with your registered email address.</li>
+  </ol>
+
+  <!-- Automation Not Running -->
+  <h2>Automation Isn't Running / Birthdays Being Missed</h2>
+  <p><strong>Symptoms:</strong> No new entries in Message History; birthdays are being missed.</p>
+  <p>Work through this checklist:</p>
+  <ol>
+    <li>
+      <strong>Automation status</strong> — Go to <strong>Messages → Automation</strong> and confirm
+      the status shows <strong>Active</strong>. If it shows "Emergency Stop active", click the clear
+      button to resume.
+    </li>
+    <li>
+      <strong>Schedule is enabled</strong> — Go to <strong>Messages → Scheduling</strong> and verify
+      at least one schedule is toggled <strong>On</strong>.
+    </li>
+    <li>
+      <strong>Template exists</strong> — Go to <strong>Messages → Templates</strong> and confirm you
+      have at least one saved template.
+    </li>
+    <li>
+      <strong>Chrome was open</strong> — The extension requires Chrome to be running at the scheduled
+      check time. If Chrome was closed, the next check will run at the next scheduled interval.
+    </li>
+    <li>
+      <strong>Max messages not reached</strong> — Check <strong>Messages → Automation → Max Messages
+      Per Run</strong>. If set too low, messages may have been capped before reaching all birthdays.
+    </li>
+    <li>
+      <strong>Facebook is logged in</strong> — Open a Facebook tab and confirm you're logged in to
+      your Facebook account.
+    </li>
+  </ol>
+
+  <!-- Duplicate Messages -->
+  <h2>Duplicate Messages / Messages Sent to Wrong People</h2>
+  <p><strong>Symptoms:</strong> Some friends receive more than one message; wrong friends are being messaged.</p>
+  <ol>
+    <li>Check <strong>Messages → History</strong> to see exactly who was messaged and when.</li>
+    <li>
+      If duplicates occurred today, click <strong>Clear Sent-Today</strong> in
+      <strong>Messages → Automation</strong> to reset the deduplication list, then reload Chrome
+      before the next run.
+    </li>
+    <li>
+      Review your <strong>Contacts</strong> list for duplicate entries (the same person added twice
+      with different profile URLs).
+    </li>
+    <li>
+      If messages go to people they shouldn't, check your schedule's <strong>Days Before</strong>
+      setting — a negative value sends a <em>follow-up</em> after the birthday, not on it.
+    </li>
+  </ol>
+
+  <!-- Wrong Template -->
+  <h2>Template Not Being Used / Wrong Template Sent</h2>
+  <ol>
+    <li>
+      Go to <strong>Messages → Templates</strong> and confirm all intended templates are saved
+      (not just drafted).
+    </li>
+    <li>
+      Check the <strong>Gender</strong> field on each template. A template set to <strong>Male</strong>
+      or <strong>Female</strong> is only used for contacts with that gender. Set to <strong>All</strong>
+      to use for everyone.
+    </li>
+    <li>
+      If a contact's gender isn't set, the extension uses a neutral or "All" template. Update the
+      contact's gender in the <strong>Contacts</strong> tab to enable gender-specific templates.
+    </li>
+  </ol>
+
+  <!-- Timeline Post Not Showing -->
+  <h2>Timeline Post Not Appearing on Facebook</h2>
+  <p><strong>Symptoms:</strong> Automation runs successfully but no post appears on the friend's timeline.</p>
+  <ol>
+    <li>Go to <strong>Messages → Timeline Posts</strong> and confirm a post is created and enabled.</li>
+    <li>Check the post's <strong>Gender</strong> setting — the same rules apply as for templates.</li>
+    <li>
+      Open Facebook manually and confirm you haven't been restricted from posting on friends' timelines
+      (some privacy settings can block this).
+    </li>
+    <li>
+      Check <strong>Messages → History</strong> — the history entry shows whether a timeline post
+      was attempted alongside the Messenger message.
+    </li>
+  </ol>
+
+  <!-- CSV Export -->
+  <h2>CSV Export Is Empty or Garbled</h2>
+  <ol>
+    <li>
+      Make sure you have messages visible in Message History before exporting. Apply filters first
+      if your history is large.
+    </li>
+    <li>
+      If the file contains odd characters, open it in Excel or Google Sheets using
+      <strong>UTF-8</strong> encoding (usually an option in the import dialog).
+    </li>
+    <li>
+      To inspect the raw content, open the downloaded file in a plain text editor such as Notepad.
+    </li>
+  </ol>
+
+  <!-- Stripe / Subscription -->
+  <h2>Stripe / Subscription Issues</h2>
+  <p><strong>Symptoms:</strong> Checkout doesn't open; subscription shows inactive after payment.</p>
+  <table>
+    <thead>
+      <tr><th>Symptom</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Checkout page won't open</td>
+        <td>Disable popup blockers or ad blockers temporarily. Stripe's checkout opens in a new tab.</td>
+      </tr>
+      <tr>
+        <td>Subscription still "inactive" after payment</td>
+        <td>Wait up to 1 minute for the webhook to process, then reload the extension. If still inactive after 5 minutes, contact support with your Stripe payment confirmation email.</td>
+      </tr>
+      <tr>
+        <td>Unexpected or duplicate charge</td>
+        <td>Contact support immediately with your payment confirmation. Do not attempt to pay again.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SMTP -->
+  <h2>SMTP / Email Notification Issues</h2>
+  <ol>
+    <li>
+      Go to <strong>Account → SMTP Settings</strong> and verify all fields:
+      <ul>
+        <li><strong>Host</strong> — e.g. <code>smtp.gmail.com</code></li>
+        <li><strong>Port</strong> — typically <code>587</code> (TLS) or <code>465</code> (SSL)</li>
+        <li><strong>Username</strong> — your full email address</li>
+        <li><strong>Password</strong> — your email password or app-specific password</li>
+      </ul>
+    </li>
+    <li>
+      <strong>Gmail users:</strong> You must use an <strong>App Password</strong>, not your regular
+      Google account password. Generate one at
+      <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">myaccount.google.com/apppasswords</a>.
+    </li>
+    <li>
+      Check that your email provider allows third-party SMTP access. Some providers require you to
+      enable this in their security settings.
+    </li>
+  </ol>
+
+  <!-- Extension Slow -->
+  <h2>Extension Becomes Slow Over Time</h2>
+  <ol>
+    <li>
+      Go to <strong>Messages → History</strong> and delete old history entries you no longer need.
+    </li>
+    <li>Reload the extension from <code>chrome://extensions/</code>.</li>
+    <li>Restart Chrome.</li>
+  </ol>
+
+  <!-- Still Having Issues -->
+  <h2>Still Having Issues?</h2>
+  <div class="warning-box">
+    <strong>Before contacting support</strong>, collect the following to help us diagnose the issue quickly.
+  </div>
+  <ol>
+    <li>
+      <strong>Popup console errors:</strong> Right-click the popup → <strong>Inspect</strong> →
+      <strong>Console</strong> tab. Copy any red error messages.
+    </li>
+    <li>
+      <strong>Background service worker logs:</strong> Go to <code>chrome://extensions/</code> →
+      BirthdayMessaging → <strong>Details</strong> → click <strong>Inspect views: service worker</strong>.
+      Check the Console tab for errors.
+    </li>
+    <li>
+      Contact support with:
+      <ul>
+        <li>A description of the problem and steps to reproduce it</li>
+        <li>Any error messages from the console</li>
+        <li>Your registered email address</li>
+        <li>Your Chrome version (<code>chrome://version/</code>)</li>
+      </ul>
+    </li>
+  </ol>
+
+  <footer>
+    &copy; 2026 CTM Media Group &nbsp;·&nbsp;
+    <a href="quick-start.html">Quick Start</a> &nbsp;·&nbsp;
+    <a href="faq.html">FAQ</a> &nbsp;·&nbsp;
+    <a href="privacy-policy.html">Privacy Policy</a> &nbsp;·&nbsp;
+    <a href="terms-of-service.html">Terms of Service</a> &nbsp;·&nbsp;
+    BirthdayMessaging is not affiliated with Meta Platforms, Inc.
+  </footer>
+
+</div>
+</body>
+</html>

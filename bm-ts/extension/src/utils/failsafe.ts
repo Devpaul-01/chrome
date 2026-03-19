@@ -206,10 +206,7 @@ export async function getActivityLog(): Promise<ActivityLogEntry[]> {
   return result[ACTIVITY_LOG_KEY] ?? [];
 }
 
-export async function addActivityLogEntry(
-  level: ActivityLogLevel,
-  message: string,
-): Promise<void> {
+export async function addActivityLogEntry(level: ActivityLogLevel, message: string): Promise<void> {
   const log = await getActivityLog();
   log.unshift({
     timestamp: new Date().toISOString(),
@@ -270,7 +267,10 @@ export async function recordSendFailure(): Promise<{ shouldPause: boolean; pause
     pauseMinutes = 30;
     shouldPause = true;
     state.pausedUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-    await addActivityLogEntry('warning', 'Second consecutive send failure — pausing for 30 minutes');
+    await addActivityLogEntry(
+      'warning',
+      'Second consecutive send failure — pausing for 30 minutes',
+    );
   } else {
     pauseMinutes = 10;
     shouldPause = true;
@@ -306,11 +306,11 @@ const RESTRICTION_INDICATORS = [
   'temporarily blocked',
   'unusual activity',
   'confirm your identity',
-  'you\'re temporarily restricted',
+  "you're temporarily restricted",
   'action blocked',
   'try again later',
   'we limit how often',
-  'you can\'t use this feature',
+  "you can't use this feature",
   'your account has been locked',
 ];
 
@@ -423,7 +423,7 @@ export async function requestAlarmsPermission(): Promise<boolean> {
           resolve(Boolean(granted));
         });
       });
-    } catch (_e) {
+    } catch {
       // Any synchronous error (e.g., API not available) results in a safe fallback.
       resolve(false);
     }

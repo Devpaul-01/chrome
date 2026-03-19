@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -84,9 +84,7 @@ describe('Dashboard', () => {
 
   it('shows a spinner while loading stats', async () => {
     // Never resolve so the component stays in loading state
-    (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockReturnValue(
-      new Promise(() => {}),
-    );
+    (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
     render(<Dashboard onClose={vi.fn()} />);
     expect(screen.getByRole('status')).toBeInTheDocument(); // Spinner
   });
@@ -96,17 +94,13 @@ describe('Dashboard', () => {
       new Error('Service unavailable'),
     );
     render(<Dashboard onClose={vi.fn()} />);
-    await waitFor(() =>
-      expect(screen.getByText(/service unavailable/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/service unavailable/i)).toBeInTheDocument());
   });
 
   it('renders the success rate hero card when stats load', async () => {
     setupSendMessage(mockStats);
     render(<Dashboard onClose={vi.fn()} />);
-    await waitFor(() =>
-      expect(screen.getByText('92%')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('92%')).toBeInTheDocument());
   });
 
   it('renders key stat cards (Total Sent, Today, This Week, This Month)', async () => {
@@ -131,33 +125,25 @@ describe('Dashboard', () => {
   it('shows automation as Active when automation_enabled=true', async () => {
     setupSendMessage(mockStats);
     render(<Dashboard onClose={vi.fn()} />);
-    await waitFor(() =>
-      expect(screen.getByText(/✓ active/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/✓ active/i)).toBeInTheDocument());
   });
 
   it('shows automation as Inactive when automation_enabled=false', async () => {
     setupSendMessage({ ...mockStats, automation_enabled: false });
     render(<Dashboard onClose={vi.fn()} />);
-    await waitFor(() =>
-      expect(screen.getByText(/○ inactive/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/○ inactive/i)).toBeInTheDocument());
   });
 
   it('shows "Not scheduled" when next_scheduled_check is absent', async () => {
     setupSendMessage({ ...mockStats, automation_enabled: true, next_scheduled_check: undefined });
     render(<Dashboard onClose={vi.fn()} />);
-    await waitFor(() =>
-      expect(screen.getByText('Not scheduled')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText('Not scheduled')).toBeInTheDocument());
   });
 
   it('shows "Unable to load statistics" when stats is null after loading', async () => {
     setupSendMessage(null);
     render(<Dashboard onClose={vi.fn()} />);
-    await waitFor(() =>
-      expect(screen.getByText(/unable to load statistics/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/unable to load statistics/i)).toBeInTheDocument());
   });
 
   it('calls sendMessage again when Refresh button is clicked', async () => {

@@ -26,16 +26,17 @@ const mockEditMessage = vi.fn();
 const mockSetExpandedId = vi.fn();
 
 const defaultHookReturn = {
-  messages: [],
+  messages: [] as QueuedMessage[],
   isLoading: false,
-  error: null,
-  successMessage: null,
-  expandedId: null,
+  error: null as string | null,
+  successMessage: null as string | null,
+  expandedId: null as string | null,
   setExpandedId: mockSetExpandedId,
   loadQueue: mockLoadQueue,
   cancelMessage: mockCancelMessage,
   retryMessage: mockRetryMessage,
   editMessage: mockEditMessage,
+  live: false,
 };
 
 vi.mock('../hooks/useMessages', () => ({
@@ -80,8 +81,10 @@ function makeMessage(overrides: Partial<QueuedMessage> = {}): QueuedMessage {
   };
 }
 
-function mockHook(partial: Partial<typeof defaultHookReturn> = {}) {
-  vi.mocked(useMessageQueue).mockReturnValue({ ...defaultHookReturn, ...partial } as ReturnType<typeof useMessageQueue>);
+function mockHook(partial: Partial<ReturnType<typeof useMessageQueue>> = {}) {
+  vi.mocked(useMessageQueue).mockReturnValue({ ...defaultHookReturn, ...partial } as ReturnType<
+    typeof useMessageQueue
+  >);
 }
 
 // ---------------------------------------------------------------------------
@@ -119,9 +122,7 @@ describe('MessageQueue', () => {
   it('shows supporting empty-state description text', () => {
     mockHook({ messages: [] });
     render(<MessageQueue onClose={vi.fn()} />);
-    expect(
-      screen.getByText(/messages will appear here when scheduled/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/messages will appear here when scheduled/i)).toBeInTheDocument();
   });
 
   // --- Error / success banners ----------------------------------------------

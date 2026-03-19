@@ -29,8 +29,8 @@ const mockGoToPage = vi.fn();
 
 const defaultHookReturn = {
   isLoading: false,
-  error: null,
-  filterStatus: 'all' as const,
+  error: null as string | null,
+  filterStatus: 'all' as 'all' | 'sent' | 'delivered' | 'failed',
   setFilterStatus: mockSetFilterStatus,
   searchQuery: '',
   setSearchQuery: mockSetSearchQuery,
@@ -38,11 +38,12 @@ const defaultHookReturn = {
   setStartDate: mockSetStartDate,
   endDate: '',
   setEndDate: mockSetEndDate,
-  expandedId: null,
+  expandedId: null as string | null,
   setExpandedId: mockSetExpandedId,
   loadHistory: mockLoadHistory,
   deleteMessage: mockDeleteMessage,
-  filteredMessages: [],
+  messages: [] as MessageHistoryItem[],
+  filteredMessages: [] as MessageHistoryItem[],
   stats: { total: 0, sent: 0, delivered: 0, failed: 0 },
   page: 1,
   pageSize: 25,
@@ -91,7 +92,7 @@ function makeMessage(overrides: Partial<MessageHistoryItem> = {}): MessageHistor
   };
 }
 
-function mockHook(partial: Partial<typeof defaultHookReturn> = {}) {
+function mockHook(partial: Partial<ReturnType<typeof useMessageHistory>> = {}) {
   vi.mocked(useMessageHistory).mockReturnValue({
     ...defaultHookReturn,
     ...partial,
@@ -151,7 +152,12 @@ describe('MessageHistory', () => {
   });
 
   it('shows "No matching messages" when startDate is active', () => {
-    mockHook({ filteredMessages: [], searchQuery: '', filterStatus: 'all', startDate: '2024-01-01' });
+    mockHook({
+      filteredMessages: [],
+      searchQuery: '',
+      filterStatus: 'all',
+      startDate: '2024-01-01',
+    });
     render(<MessageHistory onClose={vi.fn()} />);
     expect(screen.getByText('No matching messages')).toBeInTheDocument();
   });
@@ -343,7 +349,11 @@ describe('MessageHistory', () => {
   });
 
   it('shows error_message in expanded inline panel when present', () => {
-    const msg = makeMessage({ id: 'err-msg', status: 'failed', error_message: 'Post limit reached' });
+    const msg = makeMessage({
+      id: 'err-msg',
+      status: 'failed',
+      error_message: 'Post limit reached',
+    });
     mockHook({ filteredMessages: [msg], expandedId: 'err-msg' });
     render(<MessageHistory onClose={vi.fn()} />);
     expect(screen.getByText(/post limit reached/i)).toBeInTheDocument();

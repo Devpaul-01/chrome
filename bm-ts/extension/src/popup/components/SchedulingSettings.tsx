@@ -12,7 +12,6 @@ export default function SchedulingSettings() {
           <AutomationSettings onClose={() => {}} showClose={false} />
         </div>
       </div>
-
     </div>
   );
 }

@@ -27,7 +27,9 @@ type SourceTab = 'facebook' | 'file';
 
 function todayISO(): string {
   const n = new Date();
-  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(
+    n.getDate(),
+  ).padStart(2, '0')}`;
 }
 
 export default function ImportContactsModal({ onClose, onImport }: ImportContactsModalProps) {
@@ -83,10 +85,14 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
   };
 
   // ── File upload ────────────────────────────────────────────────
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
   const handleDragLeave = () => setIsDragging(false);
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault(); setIsDragging(false);
+    e.preventDefault();
+    setIsDragging(false);
     if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
   };
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
@@ -135,7 +141,8 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
       const c: any = {};
       headers.forEach((h, idx) => {
         if (h === 'name') c.name = values[idx];
-        if (['facebook_profile_url', 'facebook_url', 'facebook'].includes(h)) c.facebook_profile_url = values[idx];
+        if (['facebook_profile_url', 'facebook_url', 'facebook'].includes(h))
+          c.facebook_profile_url = values[idx];
         if (['birthday', 'birth_date'].includes(h)) c.birthday = values[idx];
         if (h === 'gender') {
           const g = values[idx].toUpperCase();
@@ -144,7 +151,8 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
         if (['notes', 'note'].includes(h)) c.notes = values[idx];
       });
       if (!c.name) {
-        let fn = '', ln = '';
+        let fn = '',
+          ln = '';
         headers.forEach((h, idx) => {
           if (['firstname', 'first_name'].includes(h)) fn = values[idx];
           if (['lastname', 'last_name'].includes(h)) ln = values[idx];
@@ -196,7 +204,10 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
 
   // ── Render ─────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{ zIndex: 9999 }}>
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+      style={{ zIndex: 9999 }}
+    >
       <div
         ref={dialogRef}
         role="dialog"
@@ -209,7 +220,13 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
           <h2 id="import-contacts-title" className="text-xl font-semibold text-blueStrong">
             {showPreview ? 'Preview Contacts' : 'Import Contacts'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none" aria-label="Close modal">×</button>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+            aria-label="Close modal"
+          >
+            ×
+          </button>
         </div>
 
         {!showPreview ? (
@@ -218,17 +235,27 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
             <div className="flex border-b border-gray-200 flex-shrink-0">
               <button
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
-                  sourceTab === 'facebook' ? 'text-orangeBrand border-b-2 border-orangeBrand' : 'text-gray-600 hover:text-gray-800'
+                  sourceTab === 'facebook'
+                    ? 'text-orangeBrand border-b-2 border-orangeBrand'
+                    : 'text-gray-600 hover:text-gray-800'
                 }`}
-                onClick={() => { setSourceTab('facebook'); setError(null); }}
+                onClick={() => {
+                  setSourceTab('facebook');
+                  setError(null);
+                }}
               >
                 From Facebook
               </button>
               <button
                 className={`flex-1 py-3 px-4 text-sm font-medium ${
-                  sourceTab === 'file' ? 'text-orangeBrand border-b-2 border-orangeBrand' : 'text-gray-600 hover:text-gray-800'
+                  sourceTab === 'file'
+                    ? 'text-orangeBrand border-b-2 border-orangeBrand'
+                    : 'text-gray-600 hover:text-gray-800'
                 }`}
-                onClick={() => { setSourceTab('file'); setError(null); }}
+                onClick={() => {
+                  setSourceTab('file');
+                  setError(null);
+                }}
               >
                 From File
               </button>
@@ -238,14 +265,17 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
               {sourceTab === 'facebook' ? (
                 <div className="space-y-5">
                   <p className="text-sm text-gray-700 leading-relaxed">
-                    Import your friends' birthdays directly from Facebook. The extension will scan
-                    the Friends' Birthdays page and extract names, profile URLs and birthday dates.
+                    Import your friends&apos; birthdays directly from Facebook. The extension will
+                    scan the Friends&apos; Birthdays page and extract names, profile URLs and
+                    birthday dates.
                   </p>
 
                   {/* Steps */}
                   <ol className="space-y-3 text-sm">
                     <li className="flex gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orangeBrand text-white text-xs font-bold flex items-center justify-center">1</span>
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orangeBrand text-white text-xs font-bold flex items-center justify-center">
+                        1
+                      </span>
                       <span className="text-gray-700">
                         Open{' '}
                         <a
@@ -253,22 +283,30 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                           target="_blank"
                           rel="noreferrer"
                           className="text-blueStrong underline hover:text-blueBrand"
-                          onClick={(e) => { e.preventDefault(); chrome.tabs.create({ url: 'https://www.facebook.com/birthdays' }); }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            chrome.tabs.create({ url: 'https://www.facebook.com/birthdays' });
+                          }}
                         >
                           facebook.com/birthdays
                         </a>{' '}
-                        or navigate to <strong>Friends &gt; Birthdays</strong> on Facebook, and wait for the page to fully load.
+                        or navigate to <strong>Friends &gt; Birthdays</strong> on Facebook, and wait
+                        for the page to fully load.
                       </span>
                     </li>
                     <li className="flex gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orangeBrand text-white text-xs font-bold flex items-center justify-center">2</span>
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orangeBrand text-white text-xs font-bold flex items-center justify-center">
+                        2
+                      </span>
                       <span className="text-gray-700">
                         Scroll down to load more birthdays if needed, then come back here and click
                         <strong> Scan Facebook</strong> below.
                       </span>
                     </li>
                     <li className="flex gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orangeBrand text-white text-xs font-bold flex items-center justify-center">3</span>
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orangeBrand text-white text-xs font-bold flex items-center justify-center">
+                        3
+                      </span>
                       <span className="text-gray-700">
                         Review the contacts found and confirm the import.
                       </span>
@@ -276,7 +314,9 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                   </ol>
 
                   {error && (
-                    <div className="p-3 rounded bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
+                    <div className="p-3 rounded bg-red-50 border border-red-200 text-red-700 text-sm">
+                      {error}
+                    </div>
                   )}
 
                   {isScraping ? (
@@ -284,10 +324,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                       <Spinner size="md" message="Scanning Facebook birthdays page..." />
                     </div>
                   ) : (
-                    <button
-                      onClick={handleScrapeFromFacebook}
-                      className="btn-orange w-full"
-                    >
+                    <button onClick={handleScrapeFromFacebook} className="btn-orange w-full">
                       Scan Facebook
                     </button>
                   )}
@@ -295,8 +332,9 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
               ) : (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-600">
-                    Upload a <strong>.csv</strong>, <strong>.json</strong>, or <strong>.vcf</strong> file
-                    containing contacts with <code>name</code>, <code>facebook_profile_url</code>, and
+                    Upload a <strong>.csv</strong>, <strong>.json</strong>, or <strong>.vcf</strong>{' '}
+                    file containing contacts with <code>name</code>,{' '}
+                    <code>facebook_profile_url</code>, and
                     <code> birthday</code> fields.
                   </p>
                   <div
@@ -305,12 +343,16 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
                     className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition ${
-                      isDragging ? 'border-blueBrand bg-blue-50' : 'border-blueStrong hover:border-blueBrand'
+                      isDragging
+                        ? 'border-blueBrand bg-blue-50'
+                        : 'border-blueStrong hover:border-blueBrand'
                     }`}
                   >
                     <div className="text-4xl mb-2">📁</div>
                     <p className="text-sm text-gray-600">
-                      Drag and drop your file here<br />or click to select a file
+                      Drag and drop your file here
+                      <br />
+                      or click to select a file
                     </p>
                     <input
                       ref={fileInputRef}
@@ -327,14 +369,18 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                     </div>
                   )}
                   {error && (
-                    <div className="p-3 rounded bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
+                    <div className="p-3 rounded bg-red-50 border border-red-200 text-red-700 text-sm">
+                      {error}
+                    </div>
                   )}
                 </div>
               )}
             </div>
 
             <div className="p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
-              <button onClick={onClose} className="btn-outline-orange">Cancel</button>
+              <button onClick={onClose} className="btn-outline-orange">
+                Cancel
+              </button>
             </div>
           </>
         ) : (
@@ -343,7 +389,8 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
             <div className="p-4 overflow-y-auto flex-1">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm text-gray-700 font-medium">
-                  Found <span className="text-orangeBrand font-bold">{parsedContacts.length}</span> contact{parsedContacts.length !== 1 ? 's' : ''}
+                  Found <span className="text-orangeBrand font-bold">{parsedContacts.length}</span>{' '}
+                  contact{parsedContacts.length !== 1 ? 's' : ''}
                   {selectedFileName ? ` in ${selectedFileName}` : ' on the Facebook page'}
                 </p>
                 {missingDateCount > 0 && (
@@ -354,7 +401,8 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
               </div>
               {missingDateCount > 0 && (
                 <p className="text-xs text-gray-500 mb-3">
-                  Contacts marked with ⚠ had no birthday found on the page — today&apos;s date has been set as a placeholder. Edit the contact after import to correct it.
+                  Contacts marked with ⚠ had no birthday found on the page — today&apos;s date has
+                  been set as a placeholder. Edit the contact after import to correct it.
                 </p>
               )}
               <div className="space-y-2">
@@ -362,10 +410,15 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                   <div key={i} className="p-3 border border-gray-200 rounded text-sm">
                     <p className="font-semibold">{c.name}</p>
                     <p className="text-xs text-gray-500 truncate">{c.facebook_profile_url}</p>
-                    <p className={`text-xs mt-0.5 ${
-                      c.birthday === todayISO() && missingDateCount > 0 ? 'text-yellow-600' : 'text-orangeBrand'
-                    }`}>
-                      {c.birthday === todayISO() && missingDateCount > 0 ? '⚠ ' : ''}Birthday: {c.birthday}
+                    <p
+                      className={`text-xs mt-0.5 ${
+                        c.birthday === todayISO() && missingDateCount > 0
+                          ? 'text-yellow-600'
+                          : 'text-orangeBrand'
+                      }`}
+                    >
+                      {c.birthday === todayISO() && missingDateCount > 0 ? '⚠ ' : ''}Birthday:{' '}
+                      {c.birthday}
                     </p>
                   </div>
                 ))}
@@ -373,11 +426,15 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
             </div>
 
             {error && (
-              <div className="mx-4 mb-2 p-3 rounded bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
+              <div className="mx-4 mb-2 p-3 rounded bg-red-50 border border-red-200 text-red-700 text-sm">
+                {error}
+              </div>
             )}
 
             <div className="p-4 border-t border-gray-200 flex justify-between flex-shrink-0">
-              <button onClick={handleBack} className="btn-outline-orange">Back</button>
+              <button onClick={handleBack} className="btn-outline-orange">
+                Back
+              </button>
               <button onClick={handleImport} className="btn-orange">
                 Import {parsedContacts.length} Contact{parsedContacts.length !== 1 ? 's' : ''}
               </button>

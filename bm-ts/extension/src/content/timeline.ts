@@ -9,7 +9,6 @@
  * - Submit posts to friend timelines
  */
 
-const DEFAULT_TIMEOUT = 10000;
 const SHORT_DELAY = 1000;
 const MEDIUM_DELAY = 2000;
 const LONG_DELAY = 3000;
@@ -347,7 +346,7 @@ export async function attachImageToPost(
 
         textbox.dispatchEvent(pasteEvent);
       }
-    } catch (e) {
+    } catch {
       // Fallback to execCommand
       document.execCommand('paste');
     }
@@ -425,10 +424,17 @@ export async function submitPost(): Promise<boolean> {
       // This mirrors the legacy approach for dialogs that don't expose a Post button.
       const textbox =
         document.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]') ??
-        document.activeElement as HTMLElement | null;
+        (document.activeElement as HTMLElement | null);
       if (textbox) {
         console.log('[BM Timeline] No Post button found — dispatching Enter key on textbox');
-        textbox.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+        textbox.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'Enter',
+            keyCode: 13,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
         await delay(LONG_DELAY);
         return true;
       }
