@@ -44,7 +44,7 @@ from app.core.jwt import (
     ensure_token_type,
 )
 from app.core.security import hash_password, verify_password
-from app.db.models import User, RevokedToken
+from app.db.models import User, RevokedToken, UserSession
 from app.db.session import get_db
 from app.schemas.auth import (
     ActiveSession,
