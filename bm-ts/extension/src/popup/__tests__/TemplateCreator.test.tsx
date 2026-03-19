@@ -40,6 +40,7 @@ vi.mock('../components/ImageLibraryPicker', () => ({
 // interact with its internal <textarea>.
 
 import TemplateCreator from '../components/TemplateCreator';
+import type { TemplateFormData as ComponentTemplateFormData } from '../components/TemplateCreator';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -104,13 +105,13 @@ async function fillForm(user: ReturnType<typeof userEvent.setup>, data: Partial<
 // ---------------------------------------------------------------------------
 
 describe('TemplateCreator', () => {
-  let mockOnSubmit: ReturnType<typeof vi.fn>;
-  let mockOnCancel: ReturnType<typeof vi.fn>;
+  let mockOnSubmit: ((data: ComponentTemplateFormData) => Promise<void>) & ReturnType<typeof vi.fn>;
+  let mockOnCancel: (() => void) & ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-    mockOnCancel = vi.fn();
+    mockOnSubmit = vi.fn().mockResolvedValue(undefined) as unknown as ((data: ComponentTemplateFormData) => Promise<void>) & ReturnType<typeof vi.fn>;
+    mockOnCancel = vi.fn() as unknown as (() => void) & ReturnType<typeof vi.fn>;
   });
 
   // --- Rendering ------------------------------------------------------------

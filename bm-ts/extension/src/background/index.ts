@@ -8,6 +8,7 @@ import {
   BirthdaySchedule,
   QueuedMessage,
   MessageHistoryItem,
+  MessageHistoryPage,
   DashboardStats,
   Contact,
   MessageGroup,
@@ -348,6 +349,7 @@ type BackgroundResponse =
   | QueuedMessage
   | QueuedMessage[]
   | MessageHistoryItem[]
+  | MessageHistoryPage
   | DashboardStats
   | Contact
   | Contact[]
@@ -647,7 +649,7 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
           }
         });
       });
-      return response?.contacts ?? [];
+      return (response?.contacts ?? []) as Contact[];
     }
     // Message Group handlers
     case 'messageGroups.list': {

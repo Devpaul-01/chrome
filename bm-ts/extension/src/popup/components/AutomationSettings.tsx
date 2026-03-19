@@ -38,7 +38,7 @@ interface EmergencyStopState {
   cooldownUntil: string | null;
 }
 
-type ConfirmationMode = 'each' | 'session';
+type ConfirmationMode = 'each' | 'session' | 'auto';
 
 interface AutomationSettingsProps {
   onClose: () => void;

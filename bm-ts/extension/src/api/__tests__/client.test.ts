@@ -61,7 +61,7 @@ describe('API request helpers (via login)', () => {
       }),
     );
 
-    await expect(login(BASE, 'bad@example.com', 'wrongpass')).rejects.toBeInstanceOf(ApiError);
+    await expect(login(BASE, { email: 'bad@example.com', password: 'wrongpass' })).rejects.toBeInstanceOf(ApiError);
   });
 
   it('resolves with token bundle on 200', async () => {
@@ -74,7 +74,7 @@ describe('API request helpers (via login)', () => {
       ),
     );
 
-    const result = await login(BASE, 'user@example.com', 'Pass1234');
+    const result = await login(BASE, { email: 'user@example.com', password: 'Pass1234' });
     expect(result.access_token).toBe('acc_tok');
     expect(result.refresh_token).toBe('ref_tok');
   });
@@ -89,7 +89,7 @@ describe('API request helpers (via login)', () => {
       ),
     );
 
-    await login(BASE, 'user@example.com', 'Pass1234');
+    await login(BASE, { email: 'user@example.com', password: 'Pass1234' });
 
     const [calledUrl] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(calledUrl).toBe(`${BASE}/auth/login`);
