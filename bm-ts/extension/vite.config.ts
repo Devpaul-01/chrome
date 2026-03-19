@@ -65,6 +65,12 @@ export default defineConfig(async () => {
         background: resolve(__dirname, "src/background/index.ts"),
         // content is NOT here — it is built separately as an IIFE by the
         // buildContentScriptIIFE plugin to avoid ES module import statements.
+        // Documentation pages (opened in new tab from the Help panel)
+        "faq": resolve(__dirname, "faq.html"),
+        "quick-start": resolve(__dirname, "quick-start.html"),
+        "troubleshooting": resolve(__dirname, "troubleshooting.html"),
+        "privacy-policy": resolve(__dirname, "privacy-policy.html"),
+        "terms-of-service": resolve(__dirname, "terms-of-service.html"),
       },
       output: {
         entryFileNames: "[name].js",
