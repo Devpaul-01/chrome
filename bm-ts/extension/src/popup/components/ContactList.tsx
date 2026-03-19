@@ -91,7 +91,9 @@ export default function ContactList({
               className="card p-3 flex justify-between items-start gap-3 hover:shadow-md transition-shadow"
             >
               <div className="flex-1 min-w-0 overflow-hidden">
-                <h3 className="font-semibold text-sm text-textPrimary break-words">{contact.name}</h3>
+                <h3 className="font-semibold text-sm text-textPrimary break-words">
+                  {contact.name}
+                </h3>
                 <div className="mt-1 space-y-0.5">
                   <p className="text-xs font-semibold text-orangeBrand">
                     🎂 {formatBirthday(contact.birthday)}

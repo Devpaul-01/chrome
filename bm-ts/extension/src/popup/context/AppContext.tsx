@@ -13,14 +13,7 @@
  * state: the WS connects after login and disconnects on logout.
  */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { UserProfile } from '../../api/client';
 import { sendBackgroundMessage } from '../api';
 import { logError } from '../../utils/errors';

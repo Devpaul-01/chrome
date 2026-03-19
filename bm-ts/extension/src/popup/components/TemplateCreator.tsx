@@ -45,7 +45,12 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
   const [isUploadingPreview, setIsUploadingPreview] = useState(false);
   const [showLibraryPicker, setShowLibraryPicker] = useState(false);
   const [librarySaveMsg, setLibrarySaveMsg] = useState<string | null>(null);
-  const { images: libraryImages, isLoading: isLoadingLibrary, isFull: libraryFull, saveToLibrary } = useImageLibrary();
+  const {
+    images: libraryImages,
+    isLoading: isLoadingLibrary,
+    isFull: libraryFull,
+    saveToLibrary,
+  } = useImageLibrary();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Optimal post dimensions
@@ -162,11 +167,6 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     }
   };
 
-  const handleGenerateAI = async () => {
-    setError('AI image generation coming soon!');
-    // TODO: Implement AI image generation
-  };
-
   const generateAIText = async (type: 'greeting' | 'sentiment' | 'closing') => {
     setIsGenerating(type);
     setError(null);
@@ -240,7 +240,11 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
           <FacebookPostPreview imageUrl={formData.imageUrl} text={completeMessage} />
           <div className="text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
           {librarySaveMsg && (
-            <p className={`text-xs font-medium ${librarySaveMsg.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
+            <p
+              className={`text-xs font-medium ${
+                librarySaveMsg.startsWith('Error') ? 'text-red-600' : 'text-green-600'
+              }`}
+            >
               {librarySaveMsg}
             </p>
           )}
@@ -306,8 +310,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Greeting <span className="text-red-500">*</span>
-                  {' '}<HelpTooltip label="Use merge tags like [Tag Person] to insert the friend's name, [Today] for today's date, and [Image] for an image URL." />
+                  Greeting <span className="text-red-500">*</span>{' '}
+                  <HelpTooltip label="Use merge tags like [Tag Person] to insert the friend's name, [Today] for today's date, and [Image] for an image URL." />
                 </label>
                 <button
                   type="button"
@@ -426,7 +430,10 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               <select
                 value={formData.gender}
                 onChange={(e) =>
-                  setFormData({ ...formData, gender: e.target.value as 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL' })
+                  setFormData({
+                    ...formData,
+                    gender: e.target.value as 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL',
+                  })
                 }
                 className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
               >
@@ -441,7 +448,9 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Attach Image{' '}
-                <span className="text-gray-400 font-normal text-xs">(optional — or use [Image] for random)</span>
+                <span className="text-gray-400 font-normal text-xs">
+                  (optional — or use [Image] for random)
+                </span>
               </label>
               {formData.imageUrl ? (
                 <div>
@@ -540,6 +549,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                 gender: 'ALL',
               });
               setActiveTab('create');
+              onCancel();
             }}
             className="flex-1 btn-outline-orange"
             disabled={isSubmitting}

@@ -22,9 +22,16 @@
  * because content scripts cannot make cross-origin requests directly.
  */
 
-import { composeMessage, randomDelay, selectTemplate, selectPost, resolveKeywords, assembleMessageFromTemplate } from '../utils/message';
+import {
+  composeMessage,
+  randomDelay,
+  selectTemplate,
+  selectPost,
+  resolveKeywords,
+  assembleMessageFromTemplate,
+} from '../utils/message';
 import { sendContentMessage } from './api';
-import type { TemplateSegment, MessageTemplate, Contact, Post } from '../api/client';
+import type { TemplateSegment, Contact } from '../api/client';
 import type { AutomationRunPayload } from '../utils/messages';
 import { postToTimeline } from './timeline';
 import { archiveConversation } from './messenger';
@@ -131,7 +138,7 @@ function renderFriendList() {
     row.style.padding = '6px';
     row.style.marginBottom = '4px';
     const strong = document.createElement('strong');
-    strong.textContent = friend.name;  // textContent — safe against XSS
+    strong.textContent = friend.name; // textContent — safe against XSS
     row.appendChild(strong);
     if (friend.profileUrl) {
       const link = document.createElement('a');
@@ -328,11 +335,22 @@ function showClipboardPermissionBanner(): void {
   const banner = document.createElement('div');
   banner.id = CLIPBOARD_BANNER_ID;
   banner.style.cssText = [
-    'position:fixed', 'bottom:16px', 'left:50%', 'transform:translateX(-50%)',
-    'z-index:2147483647', 'max-width:480px', 'width:calc(100% - 32px)',
-    'background:#fff3cd', 'border:1.5px solid #f59e0b', 'border-radius:8px',
-    'padding:12px 16px', 'font-family:system-ui,sans-serif', 'font-size:13px',
-    'box-shadow:0 4px 12px rgba(0,0,0,0.15)', 'display:flex', 'gap:12px',
+    'position:fixed',
+    'bottom:16px',
+    'left:50%',
+    'transform:translateX(-50%)',
+    'z-index:2147483647',
+    'max-width:480px',
+    'width:calc(100% - 32px)',
+    'background:#fff3cd',
+    'border:1.5px solid #f59e0b',
+    'border-radius:8px',
+    'padding:12px 16px',
+    'font-family:system-ui,sans-serif',
+    'font-size:13px',
+    'box-shadow:0 4px 12px rgba(0,0,0,0.15)',
+    'display:flex',
+    'gap:12px',
     'align-items:flex-start',
   ].join(';');
   banner.innerHTML = `
@@ -376,15 +394,18 @@ function showSendConfirmation(
     const modal = document.createElement('div');
     modal.id = modalId;
     modal.style.cssText = [
-      'position:fixed', 'inset:0', 'z-index:2147483647',
+      'position:fixed',
+      'inset:0',
+      'z-index:2147483647',
       'background:rgba(0,0,0,0.6)',
-      'display:flex', 'align-items:center', 'justify-content:center',
+      'display:flex',
+      'align-items:center',
+      'justify-content:center',
       'font-family:system-ui,sans-serif',
     ].join(';');
 
-    const truncated = messagePreview.length > 120
-      ? messagePreview.slice(0, 120) + '…'
-      : messagePreview;
+    const truncated =
+      messagePreview.length > 120 ? messagePreview.slice(0, 120) + '…' : messagePreview;
 
     modal.innerHTML = `
       <div style="background:#fff;border-radius:12px;padding:24px 28px;max-width:420px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(0,0,0,0.3);">
@@ -444,11 +465,16 @@ function showAutomationOverlay(friendName: string): void {
     automationOverlay = document.createElement('div');
     automationOverlay.id = 'bm-auto-overlay';
     automationOverlay.style.cssText = [
-      'position:fixed', 'inset:0', 'z-index:2147483646',
+      'position:fixed',
+      'inset:0',
+      'z-index:2147483646',
       'background:rgba(0,0,0,0.55)',
-      'display:flex', 'flex-direction:column',
-      'align-items:center', 'justify-content:center',
-      'color:#fff', 'font-family:system-ui,sans-serif',
+      'display:flex',
+      'flex-direction:column',
+      'align-items:center',
+      'justify-content:center',
+      'color:#fff',
+      'font-family:system-ui,sans-serif',
     ].join(';');
     automationOverlay.innerHTML = `
       <div style="background:rgba(24,24,35,0.92);padding:32px 48px;border-radius:16px;text-align:center;max-width:420px;">
@@ -470,10 +496,7 @@ function hideAutomationOverlay(): void {
 // GENDER HELPER
 // ============================================================
 
-function getContactGender(
-  friend: BirthdayFriend,
-  contacts: Contact[],
-): Contact['gender'] {
+function getContactGender(friend: BirthdayFriend, contacts: Contact[]): Contact['gender'] {
   const match =
     contacts.find((c) => friend.profileUrl && c.facebook_profile_url === friend.profileUrl) ??
     contacts.find((c) => c.name.toLowerCase() === friend.name.toLowerCase());
@@ -490,9 +513,7 @@ async function syncContactsFromFriends(
 ): Promise<void> {
   for (const friend of scraped) {
     if (!friend.profileUrl) continue;
-    const existingContact = existing.find(
-      (c) => c.facebook_profile_url === friend.profileUrl,
-    );
+    const existingContact = existing.find((c) => c.facebook_profile_url === friend.profileUrl);
     if (existingContact) {
       if (existingContact.name !== friend.name) {
         await sendContentMessage({
@@ -521,10 +542,7 @@ async function syncContactsFromFriends(
  * Use the Message button from a live BirthdayFriend entry and send a
  * pre-composed DM string. Used for current-day birthday friends.
  */
-async function sendComposedMessageToFriend(
-  friend: BirthdayFriend,
-  message: string,
-): Promise<void> {
+async function sendComposedMessageToFriend(friend: BirthdayFriend, message: string): Promise<void> {
   const opened = openMessageDialog(friend);
   if (!opened) throw new Error(`Cannot open message dialog for ${friend.name}`);
   await fillMessageAndSend(message);
@@ -534,10 +552,7 @@ async function sendComposedMessageToFriend(
  * Navigate to a Facebook profile, click the Message button, and send a DM.
  * Used for advance / follow-up contacts that are not in the live birthday feed.
  */
-async function sendMessageFromProfile(
-  profileUrl: string,
-  message: string,
-): Promise<void> {
+async function sendMessageFromProfile(profileUrl: string, message: string): Promise<void> {
   const profilePath = profileUrl.replace(/^https?:\/\/[^/]+/, '');
   if (!window.location.pathname.startsWith(profilePath)) {
     window.location.href = profileUrl;
@@ -583,8 +598,9 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
   const delayMin = Math.round(delayMsBase * 0.8);
   const delayMax = Math.round(delayMsBase * 1.2);
 
-  const flags = (stored['bm_feature_flags'] as { makePost: boolean; sendMessage: boolean } | undefined) ??
-    { makePost: true, sendMessage: true };
+  const flags = (stored['bm_feature_flags'] as
+    | { makePost: boolean; sendMessage: boolean }
+    | undefined) ?? { makePost: true, sendMessage: true };
 
   // Get confirmation mode
   const confirmMode = await getConfirmationMode();
@@ -760,7 +776,10 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
       } catch (err) {
         console.error(`[BM] Error processing ${friend.name}:`, err);
         const { shouldPause } = await recordSendFailure();
-        await addActivityLogEntry('error', `Failed to send to ${friend.name}: ${(err as Error).message}`);
+        await addActivityLogEntry(
+          'error',
+          `Failed to send to ${friend.name}: ${(err as Error).message}`,
+        );
         if (shouldPause) {
           setStatus('Send failure detected — automation paused');
           break;
@@ -829,7 +848,10 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
       } catch (err) {
         console.error(`[BM] Error processing advance/follow-up for ${contact.name}:`, err);
         const { shouldPause } = await recordSendFailure();
-        await addActivityLogEntry('error', `Failed to send to ${contact.name}: ${(err as Error).message}`);
+        await addActivityLogEntry(
+          'error',
+          `Failed to send to ${contact.name}: ${(err as Error).message}`,
+        );
         if (shouldPause) {
           setStatus('Send failure detected — automation paused');
           break;
@@ -856,12 +878,29 @@ export interface ScrapedContact {
 
 function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
   const MONTH_MAP: Record<string, string> = {
-    january: '01', february: '02', march: '03', april: '04',
-    may: '05', june: '06', july: '07', august: '08',
-    september: '09', october: '10', november: '11', december: '12',
-    jan: '01', feb: '02', mar: '03', apr: '04',
-    jun: '06', jul: '07', aug: '08',
-    sep: '09', oct: '10', nov: '11', dec: '12',
+    january: '01',
+    february: '02',
+    march: '03',
+    april: '04',
+    may: '05',
+    june: '06',
+    july: '07',
+    august: '08',
+    september: '09',
+    october: '10',
+    november: '11',
+    december: '12',
+    jan: '01',
+    feb: '02',
+    mar: '03',
+    apr: '04',
+    jun: '06',
+    jul: '07',
+    aug: '08',
+    sep: '09',
+    oct: '10',
+    nov: '11',
+    dec: '12',
   };
 
   function monthDayToISO(monthStr: string, day: number): string {
@@ -876,16 +915,23 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
     // "Today" / "Tomorrow"
     if (/\btoday\b/i.test(t)) {
       const n = new Date();
-      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(
+        n.getDate(),
+      ).padStart(2, '0')}`;
     }
     if (/\btomorrow\b/i.test(t)) {
-      const n = new Date(); n.setDate(n.getDate() + 1);
-      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+      const n = new Date();
+      n.setDate(n.getDate() + 1);
+      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(
+        n.getDate(),
+      ).padStart(2, '0')}`;
     }
     // "January 15" / "Jan. 15" / "Jan 15"
-    const reFwd = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan\.?|feb\.?|mar\.?|apr\.?|jun\.?|jul\.?|aug\.?|sep\.?|oct\.?|nov\.?|dec\.?)\s+(\d{1,2})\b/i;
+    const reFwd =
+      /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan\.?|feb\.?|mar\.?|apr\.?|jun\.?|jul\.?|aug\.?|sep\.?|oct\.?|nov\.?|dec\.?)\s+(\d{1,2})\b/i;
     // "15 January" / "15 Jan"
-    const reRev = /\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i;
+    const reRev =
+      /\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i;
     let m = reFwd.exec(t);
     if (m) return monthDayToISO(m[1], parseInt(m[2], 10));
     m = reRev.exec(t);
@@ -895,7 +941,12 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
 
   function isProfileLink(href: string): boolean {
     if (!href.includes('facebook.com')) return false;
-    if (/\/(birthdays|events|groups|pages|marketplace|watch|gaming|search|login|help|notifications|settings)\b/.test(href)) return false;
+    if (
+      /\/(birthdays|events|groups|pages|marketplace|watch|gaming|search|login|help|notifications|settings)\b/.test(
+        href,
+      )
+    )
+      return false;
     return (
       /facebook\.com\/(?!pages\b|groups\b|events\b)[^/?#\s]{2,}(\?|#|$)/.test(href) ||
       href.includes('facebook.com/profile.php')

@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import Spinner from './Spinner';
-import MessageQueue from './MessageQueue';
-import MessageHistory from './MessageHistory';
 import { useMessageHistory, useMessageQueue } from '../hooks/useMessages';
 import DashboardStatsCard from './DashboardStatsCard';
 import DashboardCharts from './DashboardCharts';
@@ -24,11 +22,10 @@ interface DashboardProps {
   onClose: () => void;
 }
 
-export default function Dashboard({ onClose }: DashboardProps) {
+export default function Dashboard({ onClose: _onClose }: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activePanel, setActivePanel] = useState<'queue' | 'history'>('queue');
   const { trends: computeHistoryTrends, live: historyLive } = useMessageHistory();
   const { live: queueLive } = useMessageQueue();
 

@@ -10,7 +10,7 @@ interface MessageQueueProps {
 type StatusFilter = 'all' | QueuedMessage['status'];
 type SortDir = 'asc' | 'desc';
 
-export default function MessageQueue({ onClose, compact = false }: MessageQueueProps) {
+export default function MessageQueue({ onClose: _onClose, compact = false }: MessageQueueProps) {
   const {
     messages,
     isLoading,

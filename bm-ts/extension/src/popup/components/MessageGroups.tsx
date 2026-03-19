@@ -142,7 +142,12 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
             <span className="text-xs font-semibold text-textPrimary mb-2 block">Gender Target</span>
             <select
               value={formData.gender}
-              onChange={(e) => setFormData({ ...formData, gender: e.target.value as any })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  gender: e.target.value as 'NEUTRAL' | 'MALE' | 'FEMALE',
+                })
+              }
               className="text-field w-full"
             >
               <option value="NEUTRAL">Neutral (Any)</option>

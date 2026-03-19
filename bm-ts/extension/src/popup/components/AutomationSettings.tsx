@@ -60,7 +60,11 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
   const [actionDelayMinutes, setActionDelayMinutes] = useState(1);
   const [rateLimits, setRateLimits] = useState<RateLimitStatus | null>(null);
   const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
-  const [emergencyStop, setEmergencyStop] = useState<EmergencyStopState>({ active: false, triggeredAt: null, cooldownUntil: null });
+  const [emergencyStop, setEmergencyStop] = useState<EmergencyStopState>({
+    active: false,
+    triggeredAt: null,
+    cooldownUntil: null,
+  });
   const [confirmMode, setConfirmMode] = useState<ConfirmationMode>('each');
   const [showLog, setShowLog] = useState(false);
 
@@ -200,7 +204,11 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
         type: 'failsafe.triggerEmergencyStop',
         payload: { cooldownHours: 24 },
       });
-      setEmergencyStop({ active: true, triggeredAt: new Date().toISOString(), cooldownUntil: null });
+      setEmergencyStop({
+        active: true,
+        triggeredAt: new Date().toISOString(),
+        cooldownUntil: null,
+      });
       setConfig((prev) => ({ ...prev, enabled: false }));
       setMessage('Emergency stop activated — all automation paused for 24 hours');
     } catch (err) {
@@ -378,11 +386,11 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
               <HelpTooltip label="Controls whether you're asked to confirm messages before they're sent. 'Each message' is safest and asks every time. 'Per session' asks once per automation run. 'Auto' may send without asking each time and carries higher ban risk." />
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {([
+              {[
                 { value: 'each' as const, label: 'Each message' },
                 { value: 'session' as const, label: 'Per session' },
                 { value: 'auto' as const, label: 'Auto (riskier)' },
-              ]).map((opt) => (
+              ].map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => handleConfirmModeChange(opt.value)}
@@ -405,19 +413,37 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Hourly:</span>
-                  <span className={rateLimits.hourly.used >= rateLimits.hourly.cap ? 'text-red-600 font-medium' : 'text-textPrimary'}>
+                  <span
+                    className={
+                      rateLimits.hourly.used >= rateLimits.hourly.cap
+                        ? 'text-red-600 font-medium'
+                        : 'text-textPrimary'
+                    }
+                  >
                     {rateLimits.hourly.used} / {rateLimits.hourly.cap}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Daily:</span>
-                  <span className={rateLimits.daily.used >= rateLimits.daily.cap ? 'text-red-600 font-medium' : 'text-textPrimary'}>
+                  <span
+                    className={
+                      rateLimits.daily.used >= rateLimits.daily.cap
+                        ? 'text-red-600 font-medium'
+                        : 'text-textPrimary'
+                    }
+                  >
                     {rateLimits.daily.used} / {rateLimits.daily.cap}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Weekly:</span>
-                  <span className={rateLimits.weekly.used >= rateLimits.weekly.cap ? 'text-red-600 font-medium' : 'text-textPrimary'}>
+                  <span
+                    className={
+                      rateLimits.weekly.used >= rateLimits.weekly.cap
+                        ? 'text-red-600 font-medium'
+                        : 'text-textPrimary'
+                    }
+                  >
                     {rateLimits.weekly.used} / {rateLimits.weekly.cap}
                   </span>
                 </div>
@@ -436,7 +462,8 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
           {/* Max Messages */}
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">
-              Max Messages Per Run{' '}<HelpTooltip label="Set to 0 for unlimited. Limits how many birthday messages are sent per automation run to stay within safe activity levels." />
+              Max Messages Per Run{' '}
+              <HelpTooltip label="Set to 0 for unlimited. Limits how many birthday messages are sent per automation run to stay within safe activity levels." />
             </label>
             <div className="flex gap-2 items-center">
               <input
@@ -448,7 +475,9 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
                 disabled={isSaving}
                 className="w-24 px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
               />
-              <span className="text-sm text-gray-500">{config.maxMessages === 0 ? '(unlimited)' : `per run`}</span>
+              <span className="text-sm text-gray-500">
+                {config.maxMessages === 0 ? '(unlimited)' : `per run`}
+              </span>
             </div>
             <p className="text-xs text-gray-500 mt-1">
               Set to 0 for no limit. Useful to avoid sending too many messages at once.
@@ -457,9 +486,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
 
           {/* Per-Action Delay */}
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">
-              Delay Between Actions
-            </label>
+            <label className="block text-sm font-medium mb-2">Delay Between Actions</label>
             <div className="flex gap-3 items-center">
               <input
                 type="range"
@@ -493,7 +520,8 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
             Clear Sent-Today List
           </button>
           <p className="text-xs text-gray-500 mb-4">
-            Resets the deduplication list so automation can re-send to contacts already processed today.
+            Resets the deduplication list so automation can re-send to contacts already processed
+            today.
           </p>
 
           {/* Activity Log */}
@@ -512,13 +540,20 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
                 ) : (
                   <div className="max-h-48 overflow-y-auto border rounded">
                     {activityLog.map((entry, i) => (
-                      <div key={i} className={`px-3 py-2 text-xs border-b last:border-b-0 ${
-                        entry.level === 'emergency' ? 'bg-red-50 text-red-700' :
-                        entry.level === 'warning' ? 'bg-yellow-50 text-yellow-700' :
-                        entry.level === 'error' ? 'bg-red-50 text-red-600' :
-                        entry.level === 'send' || entry.level === 'post' ? 'bg-green-50 text-green-700' :
-                        'bg-white text-gray-600'
-                      }`}>
+                      <div
+                        key={i}
+                        className={`px-3 py-2 text-xs border-b last:border-b-0 ${
+                          entry.level === 'emergency'
+                            ? 'bg-red-50 text-red-700'
+                            : entry.level === 'warning'
+                            ? 'bg-yellow-50 text-yellow-700'
+                            : entry.level === 'error'
+                            ? 'bg-red-50 text-red-600'
+                            : entry.level === 'send' || entry.level === 'post'
+                            ? 'bg-green-50 text-green-700'
+                            : 'bg-white text-gray-600'
+                        }`}
+                      >
                         <div className="flex justify-between items-start gap-2">
                           <span className="flex-1">{entry.message}</span>
                           <span className="text-gray-400 whitespace-nowrap">

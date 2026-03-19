@@ -47,7 +47,8 @@ export function useImageLibrary() {
    */
   const saveToLibrary = useCallback(
     async (dataUrl: string, filename: string): Promise<LibraryImage> => {
-      if (isFull) throw new Error(`Image library is full (${MAX_LIBRARY_IMAGES}/20). Delete an image first.`);
+      if (isFull)
+        throw new Error(`Image library is full (${MAX_LIBRARY_IMAGES}/20). Delete an image first.`);
       const base64Part = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
       const byteSize = atob(base64Part).length;
       const saved = await sendBackgroundMessage<LibraryImage>({
@@ -76,5 +77,14 @@ export function useImageLibrary() {
   /** Pick a random image URL from the library for preview purposes. */
   const randomPreviewUrl = images.length > 0 ? images[0].url : null;
 
-  return { images, isLoading, loadError, isFull, reload, saveToLibrary, deleteImage, randomPreviewUrl };
+  return {
+    images,
+    isLoading,
+    loadError,
+    isFull,
+    reload,
+    saveToLibrary,
+    deleteImage,
+    randomPreviewUrl,
+  };
 }

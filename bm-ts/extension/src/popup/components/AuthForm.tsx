@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import Spinner from './Spinner';
-import { ariaBoolean, generateId } from '../../utils/accessibility';
+import { generateId } from '../../utils/accessibility';
 
 type Props = {
   authMode: 'login' | 'register' | 'forgot-password';

@@ -44,7 +44,10 @@ export function useTemplateSegments() {
   }, [showToast]);
 
   useEffect(() => {
-    if (!user) { setTemplates([]); return; }
+    if (!user) {
+      setTemplates([]);
+      return;
+    }
     void loadTemplates();
   }, [user, loadTemplates]);
 

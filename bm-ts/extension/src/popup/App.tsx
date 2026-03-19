@@ -301,13 +301,24 @@ function AppShell() {
   // ---- View routing --------------------------------------------------
   const renderView = () => {
     if (viewMode === 'change-password') {
-      return <ChangePassword onCancel={() => setViewMode('main')} onSuccess={() => setViewMode('main')} />;
+      return (
+        <ChangePassword
+          onCancel={() => setViewMode('main')}
+          onSuccess={() => setViewMode('main')}
+        />
+      );
     }
     if (viewMode === 'scheduling') {
       return (
         <div>
           <SchedulingSettings />
-          <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+          <button
+            className="btn mt-4"
+            onClick={() => {
+              setActiveTab('messages');
+              setViewMode('main');
+            }}
+          >
             ← Back to Messages
           </button>
         </div>
@@ -323,7 +334,13 @@ function AppShell() {
       return (
         <div>
           <Dashboard onClose={() => setViewMode('main')} />
-          <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+          <button
+            className="btn mt-4"
+            onClick={() => {
+              setActiveTab('messages');
+              setViewMode('main');
+            }}
+          >
             ← Back to Messages
           </button>
         </div>
@@ -366,7 +383,13 @@ function AppShell() {
               <MessageGroups onClose={() => setViewMode('main')} showClose={false} />
             </div>
           </div>
-          <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+          <button
+            className="btn mt-4"
+            onClick={() => {
+              setActiveTab('messages');
+              setViewMode('main');
+            }}
+          >
             ← Back to Messages
           </button>
         </div>
@@ -377,7 +400,7 @@ function AppShell() {
         <div>
           <h2 className="text-lg font-bold text-blueStrong mb-3">Create Timeline Post</h2>
           <p className="text-xs text-gray-600 mb-4">
-            Design a birthday post to be sent to friends' timelines on their special day.
+            Design a birthday post to be sent to friends&apos; timelines on their special day.
           </p>
           <PostEditor
             postForm={post.postForm}
@@ -387,7 +410,13 @@ function AppShell() {
             message={null}
             onViewPosts={() => setViewMode('postLibrary')}
           />
-          <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+          <button
+            className="btn mt-4"
+            onClick={() => {
+              setActiveTab('messages');
+              setViewMode('main');
+            }}
+          >
             ← Back to Messages
           </button>
         </div>
@@ -407,7 +436,13 @@ function AppShell() {
       return (
         <div>
           <ImageManager onClose={() => setViewMode('main')} />
-          <button className="btn mt-4" onClick={() => { setActiveTab('messages'); setViewMode('main'); }}>
+          <button
+            className="btn mt-4"
+            onClick={() => {
+              setActiveTab('messages');
+              setViewMode('main');
+            }}
+          >
             ← Back to Messages
           </button>
         </div>
@@ -453,10 +488,7 @@ function AppShell() {
     }
     if (viewMode === 'birthday-calendar') {
       return (
-        <BirthdayCalendar
-          contacts={contactsHook.contacts}
-          onBack={() => setViewMode('contacts')}
-        />
+        <BirthdayCalendar contacts={contactsHook.contacts} onBack={() => setViewMode('contacts')} />
       );
     }
     if (viewMode === 'smtp-settings') {
@@ -475,7 +507,9 @@ function AppShell() {
           // AccountManagement defines its own UserProfile type; cast is intentional
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           user={user as any}
-          onUpdateProfile={handleUpdateProfile as Parameters<typeof AccountManagement>[0]['onUpdateProfile']}
+          onUpdateProfile={
+            handleUpdateProfile as Parameters<typeof AccountManagement>[0]['onUpdateProfile']
+          }
           onUpdateTimezone={handleUpdateTimezone}
           onDeleteAccount={handleDeleteAccount}
           onLogout={handleLogout}
@@ -524,10 +558,7 @@ function AppShell() {
               }}
               onDeleteContact={contactsHook.handleDeleteContact}
             />
-            <button
-              className="btn mt-2"
-              onClick={() => setViewMode('birthday-calendar')}
-            >
+            <button className="btn mt-2" onClick={() => setViewMode('birthday-calendar')}>
               Birthday Calendar
             </button>
           </div>
@@ -667,34 +698,37 @@ function AppShell() {
         <div className="modal-overlay">
           <div role="dialog" aria-modal="true" aria-label="Edit message template">
             <TemplateCreator
-            onSubmit={
-              msgTemplates.editingTemplate
-                ? (data: TemplateFormData) =>
-                    msgTemplates.handleUpdateMessageTemplate(msgTemplates.editingTemplate!.id, data)
-                : msgTemplates.handleCreateTemplate
-            }
-            onCancel={() => {
-              msgTemplates.setShowTemplateCreator(false);
-              msgTemplates.setEditingTemplate(null);
-            }}
-            initialData={
-              msgTemplates.editingTemplate
-                ? {
-                    greeting: msgTemplates.editingTemplate.greeting,
-                    sentiment: msgTemplates.editingTemplate.sentiment,
-                    closing: msgTemplates.editingTemplate.closing,
-                    imageUrl: msgTemplates.editingTemplate.imageUrl || null,
-                    templateTitle: msgTemplates.editingTemplate.templateTitle,
-                    daysInAdvance: msgTemplates.editingTemplate.daysInAdvance,
-                    gender: msgTemplates.editingTemplate.gender,
-                  }
-                : undefined
-            }
-          />
+              onSubmit={
+                msgTemplates.editingTemplate
+                  ? (data: TemplateFormData) =>
+                      msgTemplates.handleUpdateMessageTemplate(
+                        msgTemplates.editingTemplate!.id,
+                        data,
+                      )
+                  : msgTemplates.handleCreateTemplate
+              }
+              onCancel={() => {
+                msgTemplates.setShowTemplateCreator(false);
+                msgTemplates.setEditingTemplate(null);
+              }}
+              initialData={
+                msgTemplates.editingTemplate
+                  ? {
+                      greeting: msgTemplates.editingTemplate.greeting,
+                      sentiment: msgTemplates.editingTemplate.sentiment,
+                      closing: msgTemplates.editingTemplate.closing,
+                      imageUrl: msgTemplates.editingTemplate.imageUrl || null,
+                      templateTitle: msgTemplates.editingTemplate.templateTitle,
+                      daysInAdvance: msgTemplates.editingTemplate.daysInAdvance,
+                      gender: msgTemplates.editingTemplate.gender,
+                    }
+                  : undefined
+              }
+            />
           </div>
         </div>
       )}
-      
+
       {/* Help panel */}
       <HelpPanel
         open={showHelpPanel}
@@ -704,13 +738,8 @@ function AppShell() {
 
       {/* Onboarding wizard — shown once after first login */}
       {showOnboarding && (
-        <OnboardingWizard
-          onComplete={handleOnboardingDismiss}
-          onSkip={handleOnboardingDismiss}
-        />
+        <OnboardingWizard onComplete={handleOnboardingDismiss} onSkip={handleOnboardingDismiss} />
       )}
-
     </div>
   );
 }
-

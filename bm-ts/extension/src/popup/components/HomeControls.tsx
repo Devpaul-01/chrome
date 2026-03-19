@@ -42,7 +42,9 @@ export default function HomeControls({
     try {
       const [config, groupData, stored] = await Promise.all([
         chrome.runtime.sendMessage({ type: 'automation.getConfig' }),
-        sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' }).catch(() => [] as MessageGroup[]),
+        sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' }).catch(
+          () => [] as MessageGroup[],
+        ),
         chrome.storage.local.get([FEATURE_FLAGS_KEY, ACTIVE_GROUP_KEY]),
       ]);
       setAutomationEnabled(config?.enabled ?? false);
@@ -101,7 +103,9 @@ export default function HomeControls({
       </div>
 
       {/* Master Power Toggle */}
-      <div className={`card power-card ${automationEnabled ? 'power-card--on' : 'power-card--off'}`}>
+      <div
+        className={`card power-card ${automationEnabled ? 'power-card--on' : 'power-card--off'}`}
+      >
         <div className="flex items-center justify-between gap-4">
           <div>
             <h3 className="font-bold text-textPrimary leading-tight">Automation Engine</h3>
@@ -149,7 +153,7 @@ export default function HomeControls({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-textPrimary">Make Post</p>
-            <p className="text-xs text-textMuted">Post on birthday contacts' timelines</p>
+            <p className="text-xs text-textMuted">Post on birthday contacts&apos; timelines</p>
           </div>
           <button
             role="switch"

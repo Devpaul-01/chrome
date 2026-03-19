@@ -35,7 +35,7 @@ export default function PostEditor({
   const [showKeywords, setShowKeywords] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'create' | 'preview'>('create');
+  const [activeTab, _setActiveTab] = useState<'create' | 'preview'>('create');
   const [showLibraryPicker, setShowLibraryPicker] = useState(false);
   const { images: libraryImages, isLoading: isLoadingLibrary } = useImageLibrary();
 
@@ -132,10 +132,6 @@ export default function PostEditor({
     } finally {
       setIsProcessingImage(false);
     }
-  };
-
-  const handleGenerateAI = async () => {
-    setImageError('AI image generation coming soon!');
   };
 
   const insertKeyword = (keyword: string) => {
@@ -242,7 +238,12 @@ export default function PostEditor({
             <span className="text-xs font-semibold text-textPrimary mb-2 block">Gender Target</span>
             <select
               value={postForm.gender}
-              onChange={(event) => setPostForm({ ...postForm, gender: event.target.value as any })}
+              onChange={(event) =>
+                setPostForm({
+                  ...postForm,
+                  gender: event.target.value as 'NEUTRAL' | 'MALE' | 'FEMALE' | 'ALL',
+                })
+              }
               className="text-field w-full"
               aria-label="gender target"
             >
@@ -368,7 +369,9 @@ export default function PostEditor({
           <div className="mb-6">
             <label className="text-xs font-semibold text-textPrimary mb-2 block">
               🖼️ Attach Image{' '}
-              <span className="text-gray-400 font-normal">(optional — or use [Image] for random)</span>
+              <span className="text-gray-400 font-normal">
+                (optional — or use [Image] for random)
+              </span>
             </label>
             {postForm.image_url ? (
               <div>
@@ -441,13 +444,13 @@ export default function PostEditor({
                 <code className="bg-surfaceSection px-1.5 py-0.5 rounded text-orangeStrong">
                   {'{First_Name}'}
                 </code>{' '}
-                - Friend's first name
+                - Friend&apos;s first name
               </li>
               <li>
                 <code className="bg-surfaceSection px-1.5 py-0.5 rounded text-orangeStrong">
                   {'{Last_Name}'}
                 </code>{' '}
-                - Friend's last name
+                - Friend&apos;s last name
               </li>
               <li>
                 <code className="bg-surfaceSection px-1.5 py-0.5 rounded text-orangeStrong">

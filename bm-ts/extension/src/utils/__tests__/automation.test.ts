@@ -5,7 +5,7 @@
  * src/test-setup.ts.  Each test starts with a clean in-memory store.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   getAutomationConfig,
   saveAutomationConfig,
@@ -186,10 +186,7 @@ describe('addToSentToday / getSentToday', () => {
     // Write a record with a past date directly via the mock
     const key = 'bm_sent_today';
     await new Promise<void>((resolve) => {
-      chrome.storage.local.set(
-        { [key]: { date: '2020-01-01', ids: ['old_friend'] } },
-        resolve,
-      );
+      chrome.storage.local.set({ [key]: { date: '2020-01-01', ids: ['old_friend'] } }, resolve);
     });
     // getSentToday should see the stale date and return []
     const list = await getSentToday();

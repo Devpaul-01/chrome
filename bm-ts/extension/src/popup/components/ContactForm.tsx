@@ -17,18 +17,22 @@ export default function ContactForm({
   isSubmitting,
   message,
 }: ContactFormProps) {
+  const loosedContact = contact as Record<string, unknown>;
   const [firstName, setFirstName] = useState(() => {
-    if ((contact as any)?.firstName) return (contact as any).firstName;
+    if (typeof loosedContact?.firstName === 'string') return loosedContact.firstName;
     if (contact?.name) return contact.name.split(' ')[0] ?? '';
     return '';
   });
   const [lastName, setLastName] = useState(() => {
-    if ((contact as any)?.lastName) return (contact as any).lastName;
+    if (typeof loosedContact?.lastName === 'string') return loosedContact.lastName;
     if (contact?.name) return contact.name.split(' ').slice(1).join(' ') ?? '';
     return '';
   });
   const [facebookProfileUrl, setFacebookProfileUrl] = useState(
-    (contact as any)?.facebook_profile_url || (contact as any)?.facebookProfileUrl || '',
+    (typeof loosedContact?.facebook_profile_url === 'string' &&
+      loosedContact.facebook_profile_url) ||
+      (typeof loosedContact?.facebookProfileUrl === 'string' && loosedContact.facebookProfileUrl) ||
+      '',
   );
   // Parse notes for relationship, phone, email
   let parsedRelationship = '';
@@ -60,7 +64,7 @@ export default function ContactForm({
         ? `https://facebook.com/${name.replace(/\s+/g, '.').toLowerCase()}`
         : '';
 
-    const payload: any = {
+    const payload: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> & { notes?: string } = {
       name,
       facebook_profile_url: fb,
       birthday: new Date(birthday).toISOString(),
@@ -99,7 +103,7 @@ export default function ContactForm({
             required
             className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
           />
-          <p className="text-xs text-gray-500 mt-1">Enter the contact's given name.</p>
+          <p className="text-xs text-gray-500 mt-1">Enter the contact&apos;s given name.</p>
         </div>
 
         {/* Last Name */}
@@ -116,7 +120,7 @@ export default function ContactForm({
             required
             className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
           />
-          <p className="text-xs text-gray-500 mt-1">Enter the contact's family name.</p>
+          <p className="text-xs text-gray-500 mt-1">Enter the contact&apos;s family name.</p>
         </div>
 
         {/* Relationship */}
@@ -153,7 +157,8 @@ export default function ContactForm({
         {/* Gender */}
         <div>
           <label htmlFor="gender" className="block text-sm font-medium mb-1">
-            Gender{' '}<HelpTooltip label="Gender is used to select gender-appropriate templates and timeline posts during automation." />
+            Gender{' '}
+            <HelpTooltip label="Gender is used to select gender-appropriate templates and timeline posts during automation." />
           </label>
           <select
             id="gender"

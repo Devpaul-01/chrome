@@ -82,7 +82,9 @@ function makeMessage(overrides: Partial<QueuedMessage> = {}): QueuedMessage {
 }
 
 function mockHook(partial: Partial<ReturnType<typeof useMessageQueue>> = {}) {
-  vi.mocked(useMessageQueue).mockReturnValue({ ...defaultHookReturn, ...partial } as ReturnType<typeof useMessageQueue>);
+  vi.mocked(useMessageQueue).mockReturnValue({ ...defaultHookReturn, ...partial } as ReturnType<
+    typeof useMessageQueue
+  >);
 }
 
 // ---------------------------------------------------------------------------
@@ -120,9 +122,7 @@ describe('MessageQueue', () => {
   it('shows supporting empty-state description text', () => {
     mockHook({ messages: [] });
     render(<MessageQueue onClose={vi.fn()} />);
-    expect(
-      screen.getByText(/messages will appear here when scheduled/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/messages will appear here when scheduled/i)).toBeInTheDocument();
   });
 
   // --- Error / success banners ----------------------------------------------

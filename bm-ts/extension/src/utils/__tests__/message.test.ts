@@ -95,9 +95,7 @@ describe('composeMessage', () => {
   });
 
   it('throws when greetings list is empty', () => {
-    expect(() => composeMessage([], ['body'], ['close'])).toThrow(
-      /at least one entry/i,
-    );
+    expect(() => composeMessage([], ['body'], ['close'])).toThrow(/at least one entry/i);
   });
 
   it('throws when bodies list is empty', () => {
@@ -194,9 +192,7 @@ describe('resolveKeywords', () => {
   const friend = { name: 'Alice' };
 
   it('replaces [Tag Person] with friend name (case-insensitive)', () => {
-    expect(resolveKeywords('Happy birthday [Tag Person]!', friend)).toBe(
-      'Happy birthday Alice!',
-    );
+    expect(resolveKeywords('Happy birthday [Tag Person]!', friend)).toBe('Happy birthday Alice!');
     expect(resolveKeywords('[tag person] rocks', friend)).toBe('Alice rocks');
   });
 
@@ -209,16 +205,11 @@ describe('resolveKeywords', () => {
   });
 
   it('removes [Image] placeholder', () => {
-    expect(resolveKeywords('See [Image] for details.', friend)).toBe(
-      'See  for details.',
-    );
+    expect(resolveKeywords('See [Image] for details.', friend)).toBe('See  for details.');
   });
 
   it('handles multiple replacements in one string', () => {
-    const result = resolveKeywords(
-      'Hi [Tag Person], happy [Today]! [Image]',
-      friend,
-    );
+    const result = resolveKeywords('Hi [Tag Person], happy [Today]! [Image]', friend);
     expect(result).toContain('Alice');
     expect(result).not.toContain('[Tag Person]');
     expect(result).not.toContain('[Today]');
@@ -226,9 +217,7 @@ describe('resolveKeywords', () => {
   });
 
   it('is a no-op when no keywords present', () => {
-    expect(resolveKeywords('No placeholders here.', friend)).toBe(
-      'No placeholders here.',
-    );
+    expect(resolveKeywords('No placeholders here.', friend)).toBe('No placeholders here.');
   });
 });
 

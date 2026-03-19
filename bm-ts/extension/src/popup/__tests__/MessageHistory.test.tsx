@@ -152,7 +152,12 @@ describe('MessageHistory', () => {
   });
 
   it('shows "No matching messages" when startDate is active', () => {
-    mockHook({ filteredMessages: [], searchQuery: '', filterStatus: 'all', startDate: '2024-01-01' });
+    mockHook({
+      filteredMessages: [],
+      searchQuery: '',
+      filterStatus: 'all',
+      startDate: '2024-01-01',
+    });
     render(<MessageHistory onClose={vi.fn()} />);
     expect(screen.getByText('No matching messages')).toBeInTheDocument();
   });
@@ -344,7 +349,11 @@ describe('MessageHistory', () => {
   });
 
   it('shows error_message in expanded inline panel when present', () => {
-    const msg = makeMessage({ id: 'err-msg', status: 'failed', error_message: 'Post limit reached' });
+    const msg = makeMessage({
+      id: 'err-msg',
+      status: 'failed',
+      error_message: 'Post limit reached',
+    });
     mockHook({ filteredMessages: [msg], expandedId: 'err-msg' });
     render(<MessageHistory onClose={vi.fn()} />);
     expect(screen.getByText(/post limit reached/i)).toBeInTheDocument();

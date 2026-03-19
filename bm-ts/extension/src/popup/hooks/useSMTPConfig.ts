@@ -22,7 +22,10 @@ export function useSMTPConfig() {
   }, []);
 
   useEffect(() => {
-    if (!user) { setSMTPConfig(null); return; }
+    if (!user) {
+      setSMTPConfig(null);
+      return;
+    }
     void loadSMTPConfig();
   }, [user, loadSMTPConfig]);
 

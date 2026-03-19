@@ -76,7 +76,7 @@ describe('HelpTooltip', () => {
     render(<HelpTooltip label="Some tip" id="my-tip" />);
     expect(screen.getByRole('button', { name: /help/i })).toHaveAttribute(
       'aria-describedby',
-      'my-tip'
+      'my-tip',
     );
   });
 

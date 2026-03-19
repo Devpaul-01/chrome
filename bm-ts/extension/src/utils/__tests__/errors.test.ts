@@ -138,9 +138,7 @@ describe('parseApiError', () => {
     const result = parseApiError({
       status: 422,
       data: {
-        detail: [
-          { loc: ['body', 'email'], msg: 'field required' },
-        ],
+        detail: [{ loc: ['body', 'email'], msg: 'field required' }],
       },
     });
     expect(result.message).toContain('field required');

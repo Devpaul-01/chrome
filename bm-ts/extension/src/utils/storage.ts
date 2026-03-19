@@ -80,7 +80,11 @@ function isValidBackendUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     if (parsed.protocol === 'https:') return true;
-    if (parsed.protocol === 'http:' && (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')) return true;
+    if (
+      parsed.protocol === 'http:' &&
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
+    )
+      return true;
     return false;
   } catch {
     return false;
@@ -91,7 +95,9 @@ function isValidBackendUrl(url: string): boolean {
  *  Validates the URL scheme first — only HTTPS or HTTP-to-localhost are accepted. */
 export async function setBackendUrl(url: string): Promise<void> {
   if (!isValidBackendUrl(url)) {
-    throw new Error('Invalid backend URL: only https:// URLs (or http://localhost for development) are allowed');
+    throw new Error(
+      'Invalid backend URL: only https:// URLs (or http://localhost for development) are allowed',
+    );
   }
   return new Promise((resolve) => {
     chrome.storage.local.set({ [STORAGE_KEYS.backendUrl]: url }, () => resolve());

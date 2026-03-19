@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import TemplateGallery, { type SavedTemplate } from '../components/TemplateGallery';
@@ -125,9 +125,7 @@ describe('TemplateGallery', () => {
   });
 
   it('shows "2 days late" badge when daysInAdvance is -2', () => {
-    render(
-      <TemplateGallery {...defaultProps} templates={[makeTemplate({ daysInAdvance: -2 })]} />,
-    );
+    render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ daysInAdvance: -2 })]} />);
     expect(screen.getByText('2 days late')).toBeInTheDocument();
   });
 
@@ -190,7 +188,9 @@ describe('TemplateGallery', () => {
   it('calls onCreate when the header Create Template button is clicked', async () => {
     const user = userEvent.setup();
     const onCreate = vi.fn();
-    render(<TemplateGallery templates={[]} onEdit={vi.fn()} onDelete={vi.fn()} onCreate={onCreate} />);
+    render(
+      <TemplateGallery templates={[]} onEdit={vi.fn()} onDelete={vi.fn()} onCreate={onCreate} />,
+    );
     await user.click(screen.getAllByRole('button', { name: /create template/i })[0]);
     expect(onCreate).toHaveBeenCalledTimes(1);
   });

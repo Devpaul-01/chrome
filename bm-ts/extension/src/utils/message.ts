@@ -71,10 +71,7 @@ export function selectPost(posts: Post[], gender: Gender): Post | null {
 // [Image]      → stripped (image attached separately via clipboard)
 // ---------------------------------------------------------------------------
 
-export function resolveKeywords(
-  text: string,
-  friend: { name: string },
-): string {
+export function resolveKeywords(text: string, friend: { name: string }): string {
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
   return text
     .replace(/\[Tag Person\]/gi, friend.name)
