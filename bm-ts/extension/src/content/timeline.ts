@@ -346,7 +346,7 @@ export async function attachImageToPost(
 
         textbox.dispatchEvent(pasteEvent);
       }
-    } catch (e) {
+    } catch {
       // Fallback to execCommand
       document.execCommand('paste');
     }

@@ -132,7 +132,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(
         // Store preview and file
         setPreviewImage(resizedDataUrl);
         setSelectedFile(file);
-      } catch (err) {
+      } catch {
         setError('Failed to process image. Please try another file.');
       } finally {
         setIsProcessing(false);

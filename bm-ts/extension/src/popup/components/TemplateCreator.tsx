@@ -135,7 +135,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
           imageUrl: resizedImage,
           imageFile: file,
         });
-      } catch (err) {
+      } catch {
         setError('Failed to process image. Please try another file.');
       } finally {
         setIsProcessingImage(false);
@@ -205,7 +205,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
         ...formData,
         [type]: randomSuggestion,
       });
-    } catch (err) {
+    } catch {
       setError('Failed to generate text. Please try again.');
     } finally {
       setIsGenerating(null);

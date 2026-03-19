@@ -423,7 +423,7 @@ export async function requestAlarmsPermission(): Promise<boolean> {
           resolve(Boolean(granted));
         });
       });
-    } catch (_e) {
+    } catch {
       // Any synchronous error (e.g., API not available) results in a safe fallback.
       resolve(false);
     }

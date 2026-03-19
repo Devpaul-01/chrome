@@ -127,7 +127,7 @@ export default function PostEditor({
         ...postForm,
         image_url: resizedImage,
       });
-    } catch (err) {
+    } catch {
       setImageError('Failed to process image. Please try another file.');
     } finally {
       setIsProcessingImage(false);

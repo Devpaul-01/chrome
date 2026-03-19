@@ -16,7 +16,7 @@ export default function SubscriptionPanel() {
         type: 'subscription.status',
       });
       setSubscription(status);
-    } catch (error) {
+    } catch {
       // keep subscription null on error
       setSubscription(null);
     } finally {
