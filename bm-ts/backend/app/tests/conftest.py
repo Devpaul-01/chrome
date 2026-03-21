@@ -18,10 +18,37 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import StaticPool, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
+
+# --- SQLite compatibility for Postgres-specific types used in models ---
+# Remap Postgres-only types to SQLAlchemy Text when running tests with SQLite
+try:
+    postgresql.CITEXT = sa.Text
+    postgresql.ENUM = lambda *a, **k: sa.Text
+except Exception:
+    pass
 
 from app.db.base import Base
 from app.db.models import User
 from app.core.security import hash_password
+
+# Ensure created_at defaults are set for token rows when using SQLite tests
+from app.db.models import EmailVerificationToken, PasswordResetToken
+
+from sqlalchemy import event as sa_event
+
+
+@sa_event.listens_for(EmailVerificationToken, "before_insert")
+def _set_email_verif_created_at(mapper, connection, target):
+    if getattr(target, "created_at", None) is None:
+        target.created_at = datetime.now(timezone.utc)
+
+
+@sa_event.listens_for(PasswordResetToken, "before_insert")
+def _set_reset_created_at(mapper, connection, target):
+    if getattr(target, "created_at", None) is None:
+        target.created_at = datetime.now(timezone.utc)
 
 # ---------------------------------------------------------------------------
 # In-memory async SQLite engine (no real PostgreSQL needed for unit tests)
@@ -49,6 +76,14 @@ TestSessionLocal = async_sessionmaker(
 async def setup_db():
     """Create all tables before each test and drop them after."""
     async with engine.begin() as conn:
+        # SQLite can't parse Postgres-specific server_default SQL (eg: "'{}'::json", "now()").
+        # When testing with SQLite, strip server_default expressions so create_all succeeds.
+        if engine.url.get_backend_name() == "sqlite":
+            for table in Base.metadata.tables.values():
+                for col in table.columns:
+                    if getattr(col, "server_default", None) is not None:
+                        col.server_default = None
+
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with engine.begin() as conn:
@@ -70,6 +105,12 @@ async def test_user(db_session: AsyncSession) -> User:
         email="testuser@example.com",
         password_hash=hash_password("TestPass123!"),
         last_login_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+        failed_login_count=0,
+        locked_until=None,
+        email_verified=False,
+        metadata_payload={},
     )
     db_session.add(user)
     await db_session.commit()

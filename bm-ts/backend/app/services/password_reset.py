@@ -37,7 +37,8 @@ async def create_reset_token(user: User, db: AsyncSession) -> str:
         user_id=user.id,
         token=hash_token,
         expires_at=expires_at,
-        used_at=None,
+      used_at=None,
+      created_at=datetime.now(timezone.utc),
     )
 
     db.add(reset_token)
