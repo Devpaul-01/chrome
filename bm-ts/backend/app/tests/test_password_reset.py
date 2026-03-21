@@ -28,6 +28,12 @@ async def reset_user(db_session: AsyncSession) -> User:
         email="reset@example.com",
         password_hash=hash_password("ResetPass123!"),
         last_login_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+        failed_login_count=0,
+        locked_until=None,
+        email_verified=False,
+        metadata_payload={},
     )
     db_session.add(user)
     await db_session.commit()

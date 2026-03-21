@@ -93,7 +93,12 @@ class User(Base):
     birthday_schedules = relationship("BirthdaySchedule", back_populates="user", cascade="all, delete-orphan")
     message_queue = relationship("MessageQueue", back_populates="user", cascade="all, delete-orphan")
     message_history = relationship("MessageHistory", back_populates="user", cascade="all, delete-orphan")
+    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
+    email_verification_tokens = relationship(
+        "EmailVerificationToken", back_populates="user", cascade="all, delete-orphan"
+    )
+    email_verified = Column(Boolean(), nullable=False, server_default=text("false"))
 
 
 class SubscriptionRecord(Base):
@@ -256,6 +261,31 @@ class MessageHistory(Base):
     )
 
 
+class UserSession(Base):
+    """Persistent authenticated session anchored to the latest refresh-token JTI."""
+
+    __tablename__ = "user_sessions"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    current_refresh_token_jti = Column(String(64), nullable=False, unique=True)
+    ip_address = Column(String(64))
+    user_agent = Column(Text())
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    last_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked_at = Column(DateTime(timezone=True))
+    revoked_reason = Column(String(50))
+
+    user = relationship("User", back_populates="sessions")
+
+    __table_args__ = (
+        Index("idx_user_sessions_user_last_seen", "user_id", "last_seen_at"),
+        Index("idx_user_sessions_user_revoked", "user_id", "revoked_at"),
+        Index("idx_user_sessions_expires", "expires_at"),
+    )
+
+
 class PasswordResetToken(Base):
     """
     Single-use password reset token emailed to the user.
@@ -300,6 +330,30 @@ class RevokedToken(Base):
     __table_args__ = (
         Index("idx_revoked_jti", "refresh_token_jti", unique=True),
         Index("idx_revoked_expires", "expires_at"),
+    )
+
+
+class EmailVerificationToken(Base):
+    """
+    Single-use email verification token emailed to the user.
+
+    Mirrors the password reset token model but used to verify user email addresses.
+    """
+
+    __tablename__ = "email_verification_tokens"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String(255), nullable=False, unique=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+
+    user = relationship("User", back_populates="email_verification_tokens")
+
+    __table_args__ = (
+        Index("idx_email_verif_token_expires", "token", "expires_at"),
+        Index("idx_email_verif_user_created", "user_id", "created_at"),
     )
 
 

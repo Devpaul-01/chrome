@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     sendgrid_api_key: str = Field(default="", alias="SENDGRID_API_KEY")
     email_from_address: str = Field(default="", alias="EMAIL_FROM_ADDRESS")
     password_reset_url_base: str = Field(default="", alias="PASSWORD_RESET_URL_BASE")
+    email_verification_url_base: str = Field(default="", alias="EMAIL_VERIFICATION_URL_BASE")
 
     @field_validator("jwt_secret_key", mode="after")
     @classmethod
