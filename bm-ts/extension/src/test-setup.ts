@@ -12,6 +12,14 @@
 import '@testing-library/jest-dom';
 import * as axeMatchers from 'vitest-axe/matchers';
 import { afterEach, vi, expect } from 'vitest';
+import type { AxeMatchers } from 'vitest-axe/matchers';
+
+// Augment Vitest's Assertion interface with vitest-axe matchers
+declare module 'vitest' {
+  // eslint-disable-next-line @typescript-eslint/no-empty-interface
+  interface Assertion<T = any> extends AxeMatchers {}
+  interface AsymmetricMatchersContaining extends AxeMatchers {}
+}
 
 // Register vitest-axe matchers (toHaveNoViolations)
 expect.extend(axeMatchers);

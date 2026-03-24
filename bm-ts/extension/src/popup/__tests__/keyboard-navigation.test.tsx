@@ -91,7 +91,7 @@ describe('MessageQueue – keyboard navigation', () => {
     const msg = makeMessage();
     mockHook({ messages: [msg], expandedId: msg.id });
 
-    render(<MessageQueue />);
+    render(<MessageQueue onClose={vi.fn()} />);
 
     // The expanded detail should be visible
     expect(screen.getByText(/Happy Birthday!/)).toBeInTheDocument();
@@ -106,7 +106,7 @@ describe('MessageQueue – keyboard navigation', () => {
 
   it('error messages have role="alert" for screen readers', () => {
     mockHook({ error: 'Failed to load queue' });
-    render(<MessageQueue />);
+    render(<MessageQueue onClose={vi.fn()} />);
 
     const alert = screen.getByText('Failed to load queue');
     expect(alert).toHaveAttribute('role', 'alert');
