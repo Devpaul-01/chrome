@@ -273,9 +273,7 @@ function AppShell() {
             setOpenDropdown(tab.id);
             // Focus first menu item on next render
             requestAnimationFrame(() => {
-              navRef.current
-                ?.querySelector<HTMLElement>(`[role="menuitem"]`)
-                ?.focus();
+              navRef.current?.querySelector<HTMLElement>(`[role="menuitem"]`)?.focus();
             });
           }
           break;
@@ -358,7 +356,9 @@ function AppShell() {
                 aria-selected={activeTab === tab.id ? 'true' : 'false'}
                 aria-controls={`${tab.id}-panel`}
                 aria-haspopup={tab.menuItems ? 'menu' : undefined}
-                aria-expanded={tab.menuItems ? (openDropdown === tab.id ? 'true' : 'false') : undefined}
+                aria-expanded={
+                  tab.menuItems ? (openDropdown === tab.id ? 'true' : 'false') : undefined
+                }
                 tabIndex={activeTab === tab.id ? 0 : -1}
                 className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
                 onClick={() => {
@@ -375,7 +375,11 @@ function AppShell() {
                 {tab.label}
               </button>
               {tab.menuItems && openDropdown === tab.id && (
-                <div className="tab-dropdown tab-dropdown-open" role="menu" aria-label={`${tab.label} submenu`}>
+                <div
+                  className="tab-dropdown tab-dropdown-open"
+                  role="menu"
+                  aria-label={`${tab.label} submenu`}
+                >
                   {tab.menuItems.map((item, i) => (
                     <button
                       key={i}

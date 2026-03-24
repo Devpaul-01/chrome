@@ -117,7 +117,11 @@ export default function MessageHistory({
         )}
       </div>
 
-      {error && <div className="error mb-3" role="alert">{error}</div>}
+      {error && (
+        <div className="error mb-3" role="alert">
+          {error}
+        </div>
+      )}
 
       {/* Stats summary */}
       {!compact && (

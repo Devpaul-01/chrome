@@ -136,8 +136,16 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
         <span className="utc-clock">{utcTime}</span>
       </div>
 
-      {error && <div className="error mb-3" role="alert">{error}</div>}
-      {message && <div className="success mb-3" role="status">{message}</div>}
+      {error && (
+        <div className="error mb-3" role="alert">
+          {error}
+        </div>
+      )}
+      {message && (
+        <div className="success mb-3" role="status">
+          {message}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-8">

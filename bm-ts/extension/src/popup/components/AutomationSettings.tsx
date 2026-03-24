@@ -273,8 +273,16 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
         Configure automatic birthday checking and message sending.
       </p>
 
-      {error && <div className="error mb-3" role="alert">{error}</div>}
-      {message && <div className="success mb-3" role="status">{message}</div>}
+      {error && (
+        <div className="error mb-3" role="alert">
+          {error}
+        </div>
+      )}
+      {message && (
+        <div className="success mb-3" role="status">
+          {message}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-8">

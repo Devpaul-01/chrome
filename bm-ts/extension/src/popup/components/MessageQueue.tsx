@@ -129,8 +129,16 @@ export default function MessageQueue({ onClose: _onClose, compact = false }: Mes
     <div className="card">
       <h2 className="text-lg font-semibold mb-3">Message Queue</h2>
 
-      {error && <div className="error mb-3" role="alert">{error}</div>}
-      {successMessage && <div className="success mb-3" role="status">{successMessage}</div>}
+      {error && (
+        <div className="error mb-3" role="alert">
+          {error}
+        </div>
+      )}
+      {successMessage && (
+        <div className="success mb-3" role="status">
+          {successMessage}
+        </div>
+      )}
 
       {/* Queue summary */}
       {!compact && (

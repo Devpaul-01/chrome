@@ -26,7 +26,7 @@ import Spinner from '../components/Spinner';
 describe('Toast – accessibility', () => {
   it('success toast has no axe violations', async () => {
     const { container } = render(
-      <Toast message="Settings saved" type="success" onClose={vi.fn()} />
+      <Toast message="Settings saved" type="success" onClose={vi.fn()} />,
     );
     const results = await axe(container);
     expect(results).toHaveNoViolations();
@@ -34,24 +34,20 @@ describe('Toast – accessibility', () => {
 
   it('error toast has no axe violations', async () => {
     const { container } = render(
-      <Toast message="Something went wrong" type="error" onClose={vi.fn()} />
+      <Toast message="Something went wrong" type="error" onClose={vi.fn()} />,
     );
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
 
   it('has role="alert" for screen reader announcements', () => {
-    const { container } = render(
-      <Toast message="Test" type="info" onClose={vi.fn()} />
-    );
+    const { container } = render(<Toast message="Test" type="info" onClose={vi.fn()} />);
     const alert = container.querySelector('[role="alert"]');
     expect(alert).toBeTruthy();
   });
 
   it('close button has accessible label', () => {
-    const { getByRole } = render(
-      <Toast message="Test" type="info" onClose={vi.fn()} />
-    );
+    const { getByRole } = render(<Toast message="Test" type="info" onClose={vi.fn()} />);
     expect(getByRole('button', { name: /close notification/i })).toBeTruthy();
   });
 });
@@ -74,10 +70,7 @@ describe('HelpTooltip – accessibility', () => {
 
   it('trigger button has aria-describedby pointing to tooltip id', () => {
     const { getByRole } = render(<HelpTooltip label="Test" id="my-tip" />);
-    expect(getByRole('button', { name: /help/i })).toHaveAttribute(
-      'aria-describedby',
-      'my-tip'
-    );
+    expect(getByRole('button', { name: /help/i })).toHaveAttribute('aria-describedby', 'my-tip');
   });
 });
 

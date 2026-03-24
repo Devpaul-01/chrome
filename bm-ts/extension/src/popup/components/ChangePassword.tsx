@@ -59,8 +59,16 @@ export default function ChangePassword({ onCancel, onSuccess }: ChangePasswordPr
     <div className="card">
       <h2 className="text-lg font-semibold mb-3">Change Password</h2>
 
-      {error && <div className="error mb-3" role="alert">{error}</div>}
-      {message && <div className="success mb-3" role="status">{message}</div>}
+      {error && (
+        <div className="error mb-3" role="alert">
+          {error}
+        </div>
+      )}
+      {message && (
+        <div className="success mb-3" role="status">
+          {message}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="mb-3">

@@ -109,7 +109,11 @@ export default function Dashboard({ onClose: _onClose }: DashboardProps) {
         </button>
       </div>
 
-      {error && <div className="error mb-5" role="alert">{error}</div>}
+      {error && (
+        <div className="error mb-5" role="alert">
+          {error}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
