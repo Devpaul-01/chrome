@@ -50,6 +50,20 @@ def _set_reset_created_at(mapper, connection, target):
     if getattr(target, "created_at", None) is None:
         target.created_at = datetime.now(timezone.utc)
 
+
+from app.db.models import SubscriptionRecord
+
+
+@sa_event.listens_for(SubscriptionRecord, "before_insert")
+def _set_subscription_created_at(mapper, connection, target):
+    now = datetime.now(timezone.utc)
+    if getattr(target, "created_at", None) is None:
+        target.created_at = now
+    if getattr(target, "updated_at", None) is None:
+        target.updated_at = now
+    if getattr(target, "started_at", None) is None:
+        target.started_at = now
+
 # ---------------------------------------------------------------------------
 # In-memory async SQLite engine (no real PostgreSQL needed for unit tests)
 # ---------------------------------------------------------------------------
