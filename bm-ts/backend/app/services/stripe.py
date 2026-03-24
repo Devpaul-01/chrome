@@ -110,6 +110,66 @@ async def create_checkout_session(
     return session.url
 
 
+async def cancel_subscription(stripe_subscription_id: str) -> dict:
+    """
+    Cancel a Stripe subscription at the end of the current billing period.
+
+    Sets ``cancel_at_period_end=True`` so the user retains access until the
+    period expires.  The webhook handler will pick up the resulting
+    ``customer.subscription.updated`` event and persist the change locally.
+    """
+    sub = await run_in_threadpool(
+        stripe.Subscription.modify,
+        stripe_subscription_id,
+        cancel_at_period_end=True,
+    )
+    return dict(sub)
+
+
+async def reactivate_subscription(stripe_subscription_id: str) -> dict:
+    """Undo a pending cancellation by clearing ``cancel_at_period_end``."""
+    sub = await run_in_threadpool(
+        stripe.Subscription.modify,
+        stripe_subscription_id,
+        cancel_at_period_end=False,
+    )
+    return dict(sub)
+
+
+async def change_subscription_plan(
+    stripe_subscription_id: str, new_price_id: str
+) -> dict:
+    """
+    Upgrade or downgrade a subscription by swapping the price on
+    the first subscription item.  Stripe prorates the charge automatically.
+    """
+    sub = await run_in_threadpool(stripe.Subscription.retrieve, stripe_subscription_id)
+    item_id = sub["items"]["data"][0]["id"]
+    updated = await run_in_threadpool(
+        stripe.Subscription.modify,
+        stripe_subscription_id,
+        items=[{"id": item_id, "price": new_price_id}],
+        proration_behavior="create_prorations",
+    )
+    return dict(updated)
+
+
+async def create_billing_portal_session(
+    stripe_customer_id: str, return_url: str
+) -> str:
+    """
+    Create a Stripe Customer Portal session so the user can manage
+    payment methods, invoices, and billing details.
+    """
+    _validate_redirect_url(return_url, "return_url")
+    session = await run_in_threadpool(
+        stripe.billing_portal.Session.create,
+        customer=stripe_customer_id,
+        return_url=return_url,
+    )
+    return session.url
+
+
 def construct_event(payload: bytes, signature: str) -> stripe.Event:
     """Verify the Stripe-Signature header and return a parsed ``stripe.Event``. Raises on invalid signature."""
     return stripe.Webhook.construct_event(
