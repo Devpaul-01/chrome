@@ -249,18 +249,117 @@ function AppShell() {
       },
     ];
 
+    function handleTabKeyDown(e: React.KeyboardEvent, tabIndex: number) {
+      const tabButtons = navRef.current?.querySelectorAll<HTMLElement>('[role="tab"]');
+      if (!tabButtons) return;
+
+      switch (e.key) {
+        case 'ArrowRight': {
+          e.preventDefault();
+          const next = (tabIndex + 1) % tabButtons.length;
+          tabButtons[next].focus();
+          break;
+        }
+        case 'ArrowLeft': {
+          e.preventDefault();
+          const prev = (tabIndex - 1 + tabButtons.length) % tabButtons.length;
+          tabButtons[prev].focus();
+          break;
+        }
+        case 'ArrowDown': {
+          const tab = tabs[tabIndex];
+          if (tab.menuItems) {
+            e.preventDefault();
+            setOpenDropdown(tab.id);
+            // Focus first menu item on next render
+            requestAnimationFrame(() => {
+              navRef.current
+                ?.querySelector<HTMLElement>(`[role="menuitem"]`)
+                ?.focus();
+            });
+          }
+          break;
+        }
+        case 'Home': {
+          e.preventDefault();
+          tabButtons[0].focus();
+          break;
+        }
+        case 'End': {
+          e.preventDefault();
+          tabButtons[tabButtons.length - 1].focus();
+          break;
+        }
+        case 'Escape': {
+          if (openDropdown) {
+            e.preventDefault();
+            setOpenDropdown(null);
+          }
+          break;
+        }
+      }
+    }
+
+    function handleMenuItemKeyDown(
+      e: React.KeyboardEvent,
+      items: { label: string; action: () => void }[],
+      itemIndex: number,
+      parentTabId: TabType,
+    ) {
+      switch (e.key) {
+        case 'ArrowDown': {
+          e.preventDefault();
+          const next = (itemIndex + 1) % items.length;
+          const menuItems = navRef.current?.querySelectorAll<HTMLElement>(`[role="menuitem"]`);
+          menuItems?.[next]?.focus();
+          break;
+        }
+        case 'ArrowUp': {
+          e.preventDefault();
+          if (itemIndex === 0) {
+            // Move focus back to parent tab button
+            setOpenDropdown(null);
+            document.getElementById(`${parentTabId}-tab`)?.focus();
+          } else {
+            const prev = itemIndex - 1;
+            const menuItems = navRef.current?.querySelectorAll<HTMLElement>(`[role="menuitem"]`);
+            menuItems?.[prev]?.focus();
+          }
+          break;
+        }
+        case 'Home': {
+          e.preventDefault();
+          navRef.current?.querySelector<HTMLElement>(`[role="menuitem"]`)?.focus();
+          break;
+        }
+        case 'End': {
+          e.preventDefault();
+          const menuItems = navRef.current?.querySelectorAll<HTMLElement>(`[role="menuitem"]`);
+          menuItems?.[menuItems.length - 1]?.focus();
+          break;
+        }
+        case 'Escape': {
+          e.preventDefault();
+          setOpenDropdown(null);
+          document.getElementById(`${parentTabId}-tab`)?.focus();
+          break;
+        }
+      }
+    }
+
     return (
       <nav ref={navRef} className="tab-navigation mb-4" role="tablist">
         <div className="flex gap-1">
-          {tabs.map((tab) => (
+          {tabs.map((tab, tabIndex) => (
             <div key={tab.id} className="tab-wrapper">
               <button
                 id={`${tab.id}-tab`}
                 role="tab"
                 aria-selected={activeTab === tab.id ? 'true' : 'false'}
                 aria-controls={`${tab.id}-panel`}
-                aria-haspopup={tab.menuItems ? 'true' : undefined}
-                aria-expanded={openDropdown === tab.id ? 'true' : 'false'}
+                aria-haspopup={tab.menuItems ? 'menu' : undefined}
+                aria-expanded={tab.menuItems ? (openDropdown === tab.id ? 'true' : 'false') : undefined}
+                tabIndex={activeTab === tab.id ? 0 : -1}
                 className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
                 onClick={() => {
                   setActiveTab(tab.id);
@@ -271,20 +370,24 @@ function AppShell() {
                     tab.menuItems ? (prev === tab.id ? null : tab.id) : null,
                   );
                 }}
+                onKeyDown={(e) => handleTabKeyDown(e, tabIndex)}
               >
                 {tab.label}
               </button>
               {tab.menuItems && openDropdown === tab.id && (
-                <div className="tab-dropdown tab-dropdown-open">
+                <div className="tab-dropdown tab-dropdown-open" role="menu" aria-label={`${tab.label} submenu`}>
                   {tab.menuItems.map((item, i) => (
                     <button
                       key={i}
+                      role="menuitem"
                       className="tab-dropdown-item"
+                      tabIndex={-1}
                       onClick={(e) => {
                         e.stopPropagation();
                         item.action();
                         setOpenDropdown(null);
                       }}
+                      onKeyDown={(e) => handleMenuItemKeyDown(e, tab.menuItems!, i, tab.id)}
                     >
                       {item.label}
                     </button>

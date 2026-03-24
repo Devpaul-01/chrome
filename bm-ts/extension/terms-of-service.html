@@ -57,6 +57,8 @@
       font-size: 0.95rem;
     }
     a { color: #ca4f02; }
+    a:focus-visible, button:focus-visible { outline: 2px solid #ca4f02; outline-offset: 2px; }
+    .skip-link { position: absolute; left: -9999px; top: auto; } .skip-link:focus { left: 1rem; top: 0.5rem; z-index: 100; background: #fff; padding: 0.5rem 1rem; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
     code { font-family: monospace; background: #f5f0ec; padding: 0.1em 0.4em; border-radius: 3px; font-size: 0.9em; }
     footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid #f0ece8; font-size: 0.85rem; color: #888; }
     @media (max-width: 640px) {
@@ -67,6 +69,7 @@
 </head>
 <body>
 <div class="container">
+  <a href="#main" class="skip-link">Skip to main content</a>
 
   <header>
     <div class="logo">Birthday<span>Messaging</span></div>
@@ -74,7 +77,9 @@
     <p class="meta">Effective date: March 18, 2026 &nbsp;·&nbsp; Last updated: March 18, 2026</p>
   </header>
 
-  <div class="highlight-box">
+  <main id="main">
+
+  <div class="highlight-box" role="note">
     Please read these Terms carefully before using BirthdayMessaging. By installing the extension
     or creating an account, you agree to be bound by these Terms.
   </div>
@@ -215,7 +220,7 @@
     </li>
   </ul>
 
-  <div class="warning-box">
+  <div class="warning-box" role="note">
     <strong>Facebook Account Risk:</strong> Automating actions on Facebook carries inherent risk,
     including the possibility that Meta may restrict, suspend, or permanently disable your Facebook
     account. By using this Service, you acknowledge and accept this risk. We are not liable for
@@ -341,13 +346,17 @@
     CTM Media Group
   </p>
 
+  </main>
+
   <footer>
+    <nav aria-label="Footer navigation">
     &copy; 2026 CTM Media Group &nbsp;·&nbsp;
     <a href="privacy-policy.html">Privacy Policy</a> &nbsp;·&nbsp;
     <a href="quick-start.html">Quick Start</a> &nbsp;·&nbsp;
     <a href="faq.html">FAQ</a> &nbsp;·&nbsp;
-    <a href="troubleshooting.html">Troubleshooting</a> &nbsp;·&nbsp;
-    BirthdayMessaging is not affiliated with Meta Platforms, Inc.
+    <a href="troubleshooting.html">Troubleshooting</a>
+    </nav>
+    <p>BirthdayMessaging is not affiliated with Meta Platforms, Inc.</p>
   </footer>
 
 </div>

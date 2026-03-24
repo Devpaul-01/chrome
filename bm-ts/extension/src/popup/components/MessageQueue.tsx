@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMessageQueue, QueuedMessage } from '../hooks/useMessages';
 import Spinner from './Spinner';
+import { trapFocus, handleEscapeKey } from '../../utils/accessibility';
 
 interface MessageQueueProps {
   onClose: () => void;
@@ -30,6 +31,20 @@ export default function MessageQueue({ onClose: _onClose, compact = false }: Mes
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkLoading, setIsBulkLoading] = useState(false);
   const [previewMessage, setPreviewMessage] = useState<QueuedMessage | null>(null);
+  const previewDialogRef = useRef<HTMLDivElement>(null);
+
+  // Trap focus and handle Escape key when preview modal is open
+  useEffect(() => {
+    if (!previewMessage || !previewDialogRef.current) return;
+    const cleanupTrap = trapFocus(previewDialogRef.current);
+    const escHandler = handleEscapeKey(() => setPreviewMessage(null));
+    document.addEventListener('keydown', escHandler);
+    previewDialogRef.current.querySelector<HTMLElement>('button')?.focus();
+    return () => {
+      cleanupTrap();
+      document.removeEventListener('keydown', escHandler);
+    };
+  }, [previewMessage]);
 
   // ── Derived lists ─────────────────────────────────────────────────────
   const visibleMessages = messages
@@ -114,8 +129,8 @@ export default function MessageQueue({ onClose: _onClose, compact = false }: Mes
     <div className="card">
       <h2 className="text-lg font-semibold mb-3">Message Queue</h2>
 
-      {error && <div className="error mb-3">{error}</div>}
-      {successMessage && <div className="success mb-3">{successMessage}</div>}
+      {error && <div className="error mb-3" role="alert">{error}</div>}
+      {successMessage && <div className="success mb-3" role="status">{successMessage}</div>}
 
       {/* Queue summary */}
       {!compact && (
@@ -402,6 +417,7 @@ export default function MessageQueue({ onClose: _onClose, compact = false }: Mes
           role="dialog"
           aria-modal="true"
           aria-labelledby="preview-modal-title"
+          ref={previewDialogRef}
           onClick={(e) => {
             if (e.target === e.currentTarget) setPreviewMessage(null);
           }}

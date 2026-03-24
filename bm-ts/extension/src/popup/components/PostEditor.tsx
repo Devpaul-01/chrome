@@ -377,7 +377,7 @@ export default function PostEditor({
               <div>
                 <img
                   src={postForm.image_url}
-                  alt="Attached"
+                  alt="Attached image for birthday post"
                   className="w-full rounded-lg shadow-sm mb-2"
                   style={{ maxHeight: '180px', objectFit: 'contain' }}
                 />

@@ -79,6 +79,8 @@
     }
     code { font-family: monospace; background: #f5f0ec; padding: 0.1em 0.4em; border-radius: 3px; font-size: 0.9em; }
     a { color: #ca4f02; }
+    a:focus-visible, button:focus-visible { outline: 2px solid #ca4f02; outline-offset: 2px; }
+    .skip-link { position: absolute; left: -9999px; top: auto; } .skip-link:focus { left: 1rem; top: 0.5rem; z-index: 100; background: #fff; padding: 0.5rem 1rem; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
     footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid #f0ece8; font-size: 0.85rem; color: #888; }
     @media (max-width: 640px) {
       .container { padding: 2rem 1.25rem; }
@@ -88,6 +90,7 @@
 </head>
 <body>
 <div class="container">
+  <a href="#main" class="skip-link">Skip to main content</a>
 
   <header>
     <div class="logo">Birthday<span>Messaging</span></div>
@@ -95,7 +98,9 @@
     <p class="meta">Get up and running in about 5 minutes</p>
   </header>
 
-  <div class="highlight-box">
+  <main id="main">
+
+  <div class="highlight-box" role="note">
     <strong>What you'll accomplish:</strong> By the end of this guide, BirthdayMessaging will be
     installed, your account will be set up, and the extension will be ready to automatically send
     personalized birthday messages to your Facebook friends.
@@ -134,7 +139,7 @@
     <li>Click <strong>+ New Template</strong>.</li>
     <li>Fill in the three fields:</li>
   </ol>
-  <table>
+  <table aria-label="Template fields reference">
     <thead>
       <tr><th>Field</th><th>Example</th><th>Max length</th></tr>
     </thead>
@@ -150,7 +155,7 @@
   </ol>
 
   <h3>Personalization tags you can use</h3>
-  <table>
+  <table aria-label="Personalization tags reference">
     <thead>
       <tr><th>Tag</th><th>Replaced with</th></tr>
     </thead>
@@ -209,13 +214,17 @@
     <li><strong>Upgrade your subscription</strong> in Account → Subscription to unlock more messages per day.</li>
   </ul>
 
+  </main>
+
   <footer>
+    <nav aria-label="Footer navigation">
     &copy; 2026 CTM Media Group &nbsp;·&nbsp;
     <a href="faq.html">FAQ</a> &nbsp;·&nbsp;
     <a href="troubleshooting.html">Troubleshooting</a> &nbsp;·&nbsp;
     <a href="privacy-policy.html">Privacy Policy</a> &nbsp;·&nbsp;
-    <a href="terms-of-service.html">Terms of Service</a> &nbsp;·&nbsp;
-    BirthdayMessaging is not affiliated with Meta Platforms, Inc.
+    <a href="terms-of-service.html">Terms of Service</a>
+    </nav>
+    <p>BirthdayMessaging is not affiliated with Meta Platforms, Inc.</p>
   </footer>
 
 </div>

@@ -62,6 +62,8 @@
     }
     code { font-family: monospace; background: #f5f0ec; padding: 0.1em 0.4em; border-radius: 3px; font-size: 0.9em; }
     a { color: #ca4f02; }
+    a:focus-visible, button:focus-visible { outline: 2px solid #ca4f02; outline-offset: 2px; }
+    .skip-link { position: absolute; left: -9999px; top: auto; } .skip-link:focus { left: 1rem; top: 0.5rem; z-index: 100; background: #fff; padding: 0.5rem 1rem; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
     footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid #f0ece8; font-size: 0.85rem; color: #888; }
     @media (max-width: 640px) {
       .container { padding: 2rem 1.25rem; }
@@ -71,6 +73,7 @@
 </head>
 <body>
 <div class="container">
+  <a href="#main" class="skip-link">Skip to main content</a>
 
   <header>
     <div class="logo">Birthday<span>Messaging</span></div>
@@ -78,7 +81,9 @@
     <p class="meta">Solutions to common issues with BirthdayMessaging</p>
   </header>
 
-  <div class="highlight-box">
+  <main id="main">
+
+  <div class="highlight-box" role="note">
     <strong>Tip:</strong> Most issues are resolved by reloading the extension. Go to
     <code>chrome://extensions/</code>, find BirthdayMessaging, and click the reload (↺) button,
     then reopen the popup.
@@ -97,7 +102,7 @@
   <!-- Can't Log In -->
   <h2>Can't Log In</h2>
   <p><strong>Symptoms:</strong> Login form submits but shows an error, or the page spins indefinitely.</p>
-  <table>
+  <table aria-label="Login error messages and solutions">
     <thead>
       <tr><th>Error message</th><th>What to do</th></tr>
     </thead>
@@ -230,7 +235,7 @@
   <!-- Stripe / Subscription -->
   <h2>Stripe / Subscription Issues</h2>
   <p><strong>Symptoms:</strong> Checkout doesn't open; subscription shows inactive after payment.</p>
-  <table>
+  <table aria-label="Subscription issue solutions">
     <thead>
       <tr><th>Symptom</th><th>What to do</th></tr>
     </thead>
@@ -285,7 +290,7 @@
 
   <!-- Still Having Issues -->
   <h2>Still Having Issues?</h2>
-  <div class="warning-box">
+  <div class="warning-box" role="note">
     <strong>Before contacting support</strong>, collect the following to help us diagnose the issue quickly.
   </div>
   <ol>
@@ -309,13 +314,17 @@
     </li>
   </ol>
 
+  </main>
+
   <footer>
+    <nav aria-label="Footer navigation">
     &copy; 2026 CTM Media Group &nbsp;·&nbsp;
     <a href="quick-start.html">Quick Start</a> &nbsp;·&nbsp;
     <a href="faq.html">FAQ</a> &nbsp;·&nbsp;
     <a href="privacy-policy.html">Privacy Policy</a> &nbsp;·&nbsp;
-    <a href="terms-of-service.html">Terms of Service</a> &nbsp;·&nbsp;
-    BirthdayMessaging is not affiliated with Meta Platforms, Inc.
+    <a href="terms-of-service.html">Terms of Service</a>
+    </nav>
+    <p>BirthdayMessaging is not affiliated with Meta Platforms, Inc.</p>
   </footer>
 
 </div>

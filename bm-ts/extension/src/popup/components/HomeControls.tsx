@@ -92,7 +92,7 @@ export default function HomeControls({
 
   return (
     <div role="tabpanel" id="home-panel" className="tab-content space-y-4">
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
 
       {/* Welcome */}
       <div className="card text-center">

@@ -63,6 +63,8 @@
     }
     code { font-family: monospace; background: #f5f0ec; padding: 0.1em 0.4em; border-radius: 3px; font-size: 0.9em; }
     a { color: #ca4f02; }
+    a:focus-visible, button:focus-visible { outline: 2px solid #ca4f02; outline-offset: 2px; }
+    .skip-link { position: absolute; left: -9999px; top: auto; } .skip-link:focus { left: 1rem; top: 0.5rem; z-index: 100; background: #fff; padding: 0.5rem 1rem; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
     footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid #f0ece8; font-size: 0.85rem; color: #888; }
     @media (max-width: 640px) {
       .container { padding: 2rem 1.25rem; }
@@ -72,6 +74,7 @@
 </head>
 <body>
 <div class="container">
+  <a href="#main" class="skip-link">Skip to main content</a>
 
   <header>
     <div class="logo">Birthday<span>Messaging</span></div>
@@ -79,8 +82,10 @@
     <p class="meta">Answers to the most common questions about BirthdayMessaging</p>
   </header>
 
+  <main id="main">
+
   <!-- ── General ── -->
-  <div class="section-heading">General</div>
+  <h2 class="section-heading">General</h2>
 
   <h2>1. What does BirthdayMessaging do?</h2>
   <p>
@@ -122,7 +127,7 @@
   </p>
 
   <!-- ── Account & Billing ── -->
-  <div class="section-heading">Account &amp; Billing</div>
+  <h2 class="section-heading">Account &amp; Billing</h2>
 
   <h2>5. Do I need a subscription?</h2>
   <p>
@@ -151,14 +156,14 @@
   </p>
 
   <!-- ── Templates & Messages ── -->
-  <div class="section-heading">Templates &amp; Messages</div>
+  <h2 class="section-heading">Templates &amp; Messages</h2>
 
   <h2>9. What are merge tags?</h2>
   <p>
     Merge tags are placeholders in your message templates that are automatically replaced with real
     values when a message is sent:
   </p>
-  <table>
+  <table aria-label="Merge tags reference">
     <thead>
       <tr><th>Tag</th><th>Replaced with</th></tr>
     </thead>
@@ -194,7 +199,7 @@
   <p>Check <strong>Messages → History</strong> and <strong>Messages → Queue</strong> for more detail.</p>
 
   <!-- ── Contacts & Facebook ── -->
-  <div class="section-heading">Contacts &amp; Facebook</div>
+  <h2 class="section-heading">Contacts &amp; Facebook</h2>
 
   <h2>13. How do contacts get added?</h2>
   <p>
@@ -213,13 +218,17 @@
     We monitor Facebook layout changes and release fixes as quickly as possible.
   </p>
 
+  </main>
+
   <footer>
+    <nav aria-label="Footer navigation">
     &copy; 2026 CTM Media Group &nbsp;·&nbsp;
     <a href="quick-start.html">Quick Start</a> &nbsp;·&nbsp;
     <a href="troubleshooting.html">Troubleshooting</a> &nbsp;·&nbsp;
     <a href="privacy-policy.html">Privacy Policy</a> &nbsp;·&nbsp;
-    <a href="terms-of-service.html">Terms of Service</a> &nbsp;·&nbsp;
-    BirthdayMessaging is not affiliated with Meta Platforms, Inc.
+    <a href="terms-of-service.html">Terms of Service</a>
+    </nav>
+    <p>BirthdayMessaging is not affiliated with Meta Platforms, Inc.</p>
   </footer>
 
 </div>

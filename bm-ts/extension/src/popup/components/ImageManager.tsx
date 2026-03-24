@@ -215,7 +215,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(
               <div className="relative">
                 <img
                   src={previewImage}
-                  alt="Preview"
+                  alt="Uploaded image preview"
                   className="w-full rounded-lg shadow-md image-preview-max"
                 />
                 <div className="mt-2 text-center text-xs text-gray-600">

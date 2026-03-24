@@ -226,7 +226,7 @@ async def billing_portal(
     if not current_user.stripe_customer_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No Stripe customer on file",
+            detail="No billing account found. Please set up a subscription first.",
         )
     portal_url = await create_billing_portal_session(
         stripe_customer_id=current_user.stripe_customer_id,

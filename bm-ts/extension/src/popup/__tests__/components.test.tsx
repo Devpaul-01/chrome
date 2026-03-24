@@ -36,15 +36,15 @@ describe('Spinner', () => {
   });
 
   it('applies the correct size class for "sm"', () => {
-    render(<Spinner size="sm" />);
-    const img = screen.getByRole('status');
-    expect(img.className).toContain('w-8');
+    const { container } = render(<Spinner size="sm" />);
+    const img = container.querySelector('img');
+    expect(img?.className).toContain('w-8');
   });
 
   it('applies the correct size class for "lg"', () => {
-    render(<Spinner size="lg" />);
-    const img = screen.getByRole('status');
-    expect(img.className).toContain('w-16');
+    const { container } = render(<Spinner size="lg" />);
+    const img = container.querySelector('img');
+    expect(img?.className).toContain('w-16');
   });
 });
 

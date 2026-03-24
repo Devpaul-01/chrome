@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Spinner from './Spinner';
 import { useMessageHistory, MessageHistoryItem } from '../hooks/useMessages';
+import { trapFocus, handleEscapeKey } from '../../utils/accessibility';
 
 interface MessageHistoryProps {
   onClose: () => void;
@@ -35,6 +36,20 @@ export default function MessageHistory({
   } = useMessageHistory();
 
   const [detailMessage, setDetailMessage] = useState<MessageHistoryItem | null>(null);
+  const detailDialogRef = useRef<HTMLDivElement>(null);
+
+  // Trap focus and handle Escape key when detail modal is open
+  useEffect(() => {
+    if (!detailMessage || !detailDialogRef.current) return;
+    const cleanupTrap = trapFocus(detailDialogRef.current);
+    const escHandler = handleEscapeKey(() => setDetailMessage(null));
+    document.addEventListener('keydown', escHandler);
+    detailDialogRef.current.querySelector<HTMLElement>('button')?.focus();
+    return () => {
+      cleanupTrap();
+      document.removeEventListener('keydown', escHandler);
+    };
+  }, [detailMessage]);
 
   function formatDateTime(dateString: string): string {
     const date = new Date(dateString);
@@ -102,7 +117,7 @@ export default function MessageHistory({
         )}
       </div>
 
-      {error && <div className="error mb-3">{error}</div>}
+      {error && <div className="error mb-3" role="alert">{error}</div>}
 
       {/* Stats summary */}
       {!compact && (
@@ -364,6 +379,7 @@ export default function MessageHistory({
           role="dialog"
           aria-modal="true"
           aria-labelledby="history-detail-title"
+          ref={detailDialogRef}
           onClick={(e) => {
             if (e.target === e.currentTarget) setDetailMessage(null);
           }}

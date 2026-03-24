@@ -10,7 +10,11 @@
  */
 
 import '@testing-library/jest-dom';
-import { afterEach, vi } from 'vitest';
+import * as axeMatchers from 'vitest-axe/matchers';
+import { afterEach, vi, expect } from 'vitest';
+
+// Register vitest-axe matchers (toHaveNoViolations)
+expect.extend(axeMatchers);
 
 // ---------------------------------------------------------------------------
 // Chrome Extension API stub
