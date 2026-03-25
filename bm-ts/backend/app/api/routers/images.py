@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 from typing import List
 from uuid import UUID
 
@@ -13,6 +14,8 @@ from app.api.deps import get_current_user
 from app.db.models import User, UserImage
 from app.db.session import get_db
 from app.schemas.user_image import UserImageOut, UserImageUploadFile, UserImageUploadUrl
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -90,9 +93,10 @@ async def upload_image_file(
             detail="Invalid base64 data"
         )
     except Exception as e:
+        logger.error("Failed to process image upload: %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to process image: {str(e)}"
+            detail="Failed to process image. Please ensure the file is a valid image and try again."
         )
 
 

@@ -10,7 +10,20 @@
  */
 
 import '@testing-library/jest-dom';
-import { afterEach, vi } from 'vitest';
+import * as axeMatchers from 'vitest-axe/matchers';
+import { afterEach, vi, expect } from 'vitest';
+import type { AxeMatchers } from 'vitest-axe/matchers';
+
+// Augment Vitest's Assertion interface with vitest-axe matchers
+declare module 'vitest' {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
+  interface Assertion<T = any> extends AxeMatchers {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  interface AsymmetricMatchersContaining extends AxeMatchers {}
+}
+
+// Register vitest-axe matchers (toHaveNoViolations)
+expect.extend(axeMatchers);
 
 // ---------------------------------------------------------------------------
 // Chrome Extension API stub

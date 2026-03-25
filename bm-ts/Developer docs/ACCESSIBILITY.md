@@ -6,11 +6,19 @@ The BirthdayMessaging extension has been enhanced with comprehensive accessibili
 
 ## Compliance
 
-Our accessibility implementation follows:
-- **WCAG 2.1 Level AA** guidelines
+Our accessibility implementation targets:
+- **WCAG 2.2 Level AA** guidelines (upgraded from 2.1)
 - **ARIA 1.2** specifications
 - **Web Content Accessibility Guidelines** best practices
 - **Chrome Extension Accessibility** guidelines
+
+### WCAG 2.2 New Criteria Addressed
+- **2.4.11 Focus Not Obscured (Minimum)** — focus indicators remain visible
+- **2.4.13 Focus Appearance** — 3px orange outline with 2px offset
+- **2.5.7 Dragging Movements** — no drag-only interactions
+- **2.5.8 Target Size (Minimum)** — all interactive targets meet 24×24px minimum
+- **3.2.6 Consistent Help** — help tooltips available consistently across views
+- **3.3.7 Redundant Entry** — forms do not require re-entering previously provided information
 
 ## Key Accessibility Features
 
@@ -20,16 +28,37 @@ Our accessibility implementation follows:
 - **Alt + H** - Navigate to home/main view
 - **Alt + D** - Open dashboard (analytics view)
 - **Alt + L** - Logout
-- **Esc** - Return to main view
+- **Esc** - Return to main view / close modals
 
 #### Tab Navigation
 - All interactive elements are keyboard accessible via Tab/Shift+Tab
 - Logical tab order follows visual layout
 - Focus indicators clearly visible with orange outline (#f08500)
+- Roving tabindex on tab navigation (only active tab is in tab order)
+
+#### Tab Dropdown Keyboard Navigation
+- **ArrowLeft/ArrowRight** — move between tabs
+- **ArrowDown** — open dropdown menu and focus first item
+- **ArrowUp/ArrowDown** — move within dropdown menu items
+- **Home/End** — jump to first/last tab or menu item
+- **Escape** — close dropdown and return focus to parent tab
+- Tabs with menus have `aria-haspopup="menu"` and conditional `aria-expanded`
+- Dropdown menus have `role="menu"` with `role="menuitem"` children
+
+#### Modal Focus Traps
+- MessageQueue preview modal traps focus with Tab/Shift+Tab cycling
+- MessageHistory detail modal traps focus similarly
+- Escape key closes all modals and returns focus to trigger element
+- Focus automatically moves into modal when opened
 
 #### Skip Links
-- "Skip to main content" link appears when Tab is pressed
+- "Skip to main content" link appears when Tab is pressed on all static HTML pages
 - Allows keyboard users to bypass repetitive navigation
+
+#### Content Script Overlay
+- Overlay panel is keyboard accessible with `tabindex="-1"` and receives focus on open
+- Escape key hides the overlay
+- All buttons within the overlay have descriptive `aria-label` attributes
 
 ### 2. Screen Reader Support
 
@@ -72,6 +101,16 @@ Utility function `announceToScreenReader()` used for:
 #### Headings Hierarchy
 Proper heading structure (h1 → h2 → h3) for screen reader navigation
 
+#### Static HTML Pages
+All static pages (FAQ, Quick Start, Troubleshooting, Privacy Policy, Terms of Service) include:
+- Skip-to-main-content links
+- `<main>` landmark wrapping content
+- Proper heading hierarchy (`<h2>` section headings instead of styled `<div>`s)
+- `aria-label` on all data tables
+- `role="note"` on highlight/warning boxes
+- `<nav aria-label="Footer navigation">` on footer links
+- `:focus-visible` styles matching the popup focus indicators
+
 ### 4. Form Accessibility
 
 #### Input Labels
@@ -81,7 +120,8 @@ Proper heading structure (h1 → h2 → h3) for screen reader navigation
 
 #### Error Handling
 - Errors linked to inputs via `aria-describedby`
-- Error messages have `role="alert"` for immediate announcement
+- Error messages have `role="alert"` for immediate announcement (all components)
+- Success messages have `role="status"` for polite announcement
 - Visual and programmatic error indicators
 - Descriptive error messages
 
@@ -137,16 +177,17 @@ Respects user's motion preferences to prevent motion sickness
 ### 6. Loading States
 
 All loading states include:
-- Visual spinner (custom GIF)
-- `role="status"` on container
+- Visual spinner (custom GIF, `aria-hidden="true"`)
+- `role="status"` on wrapper container (not on `<img>`)
 - `aria-busy="true"` on buttons
 - Descriptive loading messages
-- Screen reader announcement
+- Screen reader announcement via `.sr-only` text
 
 Example:
 ```tsx
-<div role="status" aria-live="polite">
-  <Spinner size="lg" message="Initializing..." />
+<div role="status" aria-label="Loading">
+  <img src="..." alt="" aria-hidden="true" />
+  <span className="sr-only">Loading...</span>
 </div>
 ```
 
@@ -178,11 +219,25 @@ React ErrorBoundary component:
 - ✅ Confirmation dialogs for destructive actions
 - ✅ Status badges with semantic colors
 - ✅ Proper button labels
+- ✅ Modal focus traps — Tab/Shift+Tab cycle within preview/detail dialogs
+- ✅ Escape key closes modals and returns focus
+- ✅ Error messages with `role="alert"`, success with `role="status"`
 
 ### Dashboard
 - ✅ Statistics presented with proper labels
 - ✅ Real-time updates announced
 - ✅ Loading states properly communicated
+- ✅ Error messages with `role="alert"`
+
+### AutomationSettings
+- ✅ Interval preset buttons with `aria-pressed` state
+- ✅ Range slider with descriptive `aria-label`
+- ✅ Error/success messages with `role="alert"` / `role="status"`
+- ✅ All form inputs properly labeled
+
+### ImageManager & PostEditor
+- ✅ Descriptive image alt text (not generic "Preview" or "Attached")
+- ✅ Error messages with `role="alert"`
 
 ### Toast Notifications
 - ✅ `role="alert"` for immediate attention
@@ -225,6 +280,36 @@ Simple Escape key handler for modals
 Check if user prefers reduced motion
 
 ## Testing Accessibility
+
+### Automated Testing (vitest-axe)
+
+We use **vitest-axe** (axe-core) for automated WCAG compliance regression testing. Tests are in:
+- `src/popup/__tests__/accessibility.test.tsx` — axe-core scans on Toast, HelpTooltip, Spinner
+- `src/popup/__tests__/keyboard-navigation.test.tsx` — focus trap, Escape key, ARIA role verification
+
+#### Setup
+vitest-axe matchers are registered globally in `src/test-setup.ts`:
+```typescript
+import * as axeMatchers from 'vitest-axe/matchers';
+expect.extend(axeMatchers);
+```
+
+#### Writing axe Tests
+```typescript
+import { axe } from 'vitest-axe';
+
+it('has no axe violations', async () => {
+  const { container } = render(<MyComponent />);
+  const results = await axe(container);
+  expect(results).toHaveNoViolations();
+});
+```
+
+#### Running Tests
+```bash
+npm test                    # Run all tests including a11y
+npx vitest run --grep a11y  # Run only accessibility tests
+```
 
 ### Manual Testing
 
@@ -316,6 +401,25 @@ useEffect(() => {
 </div>
 ```
 
+## Backend Accessibility
+
+### Error Response Quality
+All HTTP error responses return user-friendly `detail` messages suitable for screen reader announcement:
+- Authentication errors are intentionally vague for security ("Invalid credentials")
+- Validation errors include specific field information via FastAPI's default 422 handler
+- Resource-not-found errors describe the resource type ("Contact not found", "Schedule not found")
+- Internal exceptions are never leaked to clients — raw exception text is logged server-side only
+
+### Content Security Policy
+The backend CSP header (`security_headers.py`) allows `style-src 'self' 'unsafe-inline'` to avoid blocking assistive technology tools that inject inline styles.
+
+### Image Upload Errors
+Image processing failures return generic user-friendly messages instead of leaking raw exception details:
+```python
+# Good: "Failed to process image. Please ensure the file is a valid image and try again."
+# Bad:  f"Failed to process image: {str(e)}"  # leaks internals
+```
+
 ## Known Limitations
 
 1. **Chrome Extension Sandbox**: Some ARIA features may have limited support
@@ -325,13 +429,28 @@ useEffect(() => {
 ## Future Improvements
 
 ### Planned Enhancements
-- [ ] Implement roving tabindex for template lists
 - [ ] Add more keyboard shortcuts for common actions
 - [ ] Improve mobile screen reader support
 - [ ] Add voice control support
 - [ ] Implement accessible drag-and-drop for template reordering
 - [ ] Add customizable keyboard shortcuts
 - [ ] Improve announcements for batch operations
+- [ ] Add custom `RequestValidationError` handler with human-readable summary
+- [ ] Add axe-core scans for remaining complex components (AuthForm, ContactForm, etc.)
+
+### Recently Completed
+- [x] Modal focus traps (MessageQueue, MessageHistory)
+- [x] Tab dropdown keyboard navigation (ArrowLeft/Right, ArrowDown, Escape)
+- [x] Content script overlay accessibility (focus, Escape, ARIA labels)
+- [x] Static HTML pages (skip links, headings, table labels, landmarks)
+- [x] WCAG 2.2 target size minimum (24×24px)
+- [x] `role="alert"` / `role="status"` on all error/success messages
+- [x] `aria-pressed` on AutomationSettings interval preset buttons
+- [x] Descriptive image alt text (ImageManager, PostEditor)
+- [x] Backend exception message leak fixed (images.py)
+- [x] CSP header updated for AT compatibility
+- [x] vitest-axe automated testing integration
+- [x] Spinner `role="status"` moved from `<img>` to wrapper `<div>`
 
 ### User Preferences
 - [ ] Allow users to disable animations (beyond prefers-reduced-motion)
@@ -342,7 +461,7 @@ useEffect(() => {
 ## Resources
 
 ### Guidelines & Standards
-- [WCAG 2.1](https://www.w3.org/WAI/WCAG21/quickref/)
+- [WCAG 2.2](https://www.w3.org/WAI/WCAG22/quickref/)
 - [ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)
 - [Chrome Extension Accessibility](https://developer.chrome.com/docs/extensions/mv3/a11y/)
 - [WebAIM](https://webaim.org/)
@@ -363,7 +482,7 @@ useEffect(() => {
 We are committed to ensuring digital accessibility for people with disabilities. We continually improve the user experience for everyone and apply relevant accessibility standards.
 
 ### Conformance Status
-**Partially Conformant** - Some parts of the content do not fully conform to WCAG 2.1 Level AA.
+**Substantially Conformant** — The extension substantially conforms to WCAG 2.2 Level AA. Automated testing via axe-core and manual audits have been conducted across all layers (frontend popup, content script, static HTML pages, backend API).
 
 ### Feedback
 If you encounter accessibility barriers, please contact us:
@@ -373,6 +492,7 @@ We welcome your feedback on the accessibility of this extension. Please let us k
 
 ---
 
-**Last Updated**: February 23, 2026  
-**Tested With**: NVDA 2024, Chrome 120, Keyboard-only navigation  
+**Last Updated**: March 24, 2026
+**WCAG Target**: 2.2 Level AA
+**Tested With**: axe-core 4.11, vitest-axe, NVDA, Chrome, Keyboard-only navigation
 **Status**: ✅ Production Ready

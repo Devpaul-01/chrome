@@ -273,8 +273,16 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
         Configure automatic birthday checking and message sending.
       </p>
 
-      {error && <div className="error mb-3">{error}</div>}
-      {message && <div className="success mb-3">{message}</div>}
+      {error && (
+        <div className="error mb-3" role="alert">
+          {error}
+        </div>
+      )}
+      {message && (
+        <div className="success mb-3" role="status">
+          {message}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
@@ -310,6 +318,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
                   key={preset.value}
                   onClick={() => handleUpdateInterval(preset.value)}
                   disabled={isSaving}
+                  aria-pressed={config.checkInterval === preset.value}
                   className={`px-3 py-2 text-sm rounded ${
                     config.checkInterval === preset.value
                       ? 'bg-orangeStrong text-white'

@@ -290,20 +290,31 @@ function createOverlay(): HTMLElement {
   wrapper.style.fontFamily = 'inherit';
   wrapper.style.zIndex = '2147483647';
   wrapper.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
+  wrapper.setAttribute('role', 'region');
+  wrapper.setAttribute('aria-label', 'BirthdayMessaging automation panel');
+  wrapper.setAttribute('tabindex', '-1');
   wrapper.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <strong>BirthdayMessaging</strong>
-      <button id="bm-refresh" style="font-size:12px;padding:4px 6px;">Refresh</button>
+      <button id="bm-refresh" style="font-size:12px;padding:4px 6px;" aria-label="Refresh friend list">Refresh</button>
     </div>
-    <p id="bm-status" style="margin:0 0 8px 0;font-size:13px;">Ready</p>
-    <div id="bm-friend-list"></div>
-    <button id="bm-send" style="margin-top:8px;width:100%;padding:8px;">Send to all</button>
+    <p id="bm-status" style="margin:0 0 8px 0;font-size:13px;" aria-live="polite">Ready</p>
+    <div id="bm-friend-list" aria-label="Birthday friends" role="list"></div>
+    <button id="bm-send" style="margin-top:8px;width:100%;padding:8px;" aria-label="Send birthday messages to all friends">Send to all</button>
   `;
   document.body.appendChild(wrapper);
   const refreshBtn = wrapper.querySelector<HTMLButtonElement>('#bm-refresh');
   refreshBtn?.addEventListener('click', () => void refreshFriendList());
   const sendBtn = wrapper.querySelector<HTMLButtonElement>('#bm-send');
   sendBtn?.addEventListener('click', () => void handleSendAll());
+  // Escape key closes the overlay
+  wrapper.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      wrapper.style.display = 'none';
+    }
+  });
+  // Focus the overlay so keyboard users can interact
+  wrapper.focus();
   return wrapper;
 }
 

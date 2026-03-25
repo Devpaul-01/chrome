@@ -12,13 +12,16 @@ export default function Spinner({ size = 'md', className = '', message }: Props)
   };
 
   return (
-    <div className={`flex flex-col items-center justify-center ${className}`}>
+    <div
+      className={`flex flex-col items-center justify-center ${className}`}
+      role="status"
+      aria-label="Loading"
+    >
       <img
         src="./images/Birthday_messaging-custom_loader.gif"
-        alt="Loading..."
+        alt=""
         className={`${sizeClasses[size]} object-contain`}
-        role="status"
-        aria-label="Loading"
+        aria-hidden="true"
       />
       {message && <p className="text-sm text-gray-600 mt-2">{message}</p>}
       <span className="sr-only">Loading...</span>

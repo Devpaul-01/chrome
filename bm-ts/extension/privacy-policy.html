@@ -53,6 +53,8 @@
       font-size: 0.95rem;
     }
     a { color: #ca4f02; }
+    a:focus-visible, button:focus-visible { outline: 2px solid #ca4f02; outline-offset: 2px; }
+    .skip-link { position: absolute; left: -9999px; top: auto; } .skip-link:focus { left: 1rem; top: 0.5rem; z-index: 100; background: #fff; padding: 0.5rem 1rem; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
     footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid #f0ece8; font-size: 0.85rem; color: #888; }
     @media (max-width: 640px) {
       .container { padding: 2rem 1.25rem; }
@@ -62,6 +64,7 @@
 </head>
 <body>
 <div class="container">
+  <a href="#main" class="skip-link">Skip to main content</a>
 
   <header>
     <div class="logo">Birthday<span>Messaging</span></div>
@@ -69,7 +72,9 @@
     <p class="meta">Effective date: March 18, 2026 &nbsp;·&nbsp; Last updated: March 18, 2026</p>
   </header>
 
-  <div class="highlight-box">
+  <main id="main">
+
+  <div class="highlight-box" role="note">
     <strong>Summary:</strong> BirthdayMessaging collects only what is needed to automate
     birthday messages on your behalf. We never sell your data, and you can export or delete
     everything at any time.
@@ -139,7 +144,7 @@
 
   <!-- 3. How we use your data -->
   <h2>3. How We Use Your Data</h2>
-  <table>
+  <table aria-label="Data usage purposes and legal basis">
     <thead>
       <tr>
         <th>Purpose</th>
@@ -188,7 +193,7 @@
   <h2>4. Who We Share Your Data With</h2>
   <p>We share data only with the following service providers, strictly limited to what each needs to operate:</p>
 
-  <table>
+  <table aria-label="Data sharing recipients">
     <thead>
       <tr>
         <th>Recipient</th>
@@ -278,7 +283,7 @@
     BirthdayMessaging requests the following Chrome permissions. Each permission is strictly
     necessary for the operation of the extension:
   </p>
-  <table>
+  <table aria-label="Chrome permissions explanation">
     <thead>
       <tr>
         <th>Permission</th>
@@ -372,13 +377,17 @@
     CTM Media Group
   </p>
 
+  </main>
+
   <footer>
+    <nav aria-label="Footer navigation">
     &copy; 2026 CTM Media Group &nbsp;·&nbsp;
     <a href="terms-of-service.html">Terms of Service</a> &nbsp;·&nbsp;
     <a href="quick-start.html">Quick Start</a> &nbsp;·&nbsp;
     <a href="faq.html">FAQ</a> &nbsp;·&nbsp;
-    <a href="troubleshooting.html">Troubleshooting</a> &nbsp;·&nbsp;
-    BirthdayMessaging is not affiliated with Meta Platforms, Inc.
+    <a href="troubleshooting.html">Troubleshooting</a>
+    </nav>
+    <p>BirthdayMessaging is not affiliated with Meta Platforms, Inc.</p>
   </footer>
 
 </div>

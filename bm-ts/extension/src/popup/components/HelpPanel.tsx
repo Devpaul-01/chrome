@@ -25,6 +25,14 @@ const TIPS = [
   'Check the Dashboard for delivery stats and automation health.',
 ];
 
+const DOCS = [
+  { label: '🚀 Quick Start Guide', file: 'quick-start.html' },
+  { label: '❓ FAQ', file: 'faq.html' },
+  { label: '🔧 Troubleshooting', file: 'troubleshooting.html' },
+  { label: '🔒 Privacy Policy', file: 'privacy-policy.html' },
+  { label: '📋 Terms of Service', file: 'terms-of-service.html' },
+];
+
 const RESOURCES = [
   { label: '📺 Video Tutorial', href: 'https://www.youtube.com/@birthdaymessaging' },
   { label: '❓ FAQ', href: 'https://birthdaymessaging.com/faq' },
@@ -112,7 +120,7 @@ export default function HelpPanel({ open, onClose, onRestartTour }: HelpPanelPro
           </div>
         </section>
 
-        {/* Tips */}
+        {/* Pro Tips */}
         <section>
           <h3 className="text-sm font-semibold text-textPrimary mb-2">Pro Tips</h3>
           <ul className="space-y-1.5">
@@ -123,6 +131,23 @@ export default function HelpPanel({ open, onClose, onRestartTour }: HelpPanelPro
               </li>
             ))}
           </ul>
+        </section>
+
+        {/* Documentation */}
+        <section>
+          <h3 className="text-sm font-semibold text-textPrimary mb-2">Documentation</h3>
+          <div className="flex flex-col gap-1.5">
+            {DOCS.map((doc) => (
+              <button
+                key={doc.file}
+                type="button"
+                onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL(doc.file) })}
+                className="text-xs text-left font-medium text-blueStrong hover:underline"
+              >
+                {doc.label}
+              </button>
+            ))}
+          </div>
         </section>
 
         {/* Resources */}
