@@ -17,6 +17,10 @@ import {
   SMTPConfig,
   MessageTemplate,
   createCheckoutSession as createCheckoutSessionRequest,
+  cancelSubscription,
+  reactivateSubscription,
+  changeSubscriptionPlan,
+  getBillingPortal,
   createTemplate,
   deleteTemplate,
   listTemplates,
@@ -465,6 +469,20 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) =>
         createCheckoutSessionRequest(url, accessToken, message.payload),
       );
+    }
+    case 'subscription.cancel': {
+      return runAuthAware((accessToken, url) => cancelSubscription(url, accessToken));
+    }
+    case 'subscription.reactivate': {
+      return runAuthAware((accessToken, url) => reactivateSubscription(url, accessToken));
+    }
+    case 'subscription.changePlan': {
+      return runAuthAware((accessToken, url) =>
+        changeSubscriptionPlan(url, accessToken, message.payload),
+      );
+    }
+    case 'subscription.billingPortal': {
+      return runAuthAware((accessToken, url) => getBillingPortal(url, accessToken));
     }
     case 'config.getBackendUrl': {
       return { backendUrl: baseUrl };

@@ -91,6 +91,10 @@ export type BackgroundMessage =
   // Subscription messages
   | { type: 'subscription.status' }
   | { type: 'subscription.checkout'; payload: CheckoutSessionRequest }
+  | { type: 'subscription.cancel' }
+  | { type: 'subscription.reactivate' }
+  | { type: 'subscription.changePlan'; payload: { new_plan: 'monthly' | 'yearly' } }
+  | { type: 'subscription.billingPortal' }
   // Config messages
   | { type: 'config.getBackendUrl' }
   | { type: 'config.setBackendUrl'; payload: { backendUrl: string } }
