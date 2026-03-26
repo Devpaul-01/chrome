@@ -44,6 +44,8 @@ async def get_smtp_config(
         use_tls=config.use_tls,
         from_email=config.from_email,
         from_name=config.from_name,
+        created_at=config.created_at,
+        updated_at=config.updated_at,
     )
 
 @router.put("/config", response_model=SMTPConfigOut)
@@ -93,4 +95,6 @@ async def update_smtp_config(
         use_tls=config.use_tls,
         from_email=config.from_email,
         from_name=config.from_name,
+        created_at=config.created_at,
+        updated_at=config.updated_at,
     )

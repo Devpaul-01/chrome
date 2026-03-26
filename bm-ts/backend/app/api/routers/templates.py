@@ -29,12 +29,13 @@ from app.schemas.template import (
     TemplateSegmentOut,
     TemplateSegmentUpdate,
 )
+from app.schemas.common import DeleteResponse
 from app.services.templates import compose_message
 
 router = APIRouter()
 
 
-@router.post("/", response_model=TemplateSegmentOut)
+@router.post("/", response_model=TemplateSegmentOut, status_code=status.HTTP_201_CREATED)
 async def create_template(
     data: TemplateSegmentCreate,
     current_user: User = Depends(get_current_user),
@@ -96,12 +97,12 @@ async def update_template(
     return segment
 
 
-@router.delete("/{segment_id}", status_code=status.HTTP_200_OK)
+@router.delete("/{segment_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
 async def delete_template(
     segment_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
+) -> DeleteResponse:
     """Soft-delete a template segment by setting its ``deleted_at`` timestamp."""
     stmt = select(TemplateSegment).where(
         TemplateSegment.id == segment_id,
@@ -114,7 +115,7 @@ async def delete_template(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
     segment.deleted_at = datetime.utcnow()
     await db.commit()
-    return {"status": "deleted"}
+    return DeleteResponse()
 
 
 @router.post("/preview", response_model=dict)

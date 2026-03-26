@@ -14,6 +14,7 @@ from app.api.deps import get_current_user
 from app.db.models import User, UserImage
 from app.db.session import get_db
 from app.schemas.user_image import UserImageOut, UserImageUploadFile, UserImageUploadUrl
+from app.schemas.common import DeleteResponse
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,8 @@ async def upload_image_file(
         await db.refresh(user_image)
         return user_image
         
+    except HTTPException:
+        raise
     except base64.binascii.Error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -137,12 +140,12 @@ async def get_image(
     return image
 
 
-@router.delete("/images/{image_id}", status_code=status.HTTP_200_OK)
+@router.delete("/images/{image_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
 async def delete_image(
     image_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
+) -> DeleteResponse:
     """Delete an image."""
     stmt = select(UserImage).where(
         UserImage.id == image_id,
@@ -160,4 +163,4 @@ async def delete_image(
     # In production, you would also delete from cloud storage here
     await db.delete(image)
     await db.commit()
-    return {"status": "deleted"}
+    return DeleteResponse()

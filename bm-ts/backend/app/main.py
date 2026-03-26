@@ -27,6 +27,7 @@ from app.core.config import settings
 from app.core.app_logging import setup_logging
 from app.core.audit_log import AuditLogMiddleware
 from app.core.rate_limiter import init_rate_limiter, limiter
+from app.core.request_logging import RequestLoggingMiddleware
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.api.deps import get_current_user
 from app.db.models import User
@@ -34,10 +35,28 @@ from app.db.session import get_db
 
 setup_logging()
 
+openapi_tags = [
+    {"name": "auth", "description": "Authentication, registration, password management, and session control"},
+    {"name": "templates", "description": "CRUD for template segments (greeting / body / closing)"},
+    {"name": "schedules", "description": "Birthday schedule management (days-before triggers)"},
+    {"name": "messages", "description": "Message queue and delivery history"},
+    {"name": "dashboard", "description": "Dashboard statistics and analytics"},
+    {"name": "contacts", "description": "Contact (friend) management"},
+    {"name": "message-groups", "description": "Named groups of message templates"},
+    {"name": "message-templates", "description": "Individual message templates within groups"},
+    {"name": "posts", "description": "Timeline post templates with image overlays"},
+    {"name": "images", "description": "User image library (upload and manage)"},
+    {"name": "birthday-configs", "description": "Birthday mode configurations (advance / normal / followup)"},
+    {"name": "smtp", "description": "User SMTP configuration for email delivery"},
+    {"name": "subscription", "description": "Stripe subscription management and billing"},
+    {"name": "stripe", "description": "Stripe webhook handling"},
+]
+
 app = FastAPI(
     title="BirthdayMessaging API",
     version="0.1.0",
     description="Backend API for the BirthdayMessaging Chrome Extension",
+    openapi_tags=openapi_tags,
 )
 
 init_rate_limiter(app)
@@ -52,6 +71,7 @@ app.add_middleware(
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(AuditLogMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
 
 logger = logging.getLogger(__name__)
 

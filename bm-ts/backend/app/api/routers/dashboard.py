@@ -87,9 +87,8 @@ async def get_dashboard_stats(
     )
     queued_messages = queued_result.scalar() or 0
 
-    # TODO: Implement upcoming birthdays count using contacts table (if not yet done in the code below)
-    # Before change, this returned 0 and note said "query contacts.birthday within next 30 days"
-    friends_with_upcoming_birthdays = await db.execute(
+    # Upcoming birthdays (contacts with birthday within the next 30 days)
+    upcoming_result = await db.execute(
         select(func.count(Contact.id)).where(
             and_(
                 Contact.user_id == current_user.id,
@@ -98,8 +97,7 @@ async def get_dashboard_stats(
             )
         )
     )
-    # Suggested by VSCode (not sure if it's good): friends_with_upcoming_birthdays = friends_with_upcoming_birthdays.scalar() or 0
-    # Upcoming birthdays count not yet tested by its initial creator as of 18 March 2026, but he might remove the WIP marking now if appropriate.
+    friends_with_upcoming_birthdays = upcoming_result.scalar() or 0
 
     return DashboardStats(
         total_messages_sent=total_messages_sent,

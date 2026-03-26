@@ -13,6 +13,7 @@ from app.schemas.message_template import (
     MessageTemplateOut,
     MessageTemplateUpdate,
 )
+from app.schemas.common import DeleteResponse
 
 router = APIRouter(tags=["message-templates"])
 
@@ -110,12 +111,12 @@ async def update_message_template(
     return template
 
 
-@router.delete("/message-templates/{template_id}", status_code=status.HTTP_200_OK)
+@router.delete("/message-templates/{template_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
 async def delete_message_template(
     template_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> dict[str, str]:
+) -> DeleteResponse:
     """Delete a message template"""
     stmt = select(MessageTemplate).where(
         MessageTemplate.id == template_id,
@@ -132,4 +133,4 @@ async def delete_message_template(
     
     await db.delete(template)
     await db.commit()
-    return {"status": "deleted"}
+    return DeleteResponse()

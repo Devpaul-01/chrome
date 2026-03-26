@@ -35,7 +35,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_token_payload, get_current_user
+from app.api.deps import get_current_token_payload, get_current_user, get_current_user_allow_unverified
 from app.core.jwt import (
     TokenType,
     create_access_token,
@@ -407,7 +407,7 @@ async def revoke_session(
 
 
 @router.get("/me", response_model=UserProfile)
-async def me(current_user: User = Depends(get_current_user)) -> UserProfile:
+async def me(current_user: User = Depends(get_current_user_allow_unverified)) -> UserProfile:
     """Return the profile of the currently authenticated user."""
     return current_user
 

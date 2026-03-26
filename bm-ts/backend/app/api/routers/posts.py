@@ -12,6 +12,7 @@ from app.api.deps import get_current_user
 from app.db.models import Post, User
 from app.db.session import get_db
 from app.schemas.post import GenderEnum, PostCreate, PostOut, PostUpdate
+from app.schemas.common import DeleteResponse
 
 router = APIRouter()
 
@@ -29,6 +30,10 @@ async def create_post(
         gender=data.gender.value,
         image_url=data.image_url,
         label=data.label,
+        is_default=False,
+        font_family=data.font_family,
+        font_size=data.font_size,
+        font_color=data.font_color,
     )
     db.add(post)
     await db.commit()
@@ -112,12 +117,12 @@ async def update_post(
     return post
 
 
-@router.delete("/posts/{post_id}", status_code=status.HTTP_200_OK)
+@router.delete("/posts/{post_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
 async def delete_post(
     post_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
+) -> DeleteResponse:
     """Delete a post."""
     stmt = select(Post).where(
         Post.id == post_id,
@@ -134,4 +139,4 @@ async def delete_post(
     
     await db.delete(post)
     await db.commit()
-    return {"status": "deleted"}
+    return DeleteResponse()

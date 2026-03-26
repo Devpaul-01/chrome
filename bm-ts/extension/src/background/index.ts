@@ -34,6 +34,7 @@ import {
   requestPasswordReset,
   resetPassword,
   changePassword,
+  requestEmailVerification,
   listSchedules,
   createSchedule,
   updateSchedule,
@@ -408,6 +409,9 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
     }
     case 'auth.requestPasswordReset': {
       return requestPasswordReset(baseUrl, message.payload);
+    }
+    case 'auth.requestEmailVerification': {
+      return requestEmailVerification(baseUrl, message.payload);
     }
     case 'auth.resetPassword': {
       return resetPassword(baseUrl, message.payload);

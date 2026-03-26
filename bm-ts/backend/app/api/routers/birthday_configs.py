@@ -33,6 +33,7 @@ from app.schemas.birthday_config import (
     BirthdayModeEnum,
     GenderEnum,
 )
+from app.schemas.common import DeleteResponse
 
 router = APIRouter()
 
@@ -171,12 +172,12 @@ async def toggle_birthday_config(
     return config
 
 
-@router.delete("/birthday-configs/{config_id}", status_code=status.HTTP_200_OK)
+@router.delete("/birthday-configs/{config_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
 async def delete_birthday_config(
     config_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
+) -> DeleteResponse:
     """Delete a birthday configuration."""
     stmt = select(BirthdayConfig).where(
         BirthdayConfig.id == config_id,
@@ -193,4 +194,4 @@ async def delete_birthday_config(
     
     await db.delete(config)
     await db.commit()
-    return {"status": "deleted"}
+    return DeleteResponse()
