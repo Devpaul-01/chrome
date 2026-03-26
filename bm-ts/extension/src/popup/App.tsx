@@ -768,7 +768,10 @@ function AppShell() {
         {!isInitializing && isAuthenticated && (
           <>
             {user && user.email_verified === false && (
-              <div className="bg-yellow-50 border border-yellow-300 rounded p-3 mb-4 text-sm" role="alert">
+              <div
+                className="bg-yellow-50 border border-yellow-300 rounded p-3 mb-4 text-sm"
+                role="alert"
+              >
                 <p className="font-medium text-yellow-800 mb-1">Email not verified</p>
                 <p className="text-yellow-700 mb-2">
                   Please verify your email to access all features.

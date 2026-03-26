@@ -310,7 +310,12 @@ export async function requestEmailVerification(
   baseUrl: string,
   payload: { email: string },
 ): Promise<{ message: string }> {
-  return request(baseUrl, '/auth/request-email-verification', 'POST', payload as unknown as JsonValue);
+  return request(
+    baseUrl,
+    '/auth/request-email-verification',
+    'POST',
+    payload as unknown as JsonValue,
+  );
 }
 
 export async function resetPassword(

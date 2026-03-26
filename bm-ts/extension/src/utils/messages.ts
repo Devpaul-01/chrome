@@ -76,6 +76,7 @@ export type BackgroundMessage =
   | { type: 'auth.logout' }
   | { type: 'auth.me' }
   | { type: 'auth.requestPasswordReset'; payload: { email: string } }
+  | { type: 'auth.requestEmailVerification'; payload: { email: string } }
   | { type: 'auth.resetPassword'; payload: { token: string; new_password: string } }
   | { type: 'auth.changePassword'; payload: { currentPassword: string; newPassword: string } }
   | { type: 'auth.updateProfile'; payload: UpdateUserProfilePayload }
