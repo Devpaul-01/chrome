@@ -30,8 +30,7 @@ function getStatusBadge(sub: SubscriptionStatus | null): StatusBadge {
   if (!sub) return { text: 'Unknown', className: 'bg-gray-100 text-gray-600' };
   if (sub.cancel_at_period_end)
     return { text: 'Cancels Soon', className: 'bg-yellow-100 text-yellow-800' };
-  if (sub.in_grace_period)
-    return { text: 'Past Due', className: 'bg-orange-100 text-orange-800' };
+  if (sub.in_grace_period) return { text: 'Past Due', className: 'bg-orange-100 text-orange-800' };
   switch (sub.status) {
     case 'ACTIVE':
       return { text: 'Active', className: 'bg-green-100 text-green-800' };
@@ -291,67 +290,67 @@ export default function SubscriptionPanel() {
       <div className="card">
         <h3 className="text-base font-semibold mb-4">Plans</h3>
         <div className="grid grid-cols-2 gap-3">
-          {(Object.entries(PLANS) as Array<[keyof typeof PLANS, (typeof PLANS)[keyof typeof PLANS]]>).map(
-            ([key, plan]) => {
-              const isCurrent = currentPlan === key;
-              return (
-                <div
-                  key={key}
-                  className={`relative rounded-lg border-2 p-4 text-center transition-shadow ${
-                    isCurrent
-                      ? 'border-blue-500 bg-blue-50 shadow-md'
-                      : 'border-gray-200 bg-white hover:shadow-md'
-                  }`}
-                >
-                  {isCurrent && (
-                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      CURRENT
-                    </span>
-                  )}
-                  {'savings' in plan && (
-                    <span className="absolute -top-2.5 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      {plan.savings}
-                    </span>
-                  )}
-                  <h4 className="font-semibold text-sm mb-1">{plan.label}</h4>
-                  <p className="text-xl font-bold text-gray-900 mb-0.5">{plan.price}</p>
-                  <p className="text-xs text-gray-500 mb-3">{plan.cycle}</p>
-                  {'yearlyEquiv' in plan && (
-                    <p className="text-[10px] text-gray-400 mb-3">{plan.yearlyEquiv}</p>
-                  )}
+          {(
+            Object.entries(PLANS) as Array<[keyof typeof PLANS, (typeof PLANS)[keyof typeof PLANS]]>
+          ).map(([key, plan]) => {
+            const isCurrent = currentPlan === key;
+            return (
+              <div
+                key={key}
+                className={`relative rounded-lg border-2 p-4 text-center transition-shadow ${
+                  isCurrent
+                    ? 'border-blue-500 bg-blue-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:shadow-md'
+                }`}
+              >
+                {isCurrent && (
+                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    CURRENT
+                  </span>
+                )}
+                {'savings' in plan && (
+                  <span className="absolute -top-2.5 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {plan.savings}
+                  </span>
+                )}
+                <h4 className="font-semibold text-sm mb-1">{plan.label}</h4>
+                <p className="text-xl font-bold text-gray-900 mb-0.5">{plan.price}</p>
+                <p className="text-xs text-gray-500 mb-3">{plan.cycle}</p>
+                {'yearlyEquiv' in plan && (
+                  <p className="text-[10px] text-gray-400 mb-3">{plan.yearlyEquiv}</p>
+                )}
 
-                  {isCurrent ? (
-                    <span className="inline-block text-xs text-blue-600 font-medium">
-                      ✓ Your plan
-                    </span>
-                  ) : isActive ? (
-                    <button
-                      onClick={() => {
-                        setTargetPlan(key);
-                        setShowChangePlanModal(true);
-                      }}
-                      className="btn-outline-orange text-xs w-full"
-                      disabled={!!actionLoading}
-                    >
-                      Switch to {plan.label}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleCheckout(key)}
-                      className="btn-orange text-xs w-full"
-                      disabled={!!actionLoading}
-                    >
-                      {actionLoading === 'checkout' ? (
-                        <Spinner size="sm" />
-                      ) : (
-                        `Subscribe ${plan.label}`
-                      )}
-                    </button>
-                  )}
-                </div>
-              );
-            },
-          )}
+                {isCurrent ? (
+                  <span className="inline-block text-xs text-blue-600 font-medium">
+                    ✓ Your plan
+                  </span>
+                ) : isActive ? (
+                  <button
+                    onClick={() => {
+                      setTargetPlan(key);
+                      setShowChangePlanModal(true);
+                    }}
+                    className="btn-outline-orange text-xs w-full"
+                    disabled={!!actionLoading}
+                  >
+                    Switch to {plan.label}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleCheckout(key)}
+                    className="btn-orange text-xs w-full"
+                    disabled={!!actionLoading}
+                  >
+                    {actionLoading === 'checkout' ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      `Subscribe ${plan.label}`
+                    )}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -388,7 +387,7 @@ export default function SubscriptionPanel() {
         <div className="card">
           <h3 className="text-base font-semibold mb-2">Cancel Subscription</h3>
           <p className="text-xs text-gray-500 mb-3">
-            You can cancel anytime. You'll retain access until the end of your current billing
+            You can cancel anytime. You&apos;ll retain access until the end of your current billing
             period.
           </p>
           <button
@@ -428,7 +427,7 @@ export default function SubscriptionPanel() {
             <div className="p-4 space-y-4">
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p className="text-sm text-yellow-800">
-                  You'll retain access to all features until{' '}
+                  You&apos;ll retain access to all features until{' '}
                   <strong>{formatDate(subscription?.current_period_end)}</strong>. After that, your
                   subscription will not renew.
                 </p>
@@ -439,7 +438,7 @@ export default function SubscriptionPanel() {
                   htmlFor="cancel-feedback"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  We'd love to know why you're leaving{' '}
+                  We&apos;d love to know why you&apos;re leaving{' '}
                   <span className="text-gray-400">(optional)</span>
                 </label>
                 <textarea
@@ -505,8 +504,8 @@ export default function SubscriptionPanel() {
               </p>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-800">
-                  Stripe will automatically prorate your billing. You'll be charged or credited the
-                  difference for the remainder of your current billing period.
+                  Stripe will automatically prorate your billing. You&apos;ll be charged or credited
+                  the difference for the remainder of your current billing period.
                 </p>
               </div>
             </div>
