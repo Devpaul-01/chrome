@@ -124,7 +124,11 @@ export type SegmentType = TemplateSegment['segment_type'];
 export interface SubscriptionStatus {
   is_active: boolean;
   plan?: 'monthly' | 'yearly';
+  status?: string;
   current_period_end?: string;
+  cancel_at_period_end?: boolean;
+  canceled_at?: string;
+  in_grace_period?: boolean;
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
 }
@@ -137,6 +141,27 @@ export interface CheckoutSessionRequest {
 
 export interface CheckoutSessionResponse {
   checkout_url: string;
+}
+
+export interface CancelSubscriptionResponse {
+  status: string;
+  cancel_at_period_end: boolean;
+  current_period_end?: string;
+  message: string;
+}
+
+export interface ChangePlanRequest {
+  new_plan: 'monthly' | 'yearly';
+}
+
+export interface ChangePlanResponse {
+  status: string;
+  new_plan: string;
+  message: string;
+}
+
+export interface BillingPortalResponse {
+  portal_url: string;
 }
 
 /** Register a new account and return a token pair. */
@@ -221,6 +246,41 @@ export async function createCheckoutSession(
     payload as unknown as JsonValue,
     accessToken,
   );
+}
+
+export async function cancelSubscription(
+  baseUrl: string,
+  accessToken: string,
+): Promise<CancelSubscriptionResponse> {
+  return request(baseUrl, '/subscription/cancel', 'POST', undefined, accessToken);
+}
+
+export async function reactivateSubscription(
+  baseUrl: string,
+  accessToken: string,
+): Promise<CancelSubscriptionResponse> {
+  return request(baseUrl, '/subscription/reactivate', 'POST', undefined, accessToken);
+}
+
+export async function changeSubscriptionPlan(
+  baseUrl: string,
+  accessToken: string,
+  payload: ChangePlanRequest,
+): Promise<ChangePlanResponse> {
+  return request(
+    baseUrl,
+    '/subscription/change-plan',
+    'POST',
+    payload as unknown as JsonValue,
+    accessToken,
+  );
+}
+
+export async function getBillingPortal(
+  baseUrl: string,
+  accessToken: string,
+): Promise<BillingPortalResponse> {
+  return request(baseUrl, '/subscription/billing-portal', 'POST', undefined, accessToken);
 }
 
 export interface RequestPasswordResetPayload {
