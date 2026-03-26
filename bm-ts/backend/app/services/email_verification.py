@@ -43,6 +43,10 @@ async def create_verification_token(user: User, db: AsyncSession) -> str:
 
 
 async def verify_verification_token(raw_token: str, db: AsyncSession) -> User | None:
+    """Verify an email verification token.
+    
+    Uses SELECT FOR UPDATE to prevent race conditions.
+    """
     hash_token = hashlib.sha256(raw_token.encode()).hexdigest()
 
     result = await db.execute(
@@ -55,6 +59,7 @@ async def verify_verification_token(raw_token: str, db: AsyncSession) -> User | 
                 EmailVerificationToken.used_at.is_(None),
             )
         )
+        .with_for_update()
     )
 
     row = result.first()

@@ -40,6 +40,8 @@ def _build_payload(
     payload = {
         "sub": str(subject),
         "type": token_type,
+        "iss": "birthdaymessaging",
+        "aud": "birthdaymessaging",
         "iat": now,
         "exp": now + expires_delta,
     }
@@ -68,7 +70,13 @@ def create_refresh_token(subject: UUID, session_id: UUID | None = None) -> str:
 def decode_token(token: str) -> dict[str, Any]:
     """Decode and verify a JWT, raising ``JWTError`` on any validation failure."""
     try:
-        return jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        return jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+            audience="birthdaymessaging",
+            issuer="birthdaymessaging",
+        )
     except JWTError as exc:
         raise JWTError("Token validation failed") from exc
 

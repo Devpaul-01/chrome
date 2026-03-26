@@ -15,16 +15,19 @@ from starlette.responses import Response
 logger = logging.getLogger("audit")
 
 # Routes and methods considered security-sensitive.
+# Uses path prefixes to match dynamic segments (e.g. /auth/sessions/{id}).
 _SENSITIVE_OPERATIONS: dict[tuple[str, str], str] = {
     ("POST", "/auth/register"): "account.register",
     ("POST", "/auth/login"): "account.login",
     ("POST", "/auth/logout"): "account.logout",
     ("POST", "/auth/refresh"): "token.refresh",
-    ("PUT", "/auth/password"): "account.password_change",
+    ("POST", "/auth/change-password"): "account.password_change",
     ("DELETE", "/auth/account"): "account.delete",
     ("PUT", "/smtp/config"): "smtp.config_update",
     ("POST", "/auth/request-password-reset"): "account.password_reset_request",
     ("POST", "/auth/reset-password"): "account.password_reset",
+    ("DELETE", "/auth/sessions/"): "session.revoke",
+    ("GET", "/auth/data-export"): "account.data_export",
 }
 
 
@@ -32,7 +35,13 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
     """Emit structured audit log entries for security-sensitive endpoints."""
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        # Try exact match first, then prefix match for dynamic routes
         operation = _SENSITIVE_OPERATIONS.get((request.method, request.url.path))
+        if operation is None:
+            for (method, prefix), op in _SENSITIVE_OPERATIONS.items():
+                if request.method == method and request.url.path.startswith(prefix):
+                    operation = op
+                    break
         if operation is None:
             return await call_next(request)
 

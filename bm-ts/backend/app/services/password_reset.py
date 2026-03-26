@@ -48,7 +48,11 @@ async def create_reset_token(user: User, db: AsyncSession) -> str:
 
 
 async def verify_reset_token(raw_token: str, db: AsyncSession) -> User | None:
-    """Verify a password reset token and return the associated user"""
+    """Verify a password reset token and return the associated user.
+    
+    Uses SELECT FOR UPDATE to prevent race conditions when multiple
+    requests attempt to consume the same token concurrently.
+    """
 
     hash_token = hashlib.sha256(raw_token.encode()).hexdigest()
 
@@ -62,6 +66,7 @@ async def verify_reset_token(raw_token: str, db: AsyncSession) -> User | None:
                 PasswordResetToken.used_at.is_(None),
             )
         )
+        .with_for_update()
     )
 
     row = result.first()

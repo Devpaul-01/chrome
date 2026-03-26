@@ -28,6 +28,8 @@ from app.core.app_logging import setup_logging
 from app.core.audit_log import AuditLogMiddleware
 from app.core.rate_limiter import init_rate_limiter, limiter
 from app.core.security_headers import SecurityHeadersMiddleware
+from app.api.deps import get_current_user
+from app.db.models import User
 from app.db.session import get_db
 
 setup_logging()
@@ -44,8 +46,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -107,5 +109,5 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
 # TODO: Implement actual birthday message sending logic (currently a stub)
 @app.post("/send-birthday-message")
 @limiter.limit("1/45seconds")
-async def send_message(request: Request):
+async def send_message(request: Request, _user: User = Depends(get_current_user)):
     return {"status": "sent"}

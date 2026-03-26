@@ -418,16 +418,23 @@ function showSendConfirmation(
     const truncated =
       messagePreview.length > 120 ? messagePreview.slice(0, 120) + '…' : messagePreview;
 
+    // Escape user-controlled strings to prevent XSS via crafted Facebook display names
+    const escapeHtml = (s: string): string => {
+      const el = document.createElement('span');
+      el.textContent = s;
+      return el.innerHTML;
+    };
+
     modal.innerHTML = `
       <div style="background:#fff;border-radius:12px;padding:24px 28px;max-width:420px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(0,0,0,0.3);">
         <p style="font-size:16px;font-weight:700;margin:0 0 8px;color:#1a1a2e;">
-          🎂 It's ${friendName}'s birthday!
+          🎂 It's ${escapeHtml(friendName)}'s birthday!
         </p>
         <p style="font-size:13px;color:#555;margin:0 0 12px;">
           Send your prepared message?
         </p>
         <div style="background:#f5f5f5;border-radius:8px;padding:10px 12px;margin:0 0 16px;font-size:13px;color:#333;max-height:80px;overflow-y:auto;">
-          ${truncated}
+          ${escapeHtml(truncated)}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button data-action="send" style="flex:1;padding:10px 16px;background:#4CAF50;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">

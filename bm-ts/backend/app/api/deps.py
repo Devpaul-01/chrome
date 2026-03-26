@@ -102,4 +102,21 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     if user is None:
         raise _raise_credentials_error()
+
+    # Enforce email verification and account lockout
+    if hasattr(user, "email_verified") and not user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email not verified",
+        )
+    if hasattr(user, "locked_until") and user.locked_until is not None:
+        locked = user.locked_until
+        if locked.tzinfo is None:
+            locked = locked.replace(tzinfo=timezone.utc)
+        if locked > datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is temporarily locked",
+            )
+
     return user
