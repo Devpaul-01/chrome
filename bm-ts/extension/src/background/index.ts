@@ -1,5 +1,6 @@
 import {
   ApiError,
+  BillingPortalResponse,
   CheckoutSessionResponse,
   TemplateSegment,
   TokenResponse,
@@ -348,6 +349,7 @@ type BackgroundResponse =
   | { status: string }
   | SubscriptionStatus
   | CheckoutSessionResponse
+  | BillingPortalResponse
   | BirthdaySchedule
   | BirthdaySchedule[]
   | AutomationConfig
