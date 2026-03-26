@@ -274,19 +274,20 @@ describe('MessageHistory', () => {
   it('shows Export CSV button when messages are present in full mode', () => {
     mockHook({ filteredMessages: [makeMessage()] });
     render(<MessageHistory onClose={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /export.*csv/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /export current page/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /export all/i })).toBeInTheDocument();
   });
 
   it('hides Export CSV button when no messages', () => {
     mockHook({ filteredMessages: [] });
     render(<MessageHistory onClose={vi.fn()} />);
-    expect(screen.queryByRole('button', { name: /export.*csv/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /export current page/i })).not.toBeInTheDocument();
   });
 
   it('hides Export CSV button in compact mode', () => {
     mockHook({ filteredMessages: [makeMessage()] });
     render(<MessageHistory onClose={vi.fn()} compact />);
-    expect(screen.queryByRole('button', { name: /export.*csv/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /export current page/i })).not.toBeInTheDocument();
   });
 
   // --- Message list ---------------------------------------------------------

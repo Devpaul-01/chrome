@@ -346,10 +346,10 @@ function AppShell() {
     }
 
     return (
-      <nav ref={navRef} className="tab-navigation mb-4" role="tablist">
-        <div className="flex gap-1">
+      <nav ref={navRef} className="tab-navigation mb-4" role="tablist" aria-label="Main navigation">
+        <div className="flex gap-1" role="presentation">
           {tabs.map((tab, tabIndex) => (
-            <div key={tab.id} className="tab-wrapper">
+            <div key={tab.id} className="tab-wrapper" role="presentation">
               <button
                 id={`${tab.id}-tab`}
                 role="tab"
@@ -767,6 +767,34 @@ function AppShell() {
 
         {!isInitializing && isAuthenticated && (
           <>
+            {user && user.email_verified === false && (
+              <div
+                className="bg-yellow-50 border border-yellow-300 rounded p-3 mb-4 text-sm"
+                role="alert"
+              >
+                <p className="font-medium text-yellow-800 mb-1">Email not verified</p>
+                <p className="text-yellow-700 mb-2">
+                  Please verify your email to access all features.
+                </p>
+                <button
+                  type="button"
+                  className="btn-primary text-xs py-1 px-3"
+                  onClick={async () => {
+                    try {
+                      await sendBackgroundMessage<{ message: string }>({
+                        type: 'auth.requestEmailVerification',
+                        payload: { email: user.email },
+                      });
+                      showToast('Verification email sent! Check your inbox.', 'success');
+                    } catch (error) {
+                      showToast(getErrorMessage(error), 'error');
+                    }
+                  }}
+                >
+                  Resend verification email
+                </button>
+              </div>
+            )}
             {renderTabNavigation()}
             <section
               role="tabpanel"

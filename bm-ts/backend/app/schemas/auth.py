@@ -65,6 +65,7 @@ class UserProfile(BaseModel):
     id: UUID
     email: EmailStr
     created_at: datetime
+    email_verified: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

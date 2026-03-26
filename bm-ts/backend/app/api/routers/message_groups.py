@@ -30,6 +30,7 @@ from app.schemas.message_group import (
     MessageGroupOut,
     MessageGroupUpdate,
 )
+from app.schemas.common import DeleteResponse
 
 router = APIRouter()
 
@@ -127,12 +128,12 @@ async def update_message_group(
     return message_group
 
 
-@router.delete("/message-groups/{group_id}", status_code=status.HTTP_200_OK)
+@router.delete("/message-groups/{group_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
 async def delete_message_group(
     group_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
+) -> DeleteResponse:
     """Delete a message group."""
     stmt = select(MessageGroup).where(
         MessageGroup.id == group_id,
@@ -149,4 +150,4 @@ async def delete_message_group(
     
     await db.delete(message_group)
     await db.commit()
-    return {"status": "deleted"}
+    return DeleteResponse()

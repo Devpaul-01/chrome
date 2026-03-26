@@ -11,6 +11,7 @@ from app.api.deps import get_current_user
 from app.db.models import Contact, User
 from app.db.session import get_db
 from app.schemas.contact import ContactCreate, ContactOut, ContactUpdate
+from app.schemas.common import DeleteResponse
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])
 
@@ -133,12 +134,12 @@ async def update_contact(
     return contact
 
 
-@router.delete("/{contact_id}", status_code=status.HTTP_200_OK)
+@router.delete("/{contact_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
 async def delete_contact(
     contact_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
+) -> DeleteResponse:
     """Delete a contact."""
     stmt = select(Contact).where(
         Contact.id == contact_id,
@@ -155,4 +156,4 @@ async def delete_contact(
     
     await db.delete(contact)
     await db.commit()
-    return {"status": "deleted"}
+    return DeleteResponse()

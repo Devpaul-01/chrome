@@ -19,6 +19,7 @@ from app.schemas.messages import (
     MessageHistoryPage,
 )
 from app.schemas.password_reset import MessageResponse
+from app.schemas.common import DeleteResponse
 from app.api.routers.websocket import broadcast_message_queue_update, broadcast_message_history_update
 
 router = APIRouter(prefix="/messages", tags=["messages"])
@@ -126,12 +127,12 @@ async def update_queued_message(
     return message
 
 
-@router.delete("/queue/{message_id}", status_code=status.HTTP_200_OK)
+@router.delete("/queue/{message_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
 async def cancel_queued_message(
     message_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
+) -> DeleteResponse:
     """Cancel (delete) a queued message"""
     result = await db.execute(
         select(MessageQueue).where(
@@ -164,7 +165,7 @@ async def cancel_queued_message(
         "message": {"id": message_id_str},
         "timestamp": datetime.utcnow().isoformat(),
     })
-    return {"status": "deleted"}
+    return DeleteResponse()
 
 
 @router.post("/queue/{message_id}/retry", response_model=MessageQueueSchema)
@@ -256,12 +257,12 @@ async def list_message_history(
     return MessageHistoryPage(items=items, total=total, page=page, page_size=page_size)
 
 
-@router.delete("/history/{message_id}", status_code=status.HTTP_200_OK)
+@router.delete("/history/{message_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
 async def delete_message_history(
     message_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
+) -> DeleteResponse:
     """Delete a message from history"""
     result = await db.execute(
         select(MessageHistory).where(
@@ -288,7 +289,7 @@ async def delete_message_history(
         "message": {"id": message_id_str},
         "timestamp": datetime.utcnow().isoformat(),
     })
-    return {"status": "deleted"}
+    return DeleteResponse()
 
 
 @router.get("/history/export")

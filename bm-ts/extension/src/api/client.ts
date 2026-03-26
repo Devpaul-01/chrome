@@ -114,6 +114,7 @@ export interface UserProfile {
   id: string;
   email: string;
   created_at: string;
+  email_verified?: boolean;
   name?: string;
   timezone?: string;
 }
@@ -302,6 +303,19 @@ export async function requestPasswordReset(
   payload: RequestPasswordResetPayload,
 ): Promise<{ message: string }> {
   return request(baseUrl, '/auth/request-password-reset', 'POST', payload as unknown as JsonValue);
+}
+
+/** Ask the backend to send an email-verification link. */
+export async function requestEmailVerification(
+  baseUrl: string,
+  payload: { email: string },
+): Promise<{ message: string }> {
+  return request(
+    baseUrl,
+    '/auth/request-email-verification',
+    'POST',
+    payload as unknown as JsonValue,
+  );
 }
 
 export async function resetPassword(
@@ -958,4 +972,16 @@ export async function toggleBirthdayConfig(
   enabled: boolean,
 ): Promise<BirthdayConfig> {
   return request(baseUrl, `/api/birthday-configs/${id}/toggle`, 'PATCH', { enabled }, accessToken);
+}
+
+/** Download full message history as CSV from the backend. */
+export async function exportHistoryCsv(baseUrl: string, accessToken: string): Promise<Blob> {
+  const response = await fetch(`${baseUrl}/api/messages/history/export`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, await response.json().catch(() => undefined));
+  }
+  return response.blob();
 }

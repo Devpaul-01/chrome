@@ -2,7 +2,7 @@
 
 
 **Last Updated:** March 26, 2026  
-**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (271 tests across 14 files), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026), SendGrid email service integrated for password reset (asyncio import bug fixed Mar 9, 2026), full codebase audit with metric corrections (Mar 17, 2026), Help & Tips panel + OnboardingWizard UI polish: glassmorphism, brand-consistent text, improved spacing, removed redundant Help & Shortcuts footer section (Mar 10, 2026), privacy policy + terms of service created, frontend CI pipeline configured, user documentation (Quick Start, FAQ, Troubleshooting Guide) created (Mar 18, 2026), email verification system implemented (Mar 18, 2026), user sessions management implemented (Mar 19, 2026), subscription cancel/reactivate/change-plan/billing-portal endpoints implemented and tested, backend testing expanded to ~91 tests across 11 files (Mar 19–24, 2026), comprehensive security hardening pass #2 (20 fixes — session invalidation on password reset/change, WebSocket access-token + session enforcement, timing oracle fix, atomic token consumption, JWT iss/aud claims, email_verified + account lockout enforcement, CORS/CSP/Cache-Control tightening, CSS selector injection fix, manifest CSP, audit log enrichment — Mar 26, 2026)
+**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (271 tests across 14 files), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026), SendGrid email service integrated for password reset (asyncio import bug fixed Mar 9, 2026), full codebase audit with metric corrections (Mar 17, 2026), Help & Tips panel + OnboardingWizard UI polish: glassmorphism, brand-consistent text, improved spacing, removed redundant Help & Shortcuts footer section (Mar 10, 2026), privacy policy + terms of service created, frontend CI pipeline configured, user documentation (Quick Start, FAQ, Troubleshooting Guide) created (Mar 18, 2026), email verification system implemented (Mar 18, 2026), user sessions management implemented (Mar 19, 2026), subscription cancel/reactivate/change-plan/billing-portal endpoints implemented and tested, backend testing expanded to ~91 tests across 11 files (Mar 19–24, 2026), comprehensive security hardening pass #2 (20 fixes — session invalidation on password reset/change, WebSocket access-token + session enforcement, timing oracle fix, atomic token consumption, JWT iss/aud claims, email_verified + account lockout enforcement, CORS/CSP/Cache-Control tightening, CSS selector injection fix, manifest CSP, audit log enrichment — Mar 26, 2026), backend testing expanded to ~170 tests across 20 files (9 new test files: birthday_configs, message_groups, message_templates, posts, images, smtp, integration, api_contracts, db_constraints — Mar 26, 2026), dashboard `.scalar()` bug fixed, standardized DeleteResponse across all DELETE endpoints, OpenAPI tags metadata added (14 tag groups), request logging middleware added, CSV export wiring (frontend "Export All" calls backend endpoint), ARIA role presentation cleanup (Mar 26, 2026)
 
 ---
 
@@ -24,7 +24,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - ✅ `/send-birthday-message` backend endpoint is a non-functional stub but now requires authentication (extension content scripts handle actual sending)
 - ✅ SMTP passwords encrypted at rest using Fernet symmetric encryption (passwords also masked in API responses via `SMTPConfigOut.model_post_init`)
 - ⚠️ No production deployment infrastructure
-- ✅ Backend testing expanded: ~91 tests across 11 files (auth 9, contacts 10, messages 17, password_reset 7, dashboard 5, schedules 9, templates 2, subscription 13, webhook 10, email_verification 9) — conftest.py with async fixtures in place
+- ✅ Backend testing expanded: ~170 tests across 20 files (auth 9, contacts 10, messages 17, password_reset 7, dashboard 5, schedules 9, templates 2, subscription 13, webhook 10, email_verification 9, birthday_configs 14, message_groups 12, message_templates 12, posts 12, images 10, smtp 6, integration 4, api_contracts 12, db_constraints 6) — conftest.py with comprehensive async fixtures and model event listeners for SQLite compatibility
 - ✅ Extension testing: ~271 tests across 14 files (unit + component), all passing
 - ✅ Alembic migrations fully populated — 5 migration files: initial schema (14 tables), `a1b2c3d4e5f6` (revoked_tokens), `b2c3d4e5f6g7` (account lockout columns, Mar 12), `c3d4e5f6g7h8` (email_verification_tokens + email_verified column, Mar 18), `d4e5f6g7h8i9` (user_sessions table, Mar 19) — **17 tables total**
 - ⚠️ No CI/CD pipeline or monitoring
@@ -88,7 +88,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Add CHECK constraints for enum values  (PostgreSQL ENUMs: `segment_type_enum`, `message_status_enum`, `subscription_status_enum`, `gender_enum`, `birthday_mode_enum`)
 - [x] Add NOT NULL constraints where appropriate  (`nullable=False` on required columns across all 14 tables)
 - [x] Add UNIQUE constraints (e.g., user email, reset tokens)  (CITEXT unique email, unique schedule per user+days, unique active subscription per user, unique SMTP config per user, unique birthday config per user+mode+offset)
-- [ ] Test constraint violations return proper 400 errors
+- [x] Test constraint violations return proper 400/409 errors  (`test_db_constraints.py` — 6 tests: duplicate email, unique constraints, cascade deletes, enum validation — Mar 26, 2026)
 
 ### Database Operations
 - [ ] Add database backup strategy
@@ -165,7 +165,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Delete history item
 - [x] Add pagination (currently no limit)  (page/page_size params, MessageHistoryPage response)
 - [x] Add date range filtering  (start_date/end_date query params on history endpoint)
-- [x] Add export to CSV  (backend `GET /api/messages/history/export` returns CSV StreamingResponse; frontend CSV export also implemented)
+- [x] Add export to CSV  (backend `GET /api/messages/history/export` returns CSV StreamingResponse; frontend "Export All" button calls backend endpoint via `exportHistoryCsv()` in client.ts; "Export Page" button exports current page client-side — Mar 26, 2026)
 - [ ] Add analytics aggregation
 
 #### Dashboard
@@ -185,7 +185,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Create database table in ddl.sql 
 - [x] Register router in main.py 
 - [x] Add relationship to message_groups and posts 
-- [ ] Test all CRUD endpoints (manual/automated testing needed)
+- [x] Test all CRUD endpoints  (`test_birthday_configs.py` — 14 tests: create, list, get, update, delete, gender filter, duplicate constraint, unauthorized access — Mar 26, 2026)
 - [ ] Add gender filter validation in API
 - [ ] Add archive toggle functionality testing
 - [ ] Frontend integration testing
@@ -203,6 +203,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [ ] Add post preview endpoint
 - [ ] Test gender filtering
 - [x] Test font customization features  (PostEditor.tsx with font_family/font_size/font_color fields; FacebookPostPreview.tsx renders preview)
+- [x] Test all CRUD endpoints  (`test_posts.py` — 12 tests: create with font fields, list, get, update, delete, unauthorized access — Mar 26, 2026)
 
 #### Message Groups
 **Status:**  Router registered, model complete, database schema complete
@@ -210,7 +211,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Create `MessageGroup` model in models.py 
 - [x] Create database table in ddl.sql 
 - [x] Register router in main.py 
-- [ ] Test segment_ids array handling
+- [x] Test segment_ids array handling  (`test_message_groups.py` — 12 tests: create with segment_ids, list, get, update, delete, unauthorized — Mar 26, 2026)
 - [ ] Add validation that segment_ids exist
 - [ ] Add gender filter validation
 - [ ] Frontend integration testing
@@ -221,6 +222,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Create `UserImage` model in models.py 
 - [x] Create database table in ddl.sql 
 - [x] Register router in main.py 
+- [x] Test all CRUD endpoints  (`test_images.py` — 10 tests: upload with size validation, list, get, update, delete, size limit enforcement, unauthorized access — Mar 26, 2026)
 - [ ] Implement actual file upload (currently just URL storage)
 - [ ] Set up image storage (S3, CloudFlare R2, or local volume)
 - [ ] Add image processing (resize, optimize, thumbnails)
@@ -234,7 +236,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Create database table in ddl.sql 
 - [x] Register router in main.py 
 - [x] Gender enum standardization (uses GenderEnum with ALL value) 
-- [ ] Test all CRUD endpoints
+- [x] Test all CRUD endpoints  (`test_message_templates.py` — 12 tests: create, list, get by ID, update, delete, gender filter, unauthorized access — Mar 26, 2026)
 - [x] Frontend integration for complete message templates  (TemplateCreator.tsx, TemplateGallery.tsx, useMessageTemplates.ts hook — full CRUD wired)
 
 #### SMTP Configuration
@@ -244,17 +246,18 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Create database table in ddl.sql 
 - [x] Separate SMTP router from auth router 
 - [x] Register router in main.py 
-- [ ] Test SMTP configuration endpoints
+- [x] Test SMTP configuration endpoints  (`test_smtp.py` — 6 tests: get default, update config, update partial, password masking, unauthorized access — Mar 26, 2026)
 - [x] Frontend integration with SMTPSettings component  (SMTPSettings.tsx + useSMTPConfig.ts hook — get/update SMTP config wired)
 
 ### API Quality & Error Handling
-- [x] Standardize DELETE responses across all endpoints  (All return 200 + {status: "deleted"})
+- [x] Standardize DELETE responses across all endpoints  (All return 200 + `DeleteResponse(status="deleted")` via `schemas/common.py`; applied to all 10 DELETE endpoints across 10 routers — Mar 26, 2026)
 - [x] Add proper HTTP status codes for DELETE operations 
+- [x] Add shared response models  (`schemas/common.py` — `DeleteResponse` + `ErrorResponse` models — Mar 26, 2026)
 - [ ] Standardize error responses across all endpoints (non-DELETE)
 - [ ] Add request validation error messages
-- [ ] Add request/response logging
+- [x] Add request/response logging  (`RequestLoggingMiddleware` in `core/request_logging.py` — logs method, path, status_code, duration_ms, client IP for every request — Mar 26, 2026)
 - [ ] Add API versioning strategy (v1, v2)
-- [ ] Add OpenAPI/Swagger documentation review
+- [x] Add OpenAPI tags metadata  (14 tag groups with descriptions added to FastAPI app constructor — Mar 26, 2026)
 - [ ] Test all error cases (network, database, validation)
 
 ### Security Hardening
@@ -424,7 +427,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Add pagination  (server-side pagination with Prev/Next controls)
 - [x] Add advanced search filters  (date range + status filter + search)
 - [x] Add date range picker  (From/To date inputs wired to backend)
-- [x] Add export to CSV  (current page exported as Blob download)
+- [x] Add export to CSV  ("Export All" calls backend endpoint for full history; "Export Page" exports current page as Blob download — Mar 26, 2026)
 - [x] Add message details modal 
 - [ ] Add graphs/charts for history
 
@@ -507,7 +510,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Logical tab order throughout extension
 - [x] Add accessibility (ARIA labels, semantic HTML) (implemented Feb 10, 2026)
 - [x] WCAG 2.1 Level AA compliance
-- [x] ARIA attributes (roles, labels, states, properties)
+- [x] ARIA attributes (roles, labels, states, properties, `role="presentation"` on intermediate wrappers — Mar 26, 2026)
 - [x] Screen reader support with live regions
 - [x] Semantic HTML landmarks (header, main, nav, footer)
 - [x] Form accessibility with proper labels and error associations
@@ -699,30 +702,36 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Add tests for webhook router  (`test_webhook.py` — 10 tests: missing sig, invalid sig, unhandled event, subscription.created, subscription.updated cancel/plan-change, subscription.deleted, payment.failed, no-subscription, unknown customer — Mar 2026)
 - [x] Add tests for email verification service  (`test_email_verification.py` — 9 tests: create token, store hash, verify valid/invalid/expired, mark used, used-token-blocked, request endpoint triggers send, verify endpoint marks verified — Mar 18, 2026)
 - [x] Add tests for password reset service  (test_password_reset.py — 7 tests)
+- [x] Add tests for birthday configs router  (`test_birthday_configs.py` — 14 tests: CRUD, gender filter, duplicate constraint, unauthorized — Mar 26, 2026)
+- [x] Add tests for message groups router  (`test_message_groups.py` — 12 tests: CRUD, segment_ids, unauthorized — Mar 26, 2026)
+- [x] Add tests for message templates router  (`test_message_templates.py` — 12 tests: CRUD, gender filter, unauthorized — Mar 26, 2026)
+- [x] Add tests for posts router  (`test_posts.py` — 12 tests: CRUD with font fields, unauthorized — Mar 26, 2026)
+- [x] Add tests for images router  (`test_images.py` — 10 tests: upload, size validation, CRUD, unauthorized — Mar 26, 2026)
+- [x] Add tests for SMTP config router  (`test_smtp.py` — 6 tests: get/update, password masking, unauthorized — Mar 26, 2026)
 - [ ] Target: >80% code coverage
 
 #### Integration Tests
-- [ ] Test full auth flow (register → login → refresh → change password)
+- [x] Test full auth flow (register → verify → login → refresh)  (`test_integration.py` — `test_full_auth_flow` — Mar 26, 2026)
 - [ ] Test password reset flow (request → email → reset)
-- [ ] Test template CRUD flow
-- [ ] Test schedule creation and execution
-- [ ] Test message queue flow (create → send → history)
+- [x] Test template CRUD flow  (`test_integration.py` — `test_template_crud_flow` — Mar 26, 2026)
+- [x] Test schedule CRUD flow  (`test_integration.py` — `test_schedule_crud_flow` — Mar 26, 2026)
+- [x] Test message queue flow (create → cancel → verify)  (`test_integration.py` — `test_message_queue_to_history` — Mar 26, 2026)
 - [ ] Test Stripe subscription flow (checkout → webhook → status)
 - [ ] Test webhook signature verification
 - [ ] Test token expiration and refresh
 
 #### Database Tests
 - [ ] Test migrations (up and down)
-- [ ] Test foreign key constraints
-- [ ] Test cascade deletes
-- [ ] Test unique constraints
-- [ ] Test enum constraints
+- [x] Test foreign key constraints  (`test_db_constraints.py` — cascade delete test — Mar 26, 2026)
+- [x] Test cascade deletes  (`test_db_constraints.py` — user deletion cascades to child records — Mar 26, 2026)
+- [x] Test unique constraints  (`test_db_constraints.py` — duplicate email, unique schedule constraint — Mar 26, 2026)
+- [x] Test enum constraints  (`test_db_constraints.py` — segment type enum validation — Mar 26, 2026)
 - [ ] Test concurrent operations
 
 #### API Contract Tests
-- [ ] Test all endpoints return correct status codes
-- [ ] Test all endpoints validate required fields
-- [ ] Test all endpoints return correct schema
+- [x] Test all endpoints return correct status codes  (`test_api_contracts.py` — 12 tests: health 200, auth 401, validation 422, not-found 404, correct schemas — Mar 26, 2026)
+- [x] Test all endpoints validate required fields  (`test_api_contracts.py` — validation error tests — Mar 26, 2026)
+- [x] Test all endpoints return correct schema  (`test_api_contracts.py` — schema structure verification — Mar 26, 2026)
 - [ ] Test pagination works correctly
 - [ ] Test filtering works correctly
 - [ ] Test sorting works correctly
@@ -949,7 +958,6 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 **Post-MVP (Can Launch Without):**
 - Image upload/storage implementation (currently URL-based)
 - Advanced analytics and reporting
-- Mobile app
 - Support for other social networks
 - Advanced automation features
 - Referral program
@@ -978,28 +986,21 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 ### Now 
 1. 🔴 Deploy production infrastructure
-2. ✅ Write privacy policy and terms  (completed Mar 18, 2026)
-3. 🔴 End-to-end testing
-4. ✅ Create quick start guide, FAQ, and troubleshooting guide  (completed Mar 18, 2026)
-5. ✅ Email verification system  (completed Mar 18, 2026)
-6. ✅ User session management  (completed Mar 19, 2026)
-7. ✅ Subscription management (cancel/reactivate/change-plan/billing-portal)  (completed Mar 2026)
+2. 🔴 End-to-end testing
 
 ### Soon 
 1. 🟡 CI/CD pipeline setup
 2. 🟡 Monitoring and alerting
 3. 🟡 Chrome Web Store submission
-4. ~~User documentation (FAQ, troubleshooting)~~  ✅ Completed Mar 18, 2026
-5. 🟡 Load testing
+4. 🟡 Load testing
 
 ### Later 
 1. 🟢 Phase 2 feature enhancements (image upload/storage, advanced testing, frontend integration)
 2. 🟢 Advanced testing (E2E, performance)
-3. 🟢 Mobile app
-4. 🟢 Analytics improvements
-5. 🟢 Internationalization
-6. 🟢 Comprehensive training materials (video tutorials, interactive tours)
-7. 🟢 Advanced help center and knowledge base
+3. 🟢 Analytics improvements
+4. 🟢 Internationalization
+5. 🟢 Comprehensive training materials (video tutorials, interactive tours)
+6. 🟢 Advanced help center and knowledge base
 
 ### Nice to Have
 1. ⚪ Dark mode
@@ -1014,9 +1015,6 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 ### Critical Blockers
 1. **Production Infrastructure** — No cloud provider, domain, or managed PostgreSQL set up yet
-2. ~~**Privacy Policy & Terms of Service** — Required for Chrome Web Store submission~~  ✅ Created Mar 18, 2026
-3. ~~**Email Verification** — Users could register with unverified emails~~  ✅ Implemented Mar 18, 2026
-4. ~~**Session Management** — No way to view or revoke active login sessions~~  ✅ Implemented Mar 19, 2026
 
 ### External Dependencies
 1. **Stripe Account** — Required for payments (can use test mode for now)
@@ -1025,41 +1023,37 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 4. **Domain Name** — Required for production API (if using custom domain)
 
 ### Technical Debt
-1. Backend test coverage at ~91 tests across 11 files (auth 9, contacts 10, messages 17, password_reset 7, dashboard 5, schedules 9, templates 2, subscription 13, webhook 10, email_verification 9); target >80% coverage remaining (smtp, birthday_configs, message_groups, posts, images still untested)
-2. ~~No CI/CD pipeline~~  Frontend CI pipeline created (.gitea/workflows/frontend-ci.yaml)
+1. ~~Backend test coverage at ~91 tests across 11 files; target >80% coverage remaining (smtp, birthday_configs, message_groups, posts, images still untested)~~  RESOLVED — 170 tests across 20 files; all Phase 2 routers tested (Mar 26, 2026)
+2. No backend CI/CD pipeline (only frontend CI exists)
 3. No production monitoring or error tracking service
 4. Image upload/storage not implemented (URL-based currently)
-5. ~~No comprehensive help documentation or FAQ~~  Quick Start, FAQ, and Troubleshooting Guide created (extension/quick-start.html, faq.html, troubleshooting.html — Mar 18, 2026)
-6. ~~SMTP passwords encrypted at rest using Fernet symmetric encryption; API responses masked~~  Resolved
-7. `/send-birthday-message` backend endpoint is a non-functional stub (content scripts handle actual sending)
-8. No content script or background service worker tests
-9. Frontend CSV export is client-side only (browser Blob); backend `GET /api/messages/history/export` endpoint exists but is not called by the frontend
+5. No content script or background service worker tests
+6. ~~Frontend CSV export is client-side only (browser Blob); backend `GET /api/messages/history/export` endpoint exists but is not called by the frontend~~  RESOLVED — "Export All" button now calls backend endpoint via `exportHistoryCsv()` in client.ts (Mar 26, 2026)
+7. `/send-birthday-message` endpoint is a non-functional stub (content scripts handle actual sending)
+8. Subscription proration preview shows generic text only — no actual calculated amount from Stripe API
+9. No dedicated `useSubscription` hook — subscription state fetched directly in component via `sendBackgroundMessage`
+10. 6 pre-existing test failures: 5 auth tests (KeyError: 'path' in session handling), 1 subscription test (billing portal message assertion mismatch)
 
 ---
 
 ## 📞 Next Steps
 
 ### Immediate Actions (This Week)
-1. [ ] Verify SendGrid email delivery end-to-end in development
-2. [ ] Start production infrastructure setup (cloud provider, managed PostgreSQL)
-3. [ ] Increase backend test coverage (integration tests for auth, templates, contacts)
+1. [ ] Start production infrastructure setup (cloud provider, managed PostgreSQL)
+2. [x] Increase backend test coverage (integration tests for auth, templates, contacts, all Phase 2 routers — 170 tests across 20 files, Mar 26, 2026)
+3. [ ] Fix 6 pre-existing test failures (5 auth KeyError:'path', 1 subscription assertion)
 
 ### Short Term (Next 2 Weeks)
 1. [ ] Complete production deployment (container hosting, domain, TLS)
-2. [x] Write privacy policy and terms of service  (extension/privacy-policy.html + extension/terms-of-service.html — Mar 18, 2026)
-3. [ ] Create Chrome Web Store listing
-4. [ ] Set up monitoring and alerting
-5. [ ] Run end-to-end testing
-6. [x] Create quick start guide (5-minute setup)  (extension/quick-start.html — Mar 18, 2026)
-7. [x] Draft basic FAQ (10-15 questions)  (extension/faq.html — Mar 18, 2026)
+2. [ ] Set up monitoring and alerting
+3. [ ] Run end-to-end testing
 
 ### Medium Term
 1. [ ] Submit to Chrome Web Store
 2. [ ] Set up CI/CD pipeline
 3. [ ] Add content script and background worker tests
 4. [ ] Complete user documentation (guides, FAQ, troubleshooting)
-5. ~~Encrypt SMTP passwords at rest~~  Already done (Fernet encryption in `encryption.py`)
-6. [ ] Launch to small beta group
+5. [ ] Launch to small beta group
 
 ---
 
@@ -1072,4 +1066,4 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - Iterate quickly based on user needs
 - Consider soft launch with beta testers before public launch
 
-**Last Updated:** March 24, 2026
+**Last Updated:** March 26, 2026

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import Spinner from './Spinner';
 import { useMessageHistory, MessageHistoryItem } from '../hooks/useMessages';
 import { trapFocus, handleEscapeKey } from '../../utils/accessibility';
+import { getTokens, getBackendUrl } from '../../utils/storage';
+import { exportHistoryCsv } from '../../api/client';
 
 interface MessageHistoryProps {
   onClose: () => void;
@@ -102,18 +104,44 @@ export default function MessageHistory({
     URL.revokeObjectURL(url);
   }
 
+  async function exportAllCsv() {
+    try {
+      const { accessToken } = await getTokens();
+      const baseUrl = await getBackendUrl();
+      if (!accessToken) return;
+      const blob = await exportHistoryCsv(baseUrl, accessToken);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'message_history.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Silently fall back — user can still export current page
+    }
+  }
+
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">Message History</h2>
         {!compact && filteredMessages.length > 0 && (
-          <button
-            onClick={exportCsv}
-            className="text-xs text-blueStrong hover:text-orangeStrong underline"
-            aria-label="Export current page to CSV"
-          >
-            Export CSV
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={exportAllCsv}
+              className="text-xs text-blueStrong hover:text-orangeStrong underline"
+              aria-label="Export all history to CSV"
+            >
+              Export All
+            </button>
+            <button
+              onClick={exportCsv}
+              className="text-xs text-blueStrong hover:text-orangeStrong underline"
+              aria-label="Export current page to CSV"
+            >
+              Export Page
+            </button>
+          </div>
         )}
       </div>
 
