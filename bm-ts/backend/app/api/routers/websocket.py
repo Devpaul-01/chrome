@@ -7,13 +7,14 @@ from typing import Dict
 from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status
-from jose import JWTError, jwt
+from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.jwt import decode_token, ensure_token_type, TokenType
 from app.db.session import get_db
-from app.db.models import User
+from app.db.models import User, UserSession
 from sqlalchemy import select
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -74,18 +75,32 @@ manager = ConnectionManager()
 
 
 async def get_current_user_from_token(token: str, db: AsyncSession) -> User:
-    """Validate JWT token and return user"""
+    """Validate JWT token (must be access type) and return user."""
     credentials_exception = Exception("Could not validate credentials")
     try:
-        payload = jwt.decode(
-            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
-        )
+        payload = decode_token(token)
+        ensure_token_type(payload, TokenType.ACCESS)
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
+    # Verify session is still valid
+    session_id = payload.get("sid")
+    if session_id:
+        result = await db.execute(
+            select(UserSession).where(
+                UserSession.id == UUID(session_id),
+                UserSession.user_id == UUID(user_id),
+            )
+        )
+        session = result.scalar_one_or_none()
+        if session is None or session.revoked_at is not None:
+            raise credentials_exception
+        if session.expires_at.replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
+            raise credentials_exception
+
     result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
     if user is None:
@@ -96,16 +111,13 @@ async def get_current_user_from_token(token: str, db: AsyncSession) -> User:
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    token: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """
     WebSocket endpoint for real-time updates.
 
-    Authentication can be provided in two ways (in priority order):
-      1. First message after connection: ``{"type": "auth", "token": "<jwt>"}``
-         (preferred — avoids leaking the JWT in server logs / proxy URLs)
-      2. Query parameter: ``ws://…/ws?token=<jwt>``  (legacy, still supported)
+    Authentication is provided by sending a first message after connection:
+    ``{"type": "auth", "token": "<jwt>"}``
 
     If no valid token is received within 10 seconds the connection is closed.
 
@@ -118,36 +130,28 @@ async def websocket_endpoint(
     user: User | None = None
 
     try:
-        # Legacy path: token in query string
-        if token:
-            user = await get_current_user_from_token(token, db)
+        # Accept the raw WebSocket so the client can send us the auth message
+        await websocket.accept()
+
+        # Wait up to 10 s for an auth message
+        import asyncio
+        try:
+            raw = await asyncio.wait_for(websocket.receive_text(), timeout=10.0)
+            msg = json.loads(raw)
+            if msg.get("type") == "auth" and msg.get("token"):
+                user = await get_current_user_from_token(msg["token"], db)
+        except (asyncio.TimeoutError, Exception):
+            pass
 
         if user is None:
-            # Accept the raw WebSocket so the client can send us the auth message
-            await websocket.accept()
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
 
-            # Wait up to 10 s for an auth message
-            import asyncio
-            try:
-                raw = await asyncio.wait_for(websocket.receive_text(), timeout=10.0)
-                msg = json.loads(raw)
-                if msg.get("type") == "auth" and msg.get("token"):
-                    user = await get_current_user_from_token(msg["token"], db)
-            except (asyncio.TimeoutError, Exception):
-                pass
-
-            if user is None:
-                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-                return
-
-            # Already accepted above, so just register the connection
-            if user.id not in manager.active_connections:
-                manager.active_connections[user.id] = []
-            manager.active_connections[user.id].append(websocket)
-            logger.info(f"WebSocket connected for user {user.id}. Total connections: {len(manager.active_connections[user.id])}")
-        else:
-            # Token was provided via query string and validated — use normal connect
-            await manager.connect(websocket, user.id)
+        # Register the connection
+        if user.id not in manager.active_connections:
+            manager.active_connections[user.id] = []
+        manager.active_connections[user.id].append(websocket)
+        logger.info(f"WebSocket connected for user {user.id}. Total connections: {len(manager.active_connections[user.id])}")
 
         # Send welcome message
         await websocket.send_json({

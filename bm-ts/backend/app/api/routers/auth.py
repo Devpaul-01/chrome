@@ -44,7 +44,7 @@ from app.core.jwt import (
     ensure_token_type,
 )
 from app.core.security import hash_password, verify_password
-from app.db.models import User, RevokedToken, UserSession
+from app.db.models import User, RevokedToken, UserSession, TemplateSegment, MessageTemplate, BirthdaySchedule, Contact, MessageQueue, MessageHistory
 from app.db.session import get_db
 from app.schemas.auth import (
     ActiveSession,
@@ -240,7 +240,10 @@ async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends
             detail="Account temporarily locked due to too many failed login attempts. Try again later.",
         )
 
-    if not user or not verify_password(data.password, user.password_hash):
+    if not user or not verify_password(data.password, user.password_hash if user else ""):
+        # When user is None, run a dummy verify to prevent timing oracle (user enumeration)
+        if not user:
+            verify_password(data.password, "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$dummyhashdummyhashdummyhashdummy")
         # Increment failed login counter (only if user exists)
         if user:
             user.failed_login_count = (user.failed_login_count or 0) + 1
@@ -259,6 +262,7 @@ async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends
 
 
 @router.post("/refresh", response_model=TokenResponse)
+@limiter.limit("30/minute")
 async def refresh(
     request: Request,
     data: RefreshRequest,
@@ -481,6 +485,17 @@ async def reset_password(
     # Update password
     user.password_hash = hash_password(data.new_password)
     await mark_token_used(data.token, db)
+
+    # Invalidate all active sessions — attacker's stolen session must not survive a reset
+    session_result = await db.execute(
+        select(UserSession).where(
+            UserSession.user_id == user.id,
+            UserSession.revoked_at.is_(None),
+        )
+    )
+    for s in session_result.scalars().all():
+        await _revoke_session_record(s, db, reason="password_reset")
+
     await db.commit()
     
     return MessageResponse(message="Password has been reset successfully")
@@ -490,6 +505,7 @@ async def reset_password(
 async def change_password(
     data: ChangePasswordRequest,
     current_user: User = Depends(get_current_user),
+    token_payload: dict[str, Any] = Depends(get_current_token_payload),
     db: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
     """Change password for authenticated user"""
@@ -502,6 +518,20 @@ async def change_password(
     
     # Update password
     current_user.password_hash = hash_password(data.new_password)
+
+    # Invalidate all other sessions (keep the current one alive)
+    current_sid = token_payload.get("sid")
+    session_result = await db.execute(
+        select(UserSession).where(
+            UserSession.user_id == current_user.id,
+            UserSession.revoked_at.is_(None),
+        )
+    )
+    for s in session_result.scalars().all():
+        if current_sid and str(s.id) == str(current_sid):
+            continue
+        await _revoke_session_record(s, db, reason="password_changed")
+
     await db.commit()
     
     return MessageResponse(message="Password changed successfully")

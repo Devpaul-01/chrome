@@ -84,10 +84,11 @@ async function findConversationByName(friendName: string): Promise<HTMLElement |
   }
 
   // Facebook uses various selectors for conversation items
+  const escaped = CSS.escape(friendName);
   const conversationSelectors = [
-    '[role="link"][aria-label*="' + friendName + '"]',
-    'a[href*="/messages/t/"][aria-label*="' + friendName + '"]',
-    'div[role="listitem"] a[aria-label*="' + friendName + '"]',
+    '[role="link"][aria-label*="' + escaped + '"]',
+    'a[href*="/messages/t/"][aria-label*="' + escaped + '"]',
+    'div[role="listitem"] a[aria-label*="' + escaped + '"]',
   ];
 
   for (const selector of conversationSelectors) {

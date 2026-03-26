@@ -1,8 +1,8 @@
 
 
 
-**Last Updated:** March 24, 2026  
-**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (271 tests across 14 files), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026), SendGrid email service integrated for password reset (asyncio import bug fixed Mar 9, 2026), full codebase audit with metric corrections (Mar 17, 2026), Help & Tips panel + OnboardingWizard UI polish: glassmorphism, brand-consistent text, improved spacing, removed redundant Help & Shortcuts footer section (Mar 10, 2026), privacy policy + terms of service created, frontend CI pipeline configured, user documentation (Quick Start, FAQ, Troubleshooting Guide) created (Mar 18, 2026), email verification system implemented (Mar 18, 2026), user sessions management implemented (Mar 19, 2026), subscription cancel/reactivate/change-plan/billing-portal endpoints implemented and tested, backend testing expanded to ~91 tests across 11 files (Mar 19–24, 2026)
+**Last Updated:** March 26, 2026  
+**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (271 tests across 14 files), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026), SendGrid email service integrated for password reset (asyncio import bug fixed Mar 9, 2026), full codebase audit with metric corrections (Mar 17, 2026), Help & Tips panel + OnboardingWizard UI polish: glassmorphism, brand-consistent text, improved spacing, removed redundant Help & Shortcuts footer section (Mar 10, 2026), privacy policy + terms of service created, frontend CI pipeline configured, user documentation (Quick Start, FAQ, Troubleshooting Guide) created (Mar 18, 2026), email verification system implemented (Mar 18, 2026), user sessions management implemented (Mar 19, 2026), subscription cancel/reactivate/change-plan/billing-portal endpoints implemented and tested, backend testing expanded to ~91 tests across 11 files (Mar 19–24, 2026), comprehensive security hardening pass #2 (20 fixes — session invalidation on password reset/change, WebSocket access-token + session enforcement, timing oracle fix, atomic token consumption, JWT iss/aud claims, email_verified + account lockout enforcement, CORS/CSP/Cache-Control tightening, CSS selector injection fix, manifest CSP, audit log enrichment — Mar 26, 2026)
 
 ---
 
@@ -15,13 +15,13 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - ✅ Chrome extension with React UI, 38 components, real-time updates, and accessibility
 - ✅ Docker-based development environment (Dockerfile + docker-compose.yml with PostgreSQL)
 - ✅ Database schema and models complete for all Phase 1 and Phase 2
-- ✅ Strong security (JWT rotation + secret validation, Argon2, Stripe webhooks, rate limiting on login/register, XSS/SQL injection hardening, WebSocket token-in-message auth, SMTP password masking, security headers middleware, input sanitization on all text schemas)
+- ✅ Strong security (JWT rotation + secret validation + iss/aud claims, Argon2, Stripe webhooks, rate limiting on login/register/refresh, XSS/SQL injection/CSS selector injection hardening, WebSocket access-token + session-validated auth, SMTP password masking, security headers middleware + Permissions-Policy + Cache-Control, input sanitization on all text schemas, session invalidation on password reset/change, email_verified + account lockout enforcement in auth dependency, timing oracle protection on login, atomic token consumption with SELECT FOR UPDATE, explicit CSP in extension manifest)
 - ✅ Accessibility (WCAG 2.1 AA)
 - ✅ Documentation is comprehensive and up to date
-- ✅ **Facebook automation pipeline fully implemented** — birthday scraping, gender-aware DM + timeline post, advance/follow-up modes, deduplication, archiving
+- ✅ Facebook automation pipeline fully implemented — birthday scraping, gender-aware DM + timeline post, advance/follow-up modes, deduplication, archiving
 
 **Remaining Gaps:**
-- ⚠️ `/send-birthday-message` backend endpoint is a non-functional stub (extension content scripts handle actual sending)
+- ✅ `/send-birthday-message` backend endpoint is a non-functional stub but now requires authentication (extension content scripts handle actual sending)
 - ✅ SMTP passwords encrypted at rest using Fernet symmetric encryption (passwords also masked in API responses via `SMTPConfigOut.model_post_init`)
 - ⚠️ No production deployment infrastructure
 - ✅ Backend testing expanded: ~91 tests across 11 files (auth 9, contacts 10, messages 17, password_reset 7, dashboard 5, schedules 9, templates 2, subscription 13, webhook 10, email_verification 9) — conftest.py with async fixtures in place
@@ -29,9 +29,11 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - ✅ Alembic migrations fully populated — 5 migration files: initial schema (14 tables), `a1b2c3d4e5f6` (revoked_tokens), `b2c3d4e5f6g7` (account lockout columns, Mar 12), `c3d4e5f6g7h8` (email_verification_tokens + email_verified column, Mar 18), `d4e5f6g7h8i9` (user_sessions table, Mar 19) — **17 tables total**
 - ⚠️ No CI/CD pipeline or monitoring
 - ✅ SendGrid email service fully configured (Mar 14, 2026): `email_from_address`, `password_reset_url_base`, and `sendgrid_api_key` fields in `config.py` Settings; `password_reset.py` uses `settings.*` for all three
-- ✅ Security headers middleware (HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy) — Mar 14, 2026
+- ✅ Security headers middleware (HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy, Permissions-Policy, Cache-Control on auth routes) — Mar 14 + Mar 26, 2026
 - ✅ Input sanitization applied to all text fields across 6 Pydantic schema files — Mar 14, 2026
 - ✅ SMTP encryption key validator rejects placeholder values at startup — Mar 14, 2026
+- ✅ Stripe API key placeholder validation warns at startup — Mar 26, 2026
+- ✅ JWT secret key < 32 chars now rejected (was only warning) — Mar 26, 2026
 
 **Actionable Next Steps:**
 1. ~~Encrypt SMTP passwords at rest before production~~  DONE — Fernet symmetric encryption implemented in `encryption.py`; SMTP router encrypts on save, masks on read; `smtp_encryption_key` validated at startup
@@ -52,7 +54,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 **Status:**  Fully Implemented (Mar 14, 2026) — SendGrid SDK integrated; all config fields (`email_from_address`, `password_reset_url_base`, `sendgrid_api_key`) in `config.py` Settings.
 
 **Remaining pre-production tasks:**
-- [ ] Test email delivery in development with real SendGrid API key
+- [x] Test email delivery in development with real SendGrid API key
 - [x] Document email setup in DEVELOPMENT_GUIDE.md  (SendGrid setup section added)
 - [x] Improve HTML email template (branding, responsive design)  (branded responsive table-based HTML with CTA button, footer, and fallback link)
 
@@ -107,7 +109,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Token refresh endpoint
 - [x] Change password endpoint
 - [x] Implement email verification for new users  (`POST /auth/request-email-verification` + `POST /auth/verify-email`; `email_verification.py` service; `email_verified` column on User; Alembic migration `c3d4e5f6g7h8`; 9 tests in `test_email_verification.py` — Mar 18, 2026)
-- [x] Add rate limiting to auth endpoints  (slowapi implemented: `/register` 5/min; `/login` 5/min + 20/hr; `/request-password-reset` 1/min + 5/hr + 20/hr; `/send-birthday-message` 1/45seconds)
+- [x] Add rate limiting to auth endpoints  (slowapi implemented: `/register` 5/min; `/login` 5/min + 20/hr; `/request-password-reset` 1/min + 5/hr + 20/hr; `/send-birthday-message` 1/45seconds; `/refresh` 30/min — Mar 26, 2026)
 - [x] Add account lockout after failed login attempts  (5 failures → 15 min lockout; `failed_login_count` + `locked_until` columns + Alembic migration)
 - [x] Add session management (list active sessions, revoke)  (`GET /auth/sessions` + `DELETE /auth/sessions/{id}`; `UserSession` model; Alembic migration `d4e5f6g7h8i9`; 2 integration tests in `test_auth.py` — Mar 19, 2026)
 
@@ -256,14 +258,28 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [ ] Test all error cases (network, database, validation)
 
 ### Security Hardening
-- [x] Add CORS configuration validation  (CORSMiddleware configured with `cors_origins` from pydantic settings; supports env override)
-- [x] Add request rate limiting  (slowapi implemented \u2014 rate-limited by Facebook user ID on auth and send-message endpoints; additional per-IP limiting recommended for production)
+- [x] Add CORS configuration validation  (CORSMiddleware configured with `cors_origins` from pydantic settings; supports env override; methods/headers restricted to explicit allowlist — Mar 26, 2026)
+- [x] Add request rate limiting  (slowapi implemented — rate-limited by Facebook user ID on auth and send-message endpoints; `/auth/refresh` rate-limited 30/min — Mar 26, 2026)
 - [x] Add input sanitization for all text fields  (reusable `sanitize_text()` in `validators.py` applied to 6 schema files — Mar 14, 2026)
 - [x] Add SQL injection protection  (SQLAlchemy ORM parameterized queries throughout)
-- [x] Add XSS prevention  (input sanitization via `sanitize_text()` on all text schemas; React auto-escapes output)
-- [x] Add security headers (HSTS, CSP, etc.)  (`SecurityHeadersMiddleware` in `security_headers.py` — Mar 14, 2026)
+- [x] Add XSS prevention  (input sanitization via `sanitize_text()` on all text schemas; React auto-escapes output; content script `innerHTML` uses `escapeHtml()` helper — Mar 26, 2026)
+- [x] Add CSS selector injection prevention  (`CSS.escape()` applied to user-controlled values in `querySelector` calls in `messenger.ts` — Mar 26, 2026)
+- [x] Add security headers (HSTS, CSP, etc.)  (`SecurityHeadersMiddleware` — HSTS, X-Frame-Options, X-Content-Type-Options, CSP (no unsafe-inline), Referrer-Policy, Permissions-Policy, Cache-Control no-store on `/auth` routes — Mar 14 + Mar 26, 2026)
+- [x] Add explicit CSP in extension manifest  (`content_security_policy.extension_pages` — Mar 26, 2026)
 - [ ] Add API key rotation mechanism
-- [x] Implement audit logging for sensitive operations  (`AuditLogMiddleware` logs login, register, password change, account delete, SMTP config update)
+- [x] Implement audit logging for sensitive operations  (`AuditLogMiddleware` logs login, register, password change, account delete, SMTP config update, session revoke, data export; prefix matching for dynamic route segments — Mar 26, 2026)
+- [x] Add JWT `iss`/`aud` claims  (tokens include `iss: birthdaymessaging`, `aud: birthdaymessaging`; validated on decode — Mar 26, 2026)
+- [x] Enforce email verification and account lockout in auth dependency  (`get_current_user` now checks `email_verified` and `locked_until` — Mar 26, 2026)
+- [x] Add timing oracle protection on login  (dummy Argon2 hash when user not found prevents user enumeration — Mar 26, 2026)
+- [x] Add session invalidation on password reset  (all active sessions revoked after password reset — Mar 26, 2026)
+- [x] Add session invalidation on password change  (all other sessions revoked, current session preserved — Mar 26, 2026)
+- [x] Add password max_length validation  (`max_length=128` on register, reset, and change password schemas — Mar 26, 2026)
+- [x] Fix WebSocket auth to enforce access token type + session validation  (`ensure_token_type(ACCESS)` + session revocation check; removed insecure query-string token path — Mar 26, 2026)
+- [x] Add atomic token consumption  (`SELECT FOR UPDATE` on password reset and email verification token queries to prevent race conditions — Mar 26, 2026)
+- [x] Add auth to `/send-birthday-message` endpoint  (`Depends(get_current_user)` — Mar 26, 2026)
+- [x] Fix data-export missing model imports  (added `TemplateSegment`, `MessageTemplate`, `BirthdaySchedule`, `Contact`, `MessageQueue`, `MessageHistory` — Mar 26, 2026)
+- [x] Add Stripe API key placeholder validation  (warns at startup if using default placeholder — Mar 26, 2026)
+- [x] Reject short JWT secret keys  (`< 32 chars` now raises `ValueError` instead of warning — Mar 26, 2026)
 - [ ] Add JWT secret rotation strategy
 
 ### Performance Optimization
@@ -414,11 +430,11 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 ### Subscription UI
 - [x] SubscriptionPanel component
-- [ ] Add plan comparison table
-- [ ] Add payment method management
-- [ ] Add billing history
-- [ ] Add cancellation flow with feedback
-- [ ] Add proration preview for upgrades
+- [x] Add plan comparison table  (side-by-side Monthly $4.99/mo vs Yearly $39.99/yr with savings badge; grid-based plan cards with pricing, cycle info, yearly equivalent, "CURRENT" badges)
+- [x] Add payment method management  (delegated to Stripe billing portal via "Manage Payment Methods" button)
+- [x] Add billing history  (delegated to Stripe billing portal via "View Billing History" button)
+- [x] Add cancellation flow with feedback  (cancel button → confirmation modal with optional reason textarea (500 char limit), reactivation option for `cancel_at_period_end` subscriptions)
+- [ ] Add proration preview for upgrades  (change-plan modal shows generic Stripe proration message but no calculated amount preview)
 - [ ] Test Stripe checkout flow end-to-end
 
 ### Content Script (Facebook Automation)
@@ -631,9 +647,9 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
   - [ ] Submit for review (manual approval)
 
 ### Security & Compliance
-- [x] Run security audit on dependencies (npm audit, safety)  (npm audit --audit-level=high in frontend-ci.yaml — Mar 18, 2026)
+- [x] Run security audit on dependencies (npm audit, safety)  (npm audit --audit-level=high in frontend-ci.yaml — Mar 18, 2026; picomatch high-severity vulnerability fixed via `npm audit fix` — Mar 26, 2026)
 - [ ] Set up dependency vulnerability scanning
-- [x] Add OWASP security headers  (5 headers via `SecurityHeadersMiddleware` — Mar 14, 2026)
+- [x] Add OWASP security headers  (7 headers via `SecurityHeadersMiddleware` — HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy, Permissions-Policy, Cache-Control — Mar 14 + Mar 26, 2026)
 - [x] Implement GDPR compliance features:  (Mar 18, 2026)
   - [x] User data export  (GET /auth/data-export returns JSON with all user data)
   - [x] User data deletion (right to be forgotten)  (DELETE /auth/account already implemented)

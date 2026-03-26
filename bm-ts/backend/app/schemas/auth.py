@@ -23,7 +23,7 @@ class RegisterRequest(BaseModel):
     """Registration payload — email is validated as a proper address; password minimum 8 chars."""
 
     email: EmailStr
-    password: constr(min_length=8) = Field(..., description="Minimum 8 characters")
+    password: constr(min_length=8, max_length=128) = Field(..., description="8–128 characters")
 
 
 class LoginRequest(BaseModel):

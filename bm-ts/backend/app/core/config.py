@@ -37,6 +37,18 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = Field(default="whsec_placeholder", alias="STRIPE_WEBHOOK_SECRET")
     stripe_price_monthly: str = Field(default="price_monthly_placeholder", alias="STRIPE_PRICE_MONTHLY")
     stripe_price_yearly: str = Field(default="price_yearly_placeholder", alias="STRIPE_PRICE_YEARLY")
+
+    @field_validator("stripe_api_key", mode="after")
+    @classmethod
+    def validate_stripe_api_key(cls, v: str) -> str:
+        if v in {"sk_test_placeholder", ""}:
+            import warnings
+            warnings.warn(
+                "STRIPE_API_KEY is set to a placeholder. Stripe billing will not work.",
+                stacklevel=2,
+            )
+        return v
+
     stripe_redirect_allowed_domains: list[str] = Field(
         default_factory=lambda: ["localhost"],
         alias="STRIPE_REDIRECT_ALLOWED_DOMAINS",
@@ -61,13 +73,11 @@ class Settings(BaseSettings):
                 f"Generate a secure random value (>= 32 chars) with: python -c \"import secrets; print(secrets.token_hex(16))\""
             )
         
-        # Warn if too short
+        # Reject if too short — a short key is exploitable
         if len(v) < 32:
-            import warnings
-            warnings.warn(
+            raise ValueError(
                 "JWT_SECRET_KEY is too short (< 32 chars). "
-                "Generate a secure random value with: python -c \"import secrets; print(secrets.token_hex(16))\"",
-                stacklevel=2,
+                "Generate a secure random value with: python -c \"import secrets; print(secrets.token_hex(16))\""
             )
         
         return v

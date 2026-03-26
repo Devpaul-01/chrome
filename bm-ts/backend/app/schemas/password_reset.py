@@ -16,12 +16,12 @@ class RequestPasswordResetRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     token: str
-    new_password: constr(min_length=8) = ...  # Enforce minimum length
+    new_password: constr(min_length=8, max_length=128) = ...  # Enforce length bounds
 
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
-    new_password: constr(min_length=8) = ...  # Enforce minimum length
+    new_password: constr(min_length=8, max_length=128) = ...  # Enforce length bounds
 
 
 class MessageResponse(BaseModel):
