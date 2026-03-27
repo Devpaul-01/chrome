@@ -12,6 +12,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4 #runs on node20, runner errors if node24 is used
 
+      - name: Login to the Container Registry #github actor to mock context for login
+        env:
+          PAT_SECRET: ${{secrets.REGISTRY_PASSWORD}}
+        run: |
+          echo "Authenticating with Gitea Container Registry..."
+          echo "$PAT_SECRET" | docker login gitea.birthdaymessaging.com -u ModaMetrics --password-stdin
+
       - name: Build and Push Docker image
         working-directory: backend
         run: |
