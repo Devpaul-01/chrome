@@ -34,35 +34,14 @@ jobs:
           docker push $IMAGE_NAME:$VERSION
           docker push $IMAGE_NAME:latest
 
-      - name: Deploy container locally
-        working-directory: backend
+      - name: Trigger Coolify Deployment
         run: |
-          export DB_HOST="${{ secrets.DB_HOST }}"
-          export DB_PORT="${{ secrets.DB_PORT }}"
-          export DB_NAME="${{ secrets.DB_NAME }}"
-          export DB_USER="${{ secrets.DB_USER }}"
-          export DB_PASS="${{ secrets.DB_PASS }}"
-          
-          echo "Pulling latest image..."
-          docker compose pull bm-legacy-backend
-          echo "Restarting container..."
-          docker compose up -d bm-legacy-backend
-          echo "Cleanup old images..."
-          docker image prune -f
-      - name: Verify container health
+          echo "Telling Coolify to pull and deploy the new image..."
+          # Actual Coolify Webhook URL when it is ready, using a placeholder for now
+          curl -s -X GET "https://BIRTHDAY-MESSAGING-COOLIFY-INSTANCE.com/api/v1/deploy?uuid=TEAM_WEBHOOK_UUID"
+      
+      - name: Cleanup registry credentials
+        if: always()
         run: |
-          CONTAINER_NAME="bm-legacy-backend"
-          echo "Waiting for container $CONTAINER_NAME to stabilize..."
-          sleep 15
+          docker logout gitea.birthdaymessaging.com
 
-          STATUS=$(docker inspect -f '{{.State.Status}}' $CONTAINER_NAME 2>/dev/null || echo "missing")
-          RESTARTING=$(docker inspect -f '{{.State.Restarting}}' $CONTAINER_NAME 2>/dev/null || echo "false")
-
-          if [ "$STATUS" != "running" ] || [ "$RESTARTING" = "true" ]; then
-            echo "❌ Container $CONTAINER_NAME is not healthy. Status: $STATUS, Restarting: $RESTARTING"
-            echo "Container logs:"
-            docker logs --tail 50 $CONTAINER_NAME || true
-            exit 1
-          fi
-
-          echo "✅ Container $CONTAINER_NAME is running normally."
