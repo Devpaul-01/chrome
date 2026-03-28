@@ -617,7 +617,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 ### CI/CD Pipeline
 **Priority:** P1 - REQUIRED FOR SUSTAINABLE DEVELOPMENT  
-**Status:** 🔴 Not Implemented (No .github/workflows directory exists)
+**Status:** 🔴 Not Implemented (No .gitea/workflows directory exists)
 
 #### Backend CI/CD
 - [ ] Set up Gitea Actions (or GitLab CI, CircleCI)
