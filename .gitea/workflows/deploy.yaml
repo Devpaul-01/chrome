@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - develop
+      - backend_ci_develop
 
 jobs:
   build-and-deploy:
@@ -22,9 +23,9 @@ jobs:
       - name: Build and Push Docker image
         working-directory: backend
         run: |
-          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login gitea.birthdaymessaging.io -u "${{ secrets.REGISTRY_USER }}" --password-stdin
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login gitea.birthdaymessaging.com -u "${{ secrets.REGISTRY_USER }}" --password-stdin
           
-          IMAGE_NAME=gitea.birthdaymessaging.io/ctmmediagroup/bm-legacy-backend
+          IMAGE_NAME=gitea.birthdaymessaging.com/ctmmediagroup/bm-legacy-backend
           SAFE_BRANCH_NAME=$(echo "${{ gitea.ref_name }}" | tr '/' '-')
           VERSION="${SAFE_BRANCH_NAME}-$(date +'%Y%m%d-%H%M%S')"
 
@@ -38,7 +39,7 @@ jobs:
         run: |
           echo "Telling Coolify to pull and deploy the new image..."
           # Actual Coolify Webhook URL when it is ready, using a placeholder for now
-          curl -s -X GET "https://BIRTHDAY-MESSAGING-COOLIFY-INSTANCE.com/api/v1/deploy?uuid=TEAM_WEBHOOK_UUID"
+          curl -sS -X GET "${{ secrets.COOLIFY_WEBHOOK_URL }}" || echo "Failed to trigger Coolify deployment"
       
       - name: Cleanup registry credentials
         if: always()
