@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - develop
-      - backend_ci_develop
+      - backend-ci-deploy
 
 jobs:
   build-and-deploy:
