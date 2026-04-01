@@ -2,25 +2,27 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
-from jose import JWTError
+from jose import JWTError, jwt
 from sqlalchemy import select
 from starlette.requests import Request
 
 from app.api.routers.auth import refresh, revoke
 from app.core.jwt import (
     TokenType,
+    _build_payload,
     create_access_token,
     create_refresh_token,
     decode_token,
     ensure_token_type,
 )
+from app.core.config import settings
 from app.core.security import hash_password
 from app.db.models import RevokedToken, User, UserSession
 from app.db.session import get_db
@@ -32,6 +34,8 @@ def _make_request(user_agent: str = "pytest") -> Request:
     return Request(
         {
             "type": "http",
+            "method": "POST",
+            "path": "/auth/refresh",
             "headers": [(b"user-agent", user_agent.encode("utf-8"))],
             "client": ("127.0.0.1", 12345),
         }
@@ -60,7 +64,7 @@ async def _create_user(db_session, email: str, password: str = "testpass123") ->
         last_login_at=now,
         failed_login_count=0,
         locked_until=None,
-        email_verified=False,
+        email_verified=True,
         metadata_payload={},
     )
     db_session.add(user)
@@ -231,3 +235,21 @@ async def test_revoke_session_blocks_access_and_refresh(real_auth_client, db_ses
         headers={"user-agent": "session-b"},
     )
     assert refresh_response.status_code == 401
+
+
+def test_expired_access_token_is_rejected() -> None:
+    """An access token whose exp is in the past must be rejected by decode_token."""
+    user_id = uuid4()
+    expired_payload = _build_payload(user_id, TokenType.ACCESS, timedelta(seconds=-1))
+    token = jwt.encode(expired_payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    with pytest.raises(JWTError):
+        decode_token(token)
+
+
+def test_expired_refresh_token_is_rejected() -> None:
+    """A refresh token whose exp is in the past must be rejected by decode_token."""
+    user_id = uuid4()
+    expired_payload = _build_payload(user_id, TokenType.REFRESH, timedelta(seconds=-1))
+    token = jwt.encode(expired_payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    with pytest.raises(JWTError):
+        decode_token(token)
