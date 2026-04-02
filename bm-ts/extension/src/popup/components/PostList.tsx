@@ -171,7 +171,7 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
         ) : (
           <div>
             {filteredPosts.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 bg-white bg-opacity-80 rounded-lg">
+              <div className="text-center py-8 text-gray-500 bg-white/80 rounded-lg">
                 No posts found. Create your first post to get started.
               </div>
             ) : (

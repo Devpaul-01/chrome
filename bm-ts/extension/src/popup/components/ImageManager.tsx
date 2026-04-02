@@ -323,7 +323,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(
             </h3>
 
             {images.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 bg-white bg-opacity-80 rounded-lg mb-5">
+              <div className="text-center py-8 text-gray-500 bg-white/80 rounded-lg mb-5">
                 No images yet. Upload your first image above.
               </div>
             ) : (
@@ -331,7 +331,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(
                 {images.map((image) => (
                   <div
                     key={image.id}
-                    className="bg-white bg-opacity-80 rounded-lg p-2 shadow-sm text-center"
+                    className="bg-white/80 rounded-lg p-2 shadow-sm text-center"
                   >
                     <img
                       src={image.url}

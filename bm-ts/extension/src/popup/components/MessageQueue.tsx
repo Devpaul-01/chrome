@@ -117,7 +117,7 @@ export default function MessageQueue({ onClose: _onClose, compact = false }: Mes
   function getStatusBadge(status: QueuedMessage['status']) {
     const styles: Record<QueuedMessage['status'], string> = {
       pending: 'bg-blue-100 text-blue-800',
-      processing: 'bg-orangeBrand bg-opacity-20 text-orangeStrong',
+      processing: 'bg-orangeBrand/20 text-orangeStrong',
       failed: 'bg-red-100 text-red-800',
     };
     return (
@@ -421,7 +421,7 @@ export default function MessageQueue({ onClose: _onClose, compact = false }: Mes
       {/* Message preview modal */}
       {previewMessage && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="preview-modal-title"
