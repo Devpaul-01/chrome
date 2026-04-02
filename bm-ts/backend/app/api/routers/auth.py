@@ -477,6 +477,7 @@ async def verify_email_page(token: str = "") -> HTMLResponse:
     The page makes a client-side ``POST`` to ``/auth/verify-email`` so the
     existing API validation (token expiry, used-token check) is reused.
     """
+    token_js = json.dumps(token).replace("<", "\u003c")
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -554,7 +555,7 @@ async def verify_email_page(token: str = "") -> HTMLResponse:
 </div>
 <script>
 (function() {{
-  var token = {json.dumps(token).replace("<", "\\u003c")};
+  var token = {token_js};
   var fb = document.getElementById('feedback');
   var btn = document.getElementById('verifyBtn');
   if (!token) {{
@@ -637,6 +638,7 @@ async def reset_password_page(token: str = "") -> HTMLResponse:
     existing API validation (token expiry, used-token check, password strength)
     is reused without duplication.
     """
+    token_js = json.dumps(token).replace("<", "\u003c")
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -738,7 +740,7 @@ async def reset_password_page(token: str = "") -> HTMLResponse:
 </div>
 <script>
 (function() {{
-  var token = {json.dumps(token).replace("<", "\\u003c")};
+  var token = {token_js};
   var form = document.getElementById('resetForm');
   var fb = document.getElementById('feedback');
   var btn = document.getElementById('submitBtn');
