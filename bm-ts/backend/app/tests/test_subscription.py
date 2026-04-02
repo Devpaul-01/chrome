@@ -253,4 +253,4 @@ async def test_billing_portal_no_customer(
     await db_session.commit()
     resp = await async_client.post("/subscription/billing-portal")
     assert resp.status_code == 400
-    assert "no stripe customer" in resp.json()["detail"].lower()
+    assert "no billing account found" in resp.json()["detail"].lower()
