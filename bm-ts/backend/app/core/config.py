@@ -53,7 +53,7 @@ class Settings(BaseSettings):
         default_factory=lambda: ["localhost"],
         alias="STRIPE_REDIRECT_ALLOWED_DOMAINS",
     )
-    cors_origins: list[str] = Field(default_factory=lambda: ["chrome-extension://doiajjfbpaopmocbahnaaajehmdoniic"])
+    cors_origins: list[str] = Field(default_factory=lambda: ["chrome-extension://cpobkmncaokclgimgcefglokgigjlcoj"])
     log_level: str = Field(default="INFO")
     smtp_encryption_key: str = Field(default="generate-with-fernet", alias="SMTP_ENCRYPTION_KEY")
     sendgrid_api_key: str = Field(default="", alias="SENDGRID_API_KEY")

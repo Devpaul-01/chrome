@@ -7,10 +7,9 @@ from typing import Dict
 from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status
-from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.jwt import decode_token, ensure_token_type, TokenType
+from app.core.jwt import JWTError, decode_token, ensure_token_type, TokenType
 from app.db.session import get_db
 from app.db.models import User, UserSession
 from sqlalchemy import select

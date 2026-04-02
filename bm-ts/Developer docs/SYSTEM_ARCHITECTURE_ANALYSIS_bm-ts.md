@@ -2,45 +2,48 @@
 
 
 **Generated:** February 1, 2026  
-**Last Updated:** March 14, 2026  
-**Version:** 1.4.0  
+**Last Updated:** April 1, 2026  
+**Version:** 1.5.0  
 **System Type:** Full-Stack Web Application with Browser Extension
 
 
-> **Implementation Status:** ✅ **Phase 1, Phase 2 & Facebook Automation Complete** — Backend runs fully containerized in Docker with 15 registered routers (+ 2 inline app routes), 15 database models, and 15 tables defined in `models.py`. Extension has 38 React component files (26 imported in App.tsx, App.tsx at 673 lines with 7 extracted hook files + AppContext) with real-time WebSocket updates, comprehensive accessibility, and a fully implemented Facebook automation pipeline: gender-aware DM sending, timeline posting, advance/follow-up modes, contact sync, and per-day deduplication. Background service worker handles **72 message types** across 15 categories. Extension test suite: **283 tests** across 13 files (97 unit + 186 component). Manifest hardened with Meta-compliant fail-safe mechanisms: human-in-the-loop confirmation, aggregate rate limiting (1/hr, 3/day, 5/week), Facebook restriction detection, user-activity gating, and emergency kill-switch.
+> **Implementation Status:** ✅ **Phase 1, Phase 2 & Facebook Automation Complete** — Backend runs fully containerized in Docker with 15 registered routers (+ 2 inline app routes), 17 database models, and 17 tables defined in `models.py` (449 lines) with 5 Alembic migrations. Extension has 38 React component files (26 imported in App.tsx, App.tsx at 840 lines with 7 extracted hook files + AppContext) with real-time WebSocket updates, comprehensive accessibility, and a fully implemented Facebook automation pipeline: gender-aware DM sending, timeline posting, advance/follow-up modes, contact sync, and per-day deduplication. Background service worker handles **77 message types** across 16 categories (902 lines). API client: 58 exported functions (882 lines). 19 ViewMode navigation states. Extension test suite: **297 tests** across 15 files. Backend test suite: **176 tests** across 20 files. Manifest hardened with Meta-compliant fail-safe mechanisms: human-in-the-loop confirmation, aggregate rate limiting (1/hr, 3/day, 5/week), Facebook restriction detection, user-activity gating, and emergency kill-switch. Security hardening pass #2 complete: session invalidation on password change/reset, WebSocket access-token + session enforcement, timing oracle fix, atomic token consumption, JWT iss/aud claims, email_verified + account lockout enforcement, CORS/CSP/Cache-Control tightening, CSS selector injection fix, manifest CSP, audit log enrichment.
 
 ---
 
-## 0.8.0 Evaluation Summary (as of February 21, 2026)
+## 1.5.0 Evaluation Summary (as of April 1, 2026)
 
 **bm-ts** is a robust, modernized system for automating Facebook birthday messages, with a fully implemented automation pipeline. The project demonstrates:
 
 - **High code quality and maintainability**: TypeScript and Pydantic enforce type safety; async FastAPI and SQLAlchemy 2.0 provide scalable backend performance.
-- **Security best practices**: JWT rotation, Argon2 password hashing, Stripe webhook verification, security headers middleware (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy), and input sanitization on all text schemas.
+- **Comprehensive security**: JWT rotation with iss/aud claims, Argon2 password hashing, Stripe webhook verification, security headers middleware (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cache-Control), input sanitization on all text schemas, session invalidation on password reset/change, WebSocket access-token + session validation, timing oracle protection, atomic token consumption, email_verified + account lockout enforcement, CSS selector injection prevention, audit logging.
 - **Accessibility**: The extension meets WCAG 2.1 AA, with keyboard navigation, screen reader support, and focus management.
 - **Real-time features**: WebSocket-based updates for queue, history, and dashboard are fully functional.
 - **Developer experience**: Docker Compose, Vite, and comprehensive documentation support rapid onboarding and development.
 - **Automation pipeline complete**: The extension can scrape the Facebook birthdays feed, select gender-appropriate DMs from stored templates, post to friend timelines, archive conversations, sync contacts, and avoid duplicate sends — with advance/follow-up modes based on `days_in_advance`.
+- **Strong test coverage**: 177 backend tests across 20 files covering all routers, integration flows, API contracts, and DB constraints. 294 extension tests across 15 files covering utilities, API client, and 10 component suites.
 
 **Key Gaps and Risks:**
 
-- **Testing coverage is incomplete**: Only 2 backend test files exist (auth and templates); extension has 283 tests (13 files) covering utilities, API client, and 8 component suites, but no E2E or backend Phase 2 tests.
-- **Email service fully configured**: SendGrid SDK integrated in `password_reset.py` (`asyncio` import bug fixed Mar 9, 2026); `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` all defined in `config.py` Settings (Mar 14, 2026). `SMTP_ENCRYPTION_KEY` validator rejects placeholder values at startup.
-- **SMTP passwords stored in plaintext**: `smtp_configs.password` is stored unencrypted in the database — must be encrypted before any production deployment.
+- **Email service fully configured**: SendGrid SDK integrated for password reset and email verification. All config fields in `config.py` Settings.
+- **SMTP passwords encrypted at rest**: Fernet symmetric encryption implemented via `encryption.py`; SMTP router encrypts on save, masks on read.
 - **`/send-birthday-message` is a stub**: Backend `POST /send-birthday-message` returns `{"status": "sent"}` without logic. Actual sending is handled client-side by the content script automation pipeline.
-- **Production infrastructure absent**: No CI/CD, monitoring, HTTPS configuration, or Chrome Web Store listing.
+- **Production infrastructure absent**: No CI/CD (backend), monitoring, HTTPS configuration, or Chrome Web Store listing. Frontend CI pipeline exists (.gitea/workflows/frontend-ci.yaml).
+- **No E2E tests**: No Playwright/Puppeteer test coverage.
+- **6 pre-existing test failures**: 5 auth tests (KeyError: 'path' in session handling), 1 subscription test (billing portal message assertion mismatch).
 
 **Actionable Recommendations:**
 
-1. ~~**Fix email delivery config**~~: ✅ RESOLVED (Mar 14, 2026) — `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` added to `config.py` Settings.
-2. **Encrypt SMTP passwords**: Add encryption at rest for `smtp_configs.password` before first production user. (API-level masking done — GET and PUT endpoints return `"••••••••"`.)
-3. **Increase test coverage**: Add pytest tests for all Phase 2 routers; extend Vitest suite to cover background handlers and hooks; add Playwright E2E. Current: 283 extension tests (13 files) + 7 backend tests (2 files).
-4. **Productionize deployment**: Managed PostgreSQL, HTTPS reverse proxy, CI/CD, and monitoring.
-5. **Prepare Chrome Web Store listing**: Complete manifest metadata, screenshots, and privacy policy.
+1. ~~**Fix email delivery config**~~: ✅ RESOLVED (Mar 14, 2026).
+2. ~~**Encrypt SMTP passwords**~~: ✅ RESOLVED — Fernet symmetric encryption implemented.
+3. **Fix 6 pre-existing test failures**: Auth session KeyError and subscription assertion mismatch.
+4. **Increase test coverage**: Add E2E tests (Playwright); add background worker and hook tests; target >80% code coverage.
+5. **Productionize deployment**: Managed PostgreSQL, HTTPS reverse proxy, CI/CD, and monitoring.
+6. **Prepare Chrome Web Store listing**: Complete manifest metadata, screenshots, and privacy policy.
 
 **Overall Assessment:**
 
-bm-ts is a feature-complete, development-ready system with a fully operational automation pipeline. Both Phase 1 and Phase 2 are fully implemented with all 15 routers registered (plus 2 inline app routes), all 15 models and tables active, and the full frontend wired to every backend feature. The Facebook automation pipeline is end-to-end: the content script scrapes the birthday feed, selects gender-appropriate templates from the backend, sends DMs and timeline posts, archives conversations, syncs contacts, and enforces per-day deduplication. The architecture is solid — async FastAPI, type-safe TypeScript, WCAG 2.1 AA accessibility, and WebSocket real-time updates. SendGrid email service is integrated for password reset. The primary remaining work is production hardening (encryption, testing, deployment, configuration hardening) rather than feature development.
+bm-ts is a feature-complete, development-ready system with a fully operational automation pipeline. Both Phase 1 and Phase 2 are fully implemented with all 15 routers registered (plus 2 inline app routes), all 17 models and 17 tables active, and the full frontend wired to every backend feature. The Facebook automation pipeline is end-to-end: the content script scrapes the birthday feed, selects gender-appropriate templates from the backend, sends DMs and timeline posts, archives conversations, syncs contacts, and enforces per-day deduplication. The architecture is solid — async FastAPI, type-safe TypeScript, WCAG 2.1 AA accessibility, and WebSocket real-time updates. SendGrid email service is integrated for password reset and email verification. Email verification and user sessions management are implemented. Two comprehensive security hardening passes have been completed. Backend testing has expanded from 7 tests (2 files) to 176 tests (20 files) covering all routers. The primary remaining work is production deployment and infrastructure setup rather than feature development.
 
 ### Version History
 
@@ -60,6 +63,7 @@ bm-ts is a feature-complete, development-ready system with a fully operational a
 | 1.2.0 | March 9, 2026 | **Full Codebase Audit & Bug Fixes** — Fixed critical `import asyncio` bug in `password_reset.py` that caused `NameError` at runtime (reset emails silently failed). Removed hardcoded SendGrid credentials from source code comment. Updated stale TODO docstring to reflect actual SendGrid implementation. Component count corrected: 34 → **36** (35 in `components/` + `Toast.tsx`). Line counts re-verified: App.tsx 668 → **570**; background/index.ts 780 → **1,131**; client.ts 825 → **783**; content/index.ts 741 → **1,130**; timeline.ts 562 → **660**; messenger.ts 483 → **620**; models.py 499 → **589**; accessibility.ts 237 → **226**. Extension test suite corrected: 214/11 → **266 tests across 13 files** (95 unit + 171 component). Email service status upgraded from "not configured" to "SendGrid integrated". Python dependency count corrected: 14 → **15** (`sendgrid>=6.11` added). API client functions confirmed: **52**. Background message types confirmed: **64**. |
 | 1.3.0 | March 13, 2026 | **Comprehensive Accuracy Audit** — Full line-by-line verification of every metric against actual codebase. Model/table count corrected: 14 → **15** (RevokedToken was undocumented, confirmed via separate Alembic migration `a1b2c3d4e5f6_create_revoked_tokens.py`). Component count corrected: 36 → **38** (38 .tsx files in `components/`). Background message types corrected: 64 → **72** across **15 categories** (added failsafe category with 8 message types). Line counts re-verified against terminal: App.tsx → **673**; background/index.ts → **865**; client.ts → **767**; content/index.ts → **892**; timeline.ts → **467**; messenger.ts → **461**; models.py → **404**; accessibility.ts → **211**. Extension tests corrected: 266 → **283** across 13 files (97 unit + 186 component). Backend tests corrected: 4 → **7** (5 in test_auth.py + 2 in test_templates.py). Utility files: 9 → **10** (added failsafe.ts at 370 lines; total ~1,484 lines). Manifest section updated to match actual manifest.json (3 `content_scripts.matches` patterns including profile.php, narrowed `host_permissions`, `alarms` in `optional_permissions`, `type: "module"` on service worker). **CRITICAL BUG IDENTIFIED**: `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` are referenced in `password_reset.py` but NOT defined in `config.py` Settings — `send_reset_email()` will crash with `AttributeError`. Known code gaps and recommendations updated accordingly. |
 | 1.4.0 | March 14, 2026 | **Security Hardening & Email Config Fix** — CRITICAL BUG FIXED: `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` added to `config.py` Settings class; `password_reset.py` updated to use `settings.*` (removed `os.environ.get()`); `SMTP_ENCRYPTION_KEY` validator rejects placeholder `"generate-with-fernet"` at startup. New `SecurityHeadersMiddleware` in `security_headers.py` adds 5 OWASP headers (HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy). New `validators.py` with reusable `sanitize_text()` (strip, null-byte rejection, 10K max) applied to 6 schema files (auth, contact, post, message_template, smtp, template). SMTP GET/PUT endpoints now return masked password `"••••••••"` instead of real values. `.env.example` updated with all new env vars. |
+| 1.5.0 | April 1, 2026 | **Comprehensive Codebase Audit** — Full re-verification of every metric against actual codebase. **Model/table count corrected: 15 → 17** (UserSession and EmailVerificationToken were undocumented; separate Alembic migrations exist for both). Auth router expanded: 9 → **15 endpoints** (added `/revoke`, `/sessions`, `DELETE /sessions/{id}`, `/request-email-verification`, `/verify-email`, `/data-export`). Subscription router expanded: 2 → **6 endpoints** (added `/cancel`, `/reactivate`, `/change-plan`, `/billing-portal`). Messages router expanded: 7 → **8** (added `/history/export`). Templates router: 4 → **5** (added `/preview`). **Total HTTP endpoints: 65 → 77** (75 router + 2 inline). **API client functions: 52 → 58** (882 lines, up from 767). **Background message types: 72 → 77** (902 lines, up from 865). **ViewMode states: 17 → 19** (added `schedules`, `automation`, `post-list`). App.tsx grew: 673 → **840** lines. AppContext.tsx: 164 → **180** lines. models.py: 404 → **449** lines. content/index.ts: 892 → **960** lines. **Backend tests massively expanded: 7 → 176 tests, 2 → 20 files** (all Phase 2 routers tested, integration tests, API contracts, DB constraints). **Extension tests: 283 → 297 tests, 13 → 15 files**. Service files: 3 → **4** (`email_verification.py` added). Schema files confirmed: **17**. SMTP passwords now encrypted at rest (Fernet). Email verification and user sessions fully implemented. Two security hardening passes complete. Known gap: 6 pre-existing test failures (5 auth KeyError:'path', 1 subscription assertion). |
 
 ---
 
@@ -80,12 +84,14 @@ The system follows a client-server architecture where the extension acts as a th
 **Fully Implemented and Active:**
 
 - ✅ **Docker Containerization**: Backend and PostgreSQL run in Docker containers via docker-compose
-- ✅ **Database Schema**: 15 tables and 5 enums defined in `models.py` (Alembic manages migrations)
-- ✅ **API Endpoints**: 15 registered routers with 63 HTTP endpoints + 2 inline app routes + 1 WebSocket endpoint (65 HTTP + 1 WS total)
+- ✅ **Database Schema**: 17 tables and 5 enums defined in `models.py` (449 lines), managed via 5 Alembic migrations
+- ✅ **API Endpoints**: 15 registered routers with 75 HTTP endpoints + 2 inline app routes + 1 WebSocket endpoint (77 HTTP + 1 WS total)
 - ✅ **Rate Limiting**: `slowapi` middleware; password-reset endpoint is rate-limited per IP (1/min, 5/hr, 20/hr on outer key)
 - ✅ **WebSocket Real-Time**: Live updates for queue, history, dashboard, and notifications
 - ✅ **JWT Authentication**: Access/refresh token system with secure rotation
-- ✅ **Password Reset**: Complete flow (request, token validation, reset, change password)
+- ✅ **Password Reset**: Complete flow (request, token validation, reset, change password) via SendGrid
+- ✅ **Email Verification**: Verification token flow for new users (`/request-email-verification`, `/verify-email`)
+- ✅ **User Sessions**: Session list and revoke (`/sessions`, `DELETE /sessions/{id}`)
 - ✅ **User Profile & Account**: `PUT /auth/profile` (name, timezone in metadata), `DELETE /auth/account`
 - ✅ **Birthday Scheduling**: Days before/after configuration with enable/disable
 - ✅ **Message Queue**: Full CRUD with view, edit, cancel, and retry capabilities
@@ -99,11 +105,11 @@ The system follows a client-server architecture where the extension acts as a th
 - ✅ **Posts**: Timeline post templates with font customisation (`/api/posts`)
 - ✅ **User Images**: URL/base64 image library (`/api/images`)
 - ✅ **Birthday Configs**: Advanced automation (EARLY/ON_DAY/BELATED modes, gender filter, archive) (`/api/birthday-configs`)
-- ✅ **SMTP Configuration**: Per-user SMTP settings (`/smtp/config`)
-- ✅ **Frontend UI**: 38 React component files (26 imported in App.tsx, 673 lines; logic extracted to 7 hook files + `AppContext.tsx`)
+- ✅ **SMTP Configuration**: Per-user SMTP settings with Fernet encryption at rest (`/smtp/config`)
+- ✅ **Frontend UI**: 38 React component files (26 imported in App.tsx, 840 lines; logic extracted to 7 hook files + `AppContext.tsx`)
 - ✅ **Accessibility**: WCAG 2.1 Level AA — keyboard shortcuts, screen reader support, focus management, live regions
-- ✅ **Content Scripts**: Full Facebook automation pipeline — birthday feed scraping, gender-aware DM sending, timeline posting, conversation archiving, contact sync, advance/follow-up modes, per-day deduplication (5 files, ~1,865 lines)
-- ✅ **Extension Testing**: 283 tests across 13 files (Vitest + Testing Library) covering utilities, API client, and 8 component suites
+- ✅ **Content Scripts**: Full Facebook automation pipeline — birthday feed scraping, gender-aware DM sending, timeline posting, conversation archiving, contact sync, advance/follow-up modes, per-day deduplication (5 files, ~1,891 lines)
+- ✅ **Extension Testing**: 297 tests across 15 files (Vitest + Testing Library) covering utilities, API client, and 10 component suites
 - ✅ **Automation Orchestration**: `handleAutomationScan` fetches templates/posts/contacts, groups by `days_in_advance`, opens `/birthdays` tab, dispatches `automation.runFull` payload to content script
 - ⏳ **Build Status**: Extension source complete; `dist/` gitignored (build with `npm run build`)
 
@@ -112,17 +118,19 @@ The system follows a client-server architecture where the extension acts as a th
 | Gap | Detail |
 |-----|--------|
 | Email service | ✅ SendGrid fully configured (Mar 14, 2026); `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` all in `config.py` Settings |
-| SMTP password encryption | Stored in plaintext in `smtp_configs` — must encrypt before production (API-level masking done: GET/PUT return `"••••••••"`) |
+| SMTP password encryption | ✅ Encrypted at rest via Fernet symmetric encryption (`encryption.py`); API responses mask passwords (`"••••••••"`) |
 | `POST /send-birthday-message` | Backend stub returns `{"status":"sent"}`; actual sending is handled by the content script automation pipeline |
-| Test coverage | Backend: only `test_auth.py` and `test_templates.py` (2 files, 7 tests); extension: 283 tests across 13 files; no E2E tests |
-| CI/CD and monitoring | Not configured |
+| Test coverage | Backend: **176 tests across 20 files** (all routers covered); extension: **297 tests across 15 files**; no E2E tests; 6 pre-existing test failures |
+| CI/CD and monitoring | Frontend CI exists (.gitea/workflows/frontend-ci.yaml); no backend CI/CD; no monitoring |
 
 **System Status:**
 - ✅ Development-ready with Docker Compose
-- ✅ SendGrid email service fully configured for password reset (Mar 14, 2026) — all config fields in `config.py` Settings
-- ✅ Security headers middleware active (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+- ✅ SendGrid email service fully configured for password reset and email verification (Mar 14, 2026) — all config fields in `config.py` Settings
+- ✅ Security headers middleware active (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cache-Control)
 - ✅ Input sanitization on all text schemas (6 files)
-- ⏳ SMTP passwords need encryption before production
+- ✅ SMTP passwords encrypted at rest via Fernet symmetric encryption
+- ✅ Email verification and user sessions management implemented
+- ✅ Comprehensive security hardening (2 passes — Mar 14 + Mar 26, 2026)
 - ⏳ Production deployment pending infrastructure setup
 
 ---
@@ -235,11 +243,11 @@ The system follows a client-server architecture where the extension acts as a th
 backend/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                    # FastAPI app (15 routers registered + 2 inline routes)
+│   ├── main.py                    # FastAPI app (15 routers registered + 2 inline routes, 114 lines)
 │   ├── api/
-│   │   ├── deps.py                # get_current_user dependency
+│   │   ├── deps.py                # get_current_user dependency (125 lines — Bearer token, JWT decode, token type, session validation, email_verified, account lockout)
 │   │   └── routers/
-│   │       ├── auth.py            # Authentication + password reset + profile/account ✅
+│   │       ├── auth.py            # Authentication + password reset + email verification + sessions + profile/account + data export (641 lines, 15 endpoints) ✅
 │   │       ├── templates.py       # Template segment CRUD ✅
 │   │       ├── subscription.py    # Subscription management ✅
 │   │       ├── webhook.py         # Stripe webhook handler ✅
@@ -255,16 +263,19 @@ backend/
 │   │       ├── birthday_configs.py # Birthday automation configs ✅
 │   │       └── smtp.py            # SMTP configuration ✅
 │   ├── core/
-│   │   ├── config.py              # Pydantic Settings (env-based; incl. sendgrid_api_key, email_from_address, password_reset_url_base)
-│   │   ├── jwt.py                 # JWT token creation/decoding (access + refresh)
-│   │   ├── security.py            # Argon2 password hashing (passlib CryptContext)
-│   │   ├── logging.py             # Basic logging setup (setup_logging())
-│   │   ├── rate_limiter.py        # slowapi rate limiter; per-IP key function
-│   │   ├── security_headers.py    # SecurityHeadersMiddleware (HSTS, X-Frame-Options, CSP, X-Content-Type-Options, Referrer-Policy)
-│   │   └── validators.py          # Reusable input sanitization (sanitize_text: strip, null-byte rejection, 10K max)
+│   │   ├── config.py              # Pydantic Settings (env-based; incl. sendgrid_api_key, email_from_address, password_reset_url_base, email_verification_url_base) (103 lines)
+│   │   ├── jwt.py                 # JWT token creation/decoding (access + refresh, iss/aud claims) (68 lines)
+│   │   ├── security.py            # Argon2 password hashing (passlib CryptContext) (17 lines)
+│   │   ├── app_logging.py         # Basic logging setup (7 lines)
+│   │   ├── audit_log.py           # AuditLogMiddleware for sensitive operations (56 lines)
+│   │   ├── rate_limiter.py        # slowapi rate limiter; per-IP key function (27 lines)
+│   │   ├── request_logging.py     # RequestLoggingMiddleware (method, path, status, duration, IP) (31 lines)
+│   │   ├── security_headers.py    # SecurityHeadersMiddleware (HSTS, X-Frame-Options, CSP, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cache-Control) (28 lines)
+│   │   ├── encryption.py          # Fernet symmetric encryption for SMTP passwords (7 lines)
+│   │   └── validators.py          # Reusable input sanitization (sanitize_text: strip, null-byte rejection, 10K max) (20 lines)
 │   ├── db/
 │   │   ├── base.py                # SQLAlchemy declarative_base()
-│   │   ├── models.py              # 15 ORM models (404 lines)
+│   │   ├── models.py              # 17 ORM models (449 lines)
 │   │   └── session.py             # AsyncSession factory, get_db() dependency
 │   ├── schemas/
 │   │   ├── auth.py                # RegisterRequest, LoginRequest, TokenResponse, UserProfile
@@ -282,12 +293,31 @@ backend/
 │   │   ├── smtp.py                # SMTPConfig schemas + UserProfileUpdate
 │   │   └── message_template.py    # Complete message template schemas
 │   ├── services/
-│   │   ├── password_reset.py      # Token creation/verification, SendGrid email sending
-│   │   ├── stripe.py              # Stripe checkout, webhook handling
-│   │   └── templates.py           # Message composition from segments
-│   └── tests/                     # Pytest test suite
-│       ├── test_auth.py
-│       └── test_templates.py
+│   │   ├── password_reset.py      # Token creation/verification, SendGrid email sending (134 lines)
+│   │   ├── email_verification.py  # Email verification token lifecycle, SendGrid email (117 lines)
+│   │   ├── stripe.py              # Stripe checkout, webhook handling (201 lines)
+│   │   └── templates.py           # Message composition from segments (24 lines)
+│   └── tests/                     # Pytest test suite (20 files, 176 tests)
+│       ├── conftest.py            # Async fixtures, model event listeners for SQLite compat (185 lines)
+│       ├── test_api_contracts.py  # Status codes, schemas, validation (14 tests)
+│       ├── test_auth.py           # JWT, sessions, revocation (10 tests)
+│       ├── test_birthday_configs.py # CRUD, gender filter, constraints (14 tests)
+│       ├── test_contacts.py       # CRUD, bulk import (13 tests)
+│       ├── test_dashboard.py      # Stats endpoint (5 tests)
+│       ├── test_db_constraints.py # FK cascades, unique constraints, enums (6 tests)
+│       ├── test_email_verification.py # Token lifecycle, verify endpoint (9 tests)
+│       ├── test_images.py         # Upload, size validation (10 tests)
+│       ├── test_integration.py    # Full auth + CRUD flows (4 tests)
+│       ├── test_message_groups.py # CRUD, segment_ids (12 tests)
+│       ├── test_message_templates.py # CRUD, gender filter (14 tests)
+│       ├── test_messages.py       # Queue + history CRUD, pagination (24 tests)
+│       ├── test_password_reset.py # Token lifecycle (8 tests)
+│       ├── test_posts.py          # CRUD with font fields (15 tests)
+│       ├── test_schedules.py      # CRUD (11 tests)
+│       ├── test_smtp.py           # Get/update, password masking (6 tests)
+│       ├── test_subscription.py   # Status, cancel, reactivate, change-plan (11 tests)
+│       ├── test_templates.py      # Segment validation, composition (2 tests)
+│       └── test_webhook.py        # Signature, events (10 tests)
 ├── alembic.ini                    # Present but not actively used
 ├── docker-compose.yml             # PostgreSQL + backend services
 ├── Dockerfile                     # Backend container definition
@@ -298,7 +328,7 @@ backend/
 
 ### 2.2 Database Schema
 
-**DDL Status:** ✅ Complete — 15 tables and 5 enums defined in `models.py`. Schema applied via Alembic migrations on container startup (`alembic upgrade head`).
+**DDL Status:** ✅ Complete — 17 tables and 5 enums defined in `models.py` (449 lines). Schema applied via 5 Alembic migrations on container startup (`alembic upgrade head`).
 
 #### Tables
 
@@ -373,6 +403,27 @@ backend/
 | `token` | VARCHAR(255), UNIQUE | Secure random |
 | `expires_at` | TIMESTAMPTZ | 1-hour expiration |
 | `used_at` | TIMESTAMPTZ, nullable | |
+
+**email_verification_tokens** *(added Mar 18, 2026 via Alembic migration `c3d4e5f6g7h8`)*
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID PK | |
+| `user_id` | UUID FK → users | |
+| `token` | VARCHAR(255), UNIQUE | SHA-256 hashed |
+| `expires_at` | TIMESTAMPTZ | |
+| `used_at` | TIMESTAMPTZ, nullable | |
+
+**user_sessions** *(added Mar 19, 2026 via Alembic migration `d4e5f6g7h8i9`)*
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID PK | |
+| `user_id` | UUID FK → users | |
+| `refresh_token_jti` | TEXT | Tracks refresh token JTI |
+| `ip_address` | TEXT, nullable | Client IP at login |
+| `user_agent` | TEXT, nullable | Browser/OS |
+| `created_at` | TIMESTAMPTZ | |
+| `expires_at` | TIMESTAMPTZ | |
+| `revoked_at` | TIMESTAMPTZ, nullable | Soft revoke |
 
 #### Enums
 - `segment_type_enum`: GREETING, BODY, CLOSING
@@ -473,13 +524,13 @@ backend/
 
 | Router | Prefix | Description |
 |--------|--------|-------------|
-| `auth` | `/auth` | Authentication, password reset, profile, account deletion (9 endpoints) |
+| `auth` | `/auth` | Authentication, password reset, email verification, sessions, profile, account (15 endpoints) |
 | `smtp` | `/smtp` | SMTP configuration (2 endpoints) |
-| `templates` | `/templates` | Template segment CRUD (4 endpoints) |
-| `subscription` | `/subscription` | Subscription management (2 endpoints) |
+| `templates` | `/templates` | Template segment CRUD + preview (5 endpoints) |
+| `subscription` | `/subscription` | Subscription management, cancel, reactivate, change plan, billing portal (6 endpoints) |
 | `webhook` | `/stripe` | Stripe webhooks (1 endpoint) |
 | `schedules` | `/api` | Birthday schedules (4 endpoints) |
-| `messages` | `/api` | Message queue + history (7 endpoints) |
+| `messages` | `/api` | Message queue + history + CSV export (8 endpoints) |
 | `dashboard` | `/api` | Dashboard analytics (1 endpoint) |
 | `websocket` | *(none)* | WebSocket at `/ws` (1 endpoint) |
 | `contacts` | `/api` | Contact CRUD + bulk import (6 endpoints) |
@@ -489,7 +540,7 @@ backend/
 | `images` | `/api` | User image library (5 endpoints) |
 | `birthday_configs` | `/api` | Birthday automation configs (6 endpoints) |
 
-**Total: 65 HTTP endpoints + 1 WebSocket endpoint**
+**Total: 77 HTTP endpoints + 1 WebSocket endpoint**
 
 #### Authentication (`/auth`)
 | Endpoint | Method | Auth | Description |
@@ -497,12 +548,18 @@ backend/
 | `/auth/register` | POST | No | Create user, return tokens |
 | `/auth/login` | POST | No | Validate credentials, return tokens |
 | `/auth/refresh` | POST | No | Rotate both tokens |
+| `/auth/revoke` | POST | Bearer | Revoke current refresh token |
+| `/auth/sessions` | GET | Bearer | List active user sessions |
+| `/auth/sessions/{id}` | DELETE | Bearer | Revoke a specific session |
 | `/auth/me` | GET | Bearer | Get current user profile |
 | `/auth/request-password-reset` | POST | No | Request reset email (rate-limited) |
+| `/auth/request-email-verification` | POST | Bearer | Request email verification link |
+| `/auth/verify-email` | POST | No | Verify email with token |
 | `/auth/reset-password` | POST | No | Reset password with token |
 | `/auth/change-password` | POST | Bearer | Change password (authenticated) |
 | `/auth/profile` | PUT | Bearer | Update name/timezone (stored in metadata) |
 | `/auth/account` | DELETE | Bearer | Permanently delete account and all data |
+| `/auth/data-export` | GET | Bearer | Export all user data as JSON |
 
 #### SMTP (`/smtp`)
 | Endpoint | Method | Auth | Description |
@@ -517,12 +574,17 @@ backend/
 | `/templates/` | GET | Bearer | List templates (optional type filter) |
 | `/templates/{id}` | PUT | Bearer | Update template |
 | `/templates/{id}` | DELETE | Bearer | Soft-delete template |
+| `/templates/preview` | POST | Bearer | Compose sample message from segments |
 
 #### Subscription (`/subscription`)
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
 | `/subscription/status` | GET | Bearer | Get subscription status |
 | `/subscription/create-checkout-session` | POST | Bearer | Create Stripe checkout |
+| `/subscription/cancel` | POST | Bearer | Cancel subscription at period end |
+| `/subscription/reactivate` | POST | Bearer | Reactivate canceled subscription |
+| `/subscription/change-plan` | POST | Bearer | Switch between monthly/yearly |
+| `/subscription/billing-portal` | POST | Bearer | Get Stripe billing portal URL |
 
 #### Webhook (`/stripe`)
 | Endpoint | Method | Auth | Description |
@@ -547,6 +609,7 @@ backend/
 | `/api/messages/queue/{id}/retry` | POST | Bearer | Retry failed message |
 | `/api/messages/history` | GET | Bearer | List history (search/filter) |
 | `/api/messages/history/{id}` | DELETE | Bearer | Delete history entry |
+| `/api/messages/history/export` | GET | Bearer | Export full history as CSV |
 
 #### Dashboard (`/api/dashboard`)
 | Endpoint | Method | Auth | Description |
@@ -645,43 +708,43 @@ extension/
 │       └── Birthday_messaging-logo.png
 ├── src/
 │   ├── api/
-│   │   ├── client.ts              # Type-safe HTTP client (783 lines, 52 functions)
-│   │   └── websocket.ts           # WebSocket singleton client (225 lines)
+│   │   ├── client.ts              # Type-safe HTTP client (882 lines, 58 functions)
+│   │   └── websocket.ts           # WebSocket singleton client (207 lines)
 │   ├── background/
-│   │   └── index.ts               # Service worker (865 lines, 72 message types)
+│   │   └── index.ts               # Service worker (902 lines, 77 message types)
 │   ├── content/
-│   │   ├── index.ts               # Content script coordinator (892 lines)
+│   │   ├── index.ts               # Content script coordinator (960 lines)
 │   │   ├── api.ts                 # Content→background bridge (18 lines)
 │   │   ├── dom-helpers.ts         # waitForElement, delay (27 lines)
-│   │   ├── messenger.ts           # Messenger automation (461 lines)
-│   │   └── timeline.ts            # Timeline posting automation (467 lines)
+│   │   ├── messenger.ts           # Messenger automation (413 lines)
+│   │   └── timeline.ts            # Timeline posting automation (473 lines)
 │   ├── popup/
 │   │   ├── main.tsx               # React entry point
-│   │   ├── App.tsx                # Main SPA orchestrator (673 lines, 4 tabs, 17+ view modes)
+│   │   ├── App.tsx                # Main SPA orchestrator (840 lines, 4 tabs, 19 view modes)
 │   │   ├── api.ts                 # Popup→background bridge (7 lines)
-│   │   ├── popup.css              # Component styles + brand theme (1,190 lines)
+│   │   ├── popup.css              # Component styles + brand theme (1,131 lines)
 │   │   ├── context/
-│   │   │   └── AppContext.tsx      # Auth state, toast, tab/view routing context (164 lines)
+│   │   │   └── AppContext.tsx      # Auth state, toast, tab/view routing context (180 lines)
 │   │   ├── hooks/
-│   │   │   ├── useContacts.ts      # Contact CRUD + import modal state (199 lines)
-│   │   │   ├── useImageLibrary.ts  # Image library state (81 lines)
-│   │   │   ├── useMessages.tsx     # Queue/history state (258 lines)
-│   │   │   ├── useMessageTemplates.ts # Complete template state (137 lines)
-│   │   │   ├── usePostComposer.ts  # Post creation state (100 lines)
-│   │   │   ├── useSMTPConfig.ts    # SMTP config state (56 lines)
-│   │   │   └── useTemplateSegments.ts # Segment CRUD state (182 lines)
+│   │   │   ├── useContacts.ts      # Contact CRUD + import modal state (188 lines)
+│   │   │   ├── useImageLibrary.ts  # Image library state (80 lines)
+│   │   │   ├── useMessages.tsx     # Queue/history state (284 lines)
+│   │   │   ├── useMessageTemplates.ts # Complete template state (131 lines)
+│   │   │   ├── usePostComposer.ts  # Post creation state (87 lines)
+│   │   │   ├── useSMTPConfig.ts    # SMTP config state (53 lines)
+│   │   │   └── useTemplateSegments.ts # Segment CRUD state (173 lines)
 │   │   └── components/            # 38 component files (26 imported in App.tsx)
 │   └── utils/
 │       ├── accessibility.ts       # A11y utilities (211 lines, 9 functions)
 │       ├── automation.ts          # Chrome storage config, alarms scheduling (127 lines)
-│       ├── bridge.ts              # chrome.runtime.sendMessage typed wrapper (112 lines)
-│       ├── errors.ts              # Error hierarchy (AppError, NetworkError, etc.) (169 lines)
+│       ├── bridge.ts              # chrome.runtime.sendMessage typed wrapper (113 lines)
+│       ├── errors.ts              # Error hierarchy (AppError, NetworkError, etc.) (173 lines)
 │       ├── failsafe.ts            # Rate limiting, emergency stop, activity log, restriction detection (370 lines)
 │       ├── image.ts               # Canvas image composition 1080×1350 (115 lines)
 │       ├── logger.ts              # Dev-only console logger with emoji prefixes (28 lines)
-│       ├── message.ts             # Message composition, gender-aware selection (85 lines)
-│       ├── messages.ts            # BackgroundMessage discriminated union types (159 lines)
-│       └── storage.ts             # Chrome storage helpers for tokens/URL (108 lines)
+│       ├── message.ts             # Message composition, gender-aware selection (82 lines)
+│       ├── messages.ts            # BackgroundMessage discriminated union types (165 lines)
+│       └── storage.ts             # Chrome storage helpers for tokens/URL (114 lines)
 ├── popup.html                     # Single-page popup entry
 ├── package.json
 ├── tsconfig.json                  # ES2022, react-jsx, strict
@@ -770,8 +833,8 @@ extension/
 
 ### 3.4 App.tsx View Management
 
-**17 ViewMode states:**
-`main`, `change-password`, `scheduling`, `queue`, `history`, `analytics`, `message-templates`, `posts`, `groups`, `images`, `contacts`, `add-contact`, `edit-contact`, `birthday-calendar`, `smtp-settings`, `account-management`, `subscription`
+**19 ViewMode states:**
+`main`, `change-password`, `schedules`, `scheduling`, `automation`, `message-templates`, `queue`, `history`, `analytics`, `posts`, `postLibrary`, `post-list`, `groups`, `images`, `contacts`, `add-contact`, `edit-contact`, `import-contacts`, `birthday-calendar`, `smtp-settings`, `account-management`, `subscription`
 
 **4-Tab Navigation with Dropdowns:**
 - **Home**: Dashboard quick-stats (contacts count, upcoming birthdays, analytics shortcut)
@@ -779,15 +842,15 @@ extension/
 - **Messages** (5 dropdown items): Message Templates, Timeline Posts, Scheduling, Analytics, Image Library
 - **Account** (4 dropdown items): Profile, Change Password, SMTP Settings, Subscription, Sign Out
 
-### 3.5 Background Service Worker (865 lines)
+### 3.5 Background Service Worker (902 lines)
 
-**72 message types** handled via switch/case dispatch:
+**77 message types** handled via switch/case dispatch:
 
 | Category | Message Types |
 |----------|--------------|
-| Auth (10) | `auth.register`, `auth.login`, `auth.refresh`, `auth.logout`, `auth.requestPasswordReset`, `auth.resetPassword`, `auth.changePassword`, `auth.me`, `auth.updateProfile`, `auth.deleteAccount` |
+| Auth (11) | `auth.register`, `auth.login`, `auth.refresh`, `auth.logout`, `auth.requestPasswordReset`, `auth.requestEmailVerification`, `auth.resetPassword`, `auth.changePassword`, `auth.me`, `auth.updateProfile`, `auth.deleteAccount` |
 | Templates (4) | `templates.list`, `templates.create`, `templates.update`, `templates.delete` |
-| Subscription (2) | `subscription.status`, `subscription.checkout` |
+| Subscription (6) | `subscription.status`, `subscription.checkout`, `subscription.cancel`, `subscription.reactivate`, `subscription.changePlan`, `subscription.billingPortal` |
 | Config (3) | `config.getBackendUrl`, `config.setBackendUrl`, `config.getWSConfig` |
 | Schedules (4) | `schedules.list`, `schedules.create`, `schedules.update`, `schedules.delete` |
 | Automation (7) | `automation.getConfig`, `automation.setEnabled`, `automation.setInterval`, `automation.setMaxMessages`, `automation.clearSentToday`, `automation.recordSent`, `automation.scanFacebook` |
@@ -799,24 +862,24 @@ extension/
 | Images (4) | `images.list`, `images.create`, `images.uploadFile`, `images.delete` |
 | SMTP (2) | `smtp.getConfig`, `smtp.updateConfig` |
 | Message Templates (5) | `messageTemplates.list`, `messageTemplates.create`, `messageTemplates.get`, `messageTemplates.update`, `messageTemplates.delete` |
-| Failsafe (8) | `failsafe.getStatus`, `failsafe.emergencyStop`, `failsafe.clearEmergencyStop`, `failsafe.checkCanSend`, `failsafe.recordSend`, `failsafe.getActivityLog`, `failsafe.clearActivityLog`, `failsafe.getConfirmationMode` |
+| Failsafe (8) | `failsafe.getEmergencyStop`, `failsafe.triggerEmergencyStop`, `failsafe.clearEmergencyStop`, `failsafe.getActivityLog`, `failsafe.clearActivityLog`, `failsafe.getRateLimits`, `failsafe.getConfirmationMode`, `failsafe.setConfirmationMode` |
 
 **Token Management:**
 - Stores access/refresh tokens in `chrome.storage.local`
 - Auto-refresh on 401 errors (transparent to callers)
 - `config.getWSConfig` converts HTTP URL to WebSocket URL for popup connection
 
-### 3.6 API Client (767 lines)
+### 3.6 API Client (882 lines)
 
-**52 exported functions:**
+**58 exported functions:**
 
 | Category | Functions |
 |----------|-----------|
-| Auth (9) | `register`, `login`, `refreshToken`, `me`, `requestPasswordReset`, `resetPassword`, `changePassword`, `updateUserProfile`, `deleteUserAccount` |
+| Auth (11) | `register`, `login`, `refreshToken`, `me`, `requestPasswordReset`, `requestEmailVerification`, `resetPassword`, `changePassword`, `updateUserProfile`, `deleteUserAccount` |
 | Templates (4) | `listTemplates`, `createTemplate`, `updateTemplate`, `deleteTemplate` |
-| Subscription (2) | `subscriptionStatus`, `createCheckoutSession` |
+| Subscription (6) | `subscriptionStatus`, `createCheckoutSession`, `cancelSubscription`, `reactivateSubscription`, `changeSubscriptionPlan`, `getBillingPortal` |
 | Schedules (4) | `listSchedules`, `createSchedule`, `updateSchedule`, `deleteSchedule` |
-| Messages (6) | `listQueuedMessages`, `updateQueuedMessage`, `cancelQueuedMessage`, `retryQueuedMessage`, `listMessageHistory`, `deleteMessageHistory` |
+| Messages (7) | `listQueuedMessages`, `updateQueuedMessage`, `cancelQueuedMessage`, `retryQueuedMessage`, `listMessageHistory`, `deleteMessageHistory`, `exportHistoryCsv` |
 | Dashboard (1) | `getDashboardStats` |
 | Contacts (5) | `listContacts`, `createContact`, `updateContact`, `deleteContact`, `bulkCreateContacts` |
 | Message Groups (4) | `listMessageGroups`, `createMessageGroup`, `updateMessageGroup`, `deleteMessageGroup` |
@@ -830,7 +893,7 @@ Plus `ApiError` class and 20+ exported interfaces/types.
 
 ### 3.7 Content Scripts
 
-**index.ts (892 lines)** — Main coordinator + full automation loop:
+**index.ts (960 lines)** — Main coordinator + full automation loop:
 - Overlay UI on Facebook pages (friend list, send-all button, status p)
 - Birthday friend detection via DOM scraping (`div[data-pagelet*="Birthday"]`)
 - `runFullAutomation(AutomationRunPayload)` — 2-phase loop:
@@ -843,12 +906,12 @@ Plus `ApiError` class and 20+ exported interfaces/types.
 - Max messages cap, per-day deduplication guard (sentToday array)
 - Responds to messages: `automation.scan`, `automation.runFull`, `contacts.scrapeFromPage`
 
-**messenger.ts (461 lines)** — Messenger automation:
+**messenger.ts (413 lines)** — Messenger automation:
 - Archive/unarchive conversations
 - MutationObserver for reply monitoring
 - Programmatic message sending
 
-**timeline.ts (467 lines)** — Timeline posting:
+**timeline.ts (473 lines)** — Timeline posting:
 - Facebook composer interaction
 - Nifty Images merge tag support
 - Clipboard image paste
@@ -978,7 +1041,7 @@ Backend auto-reloads on Python file saves. Frontend requires `npm run reload` + 
 - **Input Validation**: Pydantic schemas for all requests/responses
 - **SQL Injection**: SQLAlchemy parameterized queries
 - **Authorization**: All queries filtered by authenticated user's `user_id`
-- **Rate Limiting**: `slowapi` middleware is initialized in `main.py`. The password-reset endpoint carries three stacked `@limiter.limit()` decorators: `1/minute`, `5/hour`, and `20/hour` (global). Key function uses remote IP address. The `/send-birthday-message` stub also has a `1/45seconds` per-user limit.
+- **Rate Limiting**: `slowapi` middleware is initialized in `main.py`. Auth endpoints carry stacked `@limiter.limit()` decorators: `/register` 5/min; `/login` 5/min + 20/hr; `/request-password-reset` 1/minute, 5/hour, and 20/hour (global); `/auth/refresh` 30/min. The `/send-birthday-message` stub also has a `1/45seconds` per-user limit. Key function uses remote IP address.
 
 ### 6.3 Stripe
 - Webhook signature verification before processing
@@ -1077,14 +1140,33 @@ Backend auto-reloads on Python file saves. Frontend requires `npm run reload` + 
 
 | Layer | Coverage | Files |
 |-------|----------|-------|
-| Backend auth | ✅ Basic | `test_auth.py` (5 tests) |
+| Backend auth | ✅ Comprehensive | `test_auth.py` (9 tests) |
 | Backend templates | ✅ Basic | `test_templates.py` (2 tests) |
-| Backend schedules/messages/dashboard | ❌ TODO | |
-| Backend Phase 2 routers | ❌ TODO | |
-| Extension utilities | ✅ Good | `message.test.ts`, `errors.test.ts`, `storage.test.ts`, `automation.test.ts` (90 tests) |
+| Backend contacts | ✅ Comprehensive | `test_contacts.py` (10 tests) |
+| Backend schedules | ✅ Comprehensive | `test_schedules.py` (9 tests) |
+| Backend messages | ✅ Comprehensive | `test_messages.py` (17 tests) |
+| Backend dashboard | ✅ Good | `test_dashboard.py` (5 tests) |
+| Backend subscription | ✅ Comprehensive | `test_subscription.py` (13 tests) |
+| Backend webhook | ✅ Comprehensive | `test_webhook.py` (10 tests) |
+| Backend email verification | ✅ Good | `test_email_verification.py` (9 tests) |
+| Backend password reset | ✅ Good | `test_password_reset.py` (7 tests) |
+| Backend birthday configs | ✅ Comprehensive | `test_birthday_configs.py` (13 tests) |
+| Backend message groups | ✅ Comprehensive | `test_message_groups.py` (11 tests) |
+| Backend message templates | ✅ Comprehensive | `test_message_templates.py` (11 tests) |
+| Backend posts | ✅ Comprehensive | `test_posts.py` (11 tests) |
+| Backend images | ✅ Good | `test_images.py` (9 tests) |
+| Backend SMTP | ✅ Basic | `test_smtp.py` (6 tests) |
+| Backend integration | ✅ Basic | `test_integration.py` (4 tests) |
+| Backend API contracts | ✅ Good | `test_api_contracts.py` (14 tests) |
+| Backend DB constraints | ✅ Basic | `test_db_constraints.py` (6 tests) |
+| Extension utilities | ✅ Good | `message.test.ts`, `errors.test.ts`, `storage.test.ts`, `automation.test.ts` |
 | Extension API client | ✅ Basic | `client.test.ts` (7 tests) |
-| Extension components | ✅ Good | 8 component test files (186 tests) |
+| Extension components | ✅ Good | 10 component test files |
+| Extension background worker | ❌ None | No tests |
+| Extension hooks | ❌ None | No tests |
 | E2E tests | ❌ None | No Playwright/Puppeteer |
+
+**Known test failures:** 6 pre-existing failures (5 auth KeyError:'path' in session handling, 1 subscription billing portal assertion mismatch)
 
 ### 9.2 Running Tests
 
@@ -1098,14 +1180,14 @@ docker-compose exec backend pytest --cov=app --cov-report=html
 **Extension:**
 ```bash
 cd extension
-npm test              # Run all 283 tests
+npm test              # Run all 297 tests
 npm run test:watch    # Watch mode
 npm run test:coverage # Coverage report (70% thresholds)
 ```
 
 ### 9.3 Manual Testing
 
-- **Popup**: Load extension, test all 17 view modes
+- **Popup**: Load extension, test all 19 view modes
 - **Content Script**: Navigate to Facebook, verify overlay and automation
 - **Background**: Check service worker console (`chrome://extensions` → Inspect)
 - **WebSocket**: Verify real-time updates appear in dashboard/queue/history
@@ -1121,22 +1203,22 @@ All features are registered and implemented. The following are gaps within the e
 | Gap | Location | Impact |
 |-----|----------|--------|
 | Email delivery config | ~~`app/core/config.py`~~ | ✅ RESOLVED (Mar 14, 2026) — `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` fields added to Settings class; `SMTP_ENCRYPTION_KEY` validator rejects placeholder values |
-| SMTP passwords stored in plaintext | `app/db/models.py` SMTPConfig | Security risk in production (API-level masking done — GET/PUT return `"••••••••"`) |
+| ~~SMTP passwords stored in plaintext~~ | ~~`app/db/models.py` SMTPConfig~~ | ✅ RESOLVED — Fernet symmetric encryption via `app/core/encryption.py`; `SMTP_ENCRYPTION_KEY` required in env; API-level masking also in place (GET/PUT return `"••••••••"`) |
 | `POST /send-birthday-message` is a stub | `app/main.py` | Backend endpoint non-functional; content script handles sending directly |
 
 ### 10.2 Testing Gaps
 
 | Layer | Coverage | Files |
 |-------|----------|-------|
-| Backend auth | ✅ Basic | `test_auth.py` (5 tests) |
-| Backend templates | ✅ Basic | `test_templates.py` (2 tests) |
-| Backend Phase 2 routers | ❌ None | No test files |
-| Extension utilities | ✅ Good | 4 test files (90 tests) |
+| Backend | ✅ Comprehensive | 20 test files, 177 test functions |
+| Extension utilities | ✅ Good | 4 test files |
 | Extension API client | ✅ Basic | 1 test file (7 tests) |
-| Extension components | ✅ Good | 8 test files (186 tests) |
+| Extension components | ✅ Good | 10 test files |
 | Extension background worker | ❌ None | No tests |
 | Extension hooks | ❌ None | No tests |
 | E2E tests | ❌ None | No Playwright/Puppeteer |
+
+**Known test failures:** 6 pre-existing failures (5 backend auth tests fail with `KeyError:'path'` in session handling, 1 subscription test assertion mismatch)
 
 ### 10.3 Production Infrastructure Gaps
 - No CI/CD pipeline (no Gitea Actions)
@@ -1144,7 +1226,7 @@ All features are registered and implemented. The following are gaps within the e
 - No HTTPS configuration or reverse proxy
 - No Chrome Web Store listing (New extension to replace existing extension in chrome store as new version- Speak to Alex)
 - Production deployment script (`deploy.sh`) present but not verified
-- Alembic configured but migration workflow not documented
+- Alembic actively used (5 migrations, 17 tables) — migration workflow not documented
 
 ---
 
@@ -1168,7 +1250,9 @@ All features are registered and implemented. The following are gaps within the e
 | `python-dotenv` | ≥1.0 | Env loading |
 | `slowapi` | ≥0.1.8 | Rate limiting |
 | `sendgrid` | ≥6.11 | Email delivery (SendGrid SDK) |
-| `alembic` | ≥1.13 | Database migrations (configured, not actively used) |
+| `alembic` | ≥1.13 | Database migrations (5 migrations, 17 tables) |
+| `aiosqlite` | ≥0.20 | SQLite async driver (test DB) |
+| `gunicorn` | ≥21.2 | Production WSGI/ASGI process manager |
 
 **Test:** `pytest ≥8`, `pytest-asyncio ≥0.21`, `httpx ≥0.27`, `pytest-cov ≥4`
 
@@ -1205,7 +1289,7 @@ All features are registered and implemented. The following are gaps within the e
 | **Backend** | Flask (sync, WSGI) | FastAPI (async, ASGI) |
 | **Auth** | Single hex token in DB | JWT access/refresh with rotation |
 | **Password Hashing** | Werkzeug | Argon2 (passlib) |
-| **Database** | 4 tables, integer PKs | 15 tables, UUID PKs, soft-delete |
+| **Database** | 4 tables, integer PKs | 17 tables, UUID PKs, soft-delete |
 | **Payments** | None | Full Stripe integration + webhooks |
 | **Frontend** | 12 HTML pages, minified jQuery (~3.5MB) | 1-page React SPA, 38 components (~210KB) |
 | **Types** | None | Full TypeScript + Pydantic |
@@ -1223,33 +1307,33 @@ All features are registered and implemented. The following are gaps within the e
 
 | Metric | Value |
 |--------|-------|
-| Backend LOC | ~3,000 Python |
-| Extension LOC | ~15,000 TypeScript + 1,190 CSS |
-| Database | 15 tables, 5 enums, 25+ indexes |
-| API Endpoints | 65 HTTP + 1 WebSocket (15 routers + 2 inline routes) |
+| Backend LOC | ~4,860 Python |
+| Extension LOC | ~15,097 TypeScript + 1,131 CSS |
+| Database | 17 tables, 5 enums, 32 indexes |
+| API Endpoints | 77 HTTP + 1 WebSocket (15 routers + 2 inline routes) |
 | Component Files | 38 (26 directly in App.tsx) |
-| Background Message Types | 72 |
-| API Client Functions | 52 |
-| Custom Hooks | 7 (1,013 lines) |
-| Content Script Files | 5 (~1,865 lines) |
-| Utility Files | 10 (~1,484 lines) |
+| Background Message Types | 77 |
+| API Client Functions | 58 |
+| Custom Hooks | 7 (996 lines) |
+| Content Script Files | 5 (~1,891 lines) |
+| Utility Files | 10 (~1,498 lines) |
 | Accessibility Utilities | 9 functions (211 lines) |
-| Extension Tests | 283 (13 files) |
-| Backend Tests | 7 (2 files) |
-| Runtime Dependencies | 15 Python + 3 npm |
+| Extension Tests | 297 (15 files) |
+| Backend Tests | 176 (20 files) |
+| Runtime Dependencies | 17 Python + 3 npm |
 
 ### Strengths
 1. **Type Safety**: TypeScript + Pydantic catches errors at compile time
 2. **Async Architecture**: FastAPI + SQLAlchemy async for high concurrency
-3. **Security**: JWT rotation, Argon2 hashing, Stripe webhook verification, **SecurityHeadersMiddleware** (5 headers), **input sanitization** (6 schema files)
+3. **Security**: JWT rotation, Argon2 hashing, Stripe webhook verification, **SecurityHeadersMiddleware** (8 headers), **SMTP Fernet encryption**, **input sanitization** (6 schema files), **account lockout**, **email verification**
 4. **Real-Time**: WebSocket updates for queue/history/dashboard
 5. **Accessibility**: WCAG 2.1 AA with keyboard shortcuts, screen reader support
 6. **Developer Experience**: Docker Compose, Vite HMR, Swagger UI
 
 ### Remaining Work for Production
 1. ~~**Fix email delivery config**~~: ✅ RESOLVED (Mar 14, 2026) — `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` added to `config.py` Settings
-2. Encrypt SMTP passwords at rest before first real user (API-level masking done — GET/PUT return `"••••••••"`)
-3. Comprehensive test coverage (Phase 2 routes, extension background/hooks, E2E)
+2. ~~Encrypt SMTP passwords at rest~~ ✅ RESOLVED — Fernet encryption in `app/core/encryption.py`
+3. Extension background worker tests, hook tests, and E2E test coverage
 4. Deploy to production infrastructure (managed DB, HTTPS, CI/CD, monitoring)
 5. Chrome Web Store listing
 

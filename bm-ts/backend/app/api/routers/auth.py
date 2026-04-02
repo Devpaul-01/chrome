@@ -31,7 +31,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -470,6 +470,134 @@ async def verify_email(data: VerifyEmailRequest, db: AsyncSession = Depends(get_
     return MessageResponse(message="Email verified successfully")
 
 
+@router.get("/verify-email-page", response_class=HTMLResponse, include_in_schema=False)
+async def verify_email_page(token: str = "") -> HTMLResponse:
+    """Serve a self-contained HTML page that verifies the user's email.
+
+    The page makes a client-side ``POST`` to ``/auth/verify-email`` so the
+    existing API validation (token expiry, used-token check) is reused.
+    """
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verify Email &mdash; BirthdayMessaging</title>
+<link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after {{ box-sizing:border-box; }}
+  body {{
+    margin:0; padding:40px 16px;
+    background:#ffb34c;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    color:#574232;
+    min-height:100vh;
+  }}
+  .card {{
+    max-width:420px; margin:0 auto;
+    background:#ffffff;
+    border-radius:0.75rem;
+    padding:1.5rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  }}
+  .logo {{ text-align:center; margin-bottom:1rem; }}
+  .logo h1 {{
+    margin:0; font-size:1.5rem; font-weight:700;
+    color:#ca4f02;
+  }}
+  h2 {{
+    margin:0 0 0.25rem; font-size:1.125rem; font-weight:700;
+    color:#111827;
+  }}
+  .subtitle {{
+    margin:0 0 1.25rem; font-size:0.875rem; color:#6e5a49;
+  }}
+  .btn-primary {{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; padding:0.625rem 0.75rem;
+    font-size:0.875rem; font-weight:600;
+    color:#fff; background:#ca4f02;
+    border:none; border-radius:0.75rem;
+    cursor:pointer; text-transform:uppercase; letter-spacing:0.08em;
+    box-shadow:0 3px 8px rgba(202,79,2,.25),0 1px 3px rgba(202,79,2,.15);
+    transition:background-color 0.2s ease-out,box-shadow 0.2s ease-out,transform 0.15s ease-out;
+  }}
+  .btn-primary:hover:not(:disabled) {{
+    background:#e56717;
+    transform:translateY(-2px);
+    box-shadow:0 6px 16px rgba(202,79,2,.35),0 3px 6px rgba(202,79,2,.25);
+  }}
+  .btn-primary:active:not(:disabled) {{
+    transform:translateY(0);
+    box-shadow:0 2px 6px rgba(202,79,2,.25);
+  }}
+  .btn-primary:disabled {{ opacity:0.55; cursor:not-allowed; }}
+  .msg {{
+    padding:0.75rem 1rem; border-radius:0.5rem;
+    margin-bottom:1rem; font-size:0.875rem; font-weight:500;
+  }}
+  .msg.error {{
+    background:#fef2f2; border:1px solid #fca5a5; color:#991b1b;
+  }}
+  .msg.success {{
+    background:#f0fdf4; border:1px solid #86efac; color:#166534;
+  }}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><h1>BirthdayMessaging</h1></div>
+  <h2>Verify Your Email</h2>
+  <p class="subtitle">Click the button below to confirm your email address.</p>
+  <div id="feedback"></div>
+  <button id="verifyBtn" class="btn-primary">Verify Email</button>
+</div>
+<script>
+(function() {{
+  var token = {json.dumps(token).replace("<", "\\u003c")};
+  var fb = document.getElementById('feedback');
+  var btn = document.getElementById('verifyBtn');
+  if (!token) {{
+    fb.className = 'msg error';
+    fb.textContent = 'Missing verification token. Please use the link from your email.';
+    btn.disabled = true;
+    return;
+  }}
+  btn.addEventListener('click', function() {{
+    btn.disabled = true;
+    btn.textContent = 'Verifying\u2026';
+    fetch(window.location.origin + '/auth/verify-email', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ token: token }})
+    }})
+    .then(function(r) {{ return r.json().then(function(d) {{ return {{ ok: r.ok, data: d }}; }}); }})
+    .then(function(res) {{
+      if (res.ok) {{
+        fb.className = 'msg success';
+        fb.textContent = 'Email verified! You can now log in and use all features.';
+        btn.style.display = 'none';
+      }} else {{
+        fb.className = 'msg error';
+        fb.textContent = res.data.detail || 'Something went wrong. The link may have expired.';
+        btn.disabled = false;
+        btn.textContent = 'Verify Email';
+      }}
+    }})
+    .catch(function() {{
+      fb.className = 'msg error';
+      fb.textContent = 'Network error. Please try again.';
+      btn.disabled = false;
+      btn.textContent = 'Verify Email';
+    }});
+  }});
+}})();
+</script>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
+
+
 @router.post("/reset-password", response_model=MessageResponse)
 async def reset_password(
     data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)
@@ -499,6 +627,170 @@ async def reset_password(
     await db.commit()
     
     return MessageResponse(message="Password has been reset successfully")
+
+
+@router.get("/reset-password-page", response_class=HTMLResponse, include_in_schema=False)
+async def reset_password_page(token: str = "") -> HTMLResponse:
+    """Serve a self-contained HTML page where the user can set a new password.
+
+    The page makes a client-side ``POST`` to ``/auth/reset-password`` so the
+    existing API validation (token expiry, used-token check, password strength)
+    is reused without duplication.
+    """
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reset Password &mdash; BirthdayMessaging</title>
+<link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after {{ box-sizing:border-box; }}
+  body {{
+    margin:0; padding:40px 16px;
+    background:#ffb34c;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    color:#574232;
+    min-height:100vh;
+  }}
+  .card {{
+    max-width:420px; margin:0 auto;
+    background:#ffffff;
+    border-radius:0.75rem;
+    padding:1.5rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  }}
+  .logo {{ text-align:center; margin-bottom:1rem; }}
+  .logo h1 {{
+    margin:0; font-size:1.5rem; font-weight:700;
+    color:#ca4f02;
+  }}
+  h2 {{
+    margin:0 0 0.25rem; font-size:1.125rem; font-weight:700;
+    color:#111827;
+  }}
+  .subtitle {{
+    margin:0 0 1.25rem; font-size:0.875rem; color:#6e5a49;
+  }}
+  label {{
+    display:block; margin-bottom:0.25rem;
+    font-size:0.8125rem; font-weight:600; color:#574232;
+  }}
+  input {{
+    width:100%; padding:0.65rem 1rem;
+    border:none; border-radius:0.5rem;
+    background:#ffffff;
+    box-shadow:0 2px 4px rgba(0,0,0,.05);
+    font-size:0.9375rem; color:#574232;
+    margin-bottom:0.875rem;
+    transition:box-shadow 0.2s ease-out;
+  }}
+  input:focus {{
+    outline:none;
+    box-shadow:0 0 0 3px rgba(42,127,160,.15),0 2px 8px rgba(42,127,160,.2);
+  }}
+  .btn-primary {{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; padding:0.625rem 0.75rem;
+    font-size:0.875rem; font-weight:600;
+    color:#fff; background:#ca4f02;
+    border:none; border-radius:0.75rem;
+    cursor:pointer; text-transform:uppercase; letter-spacing:0.08em;
+    box-shadow:0 3px 8px rgba(202,79,2,.25),0 1px 3px rgba(202,79,2,.15);
+    transition:background-color 0.2s ease-out,box-shadow 0.2s ease-out,transform 0.15s ease-out;
+    margin-top:0.5rem;
+  }}
+  .btn-primary:hover:not(:disabled) {{
+    background:#e56717;
+    transform:translateY(-2px);
+    box-shadow:0 6px 16px rgba(202,79,2,.35),0 3px 6px rgba(202,79,2,.25);
+  }}
+  .btn-primary:active:not(:disabled) {{
+    transform:translateY(0);
+    box-shadow:0 2px 6px rgba(202,79,2,.25);
+  }}
+  .btn-primary:disabled {{ opacity:0.55; cursor:not-allowed; }}
+  .msg {{
+    padding:0.75rem 1rem; border-radius:0.5rem;
+    margin-bottom:1rem; font-size:0.875rem; font-weight:500;
+  }}
+  .msg.error {{
+    background:#fef2f2; border:1px solid #fca5a5; color:#991b1b;
+  }}
+  .msg.success {{
+    background:#f0fdf4; border:1px solid #86efac; color:#166534;
+  }}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><h1>BirthdayMessaging</h1></div>
+  <h2>Set a New Password</h2>
+  <p class="subtitle">Choose a strong password with at least 8 characters.</p>
+  <div id="feedback"></div>
+  <form id="resetForm">
+    <label for="password">New Password</label>
+    <input id="password" type="password" minlength="8" maxlength="128" required placeholder="At least 8 characters">
+    <label for="confirm">Confirm Password</label>
+    <input id="confirm" type="password" minlength="8" maxlength="128" required placeholder="Re-enter your password">
+    <button type="submit" id="submitBtn" class="btn-primary">Reset Password</button>
+  </form>
+</div>
+<script>
+(function() {{
+  var token = {json.dumps(token).replace("<", "\\u003c")};
+  var form = document.getElementById('resetForm');
+  var fb = document.getElementById('feedback');
+  var btn = document.getElementById('submitBtn');
+  if (!token) {{
+    fb.className = 'msg error';
+    fb.textContent = 'Missing reset token. Please use the link from your email.';
+    btn.disabled = true;
+    return;
+  }}
+  form.addEventListener('submit', function(e) {{
+    e.preventDefault();
+    fb.textContent = '';
+    fb.className = '';
+    var pw = document.getElementById('password').value;
+    var cf = document.getElementById('confirm').value;
+    if (pw !== cf) {{
+      fb.className = 'msg error';
+      fb.textContent = 'Passwords do not match.';
+      return;
+    }}
+    btn.disabled = true;
+    btn.textContent = 'Resetting\u2026';
+    fetch(window.location.origin + '/auth/reset-password', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ token: token, new_password: pw }})
+    }})
+    .then(function(r) {{ return r.json().then(function(d) {{ return {{ ok: r.ok, data: d }}; }}); }})
+    .then(function(res) {{
+      if (res.ok) {{
+        fb.className = 'msg success';
+        fb.textContent = 'Password reset! You can now log in with your new password.';
+        form.style.display = 'none';
+      }} else {{
+        fb.className = 'msg error';
+        fb.textContent = res.data.detail || 'Something went wrong. The link may have expired.';
+        btn.disabled = false;
+        btn.textContent = 'Reset Password';
+      }}
+    }})
+    .catch(function() {{
+      fb.className = 'msg error';
+      fb.textContent = 'Network error. Please try again.';
+      btn.disabled = false;
+      btn.textContent = 'Reset Password';
+    }});
+  }});
+}})();
+</script>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
 
 
 @router.post("/change-password", response_model=MessageResponse)

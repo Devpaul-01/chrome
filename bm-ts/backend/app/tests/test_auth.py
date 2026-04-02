@@ -9,7 +9,7 @@ import pytest
 import pytest_asyncio
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
-from jose import JWTError
+from app.core.jwt import JWTError
 from sqlalchemy import select
 from starlette.requests import Request
 

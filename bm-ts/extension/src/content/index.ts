@@ -1041,7 +1041,10 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
   return results;
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Security: reject messages not from our own extension
+  if (sender.id !== chrome.runtime.id) return false;
+
   if (message?.type === 'automation.scan') {
     void refreshFriendList();
   }
