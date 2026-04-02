@@ -18,11 +18,10 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.core.jwt import TokenType, decode_token, ensure_token_type
+from app.core.jwt import JWTError, TokenType, decode_token, ensure_token_type
 from app.db.models import User, UserSession
 from app.db.session import get_db
 

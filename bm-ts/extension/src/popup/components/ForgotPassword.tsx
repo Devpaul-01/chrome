@@ -32,8 +32,10 @@ export default function ForgotPassword({ onBack, onRequestSent }: ForgotPassword
         payload: { email },
       });
 
-      setMessage('If an account exists for that email, a reset link has been sent.');
-      onRequestSent();
+      setMessage('Reset E-mail sent. Please check your E-mail.');
+      setTimeout(() => {
+        onRequestSent();
+      }, 3000);
     } catch (err) {
       logError(err);
       setError(getErrorMessage(err));

@@ -1,0 +1,102 @@
+name: Dependency Vulnerability Scan
+run-name: ${{ gitea.actor }} — dependency scan (${{ gitea.ref_name }})
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  schedule:
+    # Run weekly on Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+
+jobs:
+  # ── Backend (Python) vulnerability scan ────────────────────────────────────
+  backend-audit:
+    name: Backend — pip-audit
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: bm-ts/backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+          pip install -e ".[test]"
+
+      - name: Run pip-audit
+        run: |
+          echo "=== Scanning Python dependencies for known vulnerabilities ==="
+          pip-audit --strict --desc --fix --dry-run --skip-editable 2>&1 | tee audit-results.txt
+          exit_code=${PIPESTATUS[0]}
+          if [ $exit_code -ne 0 ]; then
+            echo ""
+            echo "::warning::pip-audit found vulnerabilities in Python dependencies"
+          fi
+          exit $exit_code
+
+      - name: Upload audit results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-audit-results
+          path: bm-ts/backend/audit-results.txt
+          retention-days: 90
+
+  # ── Frontend (Node.js) vulnerability scan ──────────────────────────────────
+  frontend-audit:
+    name: Frontend — npm audit
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: bm-ts/extension
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: bm-ts/extension/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          echo "=== Scanning Node.js dependencies for known vulnerabilities ==="
+          npm audit --audit-level=moderate 2>&1 | tee audit-results.txt
+          exit_code=${PIPESTATUS[0]}
+          if [ $exit_code -ne 0 ]; then
+            echo ""
+            echo "::warning::npm audit found vulnerabilities in Node.js dependencies"
+          fi
+          exit $exit_code
+
+      - name: Upload audit results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-audit-results
+          path: bm-ts/extension/audit-results.txt
+          retention-days: 90

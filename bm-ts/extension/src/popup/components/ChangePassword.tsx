@@ -35,13 +35,18 @@ export default function ChangePassword({ onCancel, onSuccess }: ChangePasswordPr
     }
 
     try {
-      await chrome.runtime.sendMessage({
+      const response = await chrome.runtime.sendMessage({
         type: 'auth.changePassword',
         payload: {
           currentPassword,
           newPassword,
         },
       });
+      if (response && !response.success) {
+        const msg = response.error?.message ?? 'Failed to change password';
+        setError(msg);
+        return;
+      }
       setMessage('Password changed successfully!');
       setTimeout(() => {
         onSuccess();

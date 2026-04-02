@@ -94,7 +94,7 @@ async def mark_token_used(raw_token: str, db: AsyncSession) -> None:
 async def send_reset_email(email: str, token: str) -> None:
     """Send a password reset email via SendGrid.
 
-    Constructs a reset URL pointing to the Chrome extension popup and
+    Constructs a reset URL pointing to the backend-hosted reset page and
     dispatches the email asynchronously using ``asyncio.to_thread``.
     """
 
@@ -129,10 +129,6 @@ async def send_reset_email(email: str, token: str) -> None:
     </table>
     <p style="margin:0 0 8px;color:#888888;font-size:13px">
       If you didn&rsquo;t request this, you can safely ignore this email.
-    </p>
-    <p style="margin:0;color:#888888;font-size:13px">
-      Or copy this link into your browser:<br>
-      <a href="{reset_url}" style="color:#4f46e5;word-break:break-all">{reset_url}</a>
     </p>
   </td></tr>
   <tr><td style="background-color:#f4f4f7;padding:20px 30px;text-align:center">

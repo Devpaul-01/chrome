@@ -17,7 +17,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import InvalidTokenError as JWTError  # re-export for dependents
 
 from app.core.config import settings
 
@@ -77,7 +78,7 @@ def decode_token(token: str) -> dict[str, Any]:
             audience="birthdaymessaging",
             issuer="birthdaymessaging",
         )
-    except JWTError as exc:
+    except jwt.InvalidTokenError as exc:
         raise JWTError("Token validation failed") from exc
 
 

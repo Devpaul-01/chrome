@@ -102,9 +102,11 @@ async def update_message_template(
             detail="Message template not found"
         )
     
-    # Update fields
+    # Update fields — explicit allowlist to prevent mass assignment
+    _ALLOWED_FIELDS = {"title", "greeting", "sentiment", "closing", "image_url", "days_in_advance", "gender"}
     for field, value in data.model_dump(exclude_unset=True).items():
-        setattr(template, field, value)
+        if field in _ALLOWED_FIELDS:
+            setattr(template, field, value)
     
     await db.commit()
     await db.refresh(template)

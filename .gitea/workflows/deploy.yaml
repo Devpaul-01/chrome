@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - develop
+      - backend-ci-deploy
 
 jobs:
   build-and-deploy:
@@ -12,12 +13,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4 #runs on node20, runner errors if node24 is used
 
-      - name: Build and Push Docker image
-        working-directory: backend
+      - name: Login to the Container Registry #github actor to mock context for login
+        env:
+          PAT_SECRET: ${{secrets.REGISTRY_PASSWORD}}
         run: |
-          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login gitea.birthdaymessaging.io -u "${{ secrets.REGISTRY_USER }}" --password-stdin
+          echo "Authenticating with Gitea Container Registry..."
+          echo "$PAT_SECRET" | docker login gitea.birthdaymessaging.com -u ModaMetrics --password-stdin
+
+      - name: Build and Push Docker image
+        working-directory: bm-ts/backend
+        run: |
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login gitea.birthdaymessaging.com -u "${{ secrets.REGISTRY_USER }}" --password-stdin
           
-          IMAGE_NAME=gitea.birthdaymessaging.io/ctmmediagroup/bm-legacy-backend
+          IMAGE_NAME=gitea.birthdaymessaging.com/ctmmediagroup/bm-legacy-backend
           SAFE_BRANCH_NAME=$(echo "${{ gitea.ref_name }}" | tr '/' '-')
           VERSION="${SAFE_BRANCH_NAME}-$(date +'%Y%m%d-%H%M%S')"
 
@@ -27,35 +35,14 @@ jobs:
           docker push $IMAGE_NAME:$VERSION
           docker push $IMAGE_NAME:latest
 
-      - name: Deploy container locally
-        working-directory: backend
+      - name: Trigger Coolify Deployment
         run: |
-          export DB_HOST="${{ secrets.DB_HOST }}"
-          export DB_PORT="${{ secrets.DB_PORT }}"
-          export DB_NAME="${{ secrets.DB_NAME }}"
-          export DB_USER="${{ secrets.DB_USER }}"
-          export DB_PASS="${{ secrets.DB_PASS }}"
-          
-          echo "Pulling latest image..."
-          docker compose pull bm-legacy-backend
-          echo "Restarting container..."
-          docker compose up -d bm-legacy-backend
-          echo "Cleanup old images..."
-          docker image prune -f
-      - name: Verify container health
+          echo "Telling Coolify to pull and deploy the new image..."
+          # Actual Coolify Webhook URL when it is ready, using a placeholder for now
+          curl -sS -X GET "${{ secrets.COOLIFY_WEBHOOK_URL }}" || echo "Failed to trigger Coolify deployment"
+      
+      - name: Cleanup registry credentials
+        if: always()
         run: |
-          CONTAINER_NAME="bm-legacy-backend"
-          echo "Waiting for container $CONTAINER_NAME to stabilize..."
-          sleep 15
+          docker logout gitea.birthdaymessaging.com
 
-          STATUS=$(docker inspect -f '{{.State.Status}}' $CONTAINER_NAME 2>/dev/null || echo "missing")
-          RESTARTING=$(docker inspect -f '{{.State.Restarting}}' $CONTAINER_NAME 2>/dev/null || echo "false")
-
-          if [ "$STATUS" != "running" ] || [ "$RESTARTING" = "true" ]; then
-            echo "❌ Container $CONTAINER_NAME is not healthy. Status: $STATUS, Restarting: $RESTARTING"
-            echo "Container logs:"
-            docker logs --tail 50 $CONTAINER_NAME || true
-            exit 1
-          fi
-
-          echo "✅ Container $CONTAINER_NAME is running normally."
