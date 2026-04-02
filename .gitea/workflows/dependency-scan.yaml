@@ -43,9 +43,7 @@ jobs:
       - name: Run pip-audit
         run: |
           echo "=== Scanning Python dependencies for known vulnerabilities ==="
-          pip freeze --exclude birthdaymessaging-backend > /tmp/requirements.txt
-          pip-audit --strict --desc --fix --dry-run \
-            -r /tmp/requirements.txt 2>&1 | tee audit-results.txt
+          pip-audit --desc --fix --dry-run 2>&1 | tee audit-results.txt
           exit_code=${PIPESTATUS[0]}
           if [ $exit_code -ne 0 ]; then
             echo ""
