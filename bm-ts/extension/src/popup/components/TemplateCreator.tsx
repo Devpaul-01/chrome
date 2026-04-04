@@ -523,42 +523,44 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 mt-8">
-          <button
-            type="button"
-            onClick={() => setActiveTab('preview')}
-            className="flex-1 btn-outline-orange"
-            disabled={isSubmitting}
-          >
-            Preview
-          </button>
-          <button type="button" className="flex-1 btn-outline-orange">
-            Send Test
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setFormData({
-                greeting: '',
-                sentiment: '',
-                closing: '',
-                imageUrl: null,
-                imageFile: null,
-                templateTitle: '',
-                daysInAdvance: 0,
-                gender: 'ALL',
-              });
-              setActiveTab('create');
-              onCancel();
-            }}
-            className="flex-1 btn-outline-orange"
-            disabled={isSubmitting}
-          >
-            Cancel
-          </button>
+        <div className="space-y-3 mt-8">
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setActiveTab('preview')}
+              className="flex-1 btn-outline-orange"
+              disabled={isSubmitting}
+            >
+              Preview
+            </button>
+            <button type="button" className="flex-1 btn-outline-orange">
+              Send Test
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFormData({
+                  greeting: '',
+                  sentiment: '',
+                  closing: '',
+                  imageUrl: null,
+                  imageFile: null,
+                  templateTitle: '',
+                  daysInAdvance: 0,
+                  gender: 'ALL',
+                });
+                setActiveTab('create');
+                onCancel();
+              }}
+              className="flex-1 btn-outline-orange"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+          </div>
           <button
             type="submit"
-            className="flex-1 btn-orange flex items-center justify-center gap-2"
+            className="w-full btn-orange flex items-center justify-center gap-2"
             disabled={isSubmitting}
             aria-busy={isSubmitting ? 'true' : 'false'}
             aria-disabled={isSubmitting ? 'true' : 'false'}

@@ -47,7 +47,8 @@ export type ViewMode =
   | 'birthday-calendar'
   | 'smtp-settings'
   | 'account-management'
-  | 'subscription';
+  | 'subscription'
+  | 'template-gallery';
 
 // ---- context shape -----------------------------------------------------
 interface AppContextValue {

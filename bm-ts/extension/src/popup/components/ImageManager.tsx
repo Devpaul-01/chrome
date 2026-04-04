@@ -329,10 +329,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(
             ) : (
               <div className="grid grid-cols-2 gap-3 mb-5">
                 {images.map((image) => (
-                  <div
-                    key={image.id}
-                    className="bg-white/80 rounded-lg p-2 shadow-sm text-center"
-                  >
+                  <div key={image.id} className="bg-white/80 rounded-lg p-2 shadow-sm text-center">
                     <img
                       src={image.url}
                       alt={image.filename}

@@ -37,6 +37,7 @@ import SMTPSettings from './components/SMTPSettings';
 import MessagesHub from './components/MessagesHub';
 import HomeControls from './components/HomeControls';
 import AccountManagement from './components/AccountManagement';
+import TemplateGallery from './components/TemplateGallery';
 import OnboardingWizard from './components/OnboardingWizard';
 import HelpPanel from './components/HelpPanel';
 import FeatureTip from './components/FeatureTip';
@@ -214,39 +215,17 @@ function AppShell() {
   const isAuthenticated = Boolean(user);
 
   // ---- Tab navigation ------------------------------------------------
-  const [openDropdown, setOpenDropdown] = useState<TabType | null>(null);
   const navRef = useRef<HTMLElement>(null);
-
-  // Close dropdown when clicking outside the nav
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) {
-        setOpenDropdown(null);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const renderTabNavigation = () => {
     const tabs: {
       id: TabType;
       label: string;
-      menuItems?: { label: string; action: () => void }[];
     }[] = [
       { id: 'home', label: 'Home' },
       { id: 'contacts', label: 'Contacts' },
       { id: 'messages', label: 'Messages' },
-      {
-        id: 'account',
-        label: 'Account',
-        menuItems: [
-          { label: 'Profile', action: () => setViewMode('account-management') },
-          { label: 'SMTP Settings', action: () => setViewMode('smtp-settings') },
-          { label: 'Subscription', action: () => setViewMode('subscription') },
-          { label: 'Sign Out', action: () => void handleLogout() },
-        ],
-      },
+      { id: 'account', label: 'Account' },
     ];
 
     function handleTabKeyDown(e: React.KeyboardEvent, tabIndex: number) {
@@ -266,18 +245,6 @@ function AppShell() {
           tabButtons[prev].focus();
           break;
         }
-        case 'ArrowDown': {
-          const tab = tabs[tabIndex];
-          if (tab.menuItems) {
-            e.preventDefault();
-            setOpenDropdown(tab.id);
-            // Focus first menu item on next render
-            requestAnimationFrame(() => {
-              navRef.current?.querySelector<HTMLElement>(`[role="menuitem"]`)?.focus();
-            });
-          }
-          break;
-        }
         case 'Home': {
           e.preventDefault();
           tabButtons[0].focus();
@@ -286,60 +253,6 @@ function AppShell() {
         case 'End': {
           e.preventDefault();
           tabButtons[tabButtons.length - 1].focus();
-          break;
-        }
-        case 'Escape': {
-          if (openDropdown) {
-            e.preventDefault();
-            setOpenDropdown(null);
-          }
-          break;
-        }
-      }
-    }
-
-    function handleMenuItemKeyDown(
-      e: React.KeyboardEvent,
-      items: { label: string; action: () => void }[],
-      itemIndex: number,
-      parentTabId: TabType,
-    ) {
-      switch (e.key) {
-        case 'ArrowDown': {
-          e.preventDefault();
-          const next = (itemIndex + 1) % items.length;
-          const menuItems = navRef.current?.querySelectorAll<HTMLElement>(`[role="menuitem"]`);
-          menuItems?.[next]?.focus();
-          break;
-        }
-        case 'ArrowUp': {
-          e.preventDefault();
-          if (itemIndex === 0) {
-            // Move focus back to parent tab button
-            setOpenDropdown(null);
-            document.getElementById(`${parentTabId}-tab`)?.focus();
-          } else {
-            const prev = itemIndex - 1;
-            const menuItems = navRef.current?.querySelectorAll<HTMLElement>(`[role="menuitem"]`);
-            menuItems?.[prev]?.focus();
-          }
-          break;
-        }
-        case 'Home': {
-          e.preventDefault();
-          navRef.current?.querySelector<HTMLElement>(`[role="menuitem"]`)?.focus();
-          break;
-        }
-        case 'End': {
-          e.preventDefault();
-          const menuItems = navRef.current?.querySelectorAll<HTMLElement>(`[role="menuitem"]`);
-          menuItems?.[menuItems.length - 1]?.focus();
-          break;
-        }
-        case 'Escape': {
-          e.preventDefault();
-          setOpenDropdown(null);
-          document.getElementById(`${parentTabId}-tab`)?.focus();
           break;
         }
       }
@@ -355,49 +268,17 @@ function AppShell() {
                 role="tab"
                 aria-selected={activeTab === tab.id ? 'true' : 'false'}
                 aria-controls={`${tab.id}-panel`}
-                aria-haspopup={tab.menuItems ? 'menu' : undefined}
-                aria-expanded={
-                  tab.menuItems ? (openDropdown === tab.id ? 'true' : 'false') : undefined
-                }
                 tabIndex={activeTab === tab.id ? 0 : -1}
                 className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
                 onClick={() => {
                   setActiveTab(tab.id);
                   setViewMode('main');
                   contactsHook.setShowImportModal(false);
-                  // Toggle dropdown for tabs with menu items; close for others
-                  setOpenDropdown((prev) =>
-                    tab.menuItems ? (prev === tab.id ? null : tab.id) : null,
-                  );
                 }}
                 onKeyDown={(e) => handleTabKeyDown(e, tabIndex)}
               >
                 {tab.label}
               </button>
-              {tab.menuItems && openDropdown === tab.id && (
-                <div
-                  className="tab-dropdown tab-dropdown-open"
-                  role="menu"
-                  aria-label={`${tab.label} submenu`}
-                >
-                  {tab.menuItems.map((item, i) => (
-                    <button
-                      key={i}
-                      role="menuitem"
-                      className="tab-dropdown-item"
-                      tabIndex={-1}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        item.action();
-                        setOpenDropdown(null);
-                      }}
-                      onKeyDown={(e) => handleMenuItemKeyDown(e, tab.menuItems!, i, tab.id)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -444,11 +325,32 @@ function AppShell() {
           <button
             className="btn mt-4"
             onClick={() => {
-              setActiveTab('messages');
+              setActiveTab('home');
               setViewMode('main');
             }}
           >
-            ← Back to Messages
+            ← Back to Home
+          </button>
+        </div>
+      );
+    }
+    if (viewMode === 'template-gallery') {
+      return (
+        <div className="view-container">
+          <TemplateGallery
+            templates={msgTemplates.messageTemplates}
+            onEdit={(template) => {
+              msgTemplates.setEditingTemplate(template);
+              setViewMode('message-templates');
+            }}
+            onDelete={msgTemplates.handleDeleteMessageTemplate}
+            onCreate={() => {
+              msgTemplates.setEditingTemplate(null);
+              setViewMode('message-templates');
+            }}
+          />
+          <button className="btn mt-4" onClick={() => setViewMode('message-templates')}>
+            ← Back to Message Templates
           </button>
         </div>
       );
@@ -462,7 +364,7 @@ function AppShell() {
             <div />
           </div>
           <div className="mb-6">
-            <div className="card mb-4">
+            <div className="mb-4">
               <TemplateCreator
                 onSubmit={
                   editingTemplate
@@ -489,6 +391,9 @@ function AppShell() {
             <div className="mb-6">
               <MessageGroups onClose={() => setViewMode('main')} showClose={false} />
             </div>
+            <button className="btn w-full" onClick={() => setViewMode('template-gallery')}>
+              View/Edit Message Templates
+            </button>
           </div>
           <button
             className="btn mt-4"
@@ -695,9 +600,18 @@ function AppShell() {
             <div className="card mb-6">
               <h3 className="text-md font-semibold mb-4">Account Settings</h3>
               <div className="space-y-3">
+                <button onClick={() => setViewMode('account-management')} className="btn btn-block">
+                  Profile
+                </button>
+                <button onClick={() => setViewMode('smtp-settings')} className="btn btn-block">
+                  SMTP Settings
+                </button>
+                <button onClick={() => setViewMode('subscription')} className="btn btn-block">
+                  Subscription
+                </button>
                 <button
                   onClick={() => setViewMode('change-password')}
-                  className="btn"
+                  className="btn btn-block"
                   disabled={isAccountSubmitting}
                 >
                   Change Password
@@ -801,7 +715,7 @@ function AppShell() {
               id={`${activeTab}-panel`}
               aria-labelledby={`${activeTab}-tab`}
               tabIndex={-1}
-              className="pb-10"
+              className="pb-4"
             >
               {renderView()}
             </section>
@@ -810,7 +724,7 @@ function AppShell() {
       </main>
 
       {isAuthenticated && (
-        <footer role="contentinfo" className="mt-10">
+        <footer role="contentinfo" className="mt-4">
           <button
             type="button"
             onClick={() => setShowHelpPanel(true)}
