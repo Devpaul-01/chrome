@@ -1,7 +1,7 @@
 # Backend Integration Summary
 
-**Last Updated:** March 1, 2026  
-**Version:** 1.1.0  
+**Last Updated:** April 4, 2026  
+**Version:** 1.2.0  
 **Scope:** How the Chrome extension integrates with the FastAPI backend — covering every API route, its corresponding `client.ts` function, and the background service worker message type that triggers it.
 
 ---
@@ -14,7 +14,7 @@ The Chrome extension communicates with the backend exclusively through the backg
 Popup / Content Script
         │  chrome.runtime.sendMessage({ type: "..." })
         ▼
-Background Service Worker (background/index.ts, 780 lines)
+Background Service Worker (background/index.ts, 902 lines)
         │  calls api/client.ts functions
         ▼
 FastAPI Backend  (http://localhost:8000 in dev)
@@ -39,6 +39,11 @@ PostgreSQL 15
 | `auth.changePassword` | `changePassword(payload)` | `POST /auth/change-password` | Requires bearer token |
 | `auth.updateProfile` | `updateUserProfile(payload)` | `PUT /auth/profile` | Updates `name` / `timezone` stored in JSON metadata |
 | `auth.deleteAccount` | `deleteUserAccount()` | `DELETE /auth/account` | Cascades to all user data |
+| `auth.requestEmailVerification` | `requestEmailVerification()` | `POST /auth/request-email-verification` | Sends verification email via SendGrid |
+| `auth.verifyEmail` | *(direct POST)* | `POST /auth/verify-email` | Validates token, sets `email_verified = true` |
+| `auth.sessions` | *(via auth.me flow)* | `GET /auth/sessions` | Lists active user sessions |
+| `auth.revokeSession` | *(direct DELETE)* | `DELETE /auth/sessions/{id}` | Revokes a specific session |
+| `auth.dataExport` | *(direct GET)* | `GET /auth/data-export` | Exports all user data as JSON |
 
 **Token storage:** Access and refresh tokens are stored in `chrome.storage.local`. On every authenticated request `client.ts` reads the access token; if a 401 is returned the background worker fires `auth.refresh` automatically, stores the new pair, and retries the original request.
 
@@ -51,7 +56,7 @@ PostgreSQL 15
 | `smtp.getConfig` | `getSMTPConfig()` | `GET /smtp/config` |
 | `smtp.updateConfig` | `updateSMTPConfig(payload)` | `PUT /smtp/config` |
 
-The backend uses an upsert pattern — `PUT /smtp/config` creates the row on first call and updates it on subsequent calls. Password is stored **unencrypted** in the current dev build (tracked production gap).
+The backend uses an upsert pattern — `PUT /smtp/config` creates the row on first call and updates it on subsequent calls. Password is **encrypted at rest** using Fernet symmetric encryption (`encryption.py`). API responses mask the password as `"••••••••"`.
 
 ---
 
@@ -91,6 +96,7 @@ Segment types: `GREETING`, `BODY`, `CLOSING`. Records are soft-deleted (`deleted
 | `messages.retryQueued` | `retryQueuedMessage(id)` | `POST /api/messages/queue/{id}/retry` |
 | `messages.listHistory` | `listMessageHistory(params?)` | `GET /api/messages/history` |
 | `messages.deleteHistory` | `deleteMessageHistory(id)` | `DELETE /api/messages/history/{id}` |
+| `messages.exportCsv` | `exportHistoryCsv()` | `GET /api/messages/history/export` |
 
 The backend broadcasts a WebSocket event whenever the queue or history changes, so the popup updates without polling.
 
@@ -183,6 +189,10 @@ Full CRUD is available through the API but only `list` and `toggle` are wired to
 |---|---|---|
 | `subscription.status` | `subscriptionStatus()` | `GET /subscription/status` |
 | `subscription.checkout` | `createCheckoutSession(payload)` | `POST /subscription/create-checkout-session` |
+| `subscription.cancel` | `cancelSubscription()` | `POST /subscription/cancel` |
+| `subscription.reactivate` | `reactivateSubscription()` | `POST /subscription/reactivate` |
+| `subscription.changePlan` | `changeSubscriptionPlan(payload)` | `POST /subscription/change-plan` |
+| `subscription.billingPortal` | `getBillingPortal()` | `POST /subscription/billing-portal` |
 
 Stripe webhooks hit `POST /stripe/webhook` directly — the backend verifies the signature with `STRIPE_WEBHOOK_SECRET` and updates `subscription_records`.
 
@@ -248,9 +258,9 @@ All `client.ts` functions throw on non-2xx responses. The thrown object is an `A
 
 | Layer | Count |
 |---|---|
-| HTTP endpoints | 65 |
+| HTTP endpoints | 78 |
 | WebSocket endpoints | 1 |
-| `client.ts` exported functions | 52 |
-| Background message types that call the backend | 47 |
-| Background message types that are local-only | 17 *(automation × 7, config × 3, logout × 1, scrape × 1, others × 5)* |
-| **Total background message types** | **64** |
+| `client.ts` exported functions | 58 |
+| Background message types that call the backend | 51 |
+| Background message types that are local-only | 26 *(automation × 7, config × 3, failsafe × 8, logout × 1, scrape × 1, others × 6)* |
+| **Total background message types** | **77** |

@@ -486,7 +486,7 @@ Authorization: Bearer <token>
 
 **Response:** `200 OK`
 
-> ⚠️ **Security Note:** Passwords are currently stored as plaintext (TEXT column in PostgreSQL). Encrypt at rest before production deployment.
+> ✅ **Security Note:** SMTP passwords are encrypted at rest using Fernet symmetric encryption (`encryption.py`). API responses mask the password as `"••••••••"`.
 
 ---
 
@@ -806,7 +806,7 @@ The schema is managed by Alembic migrations, applied automatically during contai
 4. **Image Storage**: Currently stores URLs/base64 data; production should use cloud storage (S3, GCS, etc.)
 5. **Archive Mode**: When enabled, prevents sending duplicate birthday messages across years
 6. **Days Offset**: Negative for EARLY, zero for ON_DAY, positive for BELATED
-7. **SMTP Passwords**: Currently stored as plaintext — must be encrypted before production deployment
+7. ~~**SMTP Passwords**~~: ✅ RESOLVED — Encrypted at rest using Fernet symmetric encryption; API responses mask passwords
 8. **Send Birthday Message** (`POST /send-birthday-message`): Backend returns `{"status":"sent"}` stub. Actual sending is performed client-side by the content script automation pipeline (`runFullAutomation` in `content/index.ts`) — the API endpoint exists for logging/record-keeping only
 
 ## All Active Endpoints

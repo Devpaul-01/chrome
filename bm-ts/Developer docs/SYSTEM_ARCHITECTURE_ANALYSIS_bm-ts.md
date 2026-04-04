@@ -2,12 +2,12 @@
 
 
 **Generated:** February 1, 2026  
-**Last Updated:** April 1, 2026  
-**Version:** 1.5.0  
+**Last Updated:** April 4, 2026  
+**Version:** 1.5.1  
 **System Type:** Full-Stack Web Application with Browser Extension
 
 
-> **Implementation Status:** ✅ **Phase 1, Phase 2 & Facebook Automation Complete** — Backend runs fully containerized in Docker with 15 registered routers (+ 2 inline app routes), 17 database models, and 17 tables defined in `models.py` (449 lines) with 5 Alembic migrations. Extension has 38 React component files (26 imported in App.tsx, App.tsx at 840 lines with 7 extracted hook files + AppContext) with real-time WebSocket updates, comprehensive accessibility, and a fully implemented Facebook automation pipeline: gender-aware DM sending, timeline posting, advance/follow-up modes, contact sync, and per-day deduplication. Background service worker handles **77 message types** across 16 categories (902 lines). API client: 58 exported functions (882 lines). 19 ViewMode navigation states. Extension test suite: **297 tests** across 15 files. Backend test suite: **176 tests** across 20 files. Manifest hardened with Meta-compliant fail-safe mechanisms: human-in-the-loop confirmation, aggregate rate limiting (1/hr, 3/day, 5/week), Facebook restriction detection, user-activity gating, and emergency kill-switch. Security hardening pass #2 complete: session invalidation on password change/reset, WebSocket access-token + session enforcement, timing oracle fix, atomic token consumption, JWT iss/aud claims, email_verified + account lockout enforcement, CORS/CSP/Cache-Control tightening, CSS selector injection fix, manifest CSP, audit log enrichment.
+> **Implementation Status:** ✅ **Phase 1, Phase 2 & Facebook Automation Complete** — Backend runs fully containerized in Docker with 15 registered routers (+ 2 inline app routes), 17 database models, and 17 tables defined in `models.py` (449 lines) with 5 Alembic migrations. Extension has 38 React component files (26 imported in App.tsx, App.tsx at 840 lines with 7 extracted hook files + AppContext) with real-time WebSocket updates, comprehensive accessibility, and a fully implemented Facebook automation pipeline: gender-aware DM sending, timeline posting, advance/follow-up modes, contact sync, and per-day deduplication. Background service worker handles **77 message types** across 16 categories (902 lines). API client: 58 exported functions (882 lines). 22 ViewMode navigation states. Extension test suite: **294 tests** across 15 files. Backend test suite: **230 tests** across 25 files. Manifest hardened with Meta-compliant fail-safe mechanisms: human-in-the-loop confirmation, aggregate rate limiting (1/hr, 3/day, 5/week), Facebook restriction detection, user-activity gating, and emergency kill-switch. Security hardening pass #2 complete: session invalidation on password change/reset, WebSocket access-token + session enforcement, timing oracle fix, atomic token consumption, JWT iss/aud claims, email_verified + account lockout enforcement, CORS/CSP/Cache-Control tightening, CSS selector injection fix, manifest CSP, audit log enrichment.
 
 ---
 
@@ -21,7 +21,7 @@
 - **Real-time features**: WebSocket-based updates for queue, history, and dashboard are fully functional.
 - **Developer experience**: Docker Compose, Vite, and comprehensive documentation support rapid onboarding and development.
 - **Automation pipeline complete**: The extension can scrape the Facebook birthdays feed, select gender-appropriate DMs from stored templates, post to friend timelines, archive conversations, sync contacts, and avoid duplicate sends — with advance/follow-up modes based on `days_in_advance`.
-- **Strong test coverage**: 177 backend tests across 20 files covering all routers, integration flows, API contracts, and DB constraints. 294 extension tests across 15 files covering utilities, API client, and 10 component suites.
+- **Strong test coverage**: 230 backend tests across 25 files covering all routers, integration flows, API contracts, DB constraints, and core utilities. 294 extension tests across 15 files covering utilities, API client, and 10 component suites.
 
 **Key Gaps and Risks:**
 
@@ -43,7 +43,7 @@
 
 **Overall Assessment:**
 
-bm-ts is a feature-complete, development-ready system with a fully operational automation pipeline. Both Phase 1 and Phase 2 are fully implemented with all 15 routers registered (plus 2 inline app routes), all 17 models and 17 tables active, and the full frontend wired to every backend feature. The Facebook automation pipeline is end-to-end: the content script scrapes the birthday feed, selects gender-appropriate templates from the backend, sends DMs and timeline posts, archives conversations, syncs contacts, and enforces per-day deduplication. The architecture is solid — async FastAPI, type-safe TypeScript, WCAG 2.1 AA accessibility, and WebSocket real-time updates. SendGrid email service is integrated for password reset and email verification. Email verification and user sessions management are implemented. Two comprehensive security hardening passes have been completed. Backend testing has expanded from 7 tests (2 files) to 176 tests (20 files) covering all routers. The primary remaining work is production deployment and infrastructure setup rather than feature development.
+bm-ts is a feature-complete, development-ready system with a fully operational automation pipeline. Both Phase 1 and Phase 2 are fully implemented with all 15 routers registered (plus 2 inline app routes), all 17 models and 17 tables active, and the full frontend wired to every backend feature. The Facebook automation pipeline is end-to-end: the content script scrapes the birthday feed, selects gender-appropriate templates from the backend, sends DMs and timeline posts, archives conversations, syncs contacts, and enforces per-day deduplication. The architecture is solid — async FastAPI, type-safe TypeScript, WCAG 2.1 AA accessibility, and WebSocket real-time updates. SendGrid email service is integrated for password reset and email verification. Email verification and user sessions management are implemented. Two comprehensive security hardening passes have been completed. Backend testing has expanded from 7 tests (2 files) to 230 tests (25 files) covering all routers and core utilities. The primary remaining work is production deployment and infrastructure setup rather than feature development.
 
 ### Version History
 
@@ -64,6 +64,7 @@ bm-ts is a feature-complete, development-ready system with a fully operational a
 | 1.3.0 | March 13, 2026 | **Comprehensive Accuracy Audit** — Full line-by-line verification of every metric against actual codebase. Model/table count corrected: 14 → **15** (RevokedToken was undocumented, confirmed via separate Alembic migration `a1b2c3d4e5f6_create_revoked_tokens.py`). Component count corrected: 36 → **38** (38 .tsx files in `components/`). Background message types corrected: 64 → **72** across **15 categories** (added failsafe category with 8 message types). Line counts re-verified against terminal: App.tsx → **673**; background/index.ts → **865**; client.ts → **767**; content/index.ts → **892**; timeline.ts → **467**; messenger.ts → **461**; models.py → **404**; accessibility.ts → **211**. Extension tests corrected: 266 → **283** across 13 files (97 unit + 186 component). Backend tests corrected: 4 → **7** (5 in test_auth.py + 2 in test_templates.py). Utility files: 9 → **10** (added failsafe.ts at 370 lines; total ~1,484 lines). Manifest section updated to match actual manifest.json (3 `content_scripts.matches` patterns including profile.php, narrowed `host_permissions`, `alarms` in `optional_permissions`, `type: "module"` on service worker). **CRITICAL BUG IDENTIFIED**: `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` are referenced in `password_reset.py` but NOT defined in `config.py` Settings — `send_reset_email()` will crash with `AttributeError`. Known code gaps and recommendations updated accordingly. |
 | 1.4.0 | March 14, 2026 | **Security Hardening & Email Config Fix** — CRITICAL BUG FIXED: `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` added to `config.py` Settings class; `password_reset.py` updated to use `settings.*` (removed `os.environ.get()`); `SMTP_ENCRYPTION_KEY` validator rejects placeholder `"generate-with-fernet"` at startup. New `SecurityHeadersMiddleware` in `security_headers.py` adds 5 OWASP headers (HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy). New `validators.py` with reusable `sanitize_text()` (strip, null-byte rejection, 10K max) applied to 6 schema files (auth, contact, post, message_template, smtp, template). SMTP GET/PUT endpoints now return masked password `"••••••••"` instead of real values. `.env.example` updated with all new env vars. |
 | 1.5.0 | April 1, 2026 | **Comprehensive Codebase Audit** — Full re-verification of every metric against actual codebase. **Model/table count corrected: 15 → 17** (UserSession and EmailVerificationToken were undocumented; separate Alembic migrations exist for both). Auth router expanded: 9 → **15 endpoints** (added `/revoke`, `/sessions`, `DELETE /sessions/{id}`, `/request-email-verification`, `/verify-email`, `/data-export`). Subscription router expanded: 2 → **6 endpoints** (added `/cancel`, `/reactivate`, `/change-plan`, `/billing-portal`). Messages router expanded: 7 → **8** (added `/history/export`). Templates router: 4 → **5** (added `/preview`). **Total HTTP endpoints: 65 → 77** (75 router + 2 inline). **API client functions: 52 → 58** (882 lines, up from 767). **Background message types: 72 → 77** (902 lines, up from 865). **ViewMode states: 17 → 19** (added `schedules`, `automation`, `post-list`). App.tsx grew: 673 → **840** lines. AppContext.tsx: 164 → **180** lines. models.py: 404 → **449** lines. content/index.ts: 892 → **960** lines. **Backend tests massively expanded: 7 → 176 tests, 2 → 20 files** (all Phase 2 routers tested, integration tests, API contracts, DB constraints). **Extension tests: 283 → 297 tests, 13 → 15 files**. Service files: 3 → **4** (`email_verification.py` added). Schema files confirmed: **17**. SMTP passwords now encrypted at rest (Fernet). Email verification and user sessions fully implemented. Two security hardening passes complete. Known gap: 6 pre-existing test failures (5 auth KeyError:'path', 1 subscription assertion). |
+| 1.5.1 | April 4, 2026 | **Documentation Accuracy Audit** — Corrected stale metrics across all developer docs. **Backend test count corrected: 176/20 → 230 tests across 25 files** (6 new test files added since v1.5.0: test_audit_log, test_encryption, test_rate_limiter, test_security_headers, test_stripe_service, test_validators). **Extension test count corrected: 297 → 294** (precise recount). **Auth router: 15 → 17 endpoints** (2 HTML pages for email verification + password reset excluded from OpenAPI schema). **Total HTTP endpoints: 77 → 78** (76 router + 2 inline). **ViewMode states: 19 → 22** (full recount from AppContext.tsx: `postLibrary`, `post-list`, `import-contacts` were uncounted). Content scripts total: ~1,893 lines. FRONTEND_INTEGRATION_SUMMARY updated: all line counts re-verified (client.ts 882, background 902, content 962, App.tsx 840, messenger 413, timeline 473), manifest.json corrected (`alarms` in optional\_permissions, narrowed content\_scripts.matches), `failsafe.ts` added to utils listing. BACKEND_INTEGRATION_SUMMARY updated: missing auth endpoints (email verification, sessions, data export), subscription endpoints (cancel/reactivate/change-plan/billing-portal), messages CSV export added; SMTP status corrected to Fernet-encrypted; totals table corrected. MVP_CHECKLIST: component count corrected 42 → 38, ORM model count 15 → 17. BACKEND_TESTING_GUIDE: email status updated from "not configured" to SendGrid. |
 
 ---
 
@@ -85,7 +86,7 @@ The system follows a client-server architecture where the extension acts as a th
 
 - ✅ **Docker Containerization**: Backend and PostgreSQL run in Docker containers via docker-compose
 - ✅ **Database Schema**: 17 tables and 5 enums defined in `models.py` (449 lines), managed via 5 Alembic migrations
-- ✅ **API Endpoints**: 15 registered routers with 75 HTTP endpoints + 2 inline app routes + 1 WebSocket endpoint (77 HTTP + 1 WS total)
+- ✅ **API Endpoints**: 15 registered routers with 76 HTTP endpoints + 2 inline app routes + 1 WebSocket endpoint (78 HTTP + 1 WS total)
 - ✅ **Rate Limiting**: `slowapi` middleware; password-reset endpoint is rate-limited per IP (1/min, 5/hr, 20/hr on outer key)
 - ✅ **WebSocket Real-Time**: Live updates for queue, history, dashboard, and notifications
 - ✅ **JWT Authentication**: Access/refresh token system with secure rotation
@@ -108,8 +109,8 @@ The system follows a client-server architecture where the extension acts as a th
 - ✅ **SMTP Configuration**: Per-user SMTP settings with Fernet encryption at rest (`/smtp/config`)
 - ✅ **Frontend UI**: 38 React component files (26 imported in App.tsx, 840 lines; logic extracted to 7 hook files + `AppContext.tsx`)
 - ✅ **Accessibility**: WCAG 2.1 Level AA — keyboard shortcuts, screen reader support, focus management, live regions
-- ✅ **Content Scripts**: Full Facebook automation pipeline — birthday feed scraping, gender-aware DM sending, timeline posting, conversation archiving, contact sync, advance/follow-up modes, per-day deduplication (5 files, ~1,891 lines)
-- ✅ **Extension Testing**: 297 tests across 15 files (Vitest + Testing Library) covering utilities, API client, and 10 component suites
+- ✅ **Content Scripts**: Full Facebook automation pipeline — birthday feed scraping, gender-aware DM sending, timeline posting, conversation archiving, contact sync, advance/follow-up modes, per-day deduplication (5 files, ~1,893 lines)
+- ✅ **Extension Testing**: 294 tests across 15 files (Vitest + Testing Library) covering utilities, API client, and 10 component suites
 - ✅ **Automation Orchestration**: `handleAutomationScan` fetches templates/posts/contacts, groups by `days_in_advance`, opens `/birthdays` tab, dispatches `automation.runFull` payload to content script
 - ⏳ **Build Status**: Extension source complete; `dist/` gitignored (build with `npm run build`)
 
@@ -120,7 +121,7 @@ The system follows a client-server architecture where the extension acts as a th
 | Email service | ✅ SendGrid fully configured (Mar 14, 2026); `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` all in `config.py` Settings |
 | SMTP password encryption | ✅ Encrypted at rest via Fernet symmetric encryption (`encryption.py`); API responses mask passwords (`"••••••••"`) |
 | `POST /send-birthday-message` | Backend stub returns `{"status":"sent"}`; actual sending is handled by the content script automation pipeline |
-| Test coverage | Backend: **176 tests across 20 files** (all routers covered); extension: **297 tests across 15 files**; no E2E tests; 6 pre-existing test failures |
+| Test coverage | Backend: **230 tests across 25 files** (all routers covered + core utilities); extension: **294 tests across 15 files**; no E2E tests; 6 pre-existing test failures |
 | CI/CD and monitoring | Frontend CI exists (.gitea/workflows/frontend-ci.yaml); no backend CI/CD; no monitoring |
 
 **System Status:**
@@ -297,26 +298,32 @@ backend/
 │   │   ├── email_verification.py  # Email verification token lifecycle, SendGrid email (117 lines)
 │   │   ├── stripe.py              # Stripe checkout, webhook handling (201 lines)
 │   │   └── templates.py           # Message composition from segments (24 lines)
-│   └── tests/                     # Pytest test suite (20 files, 176 tests)
+│   └── tests/                     # Pytest test suite (25 files, 230 tests)
 │       ├── conftest.py            # Async fixtures, model event listeners for SQLite compat (185 lines)
 │       ├── test_api_contracts.py  # Status codes, schemas, validation (14 tests)
-│       ├── test_auth.py           # JWT, sessions, revocation (10 tests)
-│       ├── test_birthday_configs.py # CRUD, gender filter, constraints (14 tests)
-│       ├── test_contacts.py       # CRUD, bulk import (13 tests)
+│       ├── test_audit_log.py      # AuditLogMiddleware behavior (7 tests)
+│       ├── test_auth.py           # JWT, sessions, revocation (11 tests)
+│       ├── test_birthday_configs.py # CRUD, gender filter, constraints (13 tests)
+│       ├── test_contacts.py       # CRUD, bulk import (10 tests)
 │       ├── test_dashboard.py      # Stats endpoint (5 tests)
 │       ├── test_db_constraints.py # FK cascades, unique constraints, enums (6 tests)
 │       ├── test_email_verification.py # Token lifecycle, verify endpoint (9 tests)
-│       ├── test_images.py         # Upload, size validation (10 tests)
+│       ├── test_encryption.py     # Fernet encryption round-trip, key sensitivity (6 tests)
+│       ├── test_images.py         # Upload, size validation (9 tests)
 │       ├── test_integration.py    # Full auth + CRUD flows (4 tests)
-│       ├── test_message_groups.py # CRUD, segment_ids (12 tests)
-│       ├── test_message_templates.py # CRUD, gender filter (14 tests)
-│       ├── test_messages.py       # Queue + history CRUD, pagination (24 tests)
-│       ├── test_password_reset.py # Token lifecycle (8 tests)
-│       ├── test_posts.py          # CRUD with font fields (15 tests)
-│       ├── test_schedules.py      # CRUD (11 tests)
+│       ├── test_message_groups.py # CRUD, segment_ids (11 tests)
+│       ├── test_message_templates.py # CRUD, gender filter (11 tests)
+│       ├── test_messages.py       # Queue + history CRUD, pagination (17 tests)
+│       ├── test_password_reset.py # Token lifecycle (7 tests)
+│       ├── test_posts.py          # CRUD with font fields (11 tests)
+│       ├── test_rate_limiter.py   # Key resolution, middleware attachment (5 tests)
+│       ├── test_schedules.py      # CRUD (9 tests)
+│       ├── test_security_headers.py # HSTS, CSP, Referrer-Policy, Permissions-Policy (8 tests)
 │       ├── test_smtp.py           # Get/update, password masking (6 tests)
-│       ├── test_subscription.py   # Status, cancel, reactivate, change-plan (11 tests)
+│       ├── test_stripe_service.py # Stripe helpers, cancel/reactivate/plan-change (16 tests)
+│       ├── test_subscription.py   # Status, cancel, reactivate, change-plan (13 tests)
 │       ├── test_templates.py      # Segment validation, composition (2 tests)
+│       ├── test_validators.py     # Text sanitization, null-bytes, length limits (10 tests)
 │       └── test_webhook.py        # Signature, events (10 tests)
 ├── alembic.ini                    # Present but not actively used
 ├── docker-compose.yml             # PostgreSQL + backend services
@@ -524,7 +531,7 @@ backend/
 
 | Router | Prefix | Description |
 |--------|--------|-------------|
-| `auth` | `/auth` | Authentication, password reset, email verification, sessions, profile, account (15 endpoints) |
+| `auth` | `/auth` | Authentication, password reset, email verification, sessions, profile, account, data export (17 endpoints; 2 are HTML pages excluded from OpenAPI schema) |
 | `smtp` | `/smtp` | SMTP configuration (2 endpoints) |
 | `templates` | `/templates` | Template segment CRUD + preview (5 endpoints) |
 | `subscription` | `/subscription` | Subscription management, cancel, reactivate, change plan, billing portal (6 endpoints) |
@@ -540,7 +547,7 @@ backend/
 | `images` | `/api` | User image library (5 endpoints) |
 | `birthday_configs` | `/api` | Birthday automation configs (6 endpoints) |
 
-**Total: 77 HTTP endpoints + 1 WebSocket endpoint**
+**Total: 78 HTTP endpoints (76 router + 2 inline app routes) + 1 WebSocket endpoint**
 
 #### Authentication (`/auth`)
 | Endpoint | Method | Auth | Description |
@@ -833,7 +840,7 @@ extension/
 
 ### 3.4 App.tsx View Management
 
-**19 ViewMode states:**
+**22 ViewMode states:**
 `main`, `change-password`, `schedules`, `scheduling`, `automation`, `message-templates`, `queue`, `history`, `analytics`, `posts`, `postLibrary`, `post-list`, `groups`, `images`, `contacts`, `add-contact`, `edit-contact`, `import-contacts`, `birthday-calendar`, `smtp-settings`, `account-management`, `subscription`
 
 **4-Tab Navigation with Dropdowns:**
@@ -1180,7 +1187,7 @@ docker-compose exec backend pytest --cov=app --cov-report=html
 **Extension:**
 ```bash
 cd extension
-npm test              # Run all 297 tests
+npm test              # Run all 294 tests
 npm run test:watch    # Watch mode
 npm run test:coverage # Coverage report (70% thresholds)
 ```
@@ -1310,16 +1317,16 @@ All features are registered and implemented. The following are gaps within the e
 | Backend LOC | ~4,860 Python |
 | Extension LOC | ~15,097 TypeScript + 1,131 CSS |
 | Database | 17 tables, 5 enums, 32 indexes |
-| API Endpoints | 77 HTTP + 1 WebSocket (15 routers + 2 inline routes) |
+| API Endpoints | 78 HTTP + 1 WebSocket (15 routers + 2 inline routes) |
 | Component Files | 38 (26 directly in App.tsx) |
 | Background Message Types | 77 |
 | API Client Functions | 58 |
 | Custom Hooks | 7 (996 lines) |
-| Content Script Files | 5 (~1,891 lines) |
+| Content Script Files | 5 (~1,893 lines) |
 | Utility Files | 10 (~1,498 lines) |
 | Accessibility Utilities | 9 functions (211 lines) |
-| Extension Tests | 297 (15 files) |
-| Backend Tests | 176 (20 files) |
+| Extension Tests | 294 (15 files) |
+| Backend Tests | 230 (25 files) |
 | Runtime Dependencies | 17 Python + 3 npm |
 
 ### Strengths

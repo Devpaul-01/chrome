@@ -223,9 +223,9 @@ curl -X GET http://localhost:8000/api/dashboard/stats \
 - Rerun both migration scripts in order
 
 ### 5. Email Not Sending
-- Password reset emails are logged to console (not sent)
-- Implement actual email service in `app/services/password_reset.py`
-- Add email provider credentials to `.env`
+- Password reset emails are sent via **SendGrid** (configured Mar 14, 2026)
+- Ensure `SENDGRID_API_KEY`, `EMAIL_FROM_ADDRESS`, and `PASSWORD_RESET_URL_BASE` are set in `.env`
+- Check backend logs for SendGrid API errors
 
 ## Using Swagger UI
 
@@ -245,10 +245,9 @@ Server logs will show:
 
 ## Next Steps After Testing
 
-1. **Configure Email Service**
-   - Choose provider (SendGrid, AWS SES, Mailgun)
-   - Add credentials to environment
-   - Update `password_reset.py` service
+1. **~~Configure Email Service~~** ✅ DONE
+   - SendGrid fully integrated (Mar 14, 2026)
+   - All config fields in `config.py` Settings
 
 2. **Add Rate Limiting** ✅
    - Implemented via `slowapi`
