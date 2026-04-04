@@ -1,8 +1,8 @@
 
 
 
-**Last Updated:** April 2, 2026  
-**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (294 tests across 15 files), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026), SendGrid email service integrated for password reset (asyncio import bug fixed Mar 9, 2026), full codebase audit with metric corrections (Mar 17, 2026), Help & Tips panel + OnboardingWizard UI polish: glassmorphism, brand-consistent text, improved spacing, removed redundant Help & Shortcuts footer section (Mar 10, 2026), privacy policy + terms of service created, frontend CI pipeline configured, user documentation (Quick Start, FAQ, Troubleshooting Guide) created (Mar 18, 2026), email verification system implemented (Mar 18, 2026), user sessions management implemented (Mar 19, 2026), subscription cancel/reactivate/change-plan/billing-portal endpoints implemented and tested, backend testing expanded to ~230 tests across 25 files (Mar 19–Apr 2, 2026), comprehensive security hardening pass #2 (20 fixes — session invalidation on password reset/change, WebSocket access-token + session enforcement, timing oracle fix, atomic token consumption, JWT iss/aud claims, email_verified + account lockout enforcement, CORS/CSP/Cache-Control tightening, CSS selector injection fix, manifest CSP, audit log enrichment — Mar 26, 2026), SMTP Fernet encryption implemented, dashboard `.scalar()` bug fixed, standardized DeleteResponse across all DELETE endpoints, OpenAPI tags metadata added (14 tag groups), request logging middleware added, CSV export wiring (frontend "Export All" calls backend endpoint), ARIA role presentation cleanup (Mar 26, 2026), email action pages added (GET /verify-email-page + GET /reset-password-page returning branded HTML — Apr 1, 2026), backend deploy pipeline added (Docker image build + Gitea container registry + Coolify webhook — Apr 2, 2026), backend pip-audit removed from dependency scan (Apr 1, 2026), 6 new backend test files added: test_encryption (6), test_rate_limiter (5), test_security_headers (8), test_stripe_service (16), test_validators (10), test_audit_log (7)
+**Last Updated:** April 4, 2026  
+**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (363 tests across 18 files), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026), SendGrid email service integrated for password reset (asyncio import bug fixed Mar 9, 2026), full codebase audit with metric corrections (Mar 17, 2026), Help & Tips panel + OnboardingWizard UI polish: glassmorphism, brand-consistent text, improved spacing, removed redundant Help & Shortcuts footer section (Mar 10, 2026), privacy policy + terms of service created, frontend CI pipeline configured, user documentation (Quick Start, FAQ, Troubleshooting Guide) created (Mar 18, 2026), email verification system implemented (Mar 18, 2026), user sessions management implemented (Mar 19, 2026), subscription cancel/reactivate/change-plan/billing-portal endpoints implemented and tested, backend testing expanded to ~230 tests across 25 files (Mar 19–Apr 2, 2026), comprehensive security hardening pass #2 (20 fixes — session invalidation on password reset/change, WebSocket access-token + session enforcement, timing oracle fix, atomic token consumption, JWT iss/aud claims, email_verified + account lockout enforcement, CORS/CSP/Cache-Control tightening, CSS selector injection fix, manifest CSP, audit log enrichment — Mar 26, 2026), SMTP Fernet encryption implemented, dashboard `.scalar()` bug fixed, standardized DeleteResponse across all DELETE endpoints, OpenAPI tags metadata added (14 tag groups), request logging middleware added, CSV export wiring (frontend "Export All" calls backend endpoint), ARIA role presentation cleanup (Mar 26, 2026), email action pages added (GET /verify-email-page + GET /reset-password-page returning branded HTML — Apr 1, 2026), backend deploy pipeline added (Docker image build + Gitea container registry + Coolify webhook — Apr 2, 2026), backend pip-audit removed from dependency scan (Apr 1, 2026), 6 new backend test files added: test_encryption (6), test_rate_limiter (5), test_security_headers (8), test_stripe_service (16), test_validators (10), test_audit_log (7)
 
 ---
 
@@ -25,7 +25,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - ✅ SMTP passwords encrypted at rest using Fernet symmetric encryption (passwords also masked in API responses via `SMTPConfigOut.model_post_init`)
 - ⚠️ No production deployment infrastructure
 - ✅ Backend testing expanded: ~230 tests across 25 files (auth 11, contacts 10, messages 17, password_reset 7, dashboard 5, schedules 9, templates 2, subscription 13, webhook 10, email_verification 9, birthday_configs 13, message_groups 11, message_templates 11, posts 11, images 9, smtp 6, integration 4, api_contracts 14, db_constraints 6, encryption 6, rate_limiter 5, security_headers 8, stripe_service 16, validators 10, audit_log 7) — conftest.py with comprehensive async fixtures and model event listeners for SQLite compatibility
-- ✅ Extension testing: ~294 tests across 15 files (unit + component), all passing
+- ✅ Extension testing: ~363 tests across 18 files (unit + component), all passing
 - ✅ Alembic migrations fully populated — 5 migration files: initial schema (14 tables), `a1b2c3d4e5f6` (revoked_tokens), `b2c3d4e5f6g7` (account lockout columns, Mar 12), `c3d4e5f6g7h8` (email_verification_tokens + email_verified column, Mar 18), `d4e5f6g7h8i9` (user_sessions table, Mar 19) — **17 tables total**
 - ✅ CI/CD partially implemented — 3 Gitea Actions workflows: frontend CI (TypeScript/ESLint/Prettier/build/test/audit), backend deploy (Docker image build + Gitea registry + Coolify webhook), dependency vulnerability scan (frontend npm audit; backend pip-audit removed Apr 1, 2026)
 - ⚠️ No production monitoring
@@ -472,11 +472,11 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Sent-today deduplication (getSentToday, addToSentToday, clearSentToday in utils/automation.ts)
 - [x] Max messages config (maxMessages field in AutomationConfig, updateMaxMessages helper, threaded into automation payload)
 - [x] New background message types (automation.recordSent, automation.setMaxMessages, automation.clearSentToday; failsafe category with 8 message types — 77 total message types)
-- [ ] Add notification for automation status
-- [ ] Add offline support (queue requests)
-- [ ] Add crash recovery
+- [x] Add notification for automation status  (`notifications.ts` — notifyAutomationComplete, notifyAutomationFailed, notifyAutomationPaused called from handleAutomationScan — Apr 4, 2026)
+- [ ] Add offline support (queue requests)  (`offline-queue.ts` scaffolded with QUEUEABLE_PREFIXES list but not yet imported by background service worker)
+- [x] Add crash recovery  (`crash-recovery.ts` — AutomationCheckpoint interface; saveCheckpoint/clearCheckpoint/checkForStaleCheckpoint fully wired in handleAutomationScan — Apr 4, 2026)
 - [ ] Test persistent state management
-- [ ] Add update check and notification
+- [x] Add update check and notification  (`update-check.ts` — compareVersions, getCurrentVersion, handleInstallOrUpdate registered on chrome.runtime.onInstalled — Apr 4, 2026)
 
 ### Contact Management UI ✨ **NEW** (Scaffolded Feb 11, 2026)
 - [x] ContactList component - display, search, import, add, edit, delete
@@ -532,7 +532,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [ ] TemplateCreator / TemplateGallery / TemplateList component enhancements
 - [ ] AuthForm component enhancements
 - [x] New UI components added (Mar 2026): DashboardStatsCard, FacebookPostPreview, FeatureTip, GenderFilter, HelpPanel, HomeControls, ImageLibraryPicker, ImageManager, MessagesHub, PostEditor, PostList, SchedulingSettings
-- [x] New utility modules added (Mar 2026): bridge.ts (background-content messaging), failsafe.ts, image.ts, logger.ts, messages.ts
+- [x] New utility modules added (Mar 2026 — Apr 4, 2026): bridge.ts (background-content messaging), crash-recovery.ts (automation checkpoint/recovery), failsafe.ts, image.ts, logger.ts, messages.ts, notifications.ts (OS-level Chrome notifications), offline-queue.ts (scaffolded write-op queue), update-check.ts (version comparison + notification) — 9 utility modules total
 - [x] New content-script modules added (Mar 2026): content/api.ts, content/dom-helpers.ts
 - [ ] Add internationalization (i18n) support
 - [ ] Test on different screen sizes
@@ -704,6 +704,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Add tests for webhook router  (`test_webhook.py` — 10 tests: missing sig, invalid sig, unhandled event, subscription.created, subscription.updated cancel/plan-change, subscription.deleted, payment.failed, no-subscription, unknown customer — Mar 2026)
 - [x] Add tests for email verification service  (`test_email_verification.py` — 9 tests: create token, store hash, verify valid/invalid/expired, mark used, used-token-blocked, request endpoint triggers send, verify endpoint marks verified — Mar 18, 2026)
 - [x] Add tests for password reset service  (test_password_reset.py — 7 tests)
+- [x] Add tests for contacts router  (`test_contacts.py` — 10 tests: list empty, create, create without optional fields, list after create, bulk create, update, update not found, delete, delete not found, empty name rejected — Apr 4, 2026)
 - [x] Add tests for birthday configs router  (`test_birthday_configs.py` — 13 tests: CRUD, gender filter, duplicate constraint, unauthorized — Mar 26, 2026)
 - [x] Add tests for message groups router  (`test_message_groups.py` — 11 tests: CRUD, segment_ids, unauthorized — Mar 26, 2026)
 - [x] Add tests for message templates router  (`test_message_templates.py` — 11 tests: CRUD, gender filter, unauthorized — Mar 26, 2026)
@@ -746,14 +747,14 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 ### Frontend/Extension Testing
 **Priority:** P1 - USER EXPERIENCE CRITICAL  
-**Status:**  Comprehensive — ~297 tests across 15 files, all passing (Apr 1, 2026)
+**Status:**  Comprehensive — ~363 tests across 18 files, all passing (Apr 4, 2026)
 
 **Setup complete (Feb 25, 2026):**
 -  Vitest + jsdom + @testing-library/react installed
 -  `vitest.config.ts` configured with jsdom environment, coverage thresholds (70% lines/functions)
--  `src/test-setup.ts` — global Chrome API stub (storage.local Promise + callback dual-mode, alarms, runtime)
+-  `src/test-setup.ts` — global Chrome API stub (storage.local Promise + callback dual-mode, alarms, runtime, notifications)
 -  Test scripts added: `npm test`, `npm run test:watch`, `npm run test:coverage`
--  13 test files, 251 tests, all passing (verified Mar 17, 2026) → 15 test files, 297 tests (verified Apr 1, 2026)
+-  13 test files, 251 tests, all passing (verified Mar 17, 2026) → 15 test files, 297 tests (verified Apr 1, 2026) → 18 test files, 363 tests (verified Apr 4, 2026)
 
 #### Unit Tests
 - [x] Add Jest/Vitest configuration  (Vitest + jsdom, Feb 25, 2026)
@@ -775,6 +776,9 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 - [x] Test MessageHistory component  (`src/popup/__tests__/MessageHistory.test.tsx` — 51 tests: date range, CSV export, details modal, pagination, Mar 3, 2026)
 - [x] Test HelpTooltip component  (`src/popup/__tests__/HelpTooltip.test.tsx` — 10 tests: render, hover/focus show/hide, accessibility, Mar 3, 2026)
 - [x] Test OnboardingWizard component  (`src/popup/__tests__/OnboardingWizard.test.tsx` — 16 tests: navigation, step content, progress bar, complete/skip, Mar 3, 2026)
+- [x] Test failsafe utilities  (`src/utils/__tests__/failsafe.test.ts` — 35 tests: confirmationMode, rate limiting hourly/daily/weekly caps + pruning, emergencyStop, shouldAbort, activityLog, failureBackoff escalation — Apr 4, 2026)
+- [x] Test DOM helper utilities  (`src/content/__tests__/dom-helpers.test.ts` — 16 tests: delay, trySelectors/trySelectorsAll, retryOperation, debounce, createStableMutationObserver — Apr 4, 2026)
+- [x] Test messenger content script  (`src/content/__tests__/messenger.test.ts` — 15 tests: archiveConversation, unarchiveConversation multi-locale, monitorForReplies, stopMonitoringReplies, stopAllMonitoring, initializeArchiveMonitoring — Apr 4, 2026)
 - [ ] Test all form validation
 - [ ] Test error states
 - [ ] Test loading states
@@ -829,7 +833,6 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 
 - [ ] Build production extension (npm run build)
 - [ ] Test built extension thoroughly
-- [ ] Create Chrome Web Store developer account ($5 one-time fee)
 - [ ] Prepare extension listing (Legacy extension already exists in Chrome Web Store, the new build must replace it as an updated version/rebrand):
   - [ ] Extension name and description (detailed)
   - [ ] Short description (132 chars max)
@@ -851,14 +854,15 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
   - [x] Explain data usage
   - [x] Explain data sharing (if any)
   - [x] Explain user rights (access, deletion)
-- [x] Justify each permission:  (all 6 permissions table in privacy-policy.html — Mar 18, 2026)
+- [x] Justify each permission:  (all permissions table in privacy-policy.html — Mar 18, 2026; permissions updated Apr 4, 2026)
   - [x] `storage` - Save user preferences and auth tokens
   - [x] `scripting` - Inject content scripts on Facebook
   - [x] `activeTab` - Access current tab for automation
   - [x] `tabs` - Query Facebook tabs for automation
-  - [x] `alarms` - Schedule periodic birthday checks
+  - [x] `notifications` (required) - Show OS-level alerts for automation completion, failures, and pause events
+  - [x] `alarms` **(optional_permission — requested at runtime via ensureAlarmsPermission())** - Schedule periodic birthday checks
   - [x] `host_permissions` (facebook.com) - Automate birthday messages
-- [x] Add "What's New" section for updates  (WhatsNew.tsx modal, version-gated via chrome.storage.local — Mar 18, 2026)
+- [ ] Add "What's New" section for updates  (WhatsNew.tsx referenced in docs but component does not exist in codebase — pending implementation)
 
 ---
 
@@ -1035,7 +1039,7 @@ This checklist tracks all tasks required to make bm-ts a production-ready MVP. T
 2. ~~No backend CI/CD pipeline (only frontend CI exists)~~  PARTIALLY RESOLVED — deploy.yaml exists for Docker image build + Coolify deployment; backend testing CI still missing (Apr 2, 2026)
 3. No production monitoring or error tracking service
 4. Image upload/storage not implemented (URL-based currently)
-5. No content script or background service worker tests
+5. No background service worker tests; content script tests added: `dom-helpers.test.ts` (16 tests) + `messenger.test.ts` (15 tests) — Apr 4, 2026
 6. ~~Frontend CSV export is client-side only (browser Blob); backend `GET /api/messages/history/export` endpoint exists but is not called by the frontend~~  RESOLVED — "Export All" button now calls backend endpoint via `exportHistoryCsv()` in client.ts (Mar 26, 2026)
 7. `/send-birthday-message` endpoint is a non-functional stub (content scripts handle actual sending)
 8. Subscription proration preview shows generic text only — no actual calculated amount from Stripe API
