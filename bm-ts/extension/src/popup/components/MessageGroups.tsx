@@ -207,7 +207,7 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
         ) : (
           <div>
             {groups.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 bg-white bg-opacity-80 rounded-lg mb-5">
+              <div className="text-center py-8 text-gray-500 bg-white/80 rounded-lg mb-5">
                 No message groups yet. Create your first group above.
               </div>
             ) : (

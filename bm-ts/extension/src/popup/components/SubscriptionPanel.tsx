@@ -402,7 +402,7 @@ export default function SubscriptionPanel() {
 
       {/* ─── Cancel Confirmation Modal ───────────────────────────────────── */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div
             ref={cancelDialogRef}
             role="dialog"
@@ -476,7 +476,7 @@ export default function SubscriptionPanel() {
 
       {/* ─── Change Plan Confirmation Modal ──────────────────────────────── */}
       {showChangePlanModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div
             role="dialog"
             aria-modal="true"

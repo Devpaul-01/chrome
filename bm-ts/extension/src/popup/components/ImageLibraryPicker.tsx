@@ -60,7 +60,7 @@ export default function ImageLibraryPicker({
             >
               <img src={img.url} alt={img.filename} className="w-full h-20 object-cover" />
               {selectedUrl === img.url && (
-                <div className="absolute inset-0 flex items-center justify-center bg-orange-500 bg-opacity-25">
+                <div className="absolute inset-0 flex items-center justify-center bg-orange-500/25">
                   <span className="text-white text-lg font-bold drop-shadow">✓</span>
                 </div>
               )}

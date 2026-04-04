@@ -228,7 +228,7 @@ export default function Dashboard({ onClose: _onClose }: DashboardProps) {
                 </span>
               </div>
               {stats.automation_enabled && (
-                <div className="bg-white bg-opacity-70 rounded-lg px-4 py-3">
+                <div className="bg-white/70 rounded-lg px-4 py-3">
                   <div className="text-xs text-gray-600 font-medium mb-1">Next Scheduled Check</div>
                   <div className="text-sm font-bold text-green-800">
                     {formatNextCheck(stats.next_scheduled_check)}

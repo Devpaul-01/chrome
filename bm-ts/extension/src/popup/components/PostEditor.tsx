@@ -437,7 +437,7 @@ export default function PostEditor({
           {/* Spacer */}
           <div className="h-6" />
 
-          <div className="bg-white bg-opacity-80 rounded-lg p-5 shadow-sm border border-gray-200">
+          <div className="bg-white/80 rounded-lg p-5 shadow-sm border border-gray-200">
             <div className="text-xs font-semibold text-textPrimary mb-3">📝 Available Keywords</div>
             <ul className="text-xs text-gray-600 space-y-1 ml-4" style={{ listStyleType: 'disc' }}>
               <li>
