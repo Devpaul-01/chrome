@@ -349,10 +349,7 @@ function AppShell() {
               setViewMode('message-templates');
             }}
           />
-          <button
-            className="btn mt-4"
-            onClick={() => setViewMode('message-templates')}
-          >
+          <button className="btn mt-4" onClick={() => setViewMode('message-templates')}>
             ← Back to Message Templates
           </button>
         </div>
@@ -394,10 +391,7 @@ function AppShell() {
             <div className="mb-6">
               <MessageGroups onClose={() => setViewMode('main')} showClose={false} />
             </div>
-            <button
-              className="btn w-full"
-              onClick={() => setViewMode('template-gallery')}
-            >
+            <button className="btn w-full" onClick={() => setViewMode('template-gallery')}>
               View/Edit Message Templates
             </button>
           </div>
@@ -606,22 +600,13 @@ function AppShell() {
             <div className="card mb-6">
               <h3 className="text-md font-semibold mb-4">Account Settings</h3>
               <div className="space-y-3">
-                <button
-                  onClick={() => setViewMode('account-management')}
-                  className="btn btn-block"
-                >
+                <button onClick={() => setViewMode('account-management')} className="btn btn-block">
                   Profile
                 </button>
-                <button
-                  onClick={() => setViewMode('smtp-settings')}
-                  className="btn btn-block"
-                >
+                <button onClick={() => setViewMode('smtp-settings')} className="btn btn-block">
                   SMTP Settings
                 </button>
-                <button
-                  onClick={() => setViewMode('subscription')}
-                  className="btn btn-block"
-                >
+                <button onClick={() => setViewMode('subscription')} className="btn btn-block">
                   Subscription
                 </button>
                 <button
