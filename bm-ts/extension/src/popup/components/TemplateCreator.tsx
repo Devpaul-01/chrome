@@ -1,4 +1,4 @@
-import { useState, FormEvent, useRef } from 'react';
+import { useState, useEffect, FormEvent, useRef } from 'react';
 import Spinner from './Spinner';
 import FacebookPostPreview from './FacebookPostPreview';
 import { useImageLibrary } from '../hooks/useImageLibrary';
@@ -23,6 +23,8 @@ type Props = {
   initialData?: Partial<TemplateFormData>;
 };
 
+const TEMPLATE_DRAFT_KEY = 'bm_template_draft';
+
 export default function TemplateCreator({ onSubmit, onCancel, initialData }: Props) {
   const [formData, setFormData] = useState<TemplateFormData>({
     greeting: initialData?.greeting || '',
@@ -34,6 +36,23 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     daysInAdvance: initialData?.daysInAdvance || 0,
     gender: initialData?.gender || 'ALL',
   });
+
+  // Restore draft from storage when creating (not editing)
+  useEffect(() => {
+    if (initialData) return;
+    chrome.storage.local.get(TEMPLATE_DRAFT_KEY).then((stored) => {
+      if (stored[TEMPLATE_DRAFT_KEY]) {
+        setFormData((prev) => ({ ...prev, ...stored[TEMPLATE_DRAFT_KEY], imageFile: null }));
+      }
+    });
+  }, []);
+
+  // Persist draft to storage on change (only when creating)
+  useEffect(() => {
+    if (initialData) return;
+    const { imageFile, ...persistable } = formData;
+    chrome.storage.local.set({ [TEMPLATE_DRAFT_KEY]: persistable });
+  }, [formData, initialData]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +179,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
+      chrome.storage.local.remove(TEMPLATE_DRAFT_KEY);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save template');
     } finally {
@@ -178,10 +198,10 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
 
       const suggestions = {
         greeting: [
-          'Hey [name], hope your day is as awesome as you are!',
-          'Happy Birthday [name]! 🎉',
-          'Wishing you the happiest of birthdays, [name]!',
-          'Hey [name]! Another year older and even more amazing!',
+          'Hey {First_Name}, hope your day is as awesome as you are!',
+          'Happy Birthday {First_Name}! 🎉',
+          'Wishing you the happiest of birthdays, {First_Name}!',
+          'Hey {First_Name}! Another year older and even more amazing!',
         ],
         sentiment: [
           'Your birthday reminds me of all the wonderful qualities that make you so special. You bring joy to everyone around you.',

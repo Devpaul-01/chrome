@@ -22,6 +22,8 @@ export interface MessageGroupsHandle {
   focus: () => void;
 }
 
+const GROUP_DRAFT_KEY = 'bm_group_draft';
+
 const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended>(
   ({ onClose, showClose = true }, ref) => {
     const headingRef = useRef<HTMLHeadingElement>(null);
@@ -44,7 +46,19 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
     useEffect(() => {
       loadGroups();
       headingRef.current?.focus();
+      // Restore draft when creating (not editing)
+      chrome.storage.local.get(GROUP_DRAFT_KEY).then((stored) => {
+        if (stored[GROUP_DRAFT_KEY]) {
+          setFormData((prev) => ({ ...prev, ...stored[GROUP_DRAFT_KEY] }));
+        }
+      });
     }, []);
+
+    // Persist draft on change (only when creating)
+    useEffect(() => {
+      if (editingId) return;
+      chrome.storage.local.set({ [GROUP_DRAFT_KEY]: formData });
+    }, [formData, editingId]);
 
     async function loadGroups() {
       setIsLoading(true);
@@ -81,6 +95,7 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
         // Reset form
         setFormData({ name: '', gender: 'NEUTRAL', segment_ids: [] });
         setEditingId(null);
+        chrome.storage.local.remove(GROUP_DRAFT_KEY);
         await loadGroups();
       } catch (err) {
         setError((err as Error).message);

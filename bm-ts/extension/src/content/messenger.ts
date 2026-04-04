@@ -13,7 +13,7 @@ const DEFAULT_TIMEOUT = 10000;
 const RETRY_DELAY = 1000;
 const MAX_RETRIES = 3;
 
-import { waitForElement, delay } from './dom-helpers';
+import { waitForElement, delay, createStableMutationObserver, retryOperation } from './dom-helpers';
 
 /**
  * Storage interface for tracking archived conversations
@@ -137,16 +137,33 @@ async function openConversationContextMenu(conversation: HTMLElement): Promise<H
 }
 
 /**
- * Click the archive option in the context menu
+ * Click the archive option in the context menu.
+ * Supports multiple languages by checking for locale-specific text.
  */
 async function clickArchiveOption(menu: HTMLElement): Promise<boolean> {
-  // Look for archive menu item
   const menuItems = Array.from(menu.querySelectorAll('[role="menuitem"]'));
+
+  // Archive translations for supported locales
+  const archiveTerms = ['archive', 'archivieren', 'archivar', 'archiver', 'arquivar'];
+  const unarchiveTerms = ['unarchive', 'dearchivieren', 'desarchivar', 'désarchiver', 'desarquivar', 'move to inbox'];
 
   const archiveItem = menuItems.find((item) => {
     const text = item.textContent?.toLowerCase() || '';
-    return text.includes('archive') && !text.includes('unarchive');
+    const isUnarchive = unarchiveTerms.some((term) => text.includes(term));
+    if (isUnarchive) return false;
+    return archiveTerms.some((term) => text.includes(term));
   });
+
+  // Fallback: try finding by icon/data-testid if text matching fails
+  if (!archiveItem) {
+    const byTestId = menu.querySelector<HTMLElement>('[data-testid*="archive"]');
+    if (byTestId) {
+      console.log('[BM Archive] Clicking archive option (found via data-testid)');
+      byTestId.click();
+      await delay(1000);
+      return true;
+    }
+  }
 
   if (archiveItem) {
     console.log('[BM Archive] Clicking archive option');
@@ -263,16 +280,19 @@ export async function archiveConversation(
 }
 
 /**
- * Unarchive a conversation (moves it back to inbox)
+ * Unarchive a conversation (moves it back to inbox).
+ * Includes retry logic and multi-language support.
  */
 export async function unarchiveConversation(friendName: string): Promise<boolean> {
   console.log(`[BM Archive] Starting unarchive process for ${friendName}`);
 
-  try {
+  // Unarchive translations for supported locales
+  const unarchiveTerms = ['unarchive', 'move to inbox', 'dearchivieren', 'desarchivar', 'désarchiver', 'desarquivar', 'zum posteingang'];
+
+  return retryOperation(async () => {
     await ensureOnMessengerPage();
 
     // Navigate to archived messages
-    // Facebook's URL structure for archived: /messages/archived
     window.location.href = 'https://www.facebook.com/messages/archived';
     await delay(2000);
 
@@ -286,16 +306,20 @@ export async function unarchiveConversation(friendName: string): Promise<boolean
     // Open context menu
     const menu = await openConversationContextMenu(conversation);
     if (!menu) {
-      console.error('[BM Archive] Could not open context menu');
-      return false;
+      throw new Error('Could not open context menu');
     }
 
-    // Look for unarchive option
+    // Look for unarchive option with multi-language support
     const menuItems = Array.from(menu.querySelectorAll('[role="menuitem"]'));
-    const unarchiveItem = menuItems.find((item) => {
+    let unarchiveItem = menuItems.find((item) => {
       const text = item.textContent?.toLowerCase() || '';
-      return text.includes('unarchive') || text.includes('move to inbox');
+      return unarchiveTerms.some((term) => text.includes(term));
     });
+
+    // Fallback: try data-testid
+    if (!unarchiveItem) {
+      unarchiveItem = menu.querySelector('[data-testid*="unarchive"]') ?? undefined;
+    }
 
     if (unarchiveItem) {
       console.log('[BM Archive] Clicking unarchive option');
@@ -309,12 +333,11 @@ export async function unarchiveConversation(friendName: string): Promise<boolean
       return true;
     }
 
-    console.error('[BM Archive] Unarchive option not found in menu');
+    throw new Error('Unarchive option not found in menu');
+  }, MAX_RETRIES, RETRY_DELAY).catch((error) => {
+    console.error(`[BM Archive] Error unarchiving conversation after ${MAX_RETRIES} retries:`, error);
     return false;
-  } catch (error) {
-    console.error('[BM Archive] Error unarchiving conversation:', error);
-    return false;
-  }
+  });
 }
 
 /**
@@ -355,12 +378,28 @@ function isRecipientMessage(element: HTMLElement): boolean {
   return false;
 }
 
+/** Stored stable observer references for proper cleanup */
+interface ObserverRefs {
+  replyObserver: ReturnType<typeof createStableMutationObserver> | null;
+  globalObserver: ReturnType<typeof createStableMutationObserver> | null;
+}
+
+// Use a module-level variable instead of attaching to window
+const _observers: ObserverRefs = {
+  replyObserver: null,
+  globalObserver: null,
+};
+
 /**
- * Monitor for replies in open conversation
- * Sets up a MutationObserver to detect new incoming messages
+ * Monitor for replies in open conversation.
+ * Uses a stable MutationObserver with debouncing, error handling,
+ * and automatic reconnection if the target is detached.
  */
 export async function monitorForReplies(friendName: string): Promise<void> {
   console.log(`[BM Archive] Starting reply monitoring for ${friendName}`);
+
+  // Clean up any existing reply observer
+  stopMonitoringReplies();
 
   // Get the messages container
   const messagesContainer = await waitForElement('[role="log"], [role="main"]');
@@ -369,64 +408,76 @@ export async function monitorForReplies(friendName: string): Promise<void> {
     return;
   }
 
-  // Create observer
-  const observer = new MutationObserver(async (mutations) => {
-    for (const mutation of mutations) {
-      // Check if new nodes were added
-      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-        const addedNodes = Array.from(mutation.addedNodes).filter(
-          (node) => node.nodeType === Node.ELEMENT_NODE,
-        ) as HTMLElement[];
+  const observer = createStableMutationObserver(
+    async (mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          const addedNodes = Array.from(mutation.addedNodes).filter(
+            (node) => node.nodeType === Node.ELEMENT_NODE,
+          ) as HTMLElement[];
 
-        // Check if any added node is a recipient message
-        for (const node of addedNodes) {
-          if (isRecipientMessage(node)) {
-            console.log(`[BM Archive] Detected reply from ${friendName}!`);
+          for (const node of addedNodes) {
+            if (isRecipientMessage(node)) {
+              console.log(`[BM Archive] Detected reply from ${friendName}!`);
 
-            // Unarchive the conversation
-            const unarchived = await unarchiveConversation(friendName);
+              const unarchived = await unarchiveConversation(friendName);
 
-            if (unarchived) {
-              console.log(`[BM Archive] Auto-unarchived conversation for ${friendName}`);
+              if (unarchived) {
+                console.log(`[BM Archive] Auto-unarchived conversation for ${friendName}`);
+              }
+
+              // Stop observing after detecting a reply
+              observer.disconnect();
+              _observers.replyObserver = null;
+              return;
             }
-
-            // Stop observing after detecting a reply
-            observer.disconnect();
-            return;
           }
         }
       }
-    }
-  });
+    },
+    {
+      debounceMs: 300,
+      reconnectOnDetach: true,
+      onError: (err) => console.error(`[BM Archive] Reply observer error for ${friendName}:`, err),
+    },
+  );
 
-  // Start observing
-  observer.observe(messagesContainer, {
+  observer.observe(messagesContainer as HTMLElement, {
     childList: true,
     subtree: true,
   });
 
+  _observers.replyObserver = observer;
   console.log(`[BM Archive] Reply monitoring active for ${friendName}`);
-
-  // Store observer reference so we can clean it up later
-  // @ts-expect-error - attach to window for global access
-  window.__bmReplyObserver = observer;
 }
 
 /**
- * Stop monitoring for replies
+ * Stop monitoring for replies. Properly disconnects and cleans up the observer.
  */
 export function stopMonitoringReplies(): void {
-  // @ts-expect-error - accessing custom property attached to window for global access
-  const observer = window.__bmReplyObserver as MutationObserver | undefined;
-  if (observer) {
-    observer.disconnect();
+  if (_observers.replyObserver) {
+    _observers.replyObserver.disconnect();
+    _observers.replyObserver = null;
     console.log('[BM Archive] Stopped reply monitoring');
   }
 }
 
 /**
- * Initialize archive monitoring for all archived conversations
- * This should be called when the extension loads on Messenger pages
+ * Stop all archive monitoring (both reply and global observers).
+ */
+export function stopAllMonitoring(): void {
+  stopMonitoringReplies();
+  if (_observers.globalObserver) {
+    _observers.globalObserver.disconnect();
+    _observers.globalObserver = null;
+    console.log('[BM Archive] Stopped global archive monitoring');
+  }
+}
+
+/**
+ * Initialize archive monitoring for all archived conversations.
+ * Uses a stable MutationObserver with debouncing, error handling,
+ * and reconnection on SPA navigation.
  */
 export async function initializeArchiveMonitoring(): Promise<void> {
   if (!isOnMessengerPage()) {
@@ -434,6 +485,12 @@ export async function initializeArchiveMonitoring(): Promise<void> {
   }
 
   console.log('[BM Archive] Initializing archive monitoring...');
+
+  // Clean up any existing global observer
+  if (_observers.globalObserver) {
+    _observers.globalObserver.disconnect();
+    _observers.globalObserver = null;
+  }
 
   const archived = await getArchivedConversations();
 
@@ -444,46 +501,52 @@ export async function initializeArchiveMonitoring(): Promise<void> {
 
   console.log(`[BM Archive] Monitoring ${archived.length} archived conversation(s)`);
 
-  // Set up monitoring for each archived conversation
-  // In practice, we'll monitor all incoming messages and check if they're from archived contacts
   const messagesContainer = await waitForElement('[role="log"], [role="main"]');
   if (!messagesContainer) {
     console.warn('[BM Archive] Messages container not found for monitoring');
     return;
   }
 
-  const observer = new MutationObserver(async (mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-        const addedNodes = Array.from(mutation.addedNodes).filter(
-          (node) => node.nodeType === Node.ELEMENT_NODE,
-        ) as HTMLElement[];
+  const observer = createStableMutationObserver(
+    async (mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          const addedNodes = Array.from(mutation.addedNodes).filter(
+            (node) => node.nodeType === Node.ELEMENT_NODE,
+          ) as HTMLElement[];
 
-        for (const node of addedNodes) {
-          if (isRecipientMessage(node)) {
-            // Check if this message is from an archived contact
-            // We need to identify the sender from the current conversation
-            const pageTitle = document.title;
+          for (const node of addedNodes) {
+            if (isRecipientMessage(node)) {
+              const pageTitle = document.title;
+              // Re-read archived list in case it changed
+              const currentArchived = await getArchivedConversations();
 
-            for (const archivedConv of archived) {
-              if (pageTitle.includes(archivedConv.friendName)) {
-                console.log(
-                  `[BM Archive] Detected reply from archived contact: ${archivedConv.friendName}`,
-                );
-                await unarchiveConversation(archivedConv.friendName);
-                break;
+              for (const archivedConv of currentArchived) {
+                if (pageTitle.includes(archivedConv.friendName)) {
+                  console.log(
+                    `[BM Archive] Detected reply from archived contact: ${archivedConv.friendName}`,
+                  );
+                  await unarchiveConversation(archivedConv.friendName);
+                  break;
+                }
               }
             }
           }
         }
       }
-    }
-  });
+    },
+    {
+      debounceMs: 500,
+      reconnectOnDetach: true,
+      onError: (err) => console.error('[BM Archive] Global observer error:', err),
+    },
+  );
 
-  observer.observe(messagesContainer, {
+  observer.observe(messagesContainer as HTMLElement, {
     childList: true,
     subtree: true,
   });
 
+  _observers.globalObserver = observer;
   console.log('[BM Archive] Global archive monitoring initialized');
 }

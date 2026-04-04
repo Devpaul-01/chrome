@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Spinner from './Spinner';
 import { getErrorMessage, logError } from '../../utils/errors';
 import HelpTooltip from './HelpTooltip';
+import { sendBackgroundMessage } from '../api';
 
 const ACTION_DELAY_KEY = 'bm_action_delay_minutes';
 
@@ -76,10 +77,9 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
     setIsLoading(true);
     setError(null);
     try {
-      const response = await chrome.runtime.sendMessage({
+      const data = await sendBackgroundMessage<AutomationConfig>({
         type: 'automation.getConfig',
       });
-      const data = response?.data ?? response;
       if (data) {
         setConfig(data);
       }
@@ -89,16 +89,12 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
       }
 
       // Load fail-safe state
-      const [rlResult, logResult, esResult, cmResult] = await Promise.all([
-        chrome.runtime.sendMessage({ type: 'failsafe.getRateLimits' }),
-        chrome.runtime.sendMessage({ type: 'failsafe.getActivityLog' }),
-        chrome.runtime.sendMessage({ type: 'failsafe.getEmergencyStop' }),
-        chrome.runtime.sendMessage({ type: 'failsafe.getConfirmationMode' }),
+      const [rl, log, es, cm] = await Promise.all([
+        sendBackgroundMessage<RateLimitStatus>({ type: 'failsafe.getRateLimits' }),
+        sendBackgroundMessage<ActivityLogEntry[]>({ type: 'failsafe.getActivityLog' }),
+        sendBackgroundMessage<EmergencyStopState>({ type: 'failsafe.getEmergencyStop' }),
+        sendBackgroundMessage<{ mode: ConfirmationMode }>({ type: 'failsafe.getConfirmationMode' }),
       ]);
-      const rl = rlResult?.data ?? rlResult;
-      const log = logResult?.data ?? logResult;
-      const es = esResult?.data ?? esResult;
-      const cm = cmResult?.data ?? cmResult;
       if (rl?.hourly) setRateLimits(rl);
       if (Array.isArray(log)) setActivityLog(log);
       if (es) setEmergencyStop(es);
@@ -117,7 +113,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
     setMessage(null);
     setError(null);
     try {
-      await chrome.runtime.sendMessage({
+      await sendBackgroundMessage({
         type: 'automation.setEnabled',
         payload: { enabled },
       });
@@ -139,7 +135,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
     setMessage(null);
     setError(null);
     try {
-      await chrome.runtime.sendMessage({
+      await sendBackgroundMessage({
         type: 'automation.setInterval',
         payload: { minutes },
       });
@@ -157,7 +153,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
     setMessage(null);
     setError(null);
     try {
-      await chrome.runtime.sendMessage({
+      await sendBackgroundMessage({
         type: 'automation.setMaxMessages',
         payload: { max },
       });
@@ -174,7 +170,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
     setMessage(null);
     setError(null);
     try {
-      await chrome.runtime.sendMessage({ type: 'automation.clearSentToday' });
+      await sendBackgroundMessage({ type: 'automation.clearSentToday' });
       setMessage('Sent-today list cleared — all contacts can be messaged again today');
     } catch (err) {
       setError((err as Error).message);
@@ -185,11 +181,14 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
     setMessage(null);
     setError(null);
     try {
-      const response = await chrome.runtime.sendMessage({
+      const result = await sendBackgroundMessage<{ success: boolean }>({
         type: 'automation.scanFacebook',
       });
-      const result = response?.data ?? response;
-      setMessage(result?.success ? 'Scan triggered successfully' : 'No Facebook tab found');
+      if (result?.success) {
+        setMessage('Scan triggered successfully');
+      } else {
+        setError('No Facebook tab found. Please open facebook.com/birthdays in a tab and try again.');
+      }
       await loadConfig(); // Refresh to get updated lastCheck
     } catch (err) {
       setError((err as Error).message);
@@ -200,7 +199,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
     setMessage(null);
     setError(null);
     try {
-      await chrome.runtime.sendMessage({
+      await sendBackgroundMessage({
         type: 'failsafe.triggerEmergencyStop',
         payload: { cooldownHours: 24 },
       });
@@ -220,7 +219,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
     setMessage(null);
     setError(null);
     try {
-      await chrome.runtime.sendMessage({ type: 'failsafe.clearEmergencyStop' });
+      await sendBackgroundMessage({ type: 'failsafe.clearEmergencyStop' });
       setEmergencyStop({ active: false, triggeredAt: null, cooldownUntil: null });
       setMessage('Emergency stop cleared');
     } catch (err) {
@@ -230,7 +229,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
 
   async function handleConfirmModeChange(mode: ConfirmationMode) {
     try {
-      await chrome.runtime.sendMessage({
+      await sendBackgroundMessage({
         type: 'failsafe.setConfirmationMode',
         payload: { mode },
       });
@@ -243,7 +242,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
 
   async function handleClearActivityLog() {
     try {
-      await chrome.runtime.sendMessage({ type: 'failsafe.clearActivityLog' });
+      await sendBackgroundMessage({ type: 'failsafe.clearActivityLog' });
       setActivityLog([]);
       setMessage('Activity log cleared');
     } catch (err) {

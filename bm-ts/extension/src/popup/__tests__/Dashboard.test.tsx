@@ -1,9 +1,8 @@
 /**
  * Component tests for Dashboard.tsx
  *
- * Strategy: mock the hooks (useMessageQueue, useMessageHistory) and the
- * websocket client so the component is isolated. chrome.runtime.sendMessage
- * is provided by the global test-setup stub.
+ * Strategy: mock the hooks (useMessageQueue, useMessageHistory), the
+ * websocket client, and sendBackgroundMessage so the component is isolated.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -50,6 +49,14 @@ vi.mock('../hooks/useMessages', () => ({
   useMessageQueue: () => mockQueueHook,
 }));
 
+// Mock sendBackgroundMessage — the bridge uses a callback-based
+// chrome.runtime.sendMessage internally, so mocking at the API layer
+// is far simpler and keeps tests isolated from bridge implementation.
+const mockSendBackgroundMessage = vi.fn();
+vi.mock('../api', () => ({
+  sendBackgroundMessage: (...args: unknown[]) => mockSendBackgroundMessage(...args),
+}));
+
 // Import after mocks are registered
 import Dashboard, { type DashboardStats } from '../components/Dashboard';
 
@@ -70,7 +77,7 @@ const mockStats: DashboardStats = {
 };
 
 function setupSendMessage(response: unknown) {
-  (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValue(response);
+  mockSendBackgroundMessage.mockResolvedValue(response);
 }
 
 // ---------------------------------------------------------------------------
@@ -84,15 +91,13 @@ describe('Dashboard', () => {
 
   it('shows a spinner while loading stats', async () => {
     // Never resolve so the component stays in loading state
-    (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
+    mockSendBackgroundMessage.mockReturnValue(new Promise(() => {}));
     render(<Dashboard onClose={vi.fn()} />);
     expect(screen.getByRole('status')).toBeInTheDocument(); // Spinner
   });
 
   it('shows an error message when the runtime call rejects', async () => {
-    (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('Service unavailable'),
-    );
+    mockSendBackgroundMessage.mockRejectedValue(new Error('Service unavailable'));
     render(<Dashboard onClose={vi.fn()} />);
     await waitFor(() => expect(screen.getByText(/service unavailable/i)).toBeInTheDocument());
   });
@@ -156,7 +161,7 @@ describe('Dashboard', () => {
     await user.click(refreshBtn);
 
     // Initial mount + 1 manual refresh = 2 calls
-    expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(2);
+    expect(mockSendBackgroundMessage).toHaveBeenCalledTimes(2);
   });
 
   it('renders the DashboardCharts stub after stats load', async () => {

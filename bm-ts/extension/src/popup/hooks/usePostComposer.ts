@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { sendBackgroundMessage } from '../api';
 import { getErrorMessage, logError } from '../../utils/errors';
 import { composeImageFromUrl } from '../../utils/image';
@@ -24,10 +24,26 @@ const POST_FORM_DEFAULT: PostForm = {
   fontColor: '#ffffff',
 };
 
+const POST_DRAFT_KEY = 'bm_post_draft';
+
 export function usePostComposer() {
   const { showToast } = useAppContext();
   const [postForm, setPostForm] = useState<PostForm>(POST_FORM_DEFAULT);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Restore draft from storage on mount
+  useEffect(() => {
+    chrome.storage.local.get(POST_DRAFT_KEY).then((stored) => {
+      if (stored[POST_DRAFT_KEY]) {
+        setPostForm({ ...POST_FORM_DEFAULT, ...stored[POST_DRAFT_KEY] });
+      }
+    });
+  }, []);
+
+  // Persist draft to storage on change
+  useEffect(() => {
+    chrome.storage.local.set({ [POST_DRAFT_KEY]: postForm });
+  }, [postForm]);
 
   const handlePostSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
@@ -84,6 +100,7 @@ export function usePostComposer() {
 
         showToast('Post created successfully!', 'success');
         setPostForm(POST_FORM_DEFAULT);
+        chrome.storage.local.remove(POST_DRAFT_KEY);
       } catch (error) {
         const msg = getErrorMessage(error);
         logError(error, 'handlePostSubmit');

@@ -350,14 +350,14 @@ export default function PostEditor({
               {/* Font Size */}
               <div>
                 <label className="text-xs font-medium text-gray-600 mb-2 block">
-                  Font Size: {postForm.fontSize || 60}px
+                  Font Size: {postForm.fontSize || 48}px
                 </label>
                 <input
                   type="range"
-                  min="60"
+                  min="48"
                   max="100"
                   step="4"
-                  value={postForm.fontSize || 60}
+                  value={postForm.fontSize || 48}
                   onChange={(e) => setPostForm({ ...postForm, fontSize: parseInt(e.target.value) })}
                   className="w-full"
                 />

@@ -86,21 +86,80 @@ async function refreshFriendList() {
 
 /**
  * Scrapes birthday friend entries from the current Facebook page.
- * Searches `div[data-pagelet*='Birthday']` elements which Facebook renders
- * for birthday widgets in the news feed and the dedicated /birthdays page.
+ * Uses multiple selector strategies with fallbacks to handle Facebook UI changes.
+ * Searches birthday widgets in the news feed and the dedicated /birthdays page.
  */
 function gatherBirthdayFriends(): BirthdayFriend[] {
-  // Look for Facebook elements that are part of the birthday feed. `data-pagelet` often
-  // mentions “Birthday” when the birthday widget is rendered on the news feed.
-  const containers = Array.from(document.querySelectorAll("div[data-pagelet*='Birthday']"));
   const detected: BirthdayFriend[] = [];
-  containers.forEach((container, index) => {
-    const nameElement = container.querySelector('strong span, span');
-    const name = nameElement?.textContent?.trim() || 'Unknown';
-    const messageBtn = container.querySelector<HTMLElement>(
-      "a[role='button'][aria-label*='Message'], button[aria-label*='Message']",
+  const seenNames = new Set<string>();
+
+  // Multiple selector strategies for birthday containers (ordered by reliability)
+  const containerSelectors = [
+    "div[data-pagelet*='Birthday']",
+    "div[data-pagelet*='birthday']",
+    "[data-pagelet='BirthdayFeed']",
+    "[data-testid*='birthday']",
+    "[data-testid*='Birthday']",
+    // Fallback: the /birthdays page uses role="feed" for the birthday list
+    "div[role='feed'] div[role='article']",
+  ];
+
+  const containers: HTMLElement[] = [];
+  const seen = new Set<HTMLElement>();
+
+  for (const selector of containerSelectors) {
+    document.querySelectorAll<HTMLElement>(selector).forEach((el) => {
+      if (!seen.has(el)) {
+        seen.add(el);
+        containers.push(el);
+      }
+    });
+  }
+
+  // If no containers found, try broader structural fallback:
+  // look for sections that contain profile links + "Message" buttons together
+  if (containers.length === 0) {
+    const potentialContainers = document.querySelectorAll<HTMLElement>(
+      '[role="main"] [role="article"], [role="main"] > div > div > div',
     );
-    const profileLink = container.querySelector<HTMLAnchorElement>("a[href*='facebook.com']");
+    potentialContainers.forEach((el) => {
+      const hasProfileLink = el.querySelector("a[href*='facebook.com/']");
+      const hasMessageAction = el.querySelector(
+        "[role='button'][aria-label*='Message'], [role='button'][aria-label*='message'], a[href*='/messages/']",
+      );
+      if (hasProfileLink && hasMessageAction && !seen.has(el)) {
+        seen.add(el);
+        containers.push(el);
+      }
+    });
+  }
+
+  containers.forEach((container, index) => {
+    // Try multiple name-extraction strategies
+    const nameElement =
+      container.querySelector('strong span') ??
+      container.querySelector('strong') ??
+      container.querySelector('h2 span, h3 span') ??
+      container.querySelector('[role="heading"] span') ??
+      container.querySelector('a[href*="facebook.com/"] span');
+    const name = nameElement?.textContent?.trim() || 'Unknown';
+
+    // Deduplicate by name
+    if (name !== 'Unknown' && seenNames.has(name)) return;
+    if (name !== 'Unknown') seenNames.add(name);
+
+    // Multiple selectors for the message button (language-agnostic first)
+    const messageBtn =
+      container.querySelector<HTMLElement>("a[href*='/messages/t/']") ??
+      container.querySelector<HTMLElement>("a[role='button'][aria-label*='Message']") ??
+      container.querySelector<HTMLElement>("button[aria-label*='Message']") ??
+      container.querySelector<HTMLElement>("a[role='button'][aria-label*='message']") ??
+      container.querySelector<HTMLElement>("[role='button'][data-testid*='message']");
+
+    const profileLink =
+      container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/'][role='link']") ??
+      container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/']");
+
     detected.push({
       id: `${name}-${index}`,
       name,
@@ -111,7 +170,6 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
   });
   return detected;
 }
-
 /** Fetches template segments from the backend and groups them by type into `segments`. */
 async function loadSegments() {
   try {

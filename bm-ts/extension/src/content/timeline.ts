@@ -13,7 +13,7 @@ const SHORT_DELAY = 1000;
 const MEDIUM_DELAY = 2000;
 const LONG_DELAY = 3000;
 
-import { waitForElement, delay } from './dom-helpers';
+import { waitForElement, delay, trySelectors, retryOperation } from './dom-helpers';
 
 /**
  * Interface for post content
@@ -96,33 +96,40 @@ export async function openPostComposer(): Promise<HTMLElement | null> {
   console.log('[BM Timeline] Opening post composer...');
 
   try {
-    // Look for the "Write something..." or "Create post" button
+    // Selectors ordered: structural/language-agnostic first, then English-specific
     const composerSelectors = [
+      // Structural selectors (language-agnostic)
+      '[contenteditable="true"][role="textbox"]',
+      '[data-testid*="composer"], [data-testid*="post-composer"]',
+      // aria-label selectors (may vary by locale)
       '[role="button"][aria-label*="Write something"]',
       '[role="button"][aria-label*="Create post"]',
       '[aria-label*="Write post"]',
-
-      // Fallback: look for contenteditable areas
-      '[contenteditable="true"][role="textbox"]',
+      // German
+      '[role="button"][aria-label*="Was denkst du"]',
+      '[role="button"][aria-label*="Beitrag erstellen"]',
+      // Spanish
+      '[role="button"][aria-label*="crees"]',
+      '[role="button"][aria-label*="Crear publicaci"]',
+      // French
+      '[role="button"][aria-label*="quoi pensez"]',
+      '[role="button"][aria-label*="Cr"]',
     ];
 
-    let composerTrigger: HTMLElement | null = null;
-
-    for (const selector of composerSelectors) {
-      composerTrigger = document.querySelector<HTMLElement>(selector);
-      if (composerTrigger) {
-        console.log(`[BM Timeline] Found composer trigger: ${selector}`);
-        break;
-      }
-    }
+    let composerTrigger: HTMLElement | null = trySelectors(composerSelectors);
 
     if (!composerTrigger) {
-      // Try finding by text content
-      const allButtons = Array.from(document.querySelectorAll('[role="button"]'));
-      composerTrigger = allButtons.find((btn) => {
-        const text = btn.textContent?.toLowerCase() || '';
-        return text.includes('write') || text.includes('post') || text.includes('something');
-      }) as HTMLElement;
+      // Structural fallback: find buttons near the profile timeline that look like composer triggers
+      const mainContent = document.querySelector('[role="main"]');
+      if (mainContent) {
+        const buttons = Array.from(mainContent.querySelectorAll('[role="button"]'));
+        composerTrigger = (buttons.find((btn) => {
+          // Look for buttons that contain a user avatar image + placeholder text
+          const hasAvatar = btn.querySelector('image, img[src*="profile"], svg');
+          const hasPlaceholder = btn.querySelector('span')?.textContent?.trim();
+          return hasAvatar && hasPlaceholder && hasPlaceholder.length > 3;
+        }) as HTMLElement) ?? null;
+      }
     }
 
     if (!composerTrigger) {
@@ -381,12 +388,24 @@ export async function submitPost(): Promise<boolean> {
   console.log('[BM Timeline] Submitting post...');
 
   try {
-    // Look for the Post/Submit button
+    // Selectors: structural first, then locale-specific aria-labels
     const postButtonSelectors = [
+      // Data-testid based (language-agnostic)
+      '[data-testid*="post_submit"], [data-testid*="share_button"]',
+      // aria-label selectors (English)
       '[role="button"][aria-label="Post"]',
       '[role="button"][aria-label="Share"]',
       '[aria-label*="Post"][role="button"]',
-      // Legacy pattern: Facebook sometimes renders an Enter/Post div
+      // German
+      '[role="button"][aria-label*="Posten"]',
+      '[role="button"][aria-label="Teilen"]',
+      // Spanish
+      '[role="button"][aria-label="Publicar"]',
+      '[role="button"][aria-label="Compartir"]',
+      // French
+      '[role="button"][aria-label="Publier"]',
+      '[role="button"][aria-label="Partager"]',
+      // Legacy pattern
       'div[aria-label*="enter" i]',
       'div[aria-label*="post" i][role="button"]',
     ];
@@ -405,23 +424,31 @@ export async function submitPost(): Promise<boolean> {
           console.log(`[BM Timeline] Found post button: ${selector}`);
           break;
         }
+        postButton = null;
       }
     }
 
     if (!postButton) {
-      // Try finding by text content
-      const allButtons = Array.from(document.querySelectorAll('[role="button"]'));
-      postButton = allButtons.find((btn) => {
-        const text = btn.textContent?.trim().toLowerCase() || '';
-        const isDisabled =
-          btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('disabled');
-        return (text === 'post' || text === 'share') && !isDisabled;
-      }) as HTMLElement;
+      // Structural fallback: find the primary action button in the dialog
+      // Facebook typically places the submit button as the last enabled button in the dialog footer
+      const dialog = document.querySelector('[role="dialog"]');
+      if (dialog) {
+        const buttons = Array.from(dialog.querySelectorAll('[role="button"]'));
+        postButton = (buttons
+          .reverse()
+          .find((btn) => {
+            const isDisabled =
+              btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('disabled');
+            // Skip close/cancel buttons
+            const label = btn.getAttribute('aria-label')?.toLowerCase() ?? '';
+            const isClose = label.includes('close') || label.includes('cancel');
+            return !isDisabled && !isClose;
+          }) as HTMLElement) ?? null;
+      }
     }
 
     if (!postButton) {
       // Final fallback: dispatch Enter keydown on the active post textbox.
-      // This mirrors the legacy approach for dialogs that don't expose a Post button.
       const textbox =
         document.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]') ??
         (document.activeElement as HTMLElement | null);
@@ -472,57 +499,63 @@ export async function postToTimeline(post: TimelinePost): Promise<boolean> {
   console.log(`[BM Timeline] Starting timeline post for ${post.friendName}`);
 
   try {
-    // 1. Navigate to profile if URL provided
-    if (post.profileUrl) {
-      const navigated = await navigateToProfile(post.profileUrl);
-      if (!navigated) {
-        throw new Error('Failed to navigate to profile');
-      }
-    }
-
-    // 2. Open post composer
-    const composer = await openPostComposer();
-    if (!composer) {
-      throw new Error('Failed to open post composer');
-    }
-
-    await delay(SHORT_DELAY);
-
-    // 3. Insert text content
-    const contentInserted = await insertPostContent(post.content, composer);
-    if (!contentInserted) {
-      throw new Error('Failed to insert post content');
-    }
-
-    await delay(SHORT_DELAY);
-
-    // 4. Attach image if present
-    if (post.imageUrl) {
-      // Extract merge tag data from post
-      const mergeTags: NiftyImagesMergeTags = {
-        name: post.friendName,
-        firstName: post.friendName.split(' ')[0],
-        date: new Date().toLocaleDateString(),
-      };
-
-      const imageAttached = await attachImageToPost(post.imageUrl, mergeTags);
-      if (!imageAttached) {
-        console.warn('[BM Timeline] Image attachment failed, continuing without image');
+    return await retryOperation(async () => {
+      // 1. Navigate to profile if URL provided
+      if (post.profileUrl) {
+        const navigated = await navigateToProfile(post.profileUrl);
+        if (!navigated) {
+          throw new Error('Failed to navigate to profile');
+        }
       }
 
-      await delay(MEDIUM_DELAY);
-    }
+      // 2. Open post composer (retry up to 2 attempts within this step)
+      let composer: HTMLElement | null = null;
+      for (let i = 0; i < 2; i++) {
+        composer = await openPostComposer();
+        if (composer) break;
+        await delay(SHORT_DELAY);
+      }
+      if (!composer) {
+        throw new Error('Failed to open post composer');
+      }
 
-    // 5. Submit the post
-    const submitted = await submitPost();
-    if (!submitted) {
-      throw new Error('Failed to submit post');
-    }
+      await delay(SHORT_DELAY);
 
-    console.log(`[BM Timeline] Successfully posted to ${post.friendName}'s timeline`);
-    return true;
+      // 3. Insert text content
+      const contentInserted = await insertPostContent(post.content, composer);
+      if (!contentInserted) {
+        throw new Error('Failed to insert post content');
+      }
+
+      await delay(SHORT_DELAY);
+
+      // 4. Attach image if present
+      if (post.imageUrl) {
+        const mergeTags: NiftyImagesMergeTags = {
+          name: post.friendName,
+          firstName: post.friendName.split(' ')[0],
+          date: new Date().toLocaleDateString(),
+        };
+
+        const imageAttached = await attachImageToPost(post.imageUrl, mergeTags);
+        if (!imageAttached) {
+          console.warn('[BM Timeline] Image attachment failed, continuing without image');
+        }
+
+        await delay(MEDIUM_DELAY);
+      }
+
+      // 5. Submit the post
+      const submitted = await submitPost();
+      if (!submitted) {
+        throw new Error('Failed to submit post');
+      }
+
+      console.log(`[BM Timeline] Successfully posted to ${post.friendName}'s timeline`);
+      return true;
+    }, 2, 2000); // retry up to 2 times with 2s base delay
   } catch (error) {
-    console.error('[BM Timeline] Error posting to timeline:', error);
+    console.error('[BM Timeline] Error posting to timeline after retries:', error);
     return false;
   }
 }
