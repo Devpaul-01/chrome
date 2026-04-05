@@ -12,7 +12,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
-  waitForElement,
   delay,
   trySelectors,
   trySelectorsAll,
@@ -57,19 +56,16 @@ describe('trySelectors', () => {
 
   it('uses fallback predicate when selectors fail', () => {
     document.body.innerHTML = '<span class="btn">Post</span><span class="btn">Cancel</span>';
-    const result = trySelectors(
-      ['#nonexistent'],
-      document,
-      {
-        broadSelector: '.btn',
-        predicate: (el) => el.textContent === 'Post',
-      },
-    );
+    const result = trySelectors(['#nonexistent'], document, {
+      broadSelector: '.btn',
+      predicate: (el) => el.textContent === 'Post',
+    });
     expect(result?.textContent).toBe('Post');
   });
 
   it('respects custom root element', () => {
-    document.body.innerHTML = '<div id="root"><span class="x">inner</span></div><span class="x">outer</span>';
+    document.body.innerHTML =
+      '<div id="root"><span class="x">inner</span></div><span class="x">outer</span>';
     const root = document.getElementById('root')!;
     const result = trySelectors(['.x'], root);
     expect(result?.textContent).toBe('inner');
@@ -110,10 +106,7 @@ describe('retryOperation', () => {
   });
 
   it('retries on failure and succeeds', async () => {
-    const fn = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('fail1'))
-      .mockResolvedValue('ok');
+    const fn = vi.fn().mockRejectedValueOnce(new Error('fail1')).mockResolvedValue('ok');
     const result = await retryOperation(fn, 3, 10);
     expect(result).toBe('ok');
     expect(fn).toHaveBeenCalledTimes(2);
@@ -195,7 +188,9 @@ describe('createStableMutationObserver', () => {
     const onError = vi.fn();
     const error = new Error('callback broke');
     const observer = createStableMutationObserver(
-      () => { throw error; },
+      () => {
+        throw error;
+      },
       { debounceMs: 0, onError },
     );
     const target = document.getElementById('target')!;

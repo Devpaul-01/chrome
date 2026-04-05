@@ -86,7 +86,9 @@ export async function retryOperation<T>(
         const jitter = Math.random() * 0.3 + 0.85; // 0.85–1.15
         const backoffDelay = baseDelay * Math.pow(2, attempt) * jitter;
         console.warn(
-          `[BM] Retry ${attempt + 1}/${maxRetries} after ${Math.round(backoffDelay)}ms: ${lastError.message}`,
+          `[BM] Retry ${attempt + 1}/${maxRetries} after ${Math.round(backoffDelay)}ms: ${
+            lastError.message
+          }`,
         );
         await delay(backoffDelay);
       }
@@ -173,9 +175,7 @@ export function createStableMutationObserver(
             observer?.disconnect();
             // Try to find a replacement target
             if (currentConfig) {
-              const newTarget = document.querySelector<HTMLElement>(
-                '[role="log"], [role="main"]',
-              );
+              const newTarget = document.querySelector<HTMLElement>('[role="log"], [role="main"]');
               if (newTarget) {
                 console.log('[BM Observer] Reconnecting to new target');
                 currentTarget = newTarget;

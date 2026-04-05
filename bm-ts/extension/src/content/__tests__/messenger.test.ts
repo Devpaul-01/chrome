@@ -45,7 +45,10 @@ const mockRetryOperation = vi.mocked(retryOperation);
 function setupMessengerPage() {
   Object.defineProperty(window, 'location', {
     writable: true,
-    value: { href: 'https://www.facebook.com/messages/t/123', includes: (s: string) => window.location.href.includes(s) },
+    value: {
+      href: 'https://www.facebook.com/messages/t/123',
+      includes: (s: string) => window.location.href.includes(s),
+    },
   });
 }
 
@@ -145,9 +148,7 @@ describe('unarchiveConversation', () => {
     document.body.appendChild(nav);
 
     const menu = createMockMenu(['Unarchive', 'Delete']);
-    mockWaitForElement
-      .mockResolvedValueOnce(nav)
-      .mockResolvedValueOnce(menu);
+    mockWaitForElement.mockResolvedValueOnce(nav).mockResolvedValueOnce(menu);
 
     const result = await unarchiveConversation('Jane');
 
@@ -172,9 +173,7 @@ describe('unarchiveConversation', () => {
     document.body.appendChild(nav);
 
     const menu = createMockMenu(['Dearchivieren', 'Löschen']);
-    mockWaitForElement
-      .mockResolvedValueOnce(nav)
-      .mockResolvedValueOnce(menu);
+    mockWaitForElement.mockResolvedValueOnce(nav).mockResolvedValueOnce(menu);
 
     // Should not throw — the German term should be recognized
     await unarchiveConversation('Hans');
@@ -262,9 +261,7 @@ describe('stopAllMonitoring', () => {
   it('disconnects both reply and global observers', async () => {
     const replyObserver = { observe: vi.fn(), disconnect: vi.fn() };
     const globalObserver = { observe: vi.fn(), disconnect: vi.fn() };
-    mockCreateStableObserver
-      .mockReturnValueOnce(replyObserver)
-      .mockReturnValueOnce(globalObserver);
+    mockCreateStableObserver.mockReturnValueOnce(replyObserver).mockReturnValueOnce(globalObserver);
 
     const container = document.createElement('div');
     mockWaitForElement.mockResolvedValue(container);
@@ -293,7 +290,10 @@ describe('initializeArchiveMonitoring', () => {
   it('skips monitoring when not on messenger page', async () => {
     Object.defineProperty(window, 'location', {
       writable: true,
-      value: { href: 'https://www.facebook.com/', includes: (s: string) => window.location.href.includes(s) },
+      value: {
+        href: 'https://www.facebook.com/',
+        includes: (s: string) => window.location.href.includes(s),
+      },
     });
 
     await initializeArchiveMonitoring();
@@ -342,9 +342,7 @@ describe('initializeArchiveMonitoring', () => {
 
     const firstObserver = { observe: vi.fn(), disconnect: vi.fn() };
     const secondObserver = { observe: vi.fn(), disconnect: vi.fn() };
-    mockCreateStableObserver
-      .mockReturnValueOnce(firstObserver)
-      .mockReturnValueOnce(secondObserver);
+    mockCreateStableObserver.mockReturnValueOnce(firstObserver).mockReturnValueOnce(secondObserver);
 
     const container = document.createElement('div');
     mockWaitForElement.mockResolvedValue(container);

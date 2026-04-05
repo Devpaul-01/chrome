@@ -123,12 +123,13 @@ export async function openPostComposer(): Promise<HTMLElement | null> {
       const mainContent = document.querySelector('[role="main"]');
       if (mainContent) {
         const buttons = Array.from(mainContent.querySelectorAll('[role="button"]'));
-        composerTrigger = (buttons.find((btn) => {
-          // Look for buttons that contain a user avatar image + placeholder text
-          const hasAvatar = btn.querySelector('image, img[src*="profile"], svg');
-          const hasPlaceholder = btn.querySelector('span')?.textContent?.trim();
-          return hasAvatar && hasPlaceholder && hasPlaceholder.length > 3;
-        }) as HTMLElement) ?? null;
+        composerTrigger =
+          (buttons.find((btn) => {
+            // Look for buttons that contain a user avatar image + placeholder text
+            const hasAvatar = btn.querySelector('image, img[src*="profile"], svg');
+            const hasPlaceholder = btn.querySelector('span')?.textContent?.trim();
+            return hasAvatar && hasPlaceholder && hasPlaceholder.length > 3;
+          }) as HTMLElement) ?? null;
       }
     }
 
@@ -434,9 +435,8 @@ export async function submitPost(): Promise<boolean> {
       const dialog = document.querySelector('[role="dialog"]');
       if (dialog) {
         const buttons = Array.from(dialog.querySelectorAll('[role="button"]'));
-        postButton = (buttons
-          .reverse()
-          .find((btn) => {
+        postButton =
+          (buttons.reverse().find((btn) => {
             const isDisabled =
               btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('disabled');
             // Skip close/cancel buttons
@@ -499,61 +499,65 @@ export async function postToTimeline(post: TimelinePost): Promise<boolean> {
   console.log(`[BM Timeline] Starting timeline post for ${post.friendName}`);
 
   try {
-    return await retryOperation(async () => {
-      // 1. Navigate to profile if URL provided
-      if (post.profileUrl) {
-        const navigated = await navigateToProfile(post.profileUrl);
-        if (!navigated) {
-          throw new Error('Failed to navigate to profile');
+    return await retryOperation(
+      async () => {
+        // 1. Navigate to profile if URL provided
+        if (post.profileUrl) {
+          const navigated = await navigateToProfile(post.profileUrl);
+          if (!navigated) {
+            throw new Error('Failed to navigate to profile');
+          }
         }
-      }
 
-      // 2. Open post composer (retry up to 2 attempts within this step)
-      let composer: HTMLElement | null = null;
-      for (let i = 0; i < 2; i++) {
-        composer = await openPostComposer();
-        if (composer) break;
+        // 2. Open post composer (retry up to 2 attempts within this step)
+        let composer: HTMLElement | null = null;
+        for (let i = 0; i < 2; i++) {
+          composer = await openPostComposer();
+          if (composer) break;
+          await delay(SHORT_DELAY);
+        }
+        if (!composer) {
+          throw new Error('Failed to open post composer');
+        }
+
         await delay(SHORT_DELAY);
-      }
-      if (!composer) {
-        throw new Error('Failed to open post composer');
-      }
 
-      await delay(SHORT_DELAY);
-
-      // 3. Insert text content
-      const contentInserted = await insertPostContent(post.content, composer);
-      if (!contentInserted) {
-        throw new Error('Failed to insert post content');
-      }
-
-      await delay(SHORT_DELAY);
-
-      // 4. Attach image if present
-      if (post.imageUrl) {
-        const mergeTags: NiftyImagesMergeTags = {
-          name: post.friendName,
-          firstName: post.friendName.split(' ')[0],
-          date: new Date().toLocaleDateString(),
-        };
-
-        const imageAttached = await attachImageToPost(post.imageUrl, mergeTags);
-        if (!imageAttached) {
-          console.warn('[BM Timeline] Image attachment failed, continuing without image');
+        // 3. Insert text content
+        const contentInserted = await insertPostContent(post.content, composer);
+        if (!contentInserted) {
+          throw new Error('Failed to insert post content');
         }
 
-        await delay(MEDIUM_DELAY);
-      }
+        await delay(SHORT_DELAY);
 
-      // 5. Submit the post
-      const submitted = await submitPost();
-      if (!submitted) {
-        throw new Error('Failed to submit post');
-      }
+        // 4. Attach image if present
+        if (post.imageUrl) {
+          const mergeTags: NiftyImagesMergeTags = {
+            name: post.friendName,
+            firstName: post.friendName.split(' ')[0],
+            date: new Date().toLocaleDateString(),
+          };
 
-      console.log(`[BM Timeline] Successfully posted to ${post.friendName}'s timeline`);
-      return true;
-    }, 2, 2000); // retry up to 2 times with 2s base delay
+          const imageAttached = await attachImageToPost(post.imageUrl, mergeTags);
+          if (!imageAttached) {
+            console.warn('[BM Timeline] Image attachment failed, continuing without image');
+          }
+
+          await delay(MEDIUM_DELAY);
+        }
+
+        // 5. Submit the post
+        const submitted = await submitPost();
+        if (!submitted) {
+          throw new Error('Failed to submit post');
+        }
+
+        console.log(`[BM Timeline] Successfully posted to ${post.friendName}'s timeline`);
+        return true;
+      },
+      2,
+      2000,
+    ); // retry up to 2 times with 2s base delay
   } catch (error) {
     console.error('[BM Timeline] Error posting to timeline after retries:', error);
     return false;

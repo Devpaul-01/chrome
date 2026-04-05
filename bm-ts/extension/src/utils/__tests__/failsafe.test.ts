@@ -5,7 +5,7 @@
  * src/test-setup.ts.  Each test starts with a clean in-memory store.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   getConfirmationMode,
   setConfirmationMode,
@@ -75,7 +75,7 @@ describe('checkRateLimit', () => {
     const timestamps = [
       new Date(now - 3 * 60 * 60 * 1000).toISOString(), // 3 hrs ago
       new Date(now - 2 * 60 * 60 * 1000).toISOString(), // 2 hrs ago
-      new Date(now - 61 * 60 * 1000).toISOString(),      // 61 min ago (outside hourly window)
+      new Date(now - 61 * 60 * 1000).toISOString(), // 61 min ago (outside hourly window)
     ];
     await chrome.storage.local.set({ bm_rate_limits: { timestamps } });
 

@@ -45,12 +45,12 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
         setFormData((prev) => ({ ...prev, ...stored[TEMPLATE_DRAFT_KEY], imageFile: null }));
       }
     });
-  }, []);
+  }, [initialData]);
 
   // Persist draft to storage on change (only when creating)
   useEffect(() => {
     if (initialData) return;
-    const { imageFile, ...persistable } = formData;
+    const { imageFile: _imageFile, ...persistable } = formData;
     chrome.storage.local.set({ [TEMPLATE_DRAFT_KEY]: persistable });
   }, [formData, initialData]);
 
@@ -327,10 +327,9 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             </p>
 
             <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
-              A template has three parts —{' '}
-              <strong>Greeting</strong>, <strong>Sentiment</strong>, and <strong>Closing</strong>{' '}
-              — joined together to form the final message sent to your friend. Use{' '}
-              <strong>✨ Generate</strong> for suggestions, or write your own.
+              A template has three parts — <strong>Greeting</strong>, <strong>Sentiment</strong>,
+              and <strong>Closing</strong> — joined together to form the final message sent to your
+              friend. Use <strong>✨ Generate</strong> for suggestions, or write your own.
             </p>
 
             {/* Greeting */}

@@ -145,7 +145,14 @@ async function clickArchiveOption(menu: HTMLElement): Promise<boolean> {
 
   // Archive translations for supported locales
   const archiveTerms = ['archive', 'archivieren', 'archivar', 'archiver', 'arquivar'];
-  const unarchiveTerms = ['unarchive', 'dearchivieren', 'desarchivar', 'désarchiver', 'desarquivar', 'move to inbox'];
+  const unarchiveTerms = [
+    'unarchive',
+    'dearchivieren',
+    'desarchivar',
+    'désarchiver',
+    'desarquivar',
+    'move to inbox',
+  ];
 
   const archiveItem = menuItems.find((item) => {
     const text = item.textContent?.toLowerCase() || '';
@@ -287,55 +294,70 @@ export async function unarchiveConversation(friendName: string): Promise<boolean
   console.log(`[BM Archive] Starting unarchive process for ${friendName}`);
 
   // Unarchive translations for supported locales
-  const unarchiveTerms = ['unarchive', 'move to inbox', 'dearchivieren', 'desarchivar', 'désarchiver', 'desarquivar', 'zum posteingang'];
+  const unarchiveTerms = [
+    'unarchive',
+    'move to inbox',
+    'dearchivieren',
+    'desarchivar',
+    'désarchiver',
+    'desarquivar',
+    'zum posteingang',
+  ];
 
-  return retryOperation(async () => {
-    await ensureOnMessengerPage();
+  return retryOperation(
+    async () => {
+      await ensureOnMessengerPage();
 
-    // Navigate to archived messages
-    window.location.href = 'https://www.facebook.com/messages/archived';
-    await delay(2000);
+      // Navigate to archived messages
+      window.location.href = 'https://www.facebook.com/messages/archived';
+      await delay(2000);
 
-    // Find the conversation in archived
-    const conversation = await findConversationByName(friendName);
-    if (!conversation) {
-      console.warn(`[BM Archive] Conversation not found in archive for ${friendName}`);
-      return false;
-    }
+      // Find the conversation in archived
+      const conversation = await findConversationByName(friendName);
+      if (!conversation) {
+        console.warn(`[BM Archive] Conversation not found in archive for ${friendName}`);
+        return false;
+      }
 
-    // Open context menu
-    const menu = await openConversationContextMenu(conversation);
-    if (!menu) {
-      throw new Error('Could not open context menu');
-    }
+      // Open context menu
+      const menu = await openConversationContextMenu(conversation);
+      if (!menu) {
+        throw new Error('Could not open context menu');
+      }
 
-    // Look for unarchive option with multi-language support
-    const menuItems = Array.from(menu.querySelectorAll('[role="menuitem"]'));
-    let unarchiveItem = menuItems.find((item) => {
-      const text = item.textContent?.toLowerCase() || '';
-      return unarchiveTerms.some((term) => text.includes(term));
-    });
+      // Look for unarchive option with multi-language support
+      const menuItems = Array.from(menu.querySelectorAll('[role="menuitem"]'));
+      let unarchiveItem = menuItems.find((item) => {
+        const text = item.textContent?.toLowerCase() || '';
+        return unarchiveTerms.some((term) => text.includes(term));
+      });
 
-    // Fallback: try data-testid
-    if (!unarchiveItem) {
-      unarchiveItem = menu.querySelector('[data-testid*="unarchive"]') ?? undefined;
-    }
+      // Fallback: try data-testid
+      if (!unarchiveItem) {
+        unarchiveItem = menu.querySelector('[data-testid*="unarchive"]') ?? undefined;
+      }
 
-    if (unarchiveItem) {
-      console.log('[BM Archive] Clicking unarchive option');
-      (unarchiveItem as HTMLElement).click();
-      await delay(1000);
+      if (unarchiveItem) {
+        console.log('[BM Archive] Clicking unarchive option');
+        (unarchiveItem as HTMLElement).click();
+        await delay(1000);
 
-      // Remove from storage
-      await removeArchivedConversation(friendName);
+        // Remove from storage
+        await removeArchivedConversation(friendName);
 
-      console.log(`[BM Archive] Successfully unarchived conversation for ${friendName}`);
-      return true;
-    }
+        console.log(`[BM Archive] Successfully unarchived conversation for ${friendName}`);
+        return true;
+      }
 
-    throw new Error('Unarchive option not found in menu');
-  }, MAX_RETRIES, RETRY_DELAY).catch((error) => {
-    console.error(`[BM Archive] Error unarchiving conversation after ${MAX_RETRIES} retries:`, error);
+      throw new Error('Unarchive option not found in menu');
+    },
+    MAX_RETRIES,
+    RETRY_DELAY,
+  ).catch((error) => {
+    console.error(
+      `[BM Archive] Error unarchiving conversation after ${MAX_RETRIES} retries:`,
+      error,
+    );
     return false;
   });
 }

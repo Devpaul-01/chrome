@@ -1039,12 +1039,22 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
     const t = text.replace(/\s+/g, ' ').trim();
     if (/\btoday\b/i.test(t)) {
       const n = new Date();
-      return { date: `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`, monthOnly: false };
+      return {
+        date: `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(
+          n.getDate(),
+        ).padStart(2, '0')}`,
+        monthOnly: false,
+      };
     }
     if (/\btomorrow\b/i.test(t)) {
       const n = new Date();
       n.setDate(n.getDate() + 1);
-      return { date: `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`, monthOnly: false };
+      return {
+        date: `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(
+          n.getDate(),
+        ).padStart(2, '0')}`,
+        monthOnly: false,
+      };
     }
     // Bare month heading (e.g. "May") — use 1st of that month
     const mm = reMonthOnly.exec(t);
@@ -1102,7 +1112,11 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
       const text = heading.textContent?.trim() ?? '';
       if (text.length > 0 && text.length < 80) {
         const parsed = parseSectionDate(text);
-        sectionMarkers.push({ el: heading, date: parsed?.date, monthOnly: parsed?.monthOnly ?? false });
+        sectionMarkers.push({
+          el: heading,
+          date: parsed?.date,
+          monthOnly: parsed?.monthOnly ?? false,
+        });
       }
     });
 
@@ -1132,10 +1146,20 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
     // Priority: per-card specific date > section heading date > undefined
     const cardDate = findCardDate(link);
     if (cardDate) {
-      results.push({ name, facebook_profile_url: profileUrl, birthday: cardDate, monthOnly: false });
+      results.push({
+        name,
+        facebook_profile_url: profileUrl,
+        birthday: cardDate,
+        monthOnly: false,
+      });
     } else {
       const section = getSectionDate(link);
-      results.push({ name, facebook_profile_url: profileUrl, birthday: section?.date, monthOnly: section?.monthOnly });
+      results.push({
+        name,
+        facebook_profile_url: profileUrl,
+        birthday: section?.date,
+        monthOnly: section?.monthOnly,
+      });
     }
   }
 

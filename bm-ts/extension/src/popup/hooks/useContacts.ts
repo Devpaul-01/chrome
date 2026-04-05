@@ -172,9 +172,7 @@ export function useContacts() {
       try {
         // Fetch existing contacts to detect rescan updates
         const existing = await sendBackgroundMessage<Contact[]>({ type: 'contacts.list' });
-        const existingByUrl = new Map(
-          (existing ?? []).map((c) => [c.facebook_profile_url, c]),
-        );
+        const existingByUrl = new Map((existing ?? []).map((c) => [c.facebook_profile_url, c]));
 
         const toCreate: typeof importedContacts = [];
         const updatePromises: Promise<Contact>[] = [];
@@ -213,7 +211,6 @@ export function useContacts() {
 
         // Merge results into state
         setContacts((prev) => {
-          const updatedIds = new Set(updatedContacts.map((c) => c.id));
           const merged = prev.map((c) => {
             const updated = updatedContacts.find((u) => u.id === c.id);
             return updated ?? c;
