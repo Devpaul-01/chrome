@@ -103,7 +103,15 @@ const alarmsMock = {
 const runtimeMock = {
   sendMessage: vi.fn(),
   onMessage: { addListener: vi.fn() },
+  onInstalled: { addListener: vi.fn() },
   getManifest: vi.fn(() => ({ version: '0.1.0' })),
+};
+
+// chrome.notifications
+const notificationsMock = {
+  create: vi.fn(),
+  clear: vi.fn(),
+  onClicked: { addListener: vi.fn() },
 };
 
 // Attach to globalThis so any module that accesses `chrome.*` finds the mock
@@ -111,6 +119,7 @@ const runtimeMock = {
   storage: { local: storageMock },
   alarms: alarmsMock,
   runtime: runtimeMock,
+  notifications: notificationsMock,
 };
 
 // ---------------------------------------------------------------------------

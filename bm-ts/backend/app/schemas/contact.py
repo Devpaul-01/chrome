@@ -22,6 +22,7 @@ class ContactCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     facebook_profile_url: str = Field(..., min_length=1)
     birthday: datetime
+    birthday_month_only: bool = False
     gender: Optional[GenderEnum] = None
     notes: Optional[str] = None
 
@@ -37,6 +38,7 @@ class ContactUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     facebook_profile_url: Optional[str] = Field(None, min_length=1)
     birthday: Optional[datetime] = None
+    birthday_month_only: Optional[bool] = None
     gender: Optional[GenderEnum] = None
     notes: Optional[str] = None
 
@@ -51,6 +53,7 @@ class ContactOut(BaseModel):
     name: str
     facebook_profile_url: str
     birthday: datetime
+    birthday_month_only: bool
     gender: Optional[GenderEnum]
     notes: Optional[str]
     createdAt: datetime = Field(alias="created_at")

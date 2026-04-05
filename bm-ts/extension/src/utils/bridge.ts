@@ -85,28 +85,24 @@ export function sendExtensionMessage<T>(message: BackgroundMessage): Promise<T> 
   const deadline = Date.now() + HARD_TIMEOUT_MS;
 
   async function tryWithRetry(): Promise<T> {
-    try {
-      return await attemptSend<T>(message);
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      if (isWorkerSleeping(errMsg) && Date.now() < deadline) {
-        // Chrome fires lastError immediately for a sleeping worker, then wakes
-        // it. Workers typically start in 200-400 ms; wait 300 ms then retry.
-        // If still not ready, wait another 500 ms and try once more.
-        await new Promise((res) => setTimeout(res, 300));
-        try {
-          return await attemptSend<T>(message);
-        } catch (retryErr) {
-          const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-          if (isWorkerSleeping(retryMsg) && Date.now() < deadline) {
-            await new Promise((res) => setTimeout(res, 500));
-            return await attemptSend<T>(message);
-          }
-          throw retryErr;
+    const MAX_ATTEMPTS = 4;
+    const BASE_DELAY = 200;
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        return await attemptSend<T>(message);
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (isWorkerSleeping(errMsg) && Date.now() < deadline && attempt < MAX_ATTEMPTS - 1) {
+          // Exponential backoff: 200ms, 400ms, 800ms
+          const backoffDelay = BASE_DELAY * Math.pow(2, attempt);
+          await new Promise((res) => setTimeout(res, backoffDelay));
+          continue;
         }
+        throw err;
       }
-      throw err;
     }
+    throw new Error('Background service worker did not respond after retries');
   }
 
   // Apply a hard deadline across the entire operation.

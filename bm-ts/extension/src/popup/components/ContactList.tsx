@@ -98,6 +98,11 @@ export default function ContactList({
                   <p className="text-xs font-semibold text-orangeBrand">
                     🎂 {formatBirthday(contact.birthday)}
                   </p>
+                  {contact.birthday_month_only && (
+                    <p className="text-xs font-semibold text-blue-500">
+                      ⏳ Month only — messaging paused until exact date is set
+                    </p>
+                  )}
                   {contact.gender && (
                     <p className="text-xs text-textMuted">
                       <span className="font-medium">Gender:</span> {contact.gender}

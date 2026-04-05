@@ -41,7 +41,7 @@ export default function HomeControls({
     setError(null);
     try {
       const [config, groupData, stored] = await Promise.all([
-        chrome.runtime.sendMessage({ type: 'automation.getConfig' }),
+        sendBackgroundMessage<{ enabled: boolean }>({ type: 'automation.getConfig' }),
         sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' }).catch(
           () => [] as MessageGroup[],
         ),
@@ -62,7 +62,7 @@ export default function HomeControls({
     setIsSaving(true);
     setError(null);
     try {
-      await chrome.runtime.sendMessage({ type: 'automation.setEnabled', payload: { enabled } });
+      await sendBackgroundMessage({ type: 'automation.setEnabled', payload: { enabled } });
       setAutomationEnabled(enabled);
     } catch (err) {
       setError((err as Error).message);

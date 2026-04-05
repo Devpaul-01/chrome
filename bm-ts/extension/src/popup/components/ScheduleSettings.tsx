@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import Spinner from './Spinner';
 import { getErrorMessage, logError } from '../../utils/errors';
 import HelpTooltip from './HelpTooltip';
+import { sendBackgroundMessage } from '../api';
 
 export interface BirthdaySchedule {
   id: string;
@@ -38,7 +39,7 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
     setIsLoading(true);
     setError(null);
     try {
-      const data = await chrome.runtime.sendMessage({
+      const data = await sendBackgroundMessage<BirthdaySchedule[]>({
         type: 'schedules.list',
       });
       setSchedules(Array.isArray(data) ? data : []);
@@ -73,7 +74,7 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
     }
 
     try {
-      await chrome.runtime.sendMessage({
+      await sendBackgroundMessage({
         type: 'schedules.create',
         payload: { days_before: daysBefore, enabled: true },
       });
@@ -90,7 +91,7 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
   async function handleToggleSchedule(id: string, enabled: boolean) {
     setError(null);
     try {
-      await chrome.runtime.sendMessage({
+      await sendBackgroundMessage({
         type: 'schedules.update',
         payload: { id, enabled },
       });
@@ -106,7 +107,7 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
     }
     setError(null);
     try {
-      await chrome.runtime.sendMessage({
+      await sendBackgroundMessage({
         type: 'schedules.delete',
         payload: { id },
       });

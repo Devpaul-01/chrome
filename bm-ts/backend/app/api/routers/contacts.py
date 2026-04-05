@@ -28,6 +28,7 @@ async def create_contact(
         name=data.name,
         facebook_profile_url=data.facebook_profile_url,
         birthday=data.birthday,
+        birthday_month_only=data.birthday_month_only,
         gender=data.gender.value if data.gender else None,
         notes=data.notes,
     )
@@ -50,6 +51,7 @@ async def bulk_create_contacts(
             name=data.name,
             facebook_profile_url=data.facebook_profile_url,
             birthday=data.birthday,
+            birthday_month_only=data.birthday_month_only,
             gender=data.gender.value if data.gender else None,
             notes=data.notes,
         )
@@ -124,6 +126,8 @@ async def update_contact(
         contact.facebook_profile_url = data.facebook_profile_url
     if data.birthday is not None:
         contact.birthday = data.birthday
+    if data.birthday_month_only is not None:
+        contact.birthday_month_only = data.birthday_month_only
     if data.gender is not None:
         contact.gender = data.gender.value
     if data.notes is not None:

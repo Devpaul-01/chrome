@@ -5,6 +5,7 @@ import DashboardStatsCard from './DashboardStatsCard';
 import DashboardCharts from './DashboardCharts';
 import { getErrorMessage, logError } from '../../utils/errors';
 import wsClient from '../../api/websocket';
+import { sendBackgroundMessage } from '../api';
 
 export interface DashboardStats {
   total_messages_sent: number;
@@ -61,7 +62,7 @@ export default function Dashboard({ onClose: _onClose }: DashboardProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await chrome.runtime.sendMessage({
+      const data = await sendBackgroundMessage<DashboardStats>({
         type: 'dashboard.getStats',
       });
       setStats(data);

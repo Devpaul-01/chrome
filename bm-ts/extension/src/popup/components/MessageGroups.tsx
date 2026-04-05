@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { sendBackgroundMessage } from '../api';
+import HelpTooltip from './HelpTooltip';
 
 export interface MessageGroup {
   id: string;
@@ -21,6 +22,8 @@ interface MessageGroupsPropsExtended extends MessageGroupsProps {
 export interface MessageGroupsHandle {
   focus: () => void;
 }
+
+const GROUP_DRAFT_KEY = 'bm_group_draft';
 
 const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended>(
   ({ onClose, showClose = true }, ref) => {
@@ -44,7 +47,19 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
     useEffect(() => {
       loadGroups();
       headingRef.current?.focus();
+      // Restore draft when creating (not editing)
+      chrome.storage.local.get(GROUP_DRAFT_KEY).then((stored) => {
+        if (stored[GROUP_DRAFT_KEY]) {
+          setFormData((prev) => ({ ...prev, ...stored[GROUP_DRAFT_KEY] }));
+        }
+      });
     }, []);
+
+    // Persist draft on change (only when creating)
+    useEffect(() => {
+      if (editingId) return;
+      chrome.storage.local.set({ [GROUP_DRAFT_KEY]: formData });
+    }, [formData, editingId]);
 
     async function loadGroups() {
       setIsLoading(true);
@@ -81,6 +96,7 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
         // Reset form
         setFormData({ name: '', gender: 'NEUTRAL', segment_ids: [] });
         setEditingId(null);
+        chrome.storage.local.remove(GROUP_DRAFT_KEY);
         await loadGroups();
       } catch (err) {
         setError((err as Error).message);
@@ -117,8 +133,10 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
         </h2>
 
         <p className="text-xs text-gray-600 mb-5">
-          Create groups of message segments for organized birthday wishing. Assign genders to target
-          specific friends.
+          Message Groups are an <strong>advanced</strong> feature for combining individual message
+          segments into curated collections with per-gender targeting. Most users should use{' '}
+          <strong>Message Templates</strong> instead — groups are useful only when you need
+          fine-grained control over which segments are combined per send.
         </p>
 
         <form onSubmit={handleSubmit} className="card mb-5">
@@ -127,7 +145,10 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
           </h3>
 
           <label className="block mb-4">
-            <span className="text-xs font-semibold text-textPrimary mb-2 block">Group Name</span>
+            <span className="flex items-center gap-1 text-xs font-semibold text-textPrimary mb-2">
+              Group Name{' '}
+              <HelpTooltip label="A name for your own reference — e.g. 'Formal Wishes' or 'Close Friends (Male)'. Not visible to recipients." />
+            </span>
             <input
               type="text"
               value={formData.name}
@@ -139,7 +160,10 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
           </label>
 
           <label className="block mb-4">
-            <span className="text-xs font-semibold text-textPrimary mb-2 block">Gender Target</span>
+            <span className="flex items-center gap-1 text-xs font-semibold text-textPrimary mb-2">
+              Gender Target{' '}
+              <HelpTooltip label="When automation picks a group, it matches the group's gender target to the contact's saved gender. Set to Neutral to use this group as a fallback for any gender." />
+            </span>
             <select
               value={formData.gender}
               onChange={(e) =>
@@ -157,8 +181,9 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
           </label>
 
           <label className="block mb-5">
-            <span className="text-xs font-semibold text-textPrimary mb-2 block">
-              Segment IDs (comma-separated)
+            <span className="flex items-center gap-1 text-xs font-semibold text-textPrimary mb-2">
+              Segment IDs (comma-separated){' '}
+              <HelpTooltip label="UUIDs of the individual message segments to include in this group, separated by commas. Most users leave this blank — standard Message Templates don't use this field. Segment IDs can be found in your backend's template segments data." />
             </span>
             <input
               type="text"

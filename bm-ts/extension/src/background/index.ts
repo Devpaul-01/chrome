@@ -113,6 +113,13 @@ import {
   setShouldAbort,
 } from '../utils/failsafe';
 import type { ConfirmationMode } from '../utils/failsafe';
+import {
+  notifyAutomationComplete,
+  notifyAutomationFailed,
+  notifyAutomationPaused,
+} from '../utils/notifications';
+import { saveCheckpoint, clearCheckpoint, checkForStaleCheckpoint } from '../utils/crash-recovery';
+import { handleInstallOrUpdate } from '../utils/update-check';
 import logger from '../utils/logger';
 
 /**
@@ -200,6 +207,8 @@ function birthdayDateOffset(daysOffset: number): string {
 function getContactsForDaysInAdvance(contacts: Contact[], days: number): Contact[] {
   const target = birthdayDateOffset(days);
   return contacts.filter((c) => {
+    // Never auto-message contacts whose birthday day is unknown (month-only)
+    if (c.birthday_month_only) return false;
     const parts = c.birthday.split('-');
     const mmdd = parts.length >= 2 ? `${parts[parts.length - 2]}-${parts[parts.length - 1]}` : '';
     return mmdd === target;
@@ -216,14 +225,17 @@ function getContactsForDaysInAdvance(contacts: Contact[], days: number): Contact
  */
 async function openOrFocusFacebookBirthdaysTab(): Promise<chrome.tabs.Tab> {
   return new Promise((resolve, reject) => {
-    chrome.tabs.query({ url: '*://*.facebook.com/birthdays*' }, (tabs) => {
-      if (tabs.length > 0 && tabs[0].id !== undefined) {
-        resolve(tabs[0]);
-      } else {
-        // Do NOT auto-open a Facebook tab — requires user to have the page open
-        reject(new Error('Facebook birthdays tab is not open; user action is required.'));
-      }
-    });
+    chrome.tabs.query(
+      { url: ['*://*.facebook.com/birthdays*', '*://*.facebook.com/friends/birthdays*'] },
+      (tabs) => {
+        if (tabs.length > 0 && tabs[0].id !== undefined) {
+          resolve(tabs[0]);
+        } else {
+          // Do NOT auto-open a Facebook tab — requires user to have the page open
+          reject(new Error('Facebook birthdays tab is not open; user action is required.'));
+        }
+      },
+    );
   });
 }
 
@@ -237,12 +249,16 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
   if (await isEmergencyStopActive()) {
     logger.warn('handleAutomationScan: emergency stop is active, skipping');
     await addActivityLogEntry('warning', 'Automation scan skipped — emergency stop active');
+    notifyAutomationPaused('Emergency stop is active. Automation has been paused.');
     return { success: false };
   }
 
   if (await isBackoffPaused()) {
     logger.warn('handleAutomationScan: backoff pause active, skipping');
     await addActivityLogEntry('warning', 'Automation scan skipped — failure backoff active');
+    notifyAutomationPaused(
+      'Automation is paused due to recent send failures. It will resume automatically.',
+    );
     return { success: false };
   }
 
@@ -250,11 +266,20 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
   if (!rateLimit.allowed) {
     logger.warn('handleAutomationScan: rate limit reached', rateLimit.reason);
     await addActivityLogEntry('warning', `Automation scan skipped — ${rateLimit.reason}`);
+    notifyAutomationPaused(rateLimit.reason ?? 'Rate limit reached.');
     return { success: false };
   }
 
   // Reset abort flag for this new run
   await setShouldAbort(false);
+
+  // Save checkpoint for crash recovery
+  await saveCheckpoint({
+    startedAt: new Date().toISOString(),
+    phase: 'scanning',
+    targetCount: 0,
+    sentCount: 0,
+  });
 
   let templates: MessageTemplate[] = [];
   let posts: Post[] = [];
@@ -268,6 +293,10 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
     ])) as [MessageTemplate[], Post[], Contact[]];
   } catch (err) {
     logger.error('handleAutomationScan: failed to fetch backend data', err);
+    notifyAutomationFailed(
+      'Could not fetch data from the server. Check your connection and try again.',
+    );
+    await clearCheckpoint();
     return { success: false };
   }
 
@@ -315,6 +344,10 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
       'handleAutomationScan: no Facebook birthdays tab open — user must navigate to facebook.com/birthdays',
     );
     await addActivityLogEntry('info', 'Automation skipped — no Facebook birthdays tab open');
+    notifyAutomationFailed(
+      'No Facebook birthdays tab open. Please navigate to facebook.com/birthdays.',
+    );
+    await clearCheckpoint();
     return { success: false };
   }
 
@@ -339,6 +372,18 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
 
   chrome.tabs.sendMessage(tab.id, { type: 'automation.runFull', payload });
   await updateLastCheck();
+  const totalContacts =
+    advanceEntries.reduce((sum, e) => sum + e.contacts.length, 0) +
+    followUpEntries.reduce((sum, e) => sum + e.contacts.length, 0);
+  // Update checkpoint to 'dispatched' phase, then clear once done
+  await saveCheckpoint({
+    startedAt: new Date().toISOString(),
+    phase: 'dispatched',
+    targetCount: totalContacts,
+    sentCount: 0,
+  });
+  await clearCheckpoint();
+  notifyAutomationComplete(totalContacts);
   return { success: true };
 }
 
@@ -930,6 +975,20 @@ if (chrome.alarms) {
 
 // Initialize automation on startup
 async function initializeAutomation(): Promise<void> {
+  // Check for stale checkpoint from a previously interrupted run
+  const staleCheckpoint = await checkForStaleCheckpoint();
+  if (staleCheckpoint) {
+    logger.warn(
+      'Found stale automation checkpoint — previous run was interrupted',
+      staleCheckpoint,
+    );
+    await addActivityLogEntry(
+      'warning',
+      `Previous automation run interrupted during "${staleCheckpoint.phase}" phase (started ${staleCheckpoint.startedAt}). Cleaned up.`,
+    );
+    await clearCheckpoint();
+  }
+
   const config = await getAutomationConfig();
   if (config.enabled && chrome.alarms) {
     // Reschedule alarms on extension startup
@@ -942,3 +1001,6 @@ async function initializeAutomation(): Promise<void> {
 }
 
 void initializeAutomation();
+
+// Listen for extension install/update to show post-update notification
+chrome.runtime.onInstalled.addListener(handleInstallOrUpdate);

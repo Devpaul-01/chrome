@@ -1,1077 +1,273 @@
+﻿# BirthdayMessaging (bm-ts) — MVP Checklist
 
-
-
-**Last Updated:** April 2, 2026  
-**Status:** Pre-MVP — Phase 1 and Phase 2 backend complete, Facebook automation pipeline fully implemented, MessageQueue/History UI enhancements complete, onboarding wizard + contextual help tooltips implemented, frontend testing framework expanded (294 tests across 15 files), security hardening pass completed (XSS fix, SQL injection protection, rate limiting on login/register, JWT validation, WebSocket auth, SMTP masking, Stripe redirect validation — Mar 4, 2026), SendGrid email service integrated for password reset (asyncio import bug fixed Mar 9, 2026), full codebase audit with metric corrections (Mar 17, 2026), Help & Tips panel + OnboardingWizard UI polish: glassmorphism, brand-consistent text, improved spacing, removed redundant Help & Shortcuts footer section (Mar 10, 2026), privacy policy + terms of service created, frontend CI pipeline configured, user documentation (Quick Start, FAQ, Troubleshooting Guide) created (Mar 18, 2026), email verification system implemented (Mar 18, 2026), user sessions management implemented (Mar 19, 2026), subscription cancel/reactivate/change-plan/billing-portal endpoints implemented and tested, backend testing expanded to ~230 tests across 25 files (Mar 19–Apr 2, 2026), comprehensive security hardening pass #2 (20 fixes — session invalidation on password reset/change, WebSocket access-token + session enforcement, timing oracle fix, atomic token consumption, JWT iss/aud claims, email_verified + account lockout enforcement, CORS/CSP/Cache-Control tightening, CSS selector injection fix, manifest CSP, audit log enrichment — Mar 26, 2026), SMTP Fernet encryption implemented, dashboard `.scalar()` bug fixed, standardized DeleteResponse across all DELETE endpoints, OpenAPI tags metadata added (14 tag groups), request logging middleware added, CSV export wiring (frontend "Export All" calls backend endpoint), ARIA role presentation cleanup (Mar 26, 2026), email action pages added (GET /verify-email-page + GET /reset-password-page returning branded HTML — Apr 1, 2026), backend deploy pipeline added (Docker image build + Gitea container registry + Coolify webhook — Apr 2, 2026), backend pip-audit removed from dependency scan (Apr 1, 2026), 6 new backend test files added: test_encryption (6), test_rate_limiter (5), test_security_headers (8), test_stripe_service (16), test_validators (10), test_audit_log (7)
-
----
-
-## Executive Summary (as of March 17, 2026)
-
-This checklist tracks all tasks required to make bm-ts a production-ready MVP. The system is robust and well-architected, with Phase 1 features fully implemented and integrated. Phase 2 backend features are scaffolded (models, routers, and tables exist) but require activation and full wiring to the frontend. Production infrastructure, comprehensive testing, and user-facing polish are still pending.
-
-**Current Strengths:**
-- ✅ Core backend API with 15 routers and 78 HTTP endpoints + 1 WebSocket (all Phase 1 and Phase 2 routers registered; includes email verification, session list/revoke, subscription cancel/reactivate/change-plan/billing-portal)
-- ✅ Chrome extension with React UI, 38 components, real-time updates, and accessibility
-- ✅ Docker-based development environment (Dockerfile + docker-compose.yml with PostgreSQL)
-- ✅ Database schema and models complete for all Phase 1 and Phase 2
-- ✅ Strong security (JWT rotation + secret validation + iss/aud claims, Argon2, Stripe webhooks, rate limiting on login/register/refresh, XSS/SQL injection/CSS selector injection hardening, WebSocket access-token + session-validated auth, SMTP password masking, security headers middleware + Permissions-Policy + Cache-Control, input sanitization on all text schemas, session invalidation on password reset/change, email_verified + account lockout enforcement in auth dependency, timing oracle protection on login, atomic token consumption with SELECT FOR UPDATE, explicit CSP in extension manifest)
-- ✅ Accessibility (WCAG 2.1 AA)
-- ✅ Documentation is comprehensive and up to date
-- ✅ Facebook automation pipeline fully implemented — birthday scraping, gender-aware DM + timeline post, advance/follow-up modes, deduplication, archiving
-
-**Remaining Gaps:**
-- ✅ `/send-birthday-message` backend endpoint is a non-functional stub but now requires authentication (extension content scripts handle actual sending)
-- ✅ SMTP passwords encrypted at rest using Fernet symmetric encryption (passwords also masked in API responses via `SMTPConfigOut.model_post_init`)
-- ⚠️ No production deployment infrastructure
-- ✅ Backend testing expanded: ~230 tests across 25 files (auth 11, contacts 10, messages 17, password_reset 7, dashboard 5, schedules 9, templates 2, subscription 13, webhook 10, email_verification 9, birthday_configs 13, message_groups 11, message_templates 11, posts 11, images 9, smtp 6, integration 4, api_contracts 14, db_constraints 6, encryption 6, rate_limiter 5, security_headers 8, stripe_service 16, validators 10, audit_log 7) — conftest.py with comprehensive async fixtures and model event listeners for SQLite compatibility
-- ✅ Extension testing: ~294 tests across 15 files (unit + component), all passing
-- ✅ Alembic migrations fully populated — 5 migration files: initial schema (14 tables), `a1b2c3d4e5f6` (revoked_tokens), `b2c3d4e5f6g7` (account lockout columns, Mar 12), `c3d4e5f6g7h8` (email_verification_tokens + email_verified column, Mar 18), `d4e5f6g7h8i9` (user_sessions table, Mar 19) — **17 tables total**
-- ✅ CI/CD partially implemented — 3 Gitea Actions workflows: frontend CI (TypeScript/ESLint/Prettier/build/test/audit), backend deploy (Docker image build + Gitea registry + Coolify webhook), dependency vulnerability scan (frontend npm audit; backend pip-audit removed Apr 1, 2026)
-- ⚠️ No production monitoring
-- ✅ SendGrid email service fully configured (Mar 14, 2026): `email_from_address`, `password_reset_url_base`, and `sendgrid_api_key` fields in `config.py` Settings; `password_reset.py` uses `settings.*` for all three
-- ✅ Security headers middleware (HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy, Permissions-Policy, Cache-Control, Pragma) — 8 headers total — Mar 14 + Mar 26, 2026
-- ✅ Input sanitization applied to all text fields across 6 Pydantic schema files — Mar 14, 2026
-- ✅ SMTP encryption key validator rejects placeholder values at startup — Mar 14, 2026
-- ✅ Stripe API key placeholder validation warns at startup — Mar 26, 2026
-- ✅ JWT secret key < 32 chars now rejected (was only warning) — Mar 26, 2026
-
-**Actionable Next Steps:**
-1. ~~Encrypt SMTP passwords at rest before production~~  DONE — Fernet symmetric encryption implemented in `encryption.py`; SMTP router encrypts on save, masks on read; `smtp_encryption_key` validated at startup
-2. Increase test coverage (Phase 2 backend, E2E)
-3. Set up production deployment, CI/CD, and monitoring
-4. Prepare documentation and onboarding for production users
+**Last Updated:** April 4, 2026
+**Status:** Development-Complete / Pre-Production — All Phase 1 and Phase 2 features implemented on both backend and frontend. Facebook automation pipeline fully functional. Production infrastructure, deployment, and Chrome Web Store submission are the remaining blockers.
 
 ---
 
-## 🔴 Critical Blockers (Must Fix Before Any Deployment)
+## Executive Summary
 
-### 1. ~~Complete Database Schema (ddl.sql)~~  RESOLVED
-**Status:**  Complete — Schema maintained via `models.py` (17 ORM models) + Alembic migrations. Original `ddl.sql` superseded.
+This checklist tracks all remaining tasks required to ship bm-ts as a production-ready MVP. The application is **feature-complete for MVP scope** — all backend routers, database models, frontend components, content scripts, and the automation pipeline are built, tested, and wired together. The primary remaining work is **production infrastructure, deployment, and Chrome Web Store publication**.
 
----
+### Verified Codebase Statistics (April 4, 2026)
 
-### 2. ~~Implement Email Service for Password Reset~~  Complete
-**Status:**  Fully Implemented (Mar 14, 2026) — SendGrid SDK integrated; all config fields (`email_from_address`, `password_reset_url_base`, `sendgrid_api_key`) in `config.py` Settings.
+| Metric | Count |
+|--------|-------|
+| Backend Routers | 15 (+ 2 inline endpoints in main.py) |
+| Backend HTTP Endpoints | 78 + 1 WebSocket |
+| Backend ORM Models | 17 (17 tables, 5 enums, 32 indexes) |
+| Backend Tests | ~287 across 25 test files |
+| Backend Runtime Dependencies | 17 |
+| Backend LOC | ~4,860 Python |
+| Alembic Migrations | 5 |
+| Frontend Components | 38 (in components/) |
+| Frontend Custom Hooks | 8 (across 7 files + 1 context) |
+| Frontend Tests | 363 across 18 test files |
+| Frontend Runtime Dependencies | 3 (React, ReactDOM, react-calendar) |
+| API Client Functions | 58 |
+| Background Message Types | 77 |
+| Content Script Files | 5 (~2,192 lines) |
+| Utility Files | 14 (~2,063 lines) |
+| ViewMode States | 23 |
+| CI/CD Workflows | 3 (Gitea Actions) |
+| User-Facing HTML Pages | 6 |
 
-**Remaining pre-production tasks:**
-- [x] Test email delivery in development with real SendGrid API key
-- [x] Document email setup in DEVELOPMENT_GUIDE.md  (SendGrid setup section added)
-- [x] Improve HTML email template (branding, responsive design)  (branded responsive table-based HTML with CTA button, footer, and fallback link)
+### What Remains (Priority Order)
 
----
-
-## 🗄️ Database Layer
-
-### Schema & Migrations
-- [x] Define 17 models in models.py (User, SubscriptionRecord, TemplateSegment, BirthdaySchedule, MessageQueue, MessageHistory, PasswordResetToken, RevokedToken — Phase 1; Contact, MessageGroup, Post, UserImage, BirthdayConfig, SMTPConfig, MessageTemplate — Phase 2; EmailVerificationToken, UserSession — Mar 2026)
-- [x] Complete ddl.sql with all tables  (14 tables including Phase 2: posts, message_groups, user_images, birthday_configs, smtp_configs, message_templates)
-- [x] Add database indexes for performance:
-  - [x] Index on `message_queue.user_id` (idx_queue_user_status)
-  - [x] Index on `message_queue.scheduled_send_time` (idx_queue_scheduled_time)
-  - [x] Index on `message_queue.status` (idx_queue_user_status)
-  - [x] Index on `message_history.user_id` (idx_history_user_sent, idx_history_user_status)
-  - [x] Index on `message_history.sent_at` (idx_history_user_sent)
-  - [x] Index on `password_reset_tokens.token` (idx_reset_token_expires)
-  - [x] Index on `password_reset_tokens.expires_at` (idx_reset_token_expires)
-- [x] Set up Alembic properly for schema migrations: 
-  - [x] Alembic config file exists (alembic.ini)
-  - [x] Comprehensive initial migration fully populated (`78efe19bc04e_initial_schema.py`) — creates all 14 tables; both `upgrade()` and `downgrade()` implemented
-  - [x] `a1b2c3d4e5f6_create_revoked_tokens.py` — adds `revoked_tokens` table
-  - [x] `b2c3d4e5f6g7_add_account_lockout.py` — adds `failed_login_count` + `locked_until` to users (Mar 12, 2026)
-  - [x] `c3d4e5f6g7h8_add_email_verification.py` — adds `email_verified` column + `email_verification_tokens` table with indexes (Mar 18, 2026)
-  - [x] `d4e5f6g7h8i9_add_user_sessions.py` — adds `user_sessions` table (Mar 19, 2026)
-  - [ ] Test migration up/down
-  - [x] Document migration workflow in DEVELOPMENT_GUIDE.md  (Alembic workflow + SendGrid email setup added)
-
-### Data Integrity
-- [x] Add foreign key constraints with proper CASCADE behavior  (`ondelete='CASCADE'` on all child-table FKs in migration)
-- [x] Add CHECK constraints for enum values  (PostgreSQL ENUMs: `segment_type_enum`, `message_status_enum`, `subscription_status_enum`, `gender_enum`, `birthday_mode_enum`)
-- [x] Add NOT NULL constraints where appropriate  (`nullable=False` on required columns across all 14 tables)
-- [x] Add UNIQUE constraints (e.g., user email, reset tokens)  (CITEXT unique email, unique schedule per user+days, unique active subscription per user, unique SMTP config per user, unique birthday config per user+mode+offset)
-- [x] Test constraint violations return proper 400/409 errors  (`test_db_constraints.py` — 6 tests: duplicate email, unique constraints, cascade deletes, enum validation — Mar 26, 2026)
-
-### Database Operations
-- [x] Add database backup strategy  (`db-backup` service in docker-compose.yml — automated daily pg_dump at 2:00 AM UTC, keeps last 7 backups, gzip compressed)
-- [x] Document restore procedures  (`scripts/backup.sh` + `scripts/restore.sh` exist)
-- [x] Add health check query for monitoring  (`GET /health` now pings database with `SELECT 1`)
-- [ ] Consider connection pooling tuning for production
+1. **P0 — Production Infrastructure** — Cloud provider, managed PostgreSQL, domain + TLS, environment configuration
+2. **P0 — Chrome Web Store Submission** — Listing assets, permissions justification, production build testing
+3. **P1 — Backend Test CI** — Automated pytest/linting on PR (deploy pipeline exists, test pipeline does not)
+4. **P1 — Monitoring & Observability** — Error tracking, uptime monitoring, alerting
+5. **P1 — End-to-End Testing** — Manual verification of all critical user flows in production
+6. **P2 — Image Upload/Storage** — Currently URL-based; needs S3/R2 for actual file uploads
+7. **P2 — Extended Test Coverage** — E2E (Playwright), background worker tests, hook tests
+8. **P3 — Nice to Have** — Dark mode, i18n, interactive tutorials, analytics improvements
 
 ---
 
-## 🐍 Backend Layer
+## P0 — Production Blockers (Must Complete Before Launch)
 
-### Phase 1 Features (Active) - Completion Tasks
-
-#### Authentication System
-- [x] JWT access/refresh token flow
-- [x] Registration endpoint
-- [x] Login endpoint  
-- [x] Token refresh endpoint
-- [x] Change password endpoint
-- [x] Implement email verification for new users  (`POST /auth/request-email-verification` + `POST /auth/verify-email` + `GET /auth/verify-email-page` branded HTML page; `email_verification.py` service; `email_verified` column on User; Alembic migration `c3d4e5f6g7h8`; 9 tests in `test_email_verification.py` — Mar 18, 2026; HTML action page added Apr 1, 2026)
-- [x] Add rate limiting to auth endpoints  (slowapi implemented: `/register` 5/min; `/login` 5/min + 20/hr; `/request-password-reset` 1/min + 5/hr + 20/hr; `/send-birthday-message` 1/45seconds; `/refresh` 30/min — Mar 26, 2026)
-- [x] Add account lockout after failed login attempts  (5 failures → 15 min lockout; `failed_login_count` + `locked_until` columns + Alembic migration)
-- [x] Add session management (list active sessions, revoke)  (`GET /auth/sessions` + `DELETE /auth/sessions/{id}`; `UserSession` model; Alembic migration `d4e5f6g7h8i9`; 2 integration tests in `test_auth.py` — Mar 19, 2026)
-
-#### Password Reset Flow
-- [x] Request password reset endpoint
-- [x] Reset password endpoint
-- [x] Token generation and validation
-- [x] Email sending implementation (SendGrid integrated, Mar 14, 2026)
-- [x] HTML action page for password reset  (`GET /auth/reset-password-page` — branded HTML page with token-based form — Apr 1, 2026)
-- [x] Add rate limiting  (1/minute + 5/hour + 20/hour stacked on `request-password-reset` in auth.py)
-- [ ] Add URL expiration validation in frontend
-
-#### Template Management
-- [x] CRUD endpoints for template segments
-- [x] Segment types (GREETING, BODY, CLOSING)
-- [x] Add template validation (min/max length) - content must not be empty
-- [x] Add template preview endpoint (`POST /templates/preview` — composes sample message from user's segments)
-- [ ] Add bulk import/export for templates
-- [ ] Add template usage statistics
-
-#### Subscription Management
-- [x] Stripe subscription creation
-- [x] Webhook handling for subscription events
-- [x] Subscription status checking
-- [x] Add subscription cancellation flow  (`POST /subscription/cancel`; tested in `test_subscription.py`)
-- [x] Add subscription plan upgrade/downgrade  (`POST /subscription/change-plan`; tested in `test_subscription.py`)
-- [x] Add grace period handling  (status returns `in_grace_period: true`; tested in `test_subscription.py`)
-- [x] Add billing portal access  (`POST /subscription/billing-portal`; tested in `test_subscription.py`)
-- [x] Add subscription reactivation  (`POST /subscription/reactivate`; tested in `test_subscription.py`)
-- [ ] Add failed payment retry logic  (webhook handles `payment_failed` event but no automatic retry scheduling)
-- [x] Test all webhook events  (`test_webhook.py` — 10 tests cover missing/invalid signature, subscription.created, subscription.updated cancel + plan-change, subscription.deleted, payment.failed, unknown customer — Mar 2026)
-
-#### Birthday Scheduling
-- [x] CRUD endpoints for schedules
-- [x] Days before/after configuration (days_before field)
-- [x] Enable/disable toggle
-- [x] Add schedule validation (unique constraint on user_id + days_before)
-- [ ] Add bulk schedule import
-- [ ] Add schedule preview (show next run date)
-
-#### Message Queue Management
-- [x] Create queued message
-- [x] List queued messages
-- [x] Update message status
-- [x] Retry failed message
-- [x] Cancel message
-- [x] Add bulk operations (cancel all, retry all failed)  (frontend bulk retry/cancel implemented; backend endpoint pending)
-- [ ] Add message priority levels
-- [ ] Add schedule conflict detection
-
-#### Message History
-- [x] List message history
-- [x] Search by name/status
-- [x] Delete history item
-- [x] Add pagination (currently no limit)  (page/page_size params, MessageHistoryPage response)
-- [x] Add date range filtering  (start_date/end_date query params on history endpoint)
-- [x] Add export to CSV  (backend `GET /api/messages/history/export` returns CSV StreamingResponse; frontend "Export All" button calls backend endpoint via `exportHistoryCsv()` in client.ts; "Export Page" button exports current page client-side — Mar 26, 2026)
-- [ ] Add analytics aggregation
-
-#### Dashboard
-- [x] Statistics endpoint
-- [ ] Add more metrics (success rate, failure reasons)
-- [ ] Add time-series data (messages per day/week/month)
-- [ ] Add subscription revenue metrics
-
-### Phase 2 Features (Backend Complete) - Frontend Integration & Enhancement Tasks
-
-**STATUS UPDATE (Feb 14, 2026):**  All Phase 2 routers now registered, models defined, and database schema complete. Backend-frontend integration issues resolved.
-
-#### Birthday Configs
-**Status:**  Router registered, model complete, database schema complete
-
-- [x] Create `BirthdayConfig` model in models.py 
-- [x] Create database table in ddl.sql 
-- [x] Register router in main.py 
-- [x] Add relationship to message_groups and posts 
-- [x] Test all CRUD endpoints  (`test_birthday_configs.py` — 13 tests: create, list, get, update, delete, gender filter, duplicate constraint, unauthorized access — Mar 26, 2026)
-- [ ] Add gender filter validation in API
-- [ ] Add archive toggle functionality testing
-- [ ] Frontend integration testing
-
-#### Posts (Timeline Posts)
-**Status:**  Router registered, model complete with font fields, database schema complete
-
-- [x] Create `Post` model in models.py 
-- [x] Create database table in ddl.sql (includes font_family, font_size, font_color)
-- [x] Register router in main.py 
-- [x] Add font customization fields (font_family, font_size, font_color) 
-- [x] Gender enum standardization 
-- [ ] Implement image upload/storage (currently just URL storage)
-- [ ] Add image validation (size, format, dimensions)
-- [ ] Add post preview endpoint
-- [ ] Test gender filtering
-- [x] Test font customization features  (PostEditor.tsx with font_family/font_size/font_color fields; FacebookPostPreview.tsx renders preview)
-- [x] Test all CRUD endpoints  (`test_posts.py` — 11 tests: create with font fields, list, get, update, delete, unauthorized access — Mar 26, 2026)
-
-#### Message Groups
-**Status:**  Router registered, model complete, database schema complete
-
-- [x] Create `MessageGroup` model in models.py 
-- [x] Create database table in ddl.sql 
-- [x] Register router in main.py 
-- [x] Test segment_ids array handling  (`test_message_groups.py` — 11 tests: create with segment_ids, list, get, update, delete, unauthorized — Mar 26, 2026)
-- [ ] Add validation that segment_ids exist
-- [ ] Add gender filter validation
-- [ ] Frontend integration testing
-
-#### Images (User Image Library)
-**Status:** Router registered, model complete, database schema complete
-
-- [x] Create `UserImage` model in models.py 
-- [x] Create database table in ddl.sql 
-- [x] Register router in main.py 
-- [x] Test all CRUD endpoints  (`test_images.py` — 9 tests: upload with size validation, list, get, update, delete, size limit enforcement, unauthorized access — Mar 26, 2026)
-- [ ] Implement actual file upload (currently just URL storage)
-- [ ] Set up image storage (S3, CloudFlare R2, or local volume)
-- [ ] Add image processing (resize, optimize, thumbnails)
-- [ ] Add image deletion (cleanup storage)
-- [ ] Add usage tracking (which posts use which images)
-
-#### Message Templates (Complete Templates)
-**Status:**  Router registered, model complete with gender enum, database schema complete
-
-- [x] Create `MessageTemplate` model in models.py 
-- [x] Create database table in ddl.sql 
-- [x] Register router in main.py 
-- [x] Gender enum standardization (uses GenderEnum with ALL value) 
-- [x] Test all CRUD endpoints  (`test_message_templates.py` — 11 tests: create, list, get by ID, update, delete, gender filter, unauthorized access — Mar 26, 2026)
-- [x] Frontend integration for complete message templates  (TemplateCreator.tsx, TemplateGallery.tsx, useMessageTemplates.ts hook — full CRUD wired)
-
-#### SMTP Configuration
-**Status:**  Router registered and separated, model complete, database schema complete
-
-- [x] Create `SMTPConfig` model in models.py 
-- [x] Create database table in ddl.sql 
-- [x] Separate SMTP router from auth router 
-- [x] Register router in main.py 
-- [x] Test SMTP configuration endpoints  (`test_smtp.py` — 6 tests: get default, update config, update partial, password masking, unauthorized access — Mar 26, 2026)
-- [x] Frontend integration with SMTPSettings component  (SMTPSettings.tsx + useSMTPConfig.ts hook — get/update SMTP config wired)
-
-### API Quality & Error Handling
-- [x] Standardize DELETE responses across all endpoints  (All return 200 + `DeleteResponse(status="deleted")` via `schemas/common.py`; applied to all 10 DELETE endpoints across 10 routers — Mar 26, 2026)
-- [x] Add proper HTTP status codes for DELETE operations 
-- [x] Add shared response models  (`schemas/common.py` — `DeleteResponse` + `ErrorResponse` models — Mar 26, 2026)
-- [ ] Standardize error responses across all endpoints (non-DELETE)
-- [ ] Add request validation error messages
-- [x] Add request/response logging  (`RequestLoggingMiddleware` in `core/request_logging.py` — logs method, path, status_code, duration_ms, client IP for every request — Mar 26, 2026)
-- [ ] Add API versioning strategy (v1, v2)
-- [x] Add OpenAPI tags metadata  (14 tag groups with descriptions added to FastAPI app constructor — Mar 26, 2026)
-- [ ] Test all error cases (network, database, validation)
-
-### Security Hardening
-- [x] Add CORS configuration validation  (CORSMiddleware configured with `cors_origins` from pydantic settings; supports env override; methods/headers restricted to explicit allowlist — Mar 26, 2026)
-- [x] Add request rate limiting  (slowapi implemented — rate-limited by Facebook user ID on auth and send-message endpoints; `/auth/refresh` rate-limited 30/min — Mar 26, 2026)
-- [x] Add input sanitization for all text fields  (reusable `sanitize_text()` in `validators.py` applied to 6 schema files — Mar 14, 2026)
-- [x] Add SQL injection protection  (SQLAlchemy ORM parameterized queries throughout)
-- [x] Add XSS prevention  (input sanitization via `sanitize_text()` on all text schemas; React auto-escapes output; content script `innerHTML` uses `escapeHtml()` helper — Mar 26, 2026)
-- [x] Add CSS selector injection prevention  (`CSS.escape()` applied to user-controlled values in `querySelector` calls in `messenger.ts` — Mar 26, 2026)
-- [x] Add security headers (HSTS, CSP, etc.)  (`SecurityHeadersMiddleware` — HSTS, X-Frame-Options, X-Content-Type-Options, CSP (no unsafe-inline), Referrer-Policy, Permissions-Policy, Cache-Control no-store on `/auth` routes — Mar 14 + Mar 26, 2026)
-- [x] Add explicit CSP in extension manifest  (`content_security_policy.extension_pages` — Mar 26, 2026)
-- [ ] Add API key rotation mechanism
-- [x] Implement audit logging for sensitive operations  (`AuditLogMiddleware` logs login, register, password change, account delete, SMTP config update, session revoke, data export; prefix matching for dynamic route segments — Mar 26, 2026)
-- [x] Add JWT `iss`/`aud` claims  (tokens include `iss: birthdaymessaging`, `aud: birthdaymessaging`; validated on decode — Mar 26, 2026)
-- [x] Enforce email verification and account lockout in auth dependency  (`get_current_user` now checks `email_verified` and `locked_until` — Mar 26, 2026)
-- [x] Add timing oracle protection on login  (dummy Argon2 hash when user not found prevents user enumeration — Mar 26, 2026)
-- [x] Add session invalidation on password reset  (all active sessions revoked after password reset — Mar 26, 2026)
-- [x] Add session invalidation on password change  (all other sessions revoked, current session preserved — Mar 26, 2026)
-- [x] Add password max_length validation  (`max_length=128` on register, reset, and change password schemas — Mar 26, 2026)
-- [x] Fix WebSocket auth to enforce access token type + session validation  (`ensure_token_type(ACCESS)` + session revocation check; removed insecure query-string token path — Mar 26, 2026)
-- [x] Add atomic token consumption  (`SELECT FOR UPDATE` on password reset and email verification token queries to prevent race conditions — Mar 26, 2026)
-- [x] Add auth to `/send-birthday-message` endpoint  (`Depends(get_current_user)` — Mar 26, 2026)
-- [x] Fix data-export missing model imports  (added `TemplateSegment`, `MessageTemplate`, `BirthdaySchedule`, `Contact`, `MessageQueue`, `MessageHistory` — Mar 26, 2026)
-- [x] Add Stripe API key placeholder validation  (warns at startup if using default placeholder — Mar 26, 2026)
-- [x] Reject short JWT secret keys  (`< 32 chars` now raises `ValueError` instead of warning — Mar 26, 2026)
-- [ ] Add JWT secret rotation strategy
-
-### Performance Optimization
-- [ ] Add database query optimization (N+1 queries)
-- [ ] Add response caching where appropriate
-- [ ] Add database connection pooling configuration
-- [ ] Add async operation optimization
-- [ ] Load test API endpoints (100+ concurrent users)
-- [ ] Profile slow endpoints and optimize
-
----
-
-## 🎨 Frontend/Extension Layer
-
-### Extension Build & Configuration
-- [x] TypeScript + React setup
-- [x] Vite build configuration
-- [x] Manifest V3 structure
-- [x] Build extension: `npm run build`  **Successfully builds to dist/ folder**
-- [x] Test built extension loads in Chrome
-- [x] Add build to CI/CD pipeline  (frontend-ci.yaml builds extension + runs tests on every push — Mar 18, 2026)
-- [ ] Add versioning automation (package.json → manifest.json)
-- [x] Add extension icon and branding assets (Birthday_messaging-logo.png exists)
-- [ ] Test extension in incognito mode
-- [ ] Test extension with multiple Google accounts
-- [x] Enhanced navigation with dropdown menus  **4 comprehensive tab dropdowns**
-- [x] All advanced features accessible via navigation  **5 shortcuts in MessagesHub** (Message Templates, Timeline Posts, Scheduling, Analytics, Image Library)
-
-### Authentication UI
-- [x] Login form component (AuthForm)
-- [x] Registration form component (AuthForm)
-- [x] Forgot password form (ForgotPassword component)
-- [x] Change password form (ChangePassword component)
-- [x] Add form validation feedback (email & password validation implemented)
-- [x] Add loading states for all forms
-- [ ] Add "remember me" functionality
-- [x] Add password strength indicator (password validation exists)
-- [x] Add email validation before submit
-- [x] Test token refresh flow (implemented in background/index.ts)
-- [x] Add logout confirmation
-- [x] Handle expired session gracefully
-
-### Dashboard UI
-- [x] TabbedDashboard component
-- [x] Dashboard stats display (Dashboard component)
-- [x] Add real-time updates via WebSocket (implemented Feb 10, 2026)
-  - [x] WebSocket endpoint (`/ws`) with JWT authentication
-  - [x] Real-time message queue updates
-  - [x] Real-time message history updates
-  - [x] Real-time dashboard stats updates
-  - [x] Auto-reconnect with exponential backoff
-  - [x] Keep-alive ping/pong mechanism
-  - [x] See REALTIME_FEATURES.md for full documentation
-- [x] Enhanced Dashboard visual design (implemented Feb 10, 2026)
-  - [x] Borderless cards with glass-morphism effect
-  - [x] Emoji indicators for all stats (📊 🎯 📬 ⭐ 📅 📈 🎂 ⏳ ⚙️)
-  - [x] Increased spacing for better visual balance (gap-4, mb-6, p-4/p-5/p-6)
-  - [x] Consistent styling aligned with popup theme
-  - [x] Larger success rate hero card with improved typography
-  - [x] Labels above numbers for better readability
-- [x] Enhanced tab navigation system (implemented Feb 11, 2026) ✨ **NEW**
-  - [x] 4-tab layout (Home, Contacts, Messages, Account)
-  - [x] Account dropdown menu (Profile, SMTP Settings, Subscription, Sign Out)
-  - [x] State-driven view navigation across all features
-- [ ] Add date range selector for stats
-- [x] Add charts/graphs for metrics  (DashboardCharts component implemented with volume and success rate trend lines)
-- [ ] Add export functionality
-- [ ] Improve responsive design
-- [ ] Add dark mode support
-
-### User Education & Training UI
-- [x] Welcome/Onboarding Flow  (OnboardingWizard component, Mar 3, 2026)
-  - [x] Welcome modal on first launch 
-  - [x] Multi-step onboarding wizard (5 steps) 
-  - [x] Progress indicator for onboarding 
-  - [x] Skip option with confirmation 
-  - [x] Mark onboarding as complete in user preferences  (bm_onboarding_complete in chrome.storage.local)
-- [ ] Interactive Product Tour
-  - [ ] Spotlight/highlight key UI elements
-  - [ ] Step-by-step feature walkthrough
-  - [ ] Tooltip bubbles with next/previous buttons
-  - [ ] Tour progress indicator
-  - [ ] Re-trigger tour from help menu
-- [x] In-App Help System (partial )
-  - [x] Help icon/button in header/navigation  (❓ Help & Tips footer button in App.tsx, Mar 10, 2026)
-  - [x] Contextual help tooltips (? icons)  (HelpTooltip component, Mar 3, 2026)
-  - [ ] Search help articles (in-app)
-- [ ] Tutorial Components
-  - [ ] Template creation tutorial (guided mode)
-  - [ ] Schedule setup tutorial (interactive)
-  - [ ] Contact import tutorial (step-by-step)
-  - [ ] Automation test tutorial (safe mode)
-- [ ] Feature Discovery
-  - [x] "Tips & Tricks" notification system  (FeatureTip component — dismissible contextual tip banners per-tab, persisted via `chrome.storage.local`)
-- [ ] Embedded Help Resources
-  - [ ] FAQ accordion component
-  - [ ] Video tutorial player (embedded)
-  - [ ] Help article preview cards
-  - [ ] Support chat widget (optional)
-
-### Template Management UI
-- [x] TemplateCreator component
-- [x] TemplateList component
-- [x] TemplateGallery component
-- [x] Add template preview
-- [ ] Add drag-and-drop reordering
-- [ ] Add template import/export
-- [x] Add merge tag documentation/help (KeywordInserter component exists)
-- [x] Add character count  (SegmentEditor shows `{length} / {maxLength} characters` per field — greeting 300, sentiment 1000, closing 300)
-- [ ] Add template duplication
-
-### Schedule Settings UI
-- [x] ScheduleSettings component
-- [ ] Add calendar view for schedules
-- [ ] Add schedule preview (next run dates)
-- [ ] Add bulk schedule operations
-- [ ] Add schedule conflict warnings
-- [ ] Add timezone configuration
-
-### Automation UI
-- [x] AutomationSettings component
-- [x] Add automation status indicator  (shows Active/Inactive status, last check, next check times — loaded on mount; not WebSocket-pushed)
-- [x] Add pause/resume automation  (Emergency Stop 🛑 with 24-hour cooldown + clear button, beyond simple enable/disable)
-- [x] Add automation logs viewer  (collapsible Activity Log section with color-coded entries by level, clear-log button)
-- [x] Add manual trigger button  (Run Check Now implemented)
-- [x] Add Max Messages Per Run control  (numeric input wired to automation.setMaxMessages)
-- [x] Add Clear Sent-Today button  (resets deduplication list for the day)
-- [ ] Add automation test mode (dry run)
-- [x] Improve error messaging  (error/success banners, emergency stop UI with red alerts, rate-limit warning text)
-
-### Message Queue UI
-- [x] MessageQueue component
-- [ ] Add real-time status updates
-- [x] Add bulk operations (select multiple)  (checkboxes, select-all, Retry Selected, Cancel Selected)
-- [x] Add filtering by status  (status filter dropdown)
-- [x] Add sorting by date  (sort direction toggle)
-- [x] Add message preview modal 
-- [x] Add retry all failed button 
-
-### Message History UI
-- [x] MessageHistory component
-- [x] Add pagination  (server-side pagination with Prev/Next controls)
-- [x] Add advanced search filters  (date range + status filter + search)
-- [x] Add date range picker  (From/To date inputs wired to backend)
-- [x] Add export to CSV  ("Export All" calls backend endpoint for full history; "Export Page" exports current page as Blob download — Mar 26, 2026)
-- [x] Add message details modal 
-- [ ] Add graphs/charts for history
-
-### Subscription UI
-- [x] SubscriptionPanel component
-- [x] Add plan comparison table  (side-by-side Monthly $4.99/mo vs Yearly $39.99/yr with savings badge; grid-based plan cards with pricing, cycle info, yearly equivalent, "CURRENT" badges)
-- [x] Add payment method management  (delegated to Stripe billing portal via "Manage Payment Methods" button)
-- [x] Add billing history  (delegated to Stripe billing portal via "View Billing History" button)
-- [x] Add cancellation flow with feedback  (cancel button → confirmation modal with optional reason textarea (500 char limit), reactivation option for `cancel_at_period_end` subscriptions)
-- [ ] Add proration preview for upgrades  (change-plan modal shows generic Stripe proration message but no calculated amount preview)
-- [ ] Test Stripe checkout flow end-to-end
-
-### Content Script (Facebook Automation)
-- [x] Birthday friend detection (gatherBirthdayFriends in content/index.ts)
-- [x] Message sending automation (sendMessageToFriend, sendComposedMessageToFriend, sendMessageFromProfile)
-- [x] Timeline posting (timeline.ts — postToTimeline, submitPost with Enter-key fallback)
-- [x] Messenger archiving (messenger.ts — archiveConversation)
-- [x] Full automation loop (runFullAutomation — 2-phase: birthday feed + advance/follow-up contacts)
-- [x] Gender-aware template + post selection (selectTemplate, selectPost with priority: exact → neutral → any)
-- [x] Keyword resolution (resolveKeywords: [Tag Person] → name, [Today] → date, [Image] → stripped)
-- [x] Advance/follow-up mode (days_in_advance > 0 early, < 0 follow-up; contacts matched by birthday MM-DD)
-- [x] Deduplication (sent-today guard) (getSentToday/addToSentToday in utils/automation.ts)
-- [x] Contact sync (upsert) (syncContactsFromFriends — create new + update existing by profile URL)
-- [x] Full-screen automation overlay (showAutomationOverlay/hideAutomationOverlay)
-- [x] Add anti-detection delays (randomDelay already implemented)
-- [x] Add support for Facebook birthdays page  (openOrFocusFacebookBirthdaysTab opens /birthdays)
-- [x] Add image attachment for timeline posts  (postToTimeline supports imageUrl)
-- [x] Add Nifty Images merge tag replacement  (resolveKeywords + timeline.ts NiftyImages support)
-- [ ] Improve friend detection reliability (handle Facebook UI changes)
-- [ ] Add error recovery for automation failures
-- [ ] Test with various Facebook layouts (mobile, desktop, different languages)
-- [ ] Test archiving/unarchiving flow
-- [ ] Add mutation observer stability improvements
-
-### Background Service Worker
-- [x] API client integration (background/index.ts has all API calls)
-- [x] Token management (ensureTokens, refreshTokensFlow implemented)
-- [x] Automation orchestration fully implemented (handleAutomationScan: fetches templates/posts/contacts, groups by days_in_advance, opens FB birthdays tab, dispatches automation.runFull)
-- [x] Add alarm-based scheduling (chrome.alarms.create/onAlarm.addListener implemented in background/index.ts and utils/automation.ts)
-- [x] Sent-today deduplication (getSentToday, addToSentToday, clearSentToday in utils/automation.ts)
-- [x] Max messages config (maxMessages field in AutomationConfig, updateMaxMessages helper, threaded into automation payload)
-- [x] New background message types (automation.recordSent, automation.setMaxMessages, automation.clearSentToday; failsafe category with 8 message types — 77 total message types)
-- [ ] Add notification for automation status
-- [ ] Add offline support (queue requests)
-- [ ] Add crash recovery
-- [ ] Test persistent state management
-- [ ] Add update check and notification
-
-### Contact Management UI ✨ **NEW** (Scaffolded Feb 11, 2026)
-- [x] ContactList component - display, search, import, add, edit, delete
-- [x] ContactForm component - add/edit contact with validation
-- [x] Gender selector in ContactForm  (MALE / FEMALE / NEUTRAL — used by automation for template selection)
-- [x] ImportContactsModal - import from JSON, VCF, CSV with drag-and-drop
-- [x] BirthdayCalendar component - calendar and list views
-- [x] Backend Contact model and router registered 
-- [ ] Test contact CRUD operations end-to-end
-- [ ] Test import functionality with sample files
-- [ ] Add contact birthday reminders
-- [ ] Add contact grouping/tagging
-
-### Account Management UI ✨ **NEW** (Scaffolded Feb 11, 2026)
-- [x] AccountManagement component - profile, timezone, logout, delete account
-- [x] SMTPSettings component - SMTP configuration form
-- [x] Backend SMTP router registered and separated 
-- [x] Backend SMTPConfig model complete 
-- [x] Backend API endpoint for profile updates  (`PUT /auth/profile` implemented — name/timezone stored in metadata)
-- [x] Backend API endpoint for account deletion  (`DELETE /auth/account` implemented)
-- [ ] Test profile update flow
-- [ ] Test SMTP configuration end-to-end
-- [x] Test account deletion with confirmation  (account deletion now requires `current_password` for security)
-
-### Extension Quality
-- [x] Add loading states for all API calls (implemented with Spinner component)
-- [x] Add error handling for all user actions (errors.ts, Toast, ErrorBoundary)
-- [x] Add input validation everywhere (email, password, content validation)
-- [x] Add keyboard navigation support (implemented Feb 10, 2026)
-- [x] Tab navigation with visible focus indicators
-- [x] Keyboard shortcuts (Alt+H, Alt+D, Alt+L, Esc)
-- [x] Skip links for keyboard users
-- [x] Logical tab order throughout extension
-- [x] Add accessibility (ARIA labels, semantic HTML) (implemented Feb 10, 2026)
-- [x] WCAG 2.1 Level AA compliance
-- [x] ARIA attributes (roles, labels, states, properties, `role="presentation"` on intermediate wrappers — Mar 26, 2026)
-- [x] Screen reader support with live regions
-- [x] Semantic HTML landmarks (header, main, nav, footer)
-- [x] Form accessibility with proper labels and error associations
-- [x] Focus management and trap focus utilities
-- [x] Reduced motion and high contrast support
-- [x] Accessibility utility functions
-- [x] See ACCESSIBILITY.md for full documentation
-- [x] Enhanced visual polish (in progress - Feb 10-11, 2026)
-- [x] Dashboard component with modern styling (completed Feb 10)
-- [x] Tab navigation with dropdown menus (completed Feb 11) 
-- [x] Contact management UI scaffolded (completed Feb 11) 
-- [x] Birthday Calendar UI scaffolded (completed Feb 11) 
-- [x] SMTP Settings UI scaffolded (completed Feb 11) 
-- [x] Account Management UI scaffolded (completed Feb 11) 
-- [x] MessageQueue component enhancements  (bulk ops, status filter, sort, preview modal, retry all failed, Mar 3, 2026)
-- [x] MessageHistory component enhancements  (pagination, date range, CSV export, details modal, Mar 3, 2026)
-- [ ] TemplateCreator / TemplateGallery / TemplateList component enhancements
-- [ ] AuthForm component enhancements
-- [x] New UI components added (Mar 2026): DashboardStatsCard, FacebookPostPreview, FeatureTip, GenderFilter, HelpPanel, HomeControls, ImageLibraryPicker, ImageManager, MessagesHub, PostEditor, PostList, SchedulingSettings
-- [x] New utility modules added (Mar 2026): bridge.ts (background-content messaging), failsafe.ts, image.ts, logger.ts, messages.ts
-- [x] New content-script modules added (Mar 2026): content/api.ts, content/dom-helpers.ts
-- [ ] Add internationalization (i18n) support
-- [ ] Test on different screen sizes
-- [x] Test keyboard shortcuts (Alt+H, Alt+D, Alt+L, Esc implemented)
-- [x] Add user onboarding flow (first-time setup)  (OnboardingWizard, Mar 3, 2026)
-
----
-
-## 🚀 DevOps & Infrastructure
-
-### Development Environment
-- [x] Docker setup for backend (Dockerfile exists)
-- [x] Docker compose configuration (docker-compose.yml with db + backend)
-- [x] PostgreSQL 15 container configured
-- [x] Database initialization with ddl.sql (mounted to /docker-entrypoint-initdb.d/)
-- [x] Environment variable configuration (.env.example exists)
-- [x] Health check endpoint (/health)
-
-### Production Environment Setup
-**Priority:** P0 - REQUIRED FOR LAUNCH  
-**Status:** 🔴 Not Started
+### 1. Production Infrastructure Setup
+**Status:** Not Started
 
 #### Cloud Infrastructure
-- [ ] Choose cloud provider (AWS, GCP, Azure, DigitalOcean, Render, Fly.io)
-- [ ] Set up production database (PostgreSQL 15+ managed service)
-- [ ] Set up backend hosting (container service or VM)
-- [ ] Set up domain and SSL certificates
-- [ ] Set up CDN (if needed for static assets)
-- [ ] Set up object storage for images (S3, R2, etc.)
+- [ ] Choose cloud provider (Render, Fly.io, AWS, DigitalOcean)
+- [ ] Set up managed PostgreSQL (15+)
+- [ ] Set up backend hosting (container service)
+- [ ] Set up domain and TLS/SSL certificates
+- [ ] Set up object storage for images (S3, CloudFlare R2 — optional for MVP, URL-only is acceptable)
 
 #### Database Production Setup
-- [ ] Create production database cluster
-- [ ] Configure connection pooling (PgBouncer or similar)
+- [ ] Create production database instance
+- [ ] Run `alembic upgrade head` against production database
+- [ ] Verify all 17 tables and 32 indexes created
+- [ ] Configure connection pooling (PgBouncer or provider-managed)
 - [ ] Set up automatic backups (daily minimum)
 - [ ] Test backup restore procedure
-- [ ] Set up replica for read queries (optional)
-- [ ] Configure database monitoring and alerts
-- [ ] Run `alembic upgrade head` against production database
-- [ ] Verify all tables and indexes created
 
 #### Backend Production Deployment
-- [ ] Build production Docker image
-- [ ] Push image to container registry (Docker Hub, ECR, GCR)
+- [ ] Configure production environment variables:
+  - [ ] `JWT_SECRET_KEY` (generate strong 64+ char random key)
+  - [ ] `DATABASE_URL` (production PostgreSQL connection string)
+  - [ ] `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (live mode)
+  - [ ] `CORS_ORIGINS` (published extension ID + production domain)
+  - [ ] `SENDGRID_API_KEY` (production key + domain verification)
+  - [ ] `EMAIL_FROM_ADDRESS` + `PASSWORD_RESET_URL_BASE`
+  - [ ] `SMTP_ENCRYPTION_KEY` (32-byte Fernet key)
+  - [ ] `LOG_LEVEL` = WARNING or ERROR
+- [ ] Set up secrets management (provider secrets, Vault, etc.)
+- [ ] Build and push production Docker image
 - [ ] Deploy container to production environment
-- [ ] Configure environment variables (.env production values)
-- [ ] Set up secrets management (AWS Secrets Manager, Vault, etc.)
-- [ ] Configure health check endpoint
-- [ ] Set up HTTPS/TLS (Let's Encrypt or managed certificates)
-- [ ] Configure reverse proxy (nginx, Caddy, or cloud load balancer)
+- [ ] Configure HTTPS reverse proxy (Caddy, nginx, or cloud LB)
+- [ ] Configure Stripe webhook endpoint with production URL
+- [ ] Verify health check endpoint accessible (`GET /health`)
 - [ ] Test API accessible from internet
 
-#### Environment Configuration
-- [x] Create .env.production template  (all env vars documented with generation instructions)
-- [ ] Set production JWT_SECRET_KEY (generate strong random key)
-- [ ] Configure production DATABASE_URL
-- [ ] Set production Stripe keys (live mode)
-- [ ] Configure Stripe webhook endpoint (with live secret)
-- [ ] Set production CORS_ORIGINS (published extension ID)
-- [ ] Configure email service for production  SendGrid SDK integrated; needs production API key + domain verification
-- [ ] Set LOG_LEVEL to WARNING or ERROR
-
-### Monitoring & Observability
-**Priority:** P1 - LAUNCH REQUIREMENT  
-**Status:** 🔴 Not Started
-
-- [ ] Set up application logging (structured logs)
-- [ ] Set up log aggregation (CloudWatch, GCP Logs, Datadog, etc.)
-- [ ] Set up error tracking (Sentry, Rollbar, etc.)
-- [ ] Set up uptime monitoring (UptimeRobot, Pingdom, etc.)
-- [ ] Set up performance monitoring (APM)
-- [ ] Create alerting rules:
-  - [ ] API downtime alert
-  - [ ] Database connection failure
-  - [ ] High error rate (>5% 5xx responses)
-  - [ ] Slow response times (>2s p95)
-  - [ ] Failed payments
-  - [ ] Email delivery failures
-- [ ] Set up metrics dashboard (Grafana, Datadog, etc.)
-- [ ] Add business metrics tracking:
-  - [ ] Daily active users
-  - [ ] Messages sent per day
-  - [ ] Subscription conversions
-  - [ ] Churn rate
-
-### CI/CD Pipeline
-**Priority:** P1 - REQUIRED FOR SUSTAINABLE DEVELOPMENT  
-**Status:** � Partially Implemented — 3 Gitea Actions workflows exist (`.gitea/workflows/`): frontend-ci.yaml, deploy.yaml, dependency-scan.yaml
-
-#### Backend CI/CD
-- [x] Set up Gitea Actions  (`.gitea/workflows/deploy.yaml` — Docker image build + push to Gitea container registry + Coolify webhook trigger; runs on push to develop/backend-ci-deploy — Apr 2, 2026)
-- [ ] Add automated testing on PR:
-  - [ ] Run pytest for all tests
-  - [ ] Run linting (ruff, black, mypy)
-  - [ ] Check code coverage (>80% target)
-- [x] Add automated build on merge:
-  - [x] Build Docker image
-  - [x] Tag with branch name + timestamp
-  - [x] Push to container registry  (Gitea container registry at gitea.birthdaymessaging.com)
-- [x] Add automated deployment:
-  - [ ] Deploy to staging environment
-  - [ ] Run integration tests
-  - [x] Deploy to production via Coolify webhook  (placeholder URL in secrets)
-- [ ] Add rollback mechanism
-
-#### Extension CI/CD
-- [x] Set up frontend CI pipeline:  (.gitea/workflows/frontend-ci.yaml — Mar 18, 2026)
-  - [x] Run TypeScript compilation check
-  - [x] Run ESLint
-  - [x] Run Prettier check
-  - [x] Run npm build
-- [x] Add automated extension packaging:  (Mar 18, 2026)
-  - [x] Build extension zip
-  - [x] Upload to artifacts
-- [ ] Add Chrome Web Store publishing:
-  - [ ] Set up Web Store API credentials
-  - [ ] Automate version bumping
-  - [ ] Submit for review (manual approval)
-
-### Security & Compliance
-- [x] Run security audit on dependencies (npm audit, safety)  (npm audit --audit-level=high in frontend-ci.yaml — Mar 18, 2026; picomatch high-severity vulnerability fixed via `npm audit fix` — Mar 26, 2026)
-- [x] Set up dependency vulnerability scanning  (`.gitea/workflows/dependency-scan.yaml` — npm audit for frontend only; backend pip-audit removed Apr 1, 2026; runs on push/PR to main/develop + weekly Monday 08:00 UTC cron; audit results uploaded as artifacts)
-- [x] Add OWASP security headers  (8 headers via `SecurityHeadersMiddleware` — HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy, Permissions-Policy, Cache-Control, Pragma — Mar 14 + Mar 26, 2026)
-- [x] Implement GDPR compliance features:  (Mar 18, 2026)
-  - [x] User data export  (GET /auth/data-export returns JSON with all user data)
-  - [x] User data deletion (right to be forgotten)  (DELETE /auth/account already implemented)
-  - [x] Privacy policy  (extension/privacy-policy.html)
-  - [x] Terms of service  (extension/terms-of-service.html)
-  - [ ] Cookie consent (if using tracking)
-- [ ] Create security incident response plan
-- [ ] Set up bug bounty program (optional, post-launch)
-
-### Performance & Scalability
-- [ ] Load test backend (simulate 100+ concurrent users)
-- [ ] Set up auto-scaling rules (if using cloud)
-- [ ] Optimize database queries (add indexes, query plans)
-- [ ] Set up caching layer (Redis) if needed
-- [ ] Configure CDN for static assets
-- [ ] Test database backup/restore speed
-- [ ] Plan for horizontal scaling (multiple backend instances)
-
-### Documentation
-- [ ] Create production deployment guide
-- [ ] Document environment variable requirements
-- [ ] Document backup/restore procedures
-- [ ] Document rollback procedures
-- [ ] Create runbook for common issues:
-  - [ ] Database connection failures
-  - [ ] API downtime
-  - [ ] Stripe webhook failures
-  - [ ] Email delivery issues
-- [ ] Create on-call rotation guide
-- [ ] Document monitoring dashboard access
-
----
-
-## 🧪 Testing
-
-### Backend Testing
-**Priority:** P1 - REQUIRED FOR CONFIDENCE  
-**Status:**  Expanded Coverage (~230 tests across 25 files; unit + API integration tests; conftest.py with shared async fixtures)
-
-#### Unit Tests
-- [x] Basic auth tests (test_auth.py — 11 tests: access token type, refresh token validation, refresh token JTI presence, session_id in access token, token rotation/revocation, revoke endpoint, concurrent refresh reuse detection, login creates session + list endpoint marks current, revoke session blocks access, session invalidation on password change, session invalidation on password reset — Mar 19, 2026)
-- [x] Basic template tests (test_templates.py — 2 tests: empty segment validation, message composition)
-- [x] Add tests for schedules router  (test_schedules.py — 9 tests)
-- [x] Add tests for messages router  (test_messages.py — 17 tests: queue list/create/update/cancel/retry, history pagination/search/status-filter/date-range/delete)
-- [x] Add tests for dashboard router  (test_dashboard.py — 5 tests)
-- [x] Add tests for subscription router  (`test_subscription.py` — 13 tests: status no-sub/active/grace-period/past-due, cancel, reactivate, change-plan same+upgrade, billing-portal, change-plan no-active-sub — Mar 2026)
-- [x] Add tests for webhook router  (`test_webhook.py` — 10 tests: missing sig, invalid sig, unhandled event, subscription.created, subscription.updated cancel/plan-change, subscription.deleted, payment.failed, no-subscription, unknown customer — Mar 2026)
-- [x] Add tests for email verification service  (`test_email_verification.py` — 9 tests: create token, store hash, verify valid/invalid/expired, mark used, used-token-blocked, request endpoint triggers send, verify endpoint marks verified — Mar 18, 2026)
-- [x] Add tests for password reset service  (test_password_reset.py — 7 tests)
-- [x] Add tests for birthday configs router  (`test_birthday_configs.py` — 13 tests: CRUD, gender filter, duplicate constraint, unauthorized — Mar 26, 2026)
-- [x] Add tests for message groups router  (`test_message_groups.py` — 11 tests: CRUD, segment_ids, unauthorized — Mar 26, 2026)
-- [x] Add tests for message templates router  (`test_message_templates.py` — 11 tests: CRUD, gender filter, unauthorized — Mar 26, 2026)
-- [x] Add tests for posts router  (`test_posts.py` — 11 tests: CRUD with font fields, unauthorized — Mar 26, 2026)
-- [x] Add tests for images router  (`test_images.py` — 9 tests: upload, size validation, CRUD, unauthorized — Mar 26, 2026)
-- [x] Add tests for SMTP config router  (`test_smtp.py` — 6 tests: get/update, password masking, unauthorized — Mar 26, 2026)
-- [x] Add tests for encryption module  (`test_encryption.py` — 6 tests: encrypt/decrypt cycle, key validation, Fernet operations — Apr 2, 2026)
-- [x] Add tests for rate limiter  (`test_rate_limiter.py` — 5 tests: rate limit enforcement, endpoint-specific limits — Apr 2, 2026)
-- [x] Add tests for security headers middleware  (`test_security_headers.py` — 8 tests: HSTS, CSP, X-Frame-Options, Cache-Control, Permissions-Policy — Apr 2, 2026)
-- [x] Add tests for Stripe service  (`test_stripe_service.py` — 16 tests: checkout session, subscription operations, webhook handling, billing portal — Apr 2, 2026)
-- [x] Add tests for input validators  (`test_validators.py` — 10 tests: sanitize_text, email validation, password validation — Apr 2, 2026)
-- [x] Add tests for audit logging  (`test_audit_log.py` — 7 tests: audit log middleware, sensitive operation logging — Apr 2, 2026)
-- [ ] Target: >80% code coverage
-
-#### Integration Tests
-- [x] Test full auth flow (register → verify → login → refresh)  (`test_integration.py` — `test_full_auth_flow` — Mar 26, 2026)
-- [ ] Test password reset flow (request → email → reset)
-- [x] Test template CRUD flow  (`test_integration.py` — `test_template_crud_flow` — Mar 26, 2026)
-- [x] Test schedule CRUD flow  (`test_integration.py` — `test_schedule_crud_flow` — Mar 26, 2026)
-- [x] Test message queue flow (create → cancel → verify)  (`test_integration.py` — `test_message_queue_to_history` — Mar 26, 2026)
-- [ ] Test Stripe subscription flow (checkout → webhook → status)
-- [ ] Test webhook signature verification
-- [ ] Test token expiration and refresh
-
-#### Database Tests
-- [ ] Test migrations (up and down)
-- [x] Test foreign key constraints  (`test_db_constraints.py` — cascade delete test — Mar 26, 2026)
-- [x] Test cascade deletes  (`test_db_constraints.py` — user deletion cascades to child records — Mar 26, 2026)
-- [x] Test unique constraints  (`test_db_constraints.py` — duplicate email, unique schedule constraint — Mar 26, 2026)
-- [x] Test enum constraints  (`test_db_constraints.py` — segment type enum validation — Mar 26, 2026)
-- [ ] Test concurrent operations
-
-#### API Contract Tests
-- [x] Test all endpoints return correct status codes  (`test_api_contracts.py` — 14 tests: health 200, auth 401, validation 422, not-found 404, correct schemas — Mar 26, 2026)
-- [x] Test all endpoints validate required fields  (`test_api_contracts.py` — validation error tests — Mar 26, 2026)
-- [x] Test all endpoints return correct schema  (`test_api_contracts.py` — schema structure verification — Mar 26, 2026)
-- [ ] Test pagination works correctly
-- [ ] Test filtering works correctly
-- [ ] Test sorting works correctly
-
-### Frontend/Extension Testing
-**Priority:** P1 - USER EXPERIENCE CRITICAL  
-**Status:**  Comprehensive — ~297 tests across 15 files, all passing (Apr 1, 2026)
-
-**Setup complete (Feb 25, 2026):**
--  Vitest + jsdom + @testing-library/react installed
--  `vitest.config.ts` configured with jsdom environment, coverage thresholds (70% lines/functions)
--  `src/test-setup.ts` — global Chrome API stub (storage.local Promise + callback dual-mode, alarms, runtime)
--  Test scripts added: `npm test`, `npm run test:watch`, `npm run test:coverage`
--  13 test files, 251 tests, all passing (verified Mar 17, 2026) → 15 test files, 297 tests (verified Apr 1, 2026)
-
-#### Unit Tests
-- [x] Add Jest/Vitest configuration  (Vitest + jsdom, Feb 25, 2026)
-- [x] Test API client functions  (`src/api/__tests__/client.test.ts` — 7 tests: ApiError, login, auth headers)
-- [x] Test storage utilities  (`src/utils/__tests__/storage.test.ts` — 9 tests: tokens, backend URL)
-- [x] Test message composition logic  (`src/utils/__tests__/message.test.ts` — 26 tests: shufflePick, composeMessage, selectTemplate, selectPost, resolveKeywords, assembleMessageFromTemplate)
-- [x] Test automation utilities  (`src/utils/__tests__/automation.test.ts` — 22 tests: config, dedup, alarms, delays)
-- [x] Test error handling utilities  (`src/utils/__tests__/errors.test.ts` — 34 tests: error hierarchy, parseApiError, getErrorMessage, isRetryableError, validation)
-
-#### Component Tests
-- [x] Test Spinner component  (renders, size prop, optional message — moved to `components.test.tsx`, Mar 2026)
-- [x] Test Toast component  (renders, auto-close, manual close, all types — `components.test.tsx`)
-- [x] Test ErrorBoundary component  (catches errors, custom fallback, try-again button — `components.test.tsx`)
-- [x] Test AuthForm component  (login/register toggle, inputs, validation display, spinner on submit, message display, forgot-password link — `components.test.tsx`)
-- [x] Test Dashboard component  (`src/popup/__tests__/Dashboard.test.tsx` — 12 tests: loading/error/stats/automation-status/refresh, Feb 25, 2026)
-- [x] Test TemplateCreator component  (`src/popup/__tests__/TemplateCreator.test.tsx` — 15 tests: form fields, validation, submit/cancel/preview, gender select, initialData, Feb 25, 2026)
-- [x] Test MessageQueue component  (`src/popup/__tests__/MessageQueue.test.tsx` — 37 tests: status filter, sort, bulk ops, retry-all-failed, preview modal, Mar 3, 2026)
-- [x] Test TemplateGallery component  (`src/popup/__tests__/TemplateGallery.test.tsx` — 22 tests: template rendering, badges, edit/delete actions, Feb 25, 2026)
-- [x] Test MessageHistory component  (`src/popup/__tests__/MessageHistory.test.tsx` — 51 tests: date range, CSV export, details modal, pagination, Mar 3, 2026)
-- [x] Test HelpTooltip component  (`src/popup/__tests__/HelpTooltip.test.tsx` — 10 tests: render, hover/focus show/hide, accessibility, Mar 3, 2026)
-- [x] Test OnboardingWizard component  (`src/popup/__tests__/OnboardingWizard.test.tsx` — 16 tests: navigation, step content, progress bar, complete/skip, Mar 3, 2026)
-- [ ] Test all form validation
-- [ ] Test error states
-- [ ] Test loading states
-
-#### Integration Tests
-- [ ] Test login flow end-to-end
-- [ ] Test template creation flow
-- [ ] Test message sending flow
-- [ ] Test subscription flow
-- [ ] Test content script automation
-
-#### E2E Tests (Critical User Flows)
-- [ ] Set up Playwright or Puppeteer
-- [ ] Test: Install extension → register → login
-- [ ] Test: Create template → save → use in message
-- [ ] Test: Subscribe → verify active → cancel
-- [ ] Test: Add schedule → verify in queue
-- [ ] Test: Automation scan → detect birthdays → send messages
-- [ ] Test: View message history → filter → export
-
-#### Browser Compatibility
-- [ ] Test in Chrome (latest stable)
-- [ ] Test in Chrome (previous version)
-- [ ] Test in Chromium-based browsers (Edge, Brave)
-- [ ] Test on different operating systems (Windows, macOS, Linux)
-
-### Manual Testing Checklist (Pre-Launch)
-- [ ] Fresh install and onboarding flow
-- [ ] All forms submit correctly
-- [ ] All validation messages display correctly
-- [ ] Error handling works (network errors, invalid inputs)
-- [ ] Loading states display correctly
-- [ ] Extension popup renders correctly
+#### End-to-End Production Verification
+- [ ] Fresh user registration + email verification
+- [ ] Login + token refresh flow
+- [ ] Template creation + scheduling
+- [ ] Stripe checkout (live test) + webhook receipt
+- [ ] Password reset email delivery
+- [ ] WebSocket real-time updates
+- [ ] Extension popup renders correctly against production API
 - [ ] Content script detects birthdays on Facebook
-- [ ] Messages send correctly on Facebook
-- [ ] Timeline posts work correctly
-- [ ] Archiving works correctly
-- [ ] Stripe checkout completes successfully
-- [ ] Webhook updates subscription status
-- [ ] Password reset email delivers and works
-- [ ] Token refresh works automatically
-- [ ] Logout works correctly
-- [ ] Analytics/stats display correctly
+- [ ] Automation sends a test message
 
----
+### 2. Chrome Web Store Submission
+**Status:** Not Started — Legacy extension exists in Web Store; new build will replace it
 
-## 📋 Chrome Web Store Listing
-
-### Pre-Submission Requirements
-**Priority:** P0 - REQUIRED FOR PUBLICATION  
-**Status:** 🔴 Not Started
-
-- [ ] Build production extension (npm run build)
-- [ ] Test built extension thoroughly
-- [ ] Create Chrome Web Store developer account ($5 one-time fee)
-- [ ] Prepare extension listing (Legacy extension already exists in Chrome Web Store, the new build must replace it as an updated version/rebrand):
-  - [ ] Extension name and description (detailed)
+- [ ] Build production extension (`npm run build`)
+- [ ] Test built extension loads and functions correctly in Chrome
+- [ ] Prepare listing assets:
+  - [ ] Extension name and detailed description
   - [ ] Short description (132 chars max)
   - [ ] Category selection
-  - [ ] Privacy policy URL (required)
-  - [ ] Support email
-- [ ] Create promotional images:
+  - [ ] Screenshots (1280x800 or 640x400, up to 5)
   - [ ] Small tile icon (128x128)
   - [ ] Large tile icon (440x280)
   - [ ] Marquee image (1400x560)
-  - [ ] Screenshots (1280x800 or 640x400, 5 max recommended)
-- [ ] Create interactive tutorial
-- [ ] Prepare permissions justification document
-- [ ] Review and comply with Chrome Web Store Program Policies
-
-### Privacy & Permissions
-- [x] Write privacy policy (required):  (extension/privacy-policy.html — Mar 18, 2026)
-  - [x] Explain data collection
-  - [x] Explain data usage
-  - [x] Explain data sharing (if any)
-  - [x] Explain user rights (access, deletion)
-- [x] Justify each permission:  (all 6 permissions table in privacy-policy.html — Mar 18, 2026)
-  - [x] `storage` - Save user preferences and auth tokens
-  - [x] `scripting` - Inject content scripts on Facebook
-  - [x] `activeTab` - Access current tab for automation
-  - [x] `tabs` - Query Facebook tabs for automation
-  - [x] `alarms` - Schedule periodic birthday checks
-  - [x] `host_permissions` (facebook.com) - Automate birthday messages
-- [x] Add "What's New" section for updates  (WhatsNew.tsx modal, version-gated via chrome.storage.local — Mar 18, 2026)
+- [ ] Prepare permissions justification document:
+  - `storage` — Save user preferences and auth tokens
+  - `scripting` — Inject content scripts on Facebook
+  - `activeTab` — Access current tab for automation
+  - `tabs` — Query Facebook tabs for automation
+  - `notifications` — OS-level alerts for automation events
+  - `alarms` (optional) — Schedule periodic birthday checks
+  - `host_permissions` (facebook.com) — Automate birthday messages
+- [ ] Confirm privacy policy URL (already created: `privacy-policy.html`)
+- [ ] Set support email
+- [ ] Submit for Chrome Web Store review
 
 ---
 
-## 📝 Documentation
+## P1 — High Priority (Required Shortly After Launch)
 
-### User Documentation
-- [ ] Create comprehensive user guide (how to use extension):
-  - [ ] Installation instructions (Chrome Web Store)
-  - [ ] Setup wizard walkthrough (step-by-step)
-  - [x] Quick start guide (5-minute setup)  (extension/quick-start.html — Mar 18, 2026)
-  - [ ] Creating templates guide (with examples)
-  - [ ] Using merge tags and personalization
-  - [ ] Setting up schedules (timing strategies)
-  - [ ] Understanding automation (how it works)
-  - [ ] Managing message queue and history
-  - [ ] Contact management (import/export)
-  - [ ] Timeline posts and image customization
-  - [ ] SMTP configuration (for notifications)
-  - [ ] Subscription plans explanation and comparison
-  - [x] Troubleshooting common issues  (extension/troubleshooting.html — Mar 18, 2026)
-  - [ ] Best practices for engagement
-  - [ ] Privacy and permissions explanation
-- [x] Create FAQ document  (extension/faq.html — Mar 18, 2026)
-  - [x] What data does the extension collect?
-  - [x] How does automation work?
-  - [x] Why do I need a subscription?
-  - [x] How do I cancel my subscription?
-  - [x] How do I pause automation?
-  - [x] What happens if Facebook changes its layout?
-  - [x] How do I import contacts?
-  - [x] How do I reset my password?
-  - [x] What are merge tags?
-  - [x] Can I have multiple templates?
-  - [x] Why didn't a message send on a friend's birthday?
-- [ ] Create interactive tutorials (in-app)
-  - [ ] Product tour on first login
-  - [ ] Template creation wizard
-  - [ ] Schedule setup wizard
-  - [ ] Contact import wizard
+### 3. Backend Test CI Pipeline
+**Status:** Missing — Deploy pipeline exists (`deploy.yaml`) but no automated test runs on PR
 
-### Developer Documentation
-- [x] SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md (comprehensive)
-- [x] DEVELOPMENT_GUIDE.md (setup instructions)
-- [x] BACKEND_TESTING_GUIDE.md (API testing)
-- [x] BACKEND_INTEGRATION_SUMMARY.md (Phase 1 implementation)
-- [x] API_ENDPOINTS_NEW_FEATURES.md (Phase 2 features)
-- [ ] Add API reference documentation (Swagger/OpenAPI)
-- [ ] Add code commenting for complex logic
-- [ ] Add architecture decision records (ADRs)
-- [ ] Add troubleshooting guide for developers
+- [ ] Create `.gitea/workflows/backend-ci.yaml`:
+  - [ ] Run `pytest` on all ~287 tests
+  - [ ] Run linting (`ruff` or `flake8`)
+  - [ ] Run type checking (`mypy`) — optional
+  - [ ] Report code coverage (`pytest-cov`, target >80%)
+- [ ] Wire to run on PR to `main`/`develop`
 
-### Operations Documentation
-- [ ] Create deployment guide (step-by-step production setup)
-- [ ] Create monitoring guide (where to look for issues)
-- [ ] Create incident response guide (what to do when things break)
-- [ ] Create backup/restore guide
-- [ ] Create scaling guide (how to handle growth)
+### 4. Monitoring & Observability
+**Status:** Not Started
+
+- [ ] Set up error tracking (Sentry or Rollbar)
+- [ ] Set up uptime monitoring (UptimeRobot, Pingdom, or provider-native)
+- [ ] Set up structured logging + log aggregation
+- [ ] Create alerting rules:
+  - [ ] API downtime
+  - [ ] Database connection failures
+  - [ ] High error rate (>5% 5xx)
+  - [ ] Slow response times (>2s p95)
+  - [ ] Failed Stripe payments
+  - [ ] SendGrid delivery failures
+
+### 5. Alembic Migration Testing
+- [ ] Test all 5 migrations up (upgrade) against clean PostgreSQL
+- [ ] Test all 5 migrations down (downgrade)
+- [ ] Document rollback procedure
 
 ---
 
-## 🎯 MVP Definition & Launch Criteria
+## P2 — Medium Priority (Post-Launch Enhancements)
 
-### What Makes This an MVP?
+### 6. Image Upload/Storage
+**Status:** URL-based only — `POST /images/upload-file` stores base64 data URIs directly in DB
 
-**Core Value Proposition:**
-> "Users can automatically send personalized birthday messages to Facebook friends with minimal effort, powered by a subscription-based service."
+- [ ] Set up cloud object storage (S3, CloudFlare R2, or local volume)
+- [ ] Implement server-side upload -> storage pipeline
+- [ ] Add image processing (resize, optimize, thumbnails)
+- [ ] Add storage cleanup on image deletion
+- [ ] Add image size/format/dimension validation
 
-**Must-Have Features for MVP:**
-1. ✅ User account creation and authentication (implemented in auth router)
-2. ✅ Password reset via email (SendGrid fully configured Mar 14, 2026 — `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` all in `config.py` Settings)
-3. ✅ Create and manage message templates (full CRUD implemented)
-4. ✅ Set up birthday schedules (days before/after) (full CRUD implemented)
-5. ✅ Automated birthday detection on Facebook (gatherBirthdayFriends implemented)
-6. ✅ Automated message sending (sendMessageToFriend implemented)
-7. ✅ Message queue management (full CRUD implemented)
-8. ✅ Message history tracking (list, search, delete implemented)
-9. ✅ Subscription payment via Stripe (checkout session + webhook implemented)
-10. ✅ Basic dashboard with statistics (getDashboardStats implemented)
-11. ✅ Backend-frontend integration (API paths aligned, schemas consistent, DELETE standardized) 
+### 7. Extended Test Coverage
 
-**Launch Blockers (Must Complete):**
-- [x] Fix database schema (ddl.sql completeness)  Resolved
-- [x] Fix backend-frontend integration (API paths, schemas, methods)  Resolved (Phases 1-3)
-- [x] Standardize DELETE responses across API  Resolved
-- [x] Align database schema with models (post fonts, gender enum)  Resolved
-- [x] Register all Phase 2 routers  Resolved
-- [x] Implement email service for password reset  (SendGrid, Mar 9, 2026)
-- [ ] Deploy backend to production
-- [ ] Deploy database to production
-- [ ] Configure production Stripe webhooks
-- [ ] Build and test extension in production mode
-- [ ] Publish extension to Chrome Web Store
-- [ ] Test end-to-end user flow in production
-- [ ] Set up monitoring and alerts
-- [x] Create privacy policy and terms of service  (extension/privacy-policy.html + extension/terms-of-service.html — Mar 18, 2026)
-- [x] Create minimal user documentation:  (Mar 18, 2026)
-  - [x] Quick start guide (5-minute setup)  (extension/quick-start.html)
-  - [x] Basic FAQ (10-15 common questions)  (extension/faq.html)
-  - [x] Troubleshooting guide (common issues)  (extension/troubleshooting.html)
-- [x] Implement basic onboarding flow:  (Mar 3, 2026)
-  - [x] Welcome screen on first launch 
-  - [x] Essential setup wizard (templates + schedule) 
-  - [x] Contextual help tooltips on key features 
+#### Backend Gaps
+- [ ] Integration test: password reset flow (request -> email -> reset)
+- [ ] Integration test: Stripe subscription flow (checkout -> webhook -> status)
+- [ ] Database test: migration up/down verification
+- [ ] Database test: concurrent operations
+- [ ] API contract tests: pagination, filtering, sorting verification
+- [ ] Target: >80% code coverage
 
-**Post-MVP (Can Launch Without):**
-- Image upload/storage implementation (currently URL-based)
-- Advanced analytics and reporting
-- Support for other social networks
-- Advanced automation features
-- Referral program
-- Template preview and bulk operations
-- Advanced testing coverage
-- Interactive product tours and advanced training
-- Video tutorials and comprehensive help center
-- In-depth user guides and best practices documentation
+#### Frontend/Extension Gaps
+- [ ] Background service worker tests (0 coverage currently)
+- [ ] Custom hook tests (0 coverage currently)
+- [ ] E2E testing framework (Playwright or Puppeteer)
+- [ ] Critical E2E flows:
+  - [ ] Install -> register -> login -> create template -> schedule -> verify
+  - [ ] Automation scan -> detect birthdays -> send messages
+  - [ ] Subscribe -> verify active -> cancel
+- [ ] Browser compatibility testing (Chrome stable, Edge, Brave)
 
-### Success Metrics for MVP Launch
-- [ ] Define success metrics:
-  - [ ] Number of registered users (target: 100 in first month)
-  - [ ] Number of paid subscribers (target: 10 in first month)
-  - [ ] Number of messages sent (target: 1000 in first month)
-  - [ ] Extension retention rate (target: >50% weekly active)
-  - [ ] Customer support tickets (target: <5% of users)
-  - [ ] Onboarding completion rate (target: >70%)
-  - [ ] Time to first message sent (target: <10 minutes)
-  - [ ] User activation rate (completed setup + sent 1st message)
-- [ ] Set up analytics tracking for metrics
-- [ ] Create dashboard to monitor metrics
+### 8. Offline Queue Wiring
+**Status:** `offline-queue.ts` is fully scaffolded (queues write ops when offline, replays on reconnect) but **not imported** by the background service worker
+
+- [ ] Import and initialize offline queue in background `index.ts`
+- [ ] Test offline -> online replay behavior
+
+### 9. Content Script Resilience
+- [ ] Add error recovery for automation failures (retry individual friend on DOM error)
+- [ ] Add mutation observer stability improvements
+- [ ] Test with various Facebook layouts (desktop, different languages)
 
 ---
 
-## 📊 Priority Matrix
+## P3 — Low Priority (Nice to Have)
 
-### Now 
-1. 🔴 Deploy production infrastructure
-2. 🔴 End-to-end testing
+### 10. Feature Enhancements
+- [ ] Template bulk import/export
+- [ ] Template usage statistics
+- [ ] Schedule preview (show next run dates)
+- [ ] Subscription proration preview (actual Stripe API amount, not generic text)
+- [ ] Dashboard time-series data (messages per day/week/month)
+- [ ] Dark mode support
+- [ ] Internationalization (i18n)
+- [ ] `WhatsNew` component (referenced in docs but does not exist)
+- [ ] Interactive product tour (spotlight UI elements)
+- [ ] Template creation tutorial (guided mode)
+- [ ] Video tutorials (embedded)
+- [ ] In-app FAQ search
 
-### Soon 
-1. 🟡 ~~CI/CD pipeline setup~~  Partially implemented — frontend CI + backend deploy + dependency scan exist; backend test CI still needed
-2. 🟡 Monitoring and alerting
-3. 🟡 Chrome Web Store submission
-4. 🟡 Load testing
+### 11. API & Backend Polish
+- [ ] Standardize error responses across all non-DELETE endpoints
+- [ ] API versioning strategy (v1, v2)
+- [ ] JWT secret rotation strategy
+- [ ] API key rotation mechanism
+- [ ] Failed payment retry logic (Stripe webhook received but no automatic retry scheduling)
+- [ ] Validate `segment_ids` exist in message group creation
+- [ ] Database query optimization (N+1 queries)
+- [ ] Response caching where appropriate
+- [ ] Load testing (100+ concurrent users)
 
-### Later 
-1. 🟢 Phase 2 feature enhancements (image upload/storage, advanced testing, frontend integration)
-2. 🟢 Advanced testing (E2E, performance)
-3. 🟢 Analytics improvements
-4. 🟢 Internationalization
-5. 🟢 Comprehensive training materials (video tutorials, interactive tours)
-6. 🟢 Advanced help center and knowledge base
+### 12. Operations Documentation
+- [ ] Production deployment guide (step-by-step)
+- [ ] Monitoring guide
+- [ ] Incident response runbook
+- [ ] Scaling guide
 
-### Nice to Have
-1. ⚪ Dark mode
-2. ⚪ Referral program
-3. ⚪ Advanced automation features
-4. ⚪ Social network integration beyond Facebook
-5. ⚪ AI-powered message suggestions
-
----
-
-## 🚦 Current Blockers & Dependencies
-
-### Critical Blockers
-1. **Production Infrastructure** — No cloud provider, domain, or managed PostgreSQL set up yet
-
-### External Dependencies
-1. **Stripe Account** — Required for payments (can use test mode for now)
-2. **Cloud Provider** — Required for production hosting
-3. **Chrome Web Store Account** — Required for extension publishing ($5 fee)
-4. **Domain Name** — Required for production API (if using custom domain)
-
-### Technical Debt
-1. ~~Backend test coverage at ~91 tests across 11 files; target >80% coverage remaining (smtp, birthday_configs, message_groups, posts, images still untested)~~  RESOLVED — 230 tests across 25 files; all Phase 2 routers tested + encryption, rate_limiter, security_headers, stripe_service, validators, audit_log (Apr 2, 2026)
-2. ~~No backend CI/CD pipeline (only frontend CI exists)~~  PARTIALLY RESOLVED — deploy.yaml exists for Docker image build + Coolify deployment; backend testing CI still missing (Apr 2, 2026)
-3. No production monitoring or error tracking service
-4. Image upload/storage not implemented (URL-based currently)
-5. No content script or background service worker tests
-6. ~~Frontend CSV export is client-side only (browser Blob); backend `GET /api/messages/history/export` endpoint exists but is not called by the frontend~~  RESOLVED — "Export All" button now calls backend endpoint via `exportHistoryCsv()` in client.ts (Mar 26, 2026)
-7. `/send-birthday-message` endpoint is a non-functional stub (content scripts handle actual sending)
-8. Subscription proration preview shows generic text only — no actual calculated amount from Stripe API
-9. No dedicated `useSubscription` hook — subscription state fetched directly in component via `sendBackgroundMessage`
-10. 6 pre-existing test failures: 5 auth tests (KeyError: 'path' in session handling), 1 subscription test (billing portal message assertion mismatch)
+### 13. Comprehensive User Documentation
+- [ ] Full user guide (installation, templates, schedules, automation, contacts, SMTP, subscriptions)
+- [ ] Creating templates guide with examples
+- [ ] Merge tags and personalization guide
+- [ ] Automation setup and explanation
+- [ ] Contact import/export guide
 
 ---
 
-## 📞 Next Steps
+## Known Technical Debt
 
-### Immediate Actions (This Week)
-1. [ ] Start production infrastructure setup (cloud provider, managed PostgreSQL)
-2. [x] Increase backend test coverage (integration tests for auth, templates, contacts, all Phase 2 routers + encryption, rate_limiter, security_headers, stripe_service, validators, audit_log — 230 tests across 25 files, Apr 2, 2026)
-3. [ ] Fix 6 pre-existing test failures (5 auth KeyError:'path', 1 subscription assertion)
-
-### Short Term (Next 2 Weeks)
-1. [ ] Complete production deployment (container hosting, domain, TLS)
-2. [ ] Set up monitoring and alerting
-3. [ ] Run end-to-end testing
-
-### Medium Term
-1. [ ] Submit to Chrome Web Store
-2. [ ] Add backend test CI pipeline (pytest on PR)
-3. [ ] Add content script and background worker tests
-4. [ ] Complete user documentation (guides, FAQ, troubleshooting)
-5. [ ] Launch to small beta group
+1. **`POST /send-birthday-message`** — Stub endpoint that returns `{"status": "sent"}` without doing anything. Content scripts handle actual sending. Kept for rate limiting and auth enforcement.
+2. **`POST /images/upload-file`** — Stores base64 data URIs directly in DB (`# TODO: Upload to cloud storage`). Works but not scalable.
+3. **Image storage** — All image handling is URL-based or base64-in-DB. No cloud object storage configured.
+4. **Subscription proration** — `change-plan` modal shows generic Stripe proration message, no calculated amount preview from Stripe API.
+5. **Offline queue** — `offline-queue.ts` fully scaffolded but not wired into the background service worker.
+6. **No backend test CI** — Backend deploy pipeline exists, but tests are not run automatically on PR.
 
 ---
 
-## Notes
+## Actionable Next Steps
 
-- This checklist assumes you're targeting a production launch
-- Prioritize based on your team size and timeline
-- MVP should be minimal but functional and polished
-- Monitor user feedback closely after launch
-- Iterate quickly based on user needs
-- Consider soft launch with beta testers before public launch
+### This Week
+1. [ ] Choose cloud provider and provision infrastructure (database + backend hosting + domain)
+2. [ ] Configure all production environment variables
+3. [ ] Deploy backend and run Alembic migrations
 
-**Last Updated:** April 2, 2026
+### Next Week
+4. [ ] Test end-to-end user flows against production API
+5. [ ] Build production extension and test in Chrome
+6. [ ] Prepare Chrome Web Store listing assets
+7. [ ] Submit extension update to Chrome Web Store
+8. [ ] Set up basic monitoring (Sentry + uptime check)
+
+### Soon
+9. [ ] Add backend test CI pipeline
+10. [ ] Wire offline queue into background service worker
+11. [ ] Expand test coverage (background worker, hooks, E2E)
+12. [ ] Set up cloud image storage (if needed beyond URL-based)
+13. [ ] Soft launch to beta group and iterate on feedback

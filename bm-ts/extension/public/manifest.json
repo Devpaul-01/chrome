@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Helps you remember and send personalized birthday wishes to your Facebook friends.",
   "homepage_url": "https://birthdaymessaging.app/privacy",
-  "permissions": ["storage", "scripting", "activeTab", "tabs"],
+  "permissions": ["storage", "scripting", "activeTab", "tabs", "notifications"],
   "optional_permissions": ["alarms"],
   "action": {
     "default_popup": "popup.html",
@@ -18,6 +18,7 @@
     {
       "matches": [
         "https://www.facebook.com/birthdays*",
+        "https://www.facebook.com/friends/birthdays*",
         "https://www.facebook.com/messages/*",
         "https://www.facebook.com/profile.php*"
       ],
@@ -27,6 +28,7 @@
   ],
   "host_permissions": [
     "https://www.facebook.com/birthdays*",
+    "https://www.facebook.com/friends/birthdays*",
     "https://www.facebook.com/messages/*",
     "https://www.facebook.com/profile.php*",
     "http://localhost/*",

@@ -170,13 +170,62 @@ export function useContacts() {
   const handleImportContacts = useCallback(
     async (importedContacts: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<void> => {
       try {
-        const newContacts = await sendBackgroundMessage<Contact[]>({
-          type: 'contacts.bulkCreate',
-          payload: importedContacts,
+        // Fetch existing contacts to detect rescan updates
+        const existing = await sendBackgroundMessage<Contact[]>({ type: 'contacts.list' });
+        const existingByUrl = new Map((existing ?? []).map((c) => [c.facebook_profile_url, c]));
+
+        const toCreate: typeof importedContacts = [];
+        const updatePromises: Promise<Contact>[] = [];
+
+        for (const incoming of importedContacts) {
+          const match = existingByUrl.get(incoming.facebook_profile_url);
+          if (match) {
+            // Auto-update: if existing contact was month-only and incoming has a full date, update it
+            if (match.birthday_month_only && !incoming.birthday_month_only) {
+              updatePromises.push(
+                sendBackgroundMessage<Contact>({
+                  type: 'contacts.update',
+                  payload: {
+                    id: match.id,
+                    birthday: incoming.birthday,
+                    birthday_month_only: false,
+                  },
+                }),
+              );
+            }
+            // Skip creating a duplicate for already-existing contacts
+          } else {
+            toCreate.push(incoming);
+          }
+        }
+
+        const [updatedContacts, newContacts] = await Promise.all([
+          Promise.all(updatePromises),
+          toCreate.length > 0
+            ? sendBackgroundMessage<Contact[]>({
+                type: 'contacts.bulkCreate',
+                payload: toCreate,
+              })
+            : Promise.resolve([] as Contact[]),
+        ]);
+
+        // Merge results into state
+        setContacts((prev) => {
+          const merged = prev.map((c) => {
+            const updated = updatedContacts.find((u) => u.id === c.id);
+            return updated ?? c;
+          });
+          return [...newContacts, ...merged];
         });
-        setContacts((prev) => [...newContacts, ...prev]);
+
         setShowImportModal(false);
-        showToast(`Successfully imported ${newContacts.length} contacts!`, 'success');
+        const parts: string[] = [];
+        if (newContacts.length) parts.push(`${newContacts.length} imported`);
+        if (updatedContacts.length) parts.push(`${updatedContacts.length} updated`);
+        showToast(
+          parts.length ? `Contacts: ${parts.join(', ')}!` : 'No new contacts to import.',
+          'success',
+        );
       } catch (error) {
         const msg = getErrorMessage(error);
         logError(error, 'handleImportContacts');

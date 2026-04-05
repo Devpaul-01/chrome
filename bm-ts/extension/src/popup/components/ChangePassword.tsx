@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import Spinner from './Spinner';
 import { getErrorMessage, logError, validatePassword } from '../../utils/errors';
+import { sendBackgroundMessage } from '../api';
 
 interface ChangePasswordProps {
   onCancel: () => void;
@@ -35,18 +36,13 @@ export default function ChangePassword({ onCancel, onSuccess }: ChangePasswordPr
     }
 
     try {
-      const response = await chrome.runtime.sendMessage({
+      await sendBackgroundMessage({
         type: 'auth.changePassword',
         payload: {
           currentPassword,
           newPassword,
         },
       });
-      if (response && !response.success) {
-        const msg = response.error?.message ?? 'Failed to change password';
-        setError(msg);
-        return;
-      }
       setMessage('Password changed successfully!');
       setTimeout(() => {
         onSuccess();

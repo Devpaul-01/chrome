@@ -8,6 +8,7 @@ type ImportContact = {
   name: string;
   facebook_profile_url: string;
   birthday: string; // ISO date string
+  birthday_month_only?: boolean;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   notes?: string;
 };
@@ -16,6 +17,7 @@ type ScrapedContact = {
   name: string;
   facebook_profile_url: string;
   birthday?: string;
+  monthOnly?: boolean;
 };
 
 type ImportContactsModalProps = {
@@ -24,6 +26,21 @@ type ImportContactsModalProps = {
 };
 
 type SourceTab = 'facebook' | 'file';
+
+const MONTH_NAMES: Record<string, string> = {
+  '01': 'January',
+  '02': 'February',
+  '03': 'March',
+  '04': 'April',
+  '05': 'May',
+  '06': 'June',
+  '07': 'July',
+  '08': 'August',
+  '09': 'September',
+  '10': 'October',
+  '11': 'November',
+  '12': 'December',
+};
 
 function todayISO(): string {
   const n = new Date();
@@ -37,6 +54,8 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
   const [showPreview, setShowPreview] = useState(false);
   const [parsedContacts, setParsedContacts] = useState<ImportContact[]>([]);
   const [missingDateCount, setMissingDateCount] = useState(0);
+  const [monthOnlyCount, setMonthOnlyCount] = useState(0);
+  const [monthOnlySet, setMonthOnlySet] = useState<Set<number>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScraping, setIsScraping] = useState(false);
@@ -66,15 +85,24 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
       }
       const today = todayISO();
       let missing = 0;
-      const mapped: ImportContact[] = scraped.map((c) => {
+      let monthOnly = 0;
+      const monthOnlyIndices = new Set<number>();
+      const mapped: ImportContact[] = scraped.map((c, idx) => {
         if (!c.birthday) missing++;
+        if (c.monthOnly) {
+          monthOnly++;
+          monthOnlyIndices.add(idx);
+        }
         return {
           name: c.name,
           facebook_profile_url: c.facebook_profile_url,
           birthday: c.birthday ?? today,
+          birthday_month_only: c.monthOnly ?? false,
         };
       });
       setMissingDateCount(missing);
+      setMonthOnlyCount(monthOnly);
+      setMonthOnlySet(monthOnlyIndices);
       setParsedContacts(mapped);
       setShowPreview(true);
     } catch (err) {
@@ -199,6 +227,8 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
     setShowPreview(false);
     setParsedContacts([]);
     setMissingDateCount(0);
+    setMonthOnlyCount(0);
+    setMonthOnlySet(new Set());
     setError(null);
   };
 
@@ -398,11 +428,22 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                     {missingDateCount} with unknown birthday
                   </span>
                 )}
+                {monthOnlyCount > 0 && (
+                  <span className="text-xs bg-blue-100 text-blue-800 border border-blue-300 rounded px-2 py-1">
+                    {monthOnlyCount} with month only
+                  </span>
+                )}
               </div>
               {missingDateCount > 0 && (
                 <p className="text-xs text-gray-500 mb-3">
                   Contacts marked with ⚠ had no birthday found on the page — today&apos;s date has
                   been set as a placeholder. Edit the contact after import to correct it.
+                </p>
+              )}
+              {monthOnlyCount > 0 && (
+                <p className="text-xs text-gray-500 mb-3">
+                  Contacts marked with 📅 only had a birth month visible on Facebook — the day has
+                  been set to the 1st. Edit the contact after import to set the exact day.
                 </p>
               )}
               <div className="space-y-2">
@@ -412,13 +453,18 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                     <p className="text-xs text-gray-500 truncate">{c.facebook_profile_url}</p>
                     <p
                       className={`text-xs mt-0.5 ${
-                        c.birthday === todayISO() && missingDateCount > 0
+                        monthOnlySet.has(i)
+                          ? 'text-blue-600'
+                          : c.birthday === todayISO() && missingDateCount > 0
                           ? 'text-yellow-600'
                           : 'text-orangeBrand'
                       }`}
                     >
-                      {c.birthday === todayISO() && missingDateCount > 0 ? '⚠ ' : ''}Birthday:{' '}
-                      {c.birthday}
+                      {monthOnlySet.has(i)
+                        ? `📅 Birth month: ${MONTH_NAMES[c.birthday.split('-')[1]] ?? c.birthday}`
+                        : c.birthday === todayISO() && missingDateCount > 0
+                        ? `⚠ Birthday: ${c.birthday}`
+                        : `Birthday: ${c.birthday}`}
                     </p>
                   </div>
                 ))}

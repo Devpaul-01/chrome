@@ -1,4 +1,4 @@
-import { useState, FormEvent, useRef } from 'react';
+import { useState, useEffect, FormEvent, useRef } from 'react';
 import Spinner from './Spinner';
 import FacebookPostPreview from './FacebookPostPreview';
 import { useImageLibrary } from '../hooks/useImageLibrary';
@@ -23,6 +23,8 @@ type Props = {
   initialData?: Partial<TemplateFormData>;
 };
 
+const TEMPLATE_DRAFT_KEY = 'bm_template_draft';
+
 export default function TemplateCreator({ onSubmit, onCancel, initialData }: Props) {
   const [formData, setFormData] = useState<TemplateFormData>({
     greeting: initialData?.greeting || '',
@@ -34,6 +36,23 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     daysInAdvance: initialData?.daysInAdvance || 0,
     gender: initialData?.gender || 'ALL',
   });
+
+  // Restore draft from storage when creating (not editing)
+  useEffect(() => {
+    if (initialData) return;
+    chrome.storage.local.get(TEMPLATE_DRAFT_KEY).then((stored) => {
+      if (stored[TEMPLATE_DRAFT_KEY]) {
+        setFormData((prev) => ({ ...prev, ...stored[TEMPLATE_DRAFT_KEY], imageFile: null }));
+      }
+    });
+  }, [initialData]);
+
+  // Persist draft to storage on change (only when creating)
+  useEffect(() => {
+    if (initialData) return;
+    const { imageFile: _imageFile, ...persistable } = formData;
+    chrome.storage.local.set({ [TEMPLATE_DRAFT_KEY]: persistable });
+  }, [formData, initialData]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +179,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
+      chrome.storage.local.remove(TEMPLATE_DRAFT_KEY);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save template');
     } finally {
@@ -178,10 +198,10 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
 
       const suggestions = {
         greeting: [
-          'Hey [name], hope your day is as awesome as you are!',
-          'Happy Birthday [name]! 🎉',
-          'Wishing you the happiest of birthdays, [name]!',
-          'Hey [name]! Another year older and even more amazing!',
+          'Hey {First_Name}, hope your day is as awesome as you are!',
+          'Happy Birthday {First_Name}! 🎉',
+          'Wishing you the happiest of birthdays, {First_Name}!',
+          'Hey {First_Name}! Another year older and even more amazing!',
         ],
         sentiment: [
           'Your birthday reminds me of all the wonderful qualities that make you so special. You bring joy to everyone around you.',
@@ -306,6 +326,12 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               Fields marked * are required.
             </p>
 
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+              A template has three parts — <strong>Greeting</strong>, <strong>Sentiment</strong>,
+              and <strong>Closing</strong> — joined together to form the final message sent to your
+              friend. Use <strong>✨ Generate</strong> for suggestions, or write your own.
+            </p>
+
             {/* Greeting */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -337,7 +363,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Sentiment <span className="text-red-500">*</span>
+                  Sentiment <span className="text-red-500">*</span>{' '}
+                  <HelpTooltip label="The main body of your message — the personal, heartfelt part. Sits between the greeting and the closing." />
                 </label>
                 <button
                   type="button"
@@ -363,7 +390,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Closing <span className="text-red-500">*</span>
+                  Closing <span className="text-red-500">*</span>{' '}
+                  <HelpTooltip label="A short sign-off line — e.g. 'Wishing you a wonderful day!' Keep it brief." />
                 </label>
                 <button
                   type="button"
@@ -388,7 +416,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             {/* Template Title */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Template Title <span className="text-red-500">*</span>
+                Template Title <span className="text-red-500">*</span>{' '}
+                <HelpTooltip label="A private name for this template — not sent to friends. Helps you identify it in the gallery, e.g. 'Formal – Colleagues' or 'Casual – Close Friends'." />
               </label>
               <input
                 type="text"
@@ -403,7 +432,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             {/* Days in Advance */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Days in Advance
+                Days in Advance{' '}
+                <HelpTooltip label="Positive = days before the birthday; 0 = on the day; negative = days after. Useful for follow-up messages like 'Hope you had a great birthday yesterday!'" />
               </label>
               <select
                 value={formData.daysInAdvance}
@@ -426,7 +456,10 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
 
             {/* Gender Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Gender Filter</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Gender Filter{' '}
+                <HelpTooltip label="Restrict this template to contacts of a specific gender. 'All Genders' sends to everyone. Use gender-specific templates to personalise messages for male or female friends." />
+              </label>
               <select
                 value={formData.gender}
                 onChange={(e) =>
