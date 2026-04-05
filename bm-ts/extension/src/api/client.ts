@@ -530,6 +530,7 @@ export interface Contact {
   name: string;
   facebook_profile_url: string;
   birthday: string;
+  birthday_month_only?: boolean;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   notes?: string;
   createdAt: string;
@@ -540,6 +541,7 @@ export interface CreateContactPayload {
   name: string;
   facebook_profile_url: string;
   birthday: string;
+  birthday_month_only?: boolean;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   notes?: string;
 }
@@ -548,6 +550,7 @@ export interface UpdateContactPayload {
   name?: string;
   facebook_profile_url?: string;
   birthday?: string;
+  birthday_month_only?: boolean;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   notes?: string;
 }

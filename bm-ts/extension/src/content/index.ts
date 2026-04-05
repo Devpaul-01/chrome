@@ -950,6 +950,7 @@ export interface ScrapedContact {
   name: string;
   facebook_profile_url: string;
   birthday?: string; // ISO YYYY-MM-DD, derived from page context
+  monthOnly?: boolean; // true when only the birth month is known (day defaults to 01)
 }
 
 function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
@@ -986,35 +987,6 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
     return `${year}-${m}-${String(day).padStart(2, '0')}`;
   }
 
-  function parseDateFromText(text: string): string | undefined {
-    const t = text.replace(/\s+/g, ' ').trim();
-    // "Today" / "Tomorrow"
-    if (/\btoday\b/i.test(t)) {
-      const n = new Date();
-      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(
-        n.getDate(),
-      ).padStart(2, '0')}`;
-    }
-    if (/\btomorrow\b/i.test(t)) {
-      const n = new Date();
-      n.setDate(n.getDate() + 1);
-      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(
-        n.getDate(),
-      ).padStart(2, '0')}`;
-    }
-    // "January 15" / "Jan. 15" / "Jan 15"
-    const reFwd =
-      /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan\.?|feb\.?|mar\.?|apr\.?|jun\.?|jul\.?|aug\.?|sep\.?|oct\.?|nov\.?|dec\.?)\s+(\d{1,2})\b/i;
-    // "15 January" / "15 Jan"
-    const reRev =
-      /\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i;
-    let m = reFwd.exec(t);
-    if (m) return monthDayToISO(m[1], parseInt(m[2], 10));
-    m = reRev.exec(t);
-    if (m) return monthDayToISO(m[2], parseInt(m[1], 10));
-    return undefined;
-  }
-
   function isProfileLink(href: string): boolean {
     if (!href.includes('facebook.com')) return false;
     if (
@@ -1040,60 +1012,141 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
     }
   }
 
+  // ── Regexes for specific month+day patterns ──
+  const reFwd =
+    /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan\.?|feb\.?|mar\.?|apr\.?|jun\.?|jul\.?|aug\.?|sep\.?|oct\.?|nov\.?|dec\.?)\s+(\d{1,2})\b/i;
+  const reRev =
+    /\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i;
+
+  /** Parse only specific month+day patterns (never "today"/"tomorrow"). */
+  function parseSpecificDate(text: string): string | undefined {
+    const t = text.replace(/\s+/g, ' ').trim();
+    let m = reFwd.exec(t);
+    if (m) return monthDayToISO(m[1], parseInt(m[2], 10));
+    m = reRev.exec(t);
+    if (m) return monthDayToISO(m[2], parseInt(m[1], 10));
+    return undefined;
+  }
+
+  /** Regex for bare month names (e.g. section headings like "May", "June") */
+  const reMonthOnly =
+    /^\s*(january|february|march|april|may|june|july|august|september|october|november|december|jan\.?|feb\.?|mar\.?|apr\.?|jun\.?|jul\.?|aug\.?|sep\.?|oct\.?|nov\.?|dec\.?)\s*$/i;
+
+  /** Parse a section heading — supports "today", "tomorrow", specific dates, and bare months. */
+  function parseSectionDate(text: string): { date: string; monthOnly: boolean } | undefined {
+    const specific = parseSpecificDate(text);
+    if (specific) return { date: specific, monthOnly: false };
+    const t = text.replace(/\s+/g, ' ').trim();
+    if (/\btoday\b/i.test(t)) {
+      const n = new Date();
+      return { date: `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`, monthOnly: false };
+    }
+    if (/\btomorrow\b/i.test(t)) {
+      const n = new Date();
+      n.setDate(n.getDate() + 1);
+      return { date: `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`, monthOnly: false };
+    }
+    // Bare month heading (e.g. "May") — use 1st of that month
+    const mm = reMonthOnly.exec(t);
+    if (mm) {
+      return { date: monthDayToISO(mm[1], 1), monthOnly: true };
+    }
+    return undefined;
+  }
+
+  /**
+   * Find a specific date (month+day) near a profile link by walking up the DOM
+   * to find the contact's "card" container, then scanning text nodes within it.
+   *
+   * On Facebook, the date text (e.g. "6 April 1976") appears AFTER the name
+   * link in DOM order, so we must search within the card — not just before.
+   * We stop walking up once the container holds more than 2 profile links,
+   * since that means we've left the single-contact card.
+   */
+  function findCardDate(link: HTMLAnchorElement): string | undefined {
+    let container: HTMLElement | null = link.parentElement;
+    for (let depth = 0; depth < 10 && container; depth++) {
+      // Scan text nodes within this container for a specific date
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const text = walker.currentNode.textContent?.trim() ?? '';
+        if (text.length >= 3 && text.length <= 80) {
+          const d = parseSpecificDate(text);
+          if (d) return d;
+        }
+      }
+      // If this container already holds multiple profile links, we've gone
+      // past the single-contact card — stop before inheriting another card's date.
+      const profileCount = Array.from(
+        container.querySelectorAll<HTMLAnchorElement>('a[href]'),
+      ).filter((a) => isProfileLink(a.href)).length;
+      if (profileCount > 2) break;
+      container = container.parentElement;
+    }
+    return undefined;
+  }
+
+  // ── Build section date context from heading elements ──
+  // Headings like "Today's Birthdays", "Tomorrow", "April 6" give date context
+  // for contacts that don't have a per-card date.  Month-only headings like
+  // "May" provide the birth month (day defaults to 01).
+  interface SectionMarker {
+    el: HTMLElement;
+    date: string | undefined;
+    monthOnly: boolean;
+  }
+  const sectionMarkers: SectionMarker[] = [];
+  document
+    .querySelectorAll<HTMLElement>('h1,h2,h3,h4,h5,h6,[role="heading"],[aria-level]')
+    .forEach((heading) => {
+      const text = heading.textContent?.trim() ?? '';
+      if (text.length > 0 && text.length < 80) {
+        const parsed = parseSectionDate(text);
+        sectionMarkers.push({ el: heading, date: parsed?.date, monthOnly: parsed?.monthOnly ?? false });
+      }
+    });
+
+  /** Find the section date from the nearest preceding heading. */
+  function getSectionDate(element: HTMLElement): { date: string; monthOnly: boolean } | undefined {
+    for (let i = sectionMarkers.length - 1; i >= 0; i--) {
+      const pos = sectionMarkers[i].el.compareDocumentPosition(element);
+      if (pos & Node.DOCUMENT_POSITION_FOLLOWING) {
+        return sectionMarkers[i].date
+          ? { date: sectionMarkers[i].date!, monthOnly: sectionMarkers[i].monthOnly }
+          : undefined;
+      }
+    }
+    return undefined;
+  }
+
   const results: ScrapedContact[] = [];
   const seen = new Set<string>();
 
-  function tryAddContact(link: HTMLAnchorElement, contextEl: HTMLElement | null) {
+  function tryAddContact(link: HTMLAnchorElement) {
     if (!isProfileLink(link.href)) return;
     const name = link.textContent?.trim() ?? '';
     if (!name || name.length < 2 || name.length > 100) return;
     const profileUrl = normalizeProfileUrl(link.href);
     if (seen.has(profileUrl)) return;
     seen.add(profileUrl);
-    // Walk up DOM to find date string in surrounding text
-    let dateStr: string | undefined;
-    let el: HTMLElement | null = contextEl ?? link.parentElement;
-    for (let depth = 0; depth < 10 && el && !dateStr; depth++) {
-      const text = el.textContent ?? '';
-      // Only check short-ish text to avoid false positives from large containers
-      if (text.length < 600) dateStr = parseDateFromText(text);
-      el = el.parentElement;
+    // Priority: per-card specific date > section heading date > undefined
+    const cardDate = findCardDate(link);
+    if (cardDate) {
+      results.push({ name, facebook_profile_url: profileUrl, birthday: cardDate, monthOnly: false });
+    } else {
+      const section = getSectionDate(link);
+      results.push({ name, facebook_profile_url: profileUrl, birthday: section?.date, monthOnly: section?.monthOnly });
     }
-    results.push({ name, facebook_profile_url: profileUrl, birthday: dateStr });
   }
 
-  // Strategy 1: Birthday-specific pagelets (today / reminder section)
+  // Strategy 1: Birthday-specific pagelets
   document.querySelectorAll<HTMLElement>("div[data-pagelet*='Birthday']").forEach((container) => {
-    container.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((a) => tryAddContact(a, a));
+    container.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((a) => tryAddContact(a));
   });
 
-  // Strategy 2: Walk full page with month-heading context tracking
-  let sectionDateCtx: string | undefined;
-  document.querySelectorAll<HTMLElement>('h1,h2,h3,h4,[role="heading"],a[href]').forEach((node) => {
-    if (node.tagName !== 'A') {
-      const txt = node.textContent?.trim() ?? '';
-      if (txt.length < 80) {
-        const d = parseDateFromText(txt);
-        if (d) sectionDateCtx = d;
-      }
-      return;
-    }
-    const link = node as HTMLAnchorElement;
-    if (!isProfileLink(link.href)) return;
-    const name = link.textContent?.trim() ?? '';
-    if (!name || name.length < 2 || name.length > 100) return;
-    const profileUrl = normalizeProfileUrl(link.href);
-    if (seen.has(profileUrl)) return;
-    seen.add(profileUrl);
-    // Try local context first, then fall back to section heading date
-    let dateStr: string | undefined;
-    let el: HTMLElement | null = link.parentElement;
-    for (let depth = 0; depth < 8 && el && !dateStr; depth++) {
-      const text = el.textContent ?? '';
-      if (text.length < 400) dateStr = parseDateFromText(text);
-      el = el.parentElement;
-    }
-    results.push({ name, facebook_profile_url: profileUrl, birthday: dateStr ?? sectionDateCtx });
+  // Strategy 2: Walk all profile links on the page
+  document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((link) => {
+    tryAddContact(link);
   });
 
   return results;

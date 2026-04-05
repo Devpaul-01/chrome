@@ -211,6 +211,8 @@ function birthdayDateOffset(daysOffset: number): string {
 function getContactsForDaysInAdvance(contacts: Contact[], days: number): Contact[] {
   const target = birthdayDateOffset(days);
   return contacts.filter((c) => {
+    // Never auto-message contacts whose birthday day is unknown (month-only)
+    if (c.birthday_month_only) return false;
     const parts = c.birthday.split('-');
     const mmdd = parts.length >= 2 ? `${parts[parts.length - 2]}-${parts[parts.length - 1]}` : '';
     return mmdd === target;
@@ -227,7 +229,7 @@ function getContactsForDaysInAdvance(contacts: Contact[], days: number): Contact
  */
 async function openOrFocusFacebookBirthdaysTab(): Promise<chrome.tabs.Tab> {
   return new Promise((resolve, reject) => {
-    chrome.tabs.query({ url: '*://*.facebook.com/birthdays*' }, (tabs) => {
+    chrome.tabs.query({ url: ['*://*.facebook.com/birthdays*', '*://*.facebook.com/friends/birthdays*'] }, (tabs) => {
       if (tabs.length > 0 && tabs[0].id !== undefined) {
         resolve(tabs[0]);
       } else {

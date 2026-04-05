@@ -326,6 +326,13 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               Fields marked * are required.
             </p>
 
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+              A template has three parts —{' '}
+              <strong>Greeting</strong>, <strong>Sentiment</strong>, and <strong>Closing</strong>{' '}
+              — joined together to form the final message sent to your friend. Use{' '}
+              <strong>✨ Generate</strong> for suggestions, or write your own.
+            </p>
+
             {/* Greeting */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -357,7 +364,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Sentiment <span className="text-red-500">*</span>
+                  Sentiment <span className="text-red-500">*</span>{' '}
+                  <HelpTooltip label="The main body of your message — the personal, heartfelt part. Sits between the greeting and the closing." />
                 </label>
                 <button
                   type="button"
@@ -383,7 +391,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Closing <span className="text-red-500">*</span>
+                  Closing <span className="text-red-500">*</span>{' '}
+                  <HelpTooltip label="A short sign-off line — e.g. 'Wishing you a wonderful day!' Keep it brief." />
                 </label>
                 <button
                   type="button"
@@ -408,7 +417,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             {/* Template Title */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Template Title <span className="text-red-500">*</span>
+                Template Title <span className="text-red-500">*</span>{' '}
+                <HelpTooltip label="A private name for this template — not sent to friends. Helps you identify it in the gallery, e.g. 'Formal – Colleagues' or 'Casual – Close Friends'." />
               </label>
               <input
                 type="text"
@@ -423,7 +433,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             {/* Days in Advance */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Days in Advance
+                Days in Advance{' '}
+                <HelpTooltip label="Positive = days before the birthday; 0 = on the day; negative = days after. Useful for follow-up messages like 'Hope you had a great birthday yesterday!'" />
               </label>
               <select
                 value={formData.daysInAdvance}
@@ -446,7 +457,10 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
 
             {/* Gender Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Gender Filter</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Gender Filter{' '}
+                <HelpTooltip label="Restrict this template to contacts of a specific gender. 'All Genders' sends to everyone. Use gender-specific templates to personalise messages for male or female friends." />
+              </label>
               <select
                 value={formData.gender}
                 onChange={(e) =>

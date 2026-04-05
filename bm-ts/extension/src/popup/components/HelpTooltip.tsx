@@ -1,4 +1,4 @@
-import { useState, useRef, useId } from 'react';
+import { useState, useRef, useId, useLayoutEffect } from 'react';
 
 interface HelpTooltipProps {
   /** The text content shown in the tooltip. */
@@ -14,9 +14,11 @@ interface HelpTooltipProps {
  */
 export default function HelpTooltip({ label, id }: HelpTooltipProps) {
   const [visible, setVisible] = useState(false);
+  const [nudge, setNudge] = useState(0); // px to shift left (+) or right (-)
   const autoId = useId();
   const tooltipId = id ?? `help-tooltip-${autoId}`;
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tooltipRef = useRef<HTMLSpanElement>(null);
 
   function show() {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
@@ -27,6 +29,25 @@ export default function HelpTooltip({ label, id }: HelpTooltipProps) {
     // Small delay prevents flickering when moving between button and tooltip
     hideTimerRef.current = setTimeout(() => setVisible(false), 100);
   }
+
+  // After the tooltip renders, measure whether it overflows either edge and
+  // apply a pixel correction. useLayoutEffect fires before the browser paints
+  // so state updates here are batched into the same frame — no visible jump.
+  useLayoutEffect(() => {
+    if (!visible || !tooltipRef.current) {
+      setNudge(0);
+      return;
+    }
+    const rect = tooltipRef.current.getBoundingClientRect();
+    const margin = 8;
+    if (rect.right > window.innerWidth - margin) {
+      setNudge(rect.right - (window.innerWidth - margin));
+    } else if (rect.left < margin) {
+      setNudge(rect.left - margin); // negative → shift right
+    } else {
+      setNudge(0);
+    }
+  }, [visible]);
 
   return (
     <span className="relative inline-flex items-center">
@@ -46,10 +67,12 @@ export default function HelpTooltip({ label, id }: HelpTooltipProps) {
 
       {visible && (
         <span
+          ref={tooltipRef}
           id={tooltipId}
           role="tooltip"
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 w-56 max-w-xs rounded-lg text-xs px-3 py-2 leading-relaxed pointer-events-none"
+          className="absolute bottom-full left-1/2 mb-1.5 z-50 w-56 max-w-xs rounded-lg text-xs px-3 py-2 leading-relaxed pointer-events-none"
           style={{
+            transform: `translateX(calc(-50% - ${nudge}px))`,
             background: 'rgba(229, 103, 23, 0.15)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
@@ -62,10 +85,10 @@ export default function HelpTooltip({ label, id }: HelpTooltipProps) {
           onMouseLeave={hide}
         >
           {label}
-          {/* Caret pointing downward */}
+          {/* Caret pointing downward — counter-nudged to always point at the button */}
           <span
-            className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent"
-            style={{ borderTopColor: '#CA4F02' }}
+            className="absolute top-full left-1/2 border-4 border-transparent"
+            style={{ transform: `translateX(calc(-50% + ${nudge}px))`, borderTopColor: '#CA4F02' }}
             aria-hidden="true"
           />
         </span>

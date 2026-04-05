@@ -170,6 +170,7 @@
     <tbody>
       <tr><td><code>[Tag Person]</code></td><td>The friend's name (@mention on Facebook)</td></tr>
       <tr><td><code>[Today]</code></td><td>Today's date (e.g. March 18, 2026)</td></tr>
+      <tr><td><code>[Image]</code></td><td>Inserts a randomly selected image from your Image Library into the message. If your library is empty, the keyword is ignored.</td></tr>
     </tbody>
   </table>
 
@@ -208,7 +209,31 @@
     JSON, or VCF file using the <strong>Import</strong> button.
   </p>
 
-  <h2>14. What if Facebook changes its layout and automation breaks?</h2>
+  <h2>14. Why do some contacts show "Month only"?</h2>
+  <p>
+    Facebook only displays the exact birthday date for friends whose birthday is coming up in the
+    next few days. For everyone else, only the birth <em>month</em> is visible. When you import
+    contacts, BirthdayMessaging marks these as <strong>month-only</strong> and automatically pauses
+    messaging for them — this prevents messages from being sent on the wrong day.
+  </p>
+
+  <h2>15. How do I fix a month-only contact?</h2>
+  <p>There are two ways:</p>
+  <ul>
+    <li>
+      <strong>Re-import from Facebook</strong> when the friend's birthday is approaching.
+      Open <code>facebook.com/birthdays</code>, go to <strong>Contacts → Import → Facebook</strong>,
+      and re-import. BirthdayMessaging will automatically detect the exact date and update the
+      contact — no need to delete and re-add.
+    </li>
+    <li>
+      <strong>Edit the contact manually</strong> in the <strong>Contacts</strong> tab — click
+      <strong>Edit</strong>, enter the correct birthday, and save. Messaging will resume
+      immediately.
+    </li>
+  </ul>
+
+  <h2>16. What if Facebook changes its layout and automation breaks?</h2>
   <p>
     Facebook occasionally updates its UI. If automation stops detecting birthdays or sending messages
     correctly, check for an extension update in Chrome. While waiting for an update, you can still
@@ -217,6 +242,61 @@
   <p>
     We monitor Facebook layout changes and release fixes as quickly as possible.
   </p>
+
+  <!-- ── Advanced: Templates &amp; Message Groups ── -->
+  <h2 class="section-heading">Advanced: Templates &amp; Message Groups</h2>
+
+  <h2>17. How does a message template work?</h2>
+  <p>
+    Each template is made of three parts that are joined together to form the final sent message:
+  </p>
+  <ul>
+    <li><strong>Greeting</strong> — the opening line, e.g. <em>"Happy Birthday [Tag Person]! 🎉"</em></li>
+    <li><strong>Sentiment</strong> — the personal, heartfelt body of the message.</li>
+    <li><strong>Closing</strong> — a brief sign-off, e.g. <em>"Wishing you a wonderful day!"</em></li>
+  </ul>
+  <p>
+    BirthdayMessaging automatically picks a template whose <strong>Gender Filter</strong> matches
+    your contact's saved gender, falling back to an &ldquo;All Genders&rdquo; template if no
+    gender-specific match exists. The <strong>Days in Advance</strong> setting lets you use a
+    template early (e.g. &ldquo;1 Day Early&rdquo;) or as a follow-up
+    (e.g. &ldquo;1 Day Late&rdquo;). If you have multiple eligible templates, one is chosen at
+    random to keep messages feeling varied.
+  </p>
+  <div class="highlight-box">
+    <strong>Merge tags</strong> are placeholders replaced at send time:
+    <code>[Tag Person]</code> (friend&rsquo;s @mention),
+    <code>[Today]</code> (today&rsquo;s date),
+    <code>[Image]</code> (random image from your library).
+    See Q9 for the full reference table.
+  </div>
+  <p>
+    You can attach a specific image to a template using the <strong>Attach Image</strong> field,
+    or use <code>[Image]</code> anywhere in your text to have a random image from your Image
+    Library inserted at send time. Switch to the <strong>Preview</strong> tab at any time to
+    see how the assembled message will look before saving.
+  </p>
+
+  <h2>18. What are Message Groups and when should I use them?</h2>
+  <p>
+    Message Groups are an <strong>advanced</strong> feature for users who need fine-grained control
+    over how individual message <em>segments</em> are assembled. A segment is a single reusable
+    piece of content stored independently, identified by a UUID. A Message Group bundles selected
+    segments together and assigns a gender target to the bundle.
+  </p>
+  <p>
+    <strong>Most users do not need Message Groups.</strong> The standard
+    <strong>Message Templates</strong> section (<em>Messages &rarr; Message Templates</em>) is the
+    recommended way to create and manage birthday messages. Message Groups are intended for
+    advanced setups where you maintain a large shared library of individual segment pieces and
+    want to mix and match them programmatically across sends.
+  </p>
+  <div class="highlight-box">
+    <strong>Quick rule of thumb:</strong> Use <strong>Message Templates</strong> to create
+    complete birthday messages with a Greeting, Sentiment, and Closing. Only use
+    <strong>Message Groups</strong> if you are building a curated pool of individually-addressable
+    segments and need to compose messages from them.
+  </div>
 
   </main>
 
