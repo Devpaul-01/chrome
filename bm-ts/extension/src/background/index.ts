@@ -432,9 +432,8 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
   const baseUrl = await getBackendUrl();
   switch (message.type) {
     case 'auth.register': {
-      const tokens = await register(baseUrl, message.payload);
-      await saveTokens({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
-      return tokens;
+      const result = await register(baseUrl, message.payload);
+      return result;
     }
     case 'auth.login': {
       const tokens = await login(baseUrl, message.payload);

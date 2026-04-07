@@ -79,7 +79,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
       });
       if (!scraped || scraped.length === 0) {
         setError(
-          'No birthday contacts found. Make sure facebook.com/birthdays is open and fully loaded, then try again.',
+          'No birthday contacts found. Make sure facebook.com/friends/birthdays is open and fully loaded, then try again.',
         );
         return;
       }
@@ -309,16 +309,16 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                       <span className="text-gray-700">
                         Open{' '}
                         <a
-                          href="https://www.facebook.com/birthdays"
+                          href="https://www.facebook.com/friends/birthdays"
                           target="_blank"
                           rel="noreferrer"
                           className="text-blueStrong underline hover:text-blueBrand"
                           onClick={(e) => {
                             e.preventDefault();
-                            chrome.tabs.create({ url: 'https://www.facebook.com/birthdays' });
+                            chrome.tabs.create({ url: 'https://www.facebook.com/friends/birthdays' });
                           }}
                         >
-                          facebook.com/birthdays
+                          facebook.com/friends/birthdays
                         </a>{' '}
                         or navigate to <strong>Friends &gt; Birthdays</strong> on Facebook, and wait
                         for the page to fully load.

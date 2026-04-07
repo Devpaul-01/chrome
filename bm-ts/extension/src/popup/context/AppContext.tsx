@@ -23,7 +23,7 @@ import wsClient from '../../api/websocket';
 import Toast, { type ToastType } from '../components/Toast';
 
 // ---- shared type aliases -----------------------------------------------
-export type AuthMode = 'login' | 'register' | 'forgot-password';
+export type AuthMode = 'login' | 'register' | 'forgot-password' | 'verify-email-pending';
 export type TabType = 'home' | 'contacts' | 'messages' | 'account';
 export type ViewMode =
   | 'main'

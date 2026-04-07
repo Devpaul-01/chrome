@@ -122,17 +122,20 @@ function AppShell() {
     setIsAuthSubmitting(true);
     setAuthMessage(null);
     try {
-      await sendBackgroundMessage<{ access_token: string }>({
-        type: authMode === 'login' ? 'auth.login' : 'auth.register',
-        payload: { email, password },
-      });
-      await refreshUser();
-      setEmail('');
-      setPassword('');
-      showToast(
-        authMode === 'login' ? 'Welcome back!' : 'Account created successfully!',
-        'success',
+      await sendBackgroundMessage<{ message: string }>(
+        authMode === 'login'
+          ? { type: 'auth.login', payload: { email, password } }
+          : { type: 'auth.register', payload: { email, password } },
       );
+      if (authMode === 'register') {
+        setPassword('');
+        setAuthMode('verify-email-pending');
+      } else {
+        await refreshUser();
+        setEmail('');
+        setPassword('');
+        showToast('Welcome back!', 'success');
+      }
     } catch (error) {
       const msg = getErrorMessage(error);
       logError(error, `handleAuthSubmit:${authMode}`);
@@ -201,7 +204,7 @@ function AppShell() {
       await sendBackgroundMessage<{ message: string }>({ type: 'auth.deleteAccount' });
       wsClient.disconnect();
       setUser(null); // triggers all hooks to clear their state via useEffect([user])
-      showToast('Account deleted successfully', 'info');
+      showToast('Account successfully deleted', 'success');
     } catch (error) {
       const msg = getErrorMessage(error);
       logError(error, 'handleDeleteAccount');
@@ -663,6 +666,25 @@ function AppShell() {
                 onBack={() => setAuthMode('login')}
                 onRequestSent={() => setAuthMode('login')}
               />
+            ) : authMode === 'verify-email-pending' ? (
+              <div className="text-center py-6 px-4" role="status" aria-live="polite">
+                <p className="text-2xl mb-3" aria-hidden="true">&#9993;</p>
+                <h2 className="text-lg font-bold text-blueStrong mb-2">Check your email</h2>
+                <p className="text-sm text-gray-700 mb-4">
+                  We sent a verification link to <strong>{email}</strong>. Click the link to verify
+                  your account, then come back and log in.
+                </p>
+                <button
+                  type="button"
+                  className="btn-primary w-full mb-2"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setEmail('');
+                  }}
+                >
+                  Back to Login
+                </button>
+              </div>
             ) : (
               <AuthForm
                 authMode={authMode}
@@ -681,34 +703,6 @@ function AppShell() {
 
         {!isInitializing && isAuthenticated && (
           <>
-            {user && user.email_verified === false && (
-              <div
-                className="bg-yellow-50 border border-yellow-300 rounded p-3 mb-4 text-sm"
-                role="alert"
-              >
-                <p className="font-medium text-yellow-800 mb-1">Email not verified</p>
-                <p className="text-yellow-700 mb-2">
-                  Please verify your email to access all features.
-                </p>
-                <button
-                  type="button"
-                  className="btn-primary text-xs py-1 px-3"
-                  onClick={async () => {
-                    try {
-                      await sendBackgroundMessage<{ message: string }>({
-                        type: 'auth.requestEmailVerification',
-                        payload: { email: user.email },
-                      });
-                      showToast('Verification email sent! Check your inbox.', 'success');
-                    } catch (error) {
-                      showToast(getErrorMessage(error), 'error');
-                    }
-                  }}
-                >
-                  Resend verification email
-                </button>
-              </div>
-            )}
             {renderTabNavigation()}
             <section
               role="tabpanel"
