@@ -79,7 +79,6 @@ export default function ForgotPassword({ onBack, onRequestSent }: ForgotPassword
             className="input-field"
             aria-required="true"
             aria-label="Email address"
-            aria-invalid={!!error}
             autoComplete="email"
           />
         </div>
@@ -88,7 +87,6 @@ export default function ForgotPassword({ onBack, onRequestSent }: ForgotPassword
           type="submit"
           disabled={isSubmitting}
           className="btn-primary btn-block mb-2 flex items-center justify-center gap-2"
-          aria-busy={isSubmitting}
           aria-label={isSubmitting ? 'Sending password reset link' : 'Send password reset link'}
         >
           {isSubmitting && <Spinner size="sm" />}

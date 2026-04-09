@@ -187,8 +187,6 @@ export default function SMTPSettings({ config, onSave, isSubmitting, message }: 
               type="submit"
               className="btn flex items-center justify-center gap-2"
               disabled={isSubmitting}
-              aria-busy={isSubmitting ? 'true' : 'false'}
-              aria-disabled={isSubmitting ? 'true' : 'false'}
             >
               {isSubmitting && <Spinner size="sm" />}
               <span>{isSubmitting ? 'Saving...' : 'Save Settings'}</span>

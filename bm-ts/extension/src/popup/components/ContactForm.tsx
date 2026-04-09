@@ -36,22 +36,22 @@ export default function ContactForm({
   );
   // Parse notes for relationship, phone, email
   let parsedRelationship = '';
-  let parsedPhone = '';
-  let parsedEmail = '';
+  // let parsedPhone = '';
+  // let parsedEmail = '';
   if (contact?.notes) {
     const parts = contact.notes.split(' | ');
     for (const part of parts) {
       if (part.startsWith('relationship: '))
         parsedRelationship = part.replace('relationship: ', '').trim();
-      if (part.startsWith('phone: ')) parsedPhone = part.replace('phone: ', '').trim();
-      if (part.startsWith('email: ')) parsedEmail = part.replace('email: ', '').trim();
+      // if (part.startsWith('phone: ')) parsedPhone = part.replace('phone: ', '').trim();
+      // if (part.startsWith('email: ')) parsedEmail = part.replace('email: ', '').trim();
     }
   }
   const [relationship, setRelationship] = useState(parsedRelationship);
   const [birthday, setBirthday] = useState(contact?.birthday ? contact.birthday.slice(0, 10) : '');
   const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'NEUTRAL'>(contact?.gender ?? 'NEUTRAL');
-  const [phone, setPhone] = useState(parsedPhone);
-  const [email, setEmail] = useState(parsedEmail);
+  // const [phone, setPhone] = useState(parsedPhone);
+  // const [email, setEmail] = useState(parsedEmail);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -74,8 +74,8 @@ export default function ContactForm({
     // Combine optional fields into notes if present
     const notesParts: string[] = [];
     if (relationship.trim()) notesParts.push(`relationship: ${relationship.trim()}`);
-    if (phone.trim()) notesParts.push(`phone: ${phone.trim()}`);
-    if (email.trim()) notesParts.push(`email: ${email.trim()}`);
+    // if (phone.trim()) notesParts.push(`phone: ${phone.trim()}`);
+    // if (email.trim()) notesParts.push(`email: ${email.trim()}`);
     if (notesParts.length) payload.notes = notesParts.join(' | ');
 
     await onSubmit(payload);
@@ -175,8 +175,8 @@ export default function ContactForm({
           </p>
         </div>
 
-        {/* Phone */}
-        <div>
+        {/* Phone — commented out until multi-platform support is added */}
+        {/* <div>
           <label htmlFor="phone" className="block text-sm font-medium mb-1">
             Phone <span className="text-red-500">*</span>
           </label>
@@ -189,10 +189,10 @@ export default function ContactForm({
             required
             className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
           />
-        </div>
+        </div> */}
 
-        {/* Email */}
-        <div>
+        {/* Email — commented out until multi-platform support is added */}
+        {/* <div>
           <label htmlFor="email" className="block text-sm font-medium mb-1">
             Email <span className="text-red-500">*</span>
           </label>
@@ -205,7 +205,7 @@ export default function ContactForm({
             required
             className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
           />
-        </div>
+        </div> */}
 
         {/* Message */}
         {message && <div className="p-3 rounded bg-red-50 text-red-700 text-sm">{message}</div>}
@@ -239,13 +239,7 @@ export default function ContactForm({
           >
             Cancel
           </button>
-          <button
-            type="submit"
-            className="btn-orange"
-            disabled={isSubmitting}
-            aria-busy={isSubmitting ? 'true' : 'false'}
-            aria-disabled={isSubmitting ? 'true' : 'false'}
-          >
+          <button type="submit" className="btn-orange" disabled={isSubmitting}>
             {isSubmitting ? 'Saving...' : 'Save Contact'}
           </button>
         </div>

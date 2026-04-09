@@ -33,7 +33,7 @@ import ContactList from './components/ContactList';
 import ContactForm from './components/ContactForm';
 import ImportContactsModal from './components/ImportContactsModal';
 import BirthdayCalendar from './components/BirthdayCalendar';
-import SMTPSettings from './components/SMTPSettings';
+// import SMTPSettings from './components/SMTPSettings'; // Uncomment when SMTP/multi-platform support is added
 import MessagesHub from './components/MessagesHub';
 import HomeControls from './components/HomeControls';
 import AccountManagement from './components/AccountManagement';
@@ -42,6 +42,7 @@ import OnboardingWizard from './components/OnboardingWizard';
 import HelpPanel from './components/HelpPanel';
 import FeatureTip from './components/FeatureTip';
 import Spinner from './components/Spinner';
+import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
 import './popup.css';
 
@@ -56,6 +57,23 @@ import { useContacts } from './hooks/useContacts';
 import { useSMTPConfig } from './hooks/useSMTPConfig';
 import { useMessageTemplates } from './hooks/useMessageTemplates';
 import { usePostComposer } from './hooks/usePostComposer';
+
+const COMMON_TIMEZONES = [
+  'UTC',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Toronto',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Asia/Dubai',
+  'Australia/Sydney',
+  'Pacific/Auckland',
+];
 
 // ---- Root component: just the provider + error boundary -----------------
 export default function App() {
@@ -84,7 +102,7 @@ function AppShell() {
   } = useAppContext();
 
   const contactsHook = useContacts();
-  const smtpHook = useSMTPConfig();
+  const _smtpHook = useSMTPConfig();
   const msgTemplates = useMessageTemplates();
   const post = usePostComposer();
 
@@ -149,6 +167,12 @@ function AppShell() {
   // ---- Account management (mutates user in context) ------------------
   const [isAccountSubmitting, setIsAccountSubmitting] = useState(false);
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
+  const [accountTimezone, setAccountTimezone] = useState(
+    () =>
+      (user as { timezone?: string } | null)?.timezone ||
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+  );
+  const [showAccountDeleteConfirm, setShowAccountDeleteConfirm] = useState(false);
 
   const handleUpdateProfile = useCallback(
     async (profile: Partial<UserProfile>): Promise<void> => {
@@ -269,7 +293,9 @@ function AppShell() {
               <button
                 id={`${tab.id}-tab`}
                 role="tab"
-                aria-selected={activeTab === tab.id ? 'true' : 'false'}
+                ref={(el) => {
+                  if (el) el.setAttribute('aria-selected', String(activeTab === tab.id));
+                }}
                 aria-controls={`${tab.id}-panel`}
                 tabIndex={activeTab === tab.id ? 0 : -1}
                 className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
@@ -506,16 +532,17 @@ function AppShell() {
         <BirthdayCalendar contacts={contactsHook.contacts} onBack={() => setViewMode('contacts')} />
       );
     }
-    if (viewMode === 'smtp-settings') {
-      return (
-        <SMTPSettings
-          config={smtpHook.smtpConfig || undefined}
-          onSave={smtpHook.handleSaveSMTPConfig}
-          isSubmitting={smtpHook.isSubmitting}
-          message={smtpHook.message}
-        />
-      );
-    }
+    // SMTP settings view — commented out until multi-platform support is added
+    // if (viewMode === 'smtp-settings') {
+    //   return (
+    //     <SMTPSettings
+    //       config={smtpHook.smtpConfig || undefined}
+    //       onSave={smtpHook.handleSaveSMTPConfig}
+    //       isSubmitting={smtpHook.isSubmitting}
+    //       message={smtpHook.message}
+    //     />
+    //   );
+    // }
     if (viewMode === 'account-management' && user) {
       return (
         <AccountManagement
@@ -525,10 +552,6 @@ function AppShell() {
           onUpdateProfile={
             handleUpdateProfile as Parameters<typeof AccountManagement>[0]['onUpdateProfile']
           }
-          onUpdateTimezone={handleUpdateTimezone}
-          onDeleteAccount={handleDeleteAccount}
-          onLogout={handleLogout}
-          onRestartTour={handleRestartTour}
           isSubmitting={isAccountSubmitting}
           message={accountMessage}
         />
@@ -606,9 +629,10 @@ function AppShell() {
                 <button onClick={() => setViewMode('account-management')} className="btn btn-block">
                   Profile
                 </button>
-                <button onClick={() => setViewMode('smtp-settings')} className="btn btn-block">
+                {/* SMTP Settings button — commented out until multi-platform support is added */}
+                {/* <button onClick={() => setViewMode('smtp-settings')} className="btn btn-block">
                   SMTP Settings
-                </button>
+                </button> */}
                 <button onClick={() => setViewMode('subscription')} className="btn btn-block">
                   Subscription
                 </button>
@@ -628,6 +652,88 @@ function AppShell() {
                 </button>
               </div>
             </div>
+
+            {/* Timezone Settings */}
+            <div className="card mb-6">
+              <h3 className="text-md font-semibold mb-4">Timezone Settings</h3>
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor="accountTimezone" className="block text-sm font-medium mb-1">
+                    Your Timezone
+                  </label>
+                  <select
+                    id="accountTimezone"
+                    value={accountTimezone}
+                    onChange={(e) => setAccountTimezone(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+                  >
+                    {COMMON_TIMEZONES.map((tz) => (
+                      <option key={tz} value={tz}>
+                        {tz}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    This timezone is used for scheduling birthday messages
+                  </p>
+                </div>
+                <button
+                  onClick={() => void handleUpdateTimezone(accountTimezone)}
+                  className="btn btn-block flex items-center justify-center gap-2"
+                  disabled={isAccountSubmitting}
+                >
+                  {isAccountSubmitting && <Spinner size="sm" />}
+                  <span>Update Timezone</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Restart Welcome Tour */}
+            <div className="card mb-6">
+              <button
+                type="button"
+                onClick={handleRestartTour}
+                className="btn-outline-orange w-full text-sm"
+              >
+                🔄 Restart Welcome Tour
+              </button>
+            </div>
+
+            {/* Delete Account */}
+            <div className="card mb-6">
+              {!showAccountDeleteConfirm ? (
+                <button
+                  onClick={() => setShowAccountDeleteConfirm(true)}
+                  className="btn-danger w-full flex items-center justify-center gap-2"
+                  disabled={isAccountSubmitting}
+                >
+                  <span>Delete Account</span>
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-red-700 font-medium">
+                    Are you sure you want to delete your account? This action cannot be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowAccountDeleteConfirm(false)}
+                      className="btn-secondary flex-1"
+                      disabled={isAccountSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => void handleDeleteAccount()}
+                      className="btn-danger flex-1 flex items-center justify-center gap-2"
+                      disabled={isAccountSubmitting}
+                    >
+                      {isAccountSubmitting && <Spinner size="sm" />}
+                      <span>{isAccountSubmitting ? 'Deleting...' : 'Confirm Delete'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         );
 
@@ -639,6 +745,7 @@ function AppShell() {
   // ---- Render --------------------------------------------------------
   return (
     <div className="popup-root" role="application" aria-label="Birthday Messaging Extension">
+      <ScrollToTop />
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
@@ -711,7 +818,7 @@ function AppShell() {
               id={`${activeTab}-panel`}
               aria-labelledby={`${activeTab}-tab`}
               tabIndex={-1}
-              className="pb-4"
+              className="pb-2"
             >
               {renderView()}
             </section>
@@ -720,7 +827,7 @@ function AppShell() {
       </main>
 
       {isAuthenticated && (
-        <footer role="contentinfo" className="mt-4">
+        <footer role="contentinfo" className="mt-2">
           <button
             type="button"
             onClick={() => setShowHelpPanel(true)}
@@ -729,6 +836,17 @@ function AppShell() {
           >
             ❓ Help &amp; Tips
           </button>
+          <p className="text-center text-xs font-bold mt-2">
+            Powered by{' '}
+            <a
+              href="https://birthdaymessaging.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blueStrong underline hover:opacity-80"
+            >
+              birthdaymessaging.com
+            </a>
+          </p>
         </footer>
       )}
 
