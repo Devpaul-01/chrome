@@ -1,6 +1,5 @@
 name: Deploy Backend
 
-# shows who triggered it (i didn’t touch this, gitea handles it)
 run-name: ${{ gitea.actor }} is deploying the backend
 
 # runs when i push to these branches
@@ -30,7 +29,7 @@ jobs:
         run: |
           IMAGE_NAME=gitea.birthdaymessaging.com/ctmmediagroup/bm-legacy-backend
           
-          # fix branch names like feature/test so docker doesn’t break
+          
           SAFE_BRANCH_NAME=$(echo "${GITHUB_REF_NAME}" | tr '/' '-')
           
           # version = branch + commit (so every build is unique)
