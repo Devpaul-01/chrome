@@ -1,48 +1,61 @@
 name: Deploy Backend
+
+# shows who triggered it (i didn’t touch this, gitea handles it)
 run-name: ${{ gitea.actor }} is deploying the backend
+
+# runs when i push to these branches
 on:
   push:
     branches:
       - develop
-      - backend-ci-deploy
+      - backend-ci-deploy   # i use this to test my pipeline
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest   # just spins up a linux machine
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4 #runs on node20, runner errors if node24 is used
+      # grab my repo code
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Login to the Container Registry #github actor to mock context for login
-        env:
-          PAT_SECRET: ${{secrets.REGISTRY_PASSWORD}}
-        run: |
-          echo "Authenticating with Gitea Container Registry..."
-          echo "$PAT_SECRET" | docker login gitea.birthdaymessaging.com -u ModaMetrics --password-stdin
-
-      - name: Build and Push Docker image
-        working-directory: bm-ts/backend
+      # log into gitea registry so i can push images
+      - name: Login to registry
         run: |
           echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login gitea.birthdaymessaging.com -u "${{ secrets.REGISTRY_USER }}" --password-stdin
-          
-          IMAGE_NAME=gitea.birthdaymessaging.com/ctmmediagroup/bm-legacy-backend
-          SAFE_BRANCH_NAME=$(echo "${{ gitea.ref_name }}" | tr '/' '-')
-          VERSION="${SAFE_BRANCH_NAME}-$(date +'%Y%m%d-%H%M%S')"
 
-          echo "Building image $IMAGE_NAME:$VERSION"
-          docker build -t $IMAGE_NAME:$VERSION -t $IMAGE_NAME:latest .
-          echo "Pushing image $IMAGE_NAME:$VERSION"
+      # build the docker image and push it
+      - name: Build + Push image
+        working-directory: bm-ts/backend   # my backend folder (has Dockerfile)
+        run: |
+          IMAGE_NAME=gitea.birthdaymessaging.com/ctmmediagroup/bm-legacy-backend
+          
+          # fix branch names like feature/test so docker doesn’t break
+          SAFE_BRANCH_NAME=$(echo "${GITHUB_REF_NAME}" | tr '/' '-')
+          
+          # version = branch + commit (so every build is unique)
+          VERSION="${SAFE_BRANCH_NAME}-$(git rev-parse --short HEAD)"
+
+          echo "building $IMAGE_NAME:$VERSION"
+
+          docker build \
+            -t $IMAGE_NAME:$VERSION \
+            -t $IMAGE_NAME:latest \
+            .
+
+          echo "pushing to registry..."
+
           docker push $IMAGE_NAME:$VERSION
           docker push $IMAGE_NAME:latest
 
-      - name: Trigger Coolify Deployment
+      # tell coolify to redeploy with the new image
+      - name: Trigger deploy
         run: |
-          echo "Telling Coolify to pull and deploy the new image..."
-          # Actual Coolify Webhook URL when it is ready, using a placeholder for now
-          curl -sS -X GET "${{ secrets.COOLIFY_WEBHOOK_URL }}" || echo "Failed to trigger Coolify deployment"
-      
-      - name: Cleanup registry credentials
+          echo "triggering coolify..."
+          curl -X GET "${{ secrets.COOLIFY_WEBHOOK_URL }}" -v
+
+      # log out after everything (just cleanup)
+      - name: Logout
         if: always()
-        run: |
-          docker logout gitea.birthdaymessaging.com
+        run: docker logout gitea.birthdaymessaging.com
 
