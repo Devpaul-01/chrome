@@ -79,9 +79,14 @@ export default function BirthdayCalendar({ contacts, onBack }: BirthdayCalendarP
               ) : (
                 <ul className="space-y-2">
                   {contactsOnSelectedDate.map((contact) => (
-                    <li key={contact.id} className="p-2 border rounded flex items-center gap-2">
+                    <li key={contact.id} className="p-2 flex items-center gap-2">
                       <span className="font-semibold">{contact.name}</span>
-                      <span className="text-xs text-orangeBrand">{contact.birthday}</span>
+                      <span className="text-xs text-orangeBrand">
+                        {new Date(contact.birthday).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'long',
+                        })}
+                      </span>
                       {contact.facebook_profile_url && (
                         <a
                           href={contact.facebook_profile_url}
@@ -124,7 +129,7 @@ export default function BirthdayCalendar({ contacts, onBack }: BirthdayCalendarP
                 })
                 .slice(0, 10)
                 .map((contact) => (
-                  <li key={contact.id} className="p-2 border rounded flex items-center gap-2">
+                  <li key={contact.id} className="p-2 flex items-center gap-2">
                     <span className="font-semibold">{contact.name}</span>
                     <span className="text-xs text-orangeBrand">
                       {new Date(contact.birthday).toLocaleDateString('en-GB', {
