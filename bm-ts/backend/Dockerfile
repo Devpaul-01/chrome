@@ -14,7 +14,8 @@ RUN pip install --no-cache-dir ".[test]"
 
 ENV PYTHONPATH=/app
 
-RUN adduser --system appuser
+RUN adduser --system --home /app appuser
+RUN chown -R appuser /app
 USER appuser
 
 EXPOSE 8000
