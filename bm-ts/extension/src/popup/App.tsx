@@ -102,7 +102,7 @@ function AppShell() {
   } = useAppContext();
 
   const contactsHook = useContacts();
-  const smtpHook = useSMTPConfig();
+  const _smtpHook = useSMTPConfig();
   const msgTemplates = useMessageTemplates();
   const post = usePostComposer();
 
@@ -167,9 +167,10 @@ function AppShell() {
   // ---- Account management (mutates user in context) ------------------
   const [isAccountSubmitting, setIsAccountSubmitting] = useState(false);
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
-  const [accountTimezone, setAccountTimezone] = useState(() =>
-    (user as { timezone?: string } | null)?.timezone ||
-    Intl.DateTimeFormat().resolvedOptions().timeZone,
+  const [accountTimezone, setAccountTimezone] = useState(
+    () =>
+      (user as { timezone?: string } | null)?.timezone ||
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
   );
   const [showAccountDeleteConfirm, setShowAccountDeleteConfirm] = useState(false);
 
