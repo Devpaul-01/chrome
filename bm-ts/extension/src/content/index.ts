@@ -327,51 +327,126 @@ async function waitForSelector(selector: string, timeout = 5000): Promise<boolea
 /**
  * Creates (or returns the existing) overlay sidebar and appends it to `document.body`.
  * The overlay shows a friend list, a status line, and Send / Refresh buttons.
+ * Styled to match the popup glass-card design system.
  */
 function createOverlay(): HTMLElement {
   const existing = document.getElementById(overlayId);
   if (existing) {
     return existing;
   }
+
   const wrapper = document.createElement('div');
   wrapper.id = overlayId;
+
+  // Glass card — mirrors popup design tokens
   wrapper.style.position = 'fixed';
   wrapper.style.top = '12px';
   wrapper.style.right = '12px';
   wrapper.style.width = '320px';
   wrapper.style.maxHeight = '90vh';
   wrapper.style.overflowY = 'auto';
-  wrapper.style.background = 'rgba(255,255,255,0.98)';
-  wrapper.style.border = '1px solid #ccc';
-  wrapper.style.borderRadius = '8px';
-  wrapper.style.padding = '12px';
-  wrapper.style.fontFamily = 'inherit';
+  wrapper.style.background =
+    'linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(255,241,232,0.96) 100%)';
+  wrapper.style.border = '1.5px solid rgba(202, 79, 2, 0.22)';
+  wrapper.style.borderRadius = '12px';
+  wrapper.style.padding = '14px 16px';
+  wrapper.style.fontFamily =
+    'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  wrapper.style.fontSize = '13px';
+  wrapper.style.color = '#574232';
   wrapper.style.zIndex = '2147483647';
-  wrapper.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
+  wrapper.style.boxShadow = '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)';
+
   wrapper.setAttribute('role', 'region');
   wrapper.setAttribute('aria-label', 'BirthdayMessaging automation panel');
   wrapper.setAttribute('tabindex', '-1');
+
   wrapper.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <strong>BirthdayMessaging</strong>
-      <button id="bm-refresh" style="font-size:12px;padding:4px 6px;" aria-label="Refresh friend list">Refresh</button>
+    <div id="bm-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <strong style="font-size:13px;font-weight:700;color:#574232;letter-spacing:0.01em;">BirthdayMessaging</strong>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <button id="bm-minimize"
+          style="background:transparent;border:none;cursor:pointer;color:#6e5a49;font-size:18px;line-height:1;padding:2px 7px;border-radius:6px;transition:background 0.15s;"
+          aria-label="Minimize panel">−</button>
+        <button id="bm-refresh"
+          style="font-size:11px;padding:4px 10px;background:transparent;border:1.5px solid #ca4f02;color:#ca4f02;border-radius:6px;cursor:pointer;font-weight:600;transition:background 0.15s,transform 0.1s;"
+          aria-label="Refresh friend list">Refresh</button>
+      </div>
     </div>
-    <p id="bm-status" style="margin:0 0 8px 0;font-size:13px;" aria-live="polite">Ready</p>
-    <div id="bm-friend-list" aria-label="Birthday friends" role="list"></div>
-    <button id="bm-send" style="margin-top:8px;width:100%;padding:8px;" aria-label="Send birthday messages to all friends">Send to all</button>
+    <div id="bm-body">
+      <p id="bm-status" style="margin:0 0 8px 0;font-size:13px;color:#6e5a49;" aria-live="polite">Ready</p>
+      <div id="bm-friend-list" aria-label="Birthday friends" role="list"></div>
+      <button id="bm-send"
+        style="margin-top:10px;width:100%;padding:9px;background:#ca4f02;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;box-shadow:0 3px 8px rgba(202,79,2,0.25);transition:background 0.15s,transform 0.1s;"
+        aria-label="Send birthday messages to all friends">Send to all</button>
+    </div>
   `;
+
   document.body.appendChild(wrapper);
+
+  const header = wrapper.querySelector<HTMLElement>('#bm-header');
+  const body = wrapper.querySelector<HTMLElement>('#bm-body');
+  const minimizeBtn = wrapper.querySelector<HTMLButtonElement>('#bm-minimize');
   const refreshBtn = wrapper.querySelector<HTMLButtonElement>('#bm-refresh');
-  refreshBtn?.addEventListener('click', () => void refreshFriendList());
   const sendBtn = wrapper.querySelector<HTMLButtonElement>('#bm-send');
+
+  // Button hover effects
+  refreshBtn?.addEventListener('mouseenter', () => {
+    if (refreshBtn) refreshBtn.style.background = 'rgba(229,103,23,0.1)';
+  });
+  refreshBtn?.addEventListener('mouseleave', () => {
+    if (refreshBtn) refreshBtn.style.background = 'transparent';
+  });
+  sendBtn?.addEventListener('mouseenter', () => {
+    if (sendBtn) {
+      sendBtn.style.background = '#e56717';
+      sendBtn.style.transform = 'translateY(-1px)';
+    }
+  });
+  sendBtn?.addEventListener('mouseleave', () => {
+    if (sendBtn) {
+      sendBtn.style.background = '#ca4f02';
+      sendBtn.style.transform = 'translateY(0)';
+    }
+  });
+  minimizeBtn?.addEventListener('mouseenter', () => {
+    if (minimizeBtn) minimizeBtn.style.background = 'rgba(202,79,2,0.08)';
+  });
+  minimizeBtn?.addEventListener('mouseleave', () => {
+    if (minimizeBtn) minimizeBtn.style.background = 'transparent';
+  });
+
+  // Minimize / maximize toggle
+  minimizeBtn?.addEventListener('click', () => {
+    if (!body || !minimizeBtn || !header) return;
+    const isMinimized = body.style.display === 'none';
+    if (isMinimized) {
+      body.style.display = '';
+      header.style.marginBottom = '10px';
+      minimizeBtn.textContent = '−';
+      minimizeBtn.setAttribute('aria-label', 'Minimize panel');
+      wrapper.style.maxHeight = '90vh';
+      wrapper.style.overflowY = 'auto';
+    } else {
+      body.style.display = 'none';
+      header.style.marginBottom = '0';
+      minimizeBtn.textContent = '+';
+      minimizeBtn.setAttribute('aria-label', 'Expand panel');
+      wrapper.style.maxHeight = 'none';
+      wrapper.style.overflowY = 'visible';
+    }
+  });
+
+  refreshBtn?.addEventListener('click', () => void refreshFriendList());
   sendBtn?.addEventListener('click', () => void handleSendAll());
-  // Escape key closes the overlay
+
+  // Escape key collapses the overlay
   wrapper.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       wrapper.style.display = 'none';
     }
   });
-  // Focus the overlay so keyboard users can interact
+
   wrapper.focus();
   return wrapper;
 }

@@ -3,8 +3,8 @@ import Spinner from './Spinner';
 import { generateId } from '../../utils/accessibility';
 
 type Props = {
-  authMode: 'login' | 'register' | 'forgot-password';
-  setAuthMode: (m: 'login' | 'register' | 'forgot-password') => void;
+  authMode: 'login' | 'register' | 'forgot-password' | 'verify-email-pending';
+  setAuthMode: (m: 'login' | 'register' | 'forgot-password' | 'verify-email-pending') => void;
   email: string;
   setEmail: (s: string) => void;
   password: string;

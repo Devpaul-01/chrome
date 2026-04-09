@@ -5,7 +5,7 @@ All routes are mounted under ``/auth`` (set in main.py).
 
 Endpoints
 ---------
-POST  /auth/register               Register a new account, return token pair.
+POST  /auth/register               Register a new account, send verification email.
 POST  /auth/login                  Authenticate, return token pair.
 POST  /auth/refresh                Exchange a refresh token for a new token pair.
 GET   /auth/sessions               List active authenticated sessions.
@@ -48,7 +48,6 @@ from app.db.models import User, RevokedToken, UserSession, TemplateSegment, Mess
 from app.db.session import get_db
 from app.schemas.auth import (
     ActiveSession,
-    DeleteAccountRequest,
     LoginRequest,
     RegisterRequest,
     RefreshRequest,
@@ -180,12 +179,12 @@ async def _revoke_session_record(
     )
 
 
-@router.post("/register", response_model=TokenResponse)
+@router.post("/register", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def register(
     request: Request, data: RegisterRequest, db: AsyncSession = Depends(get_db)
-) -> TokenResponse:
-    """Register a new account.  Returns a token pair on success; 400 if the email is already taken."""
+) -> MessageResponse:
+    """Register a new account.  Sends a verification email; the user must verify before logging in."""
     stmt = select(User).where(User.email == data.email)
     result = await db.execute(stmt)
     if result.scalar_one_or_none():
@@ -201,19 +200,15 @@ async def register(
     )
     db.add(user)
     await db.flush()
-    response, _ = await _issue_session_tokens(user, db, request)
     await db.commit()
     await db.refresh(user)
-    # Send email verification if configured
+    # Send email verification; do not fail registration if email sending fails
     try:
-        # Create token and send email; do not fail registration if email sending fails
-        if hasattr(send_verification_email, "__call__"):
-            token = await create_verification_token(user, db)
-            await send_verification_email(user.email, token)
+        token = await create_verification_token(user, db)
+        await send_verification_email(user.email, token)
     except Exception:
-        # Swallow email errors to avoid blocking registration
         pass
-    return response
+    return MessageResponse(message="Account created. Please check your email to verify your account before logging in.")
 
 
 # Account lockout constants
@@ -251,6 +246,12 @@ async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends
                 user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=_LOCKOUT_MINUTES)
             await db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    if not user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email before logging in. Check your inbox for the verification link.",
+        )
 
     # Successful login — reset lockout state
     user.failed_login_count = 0
@@ -855,19 +856,13 @@ async def update_profile(
 
 @router.delete("/account", response_model=MessageResponse)
 async def delete_account(
-    data: DeleteAccountRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
-    """Delete the current user's account permanently.  Requires current password as confirmation."""
-    if not verify_password(data.current_password, current_user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect password",
-        )
+    """Delete the current user's account permanently."""
     await db.delete(current_user)
     await db.commit()
-    return MessageResponse(message="Account deleted successfully")
+    return MessageResponse(message="Account successfully deleted")
 
 
 @router.get("/data-export")
