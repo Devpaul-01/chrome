@@ -166,8 +166,16 @@ export interface BillingPortalResponse {
 }
 
 /** Register a new account. A verification email is sent; the user cannot log in until verified. */
-export async function register(baseUrl: string, payload: RegisterPayload): Promise<{ message: string }> {
-  return request<{ message: string }>(baseUrl, '/auth/register', 'POST', payload as unknown as JsonValue);
+export async function register(
+  baseUrl: string,
+  payload: RegisterPayload,
+): Promise<{ message: string }> {
+  return request<{ message: string }>(
+    baseUrl,
+    '/auth/register',
+    'POST',
+    payload as unknown as JsonValue,
+  );
 }
 
 /** Authenticate with email + password and return a token pair. */

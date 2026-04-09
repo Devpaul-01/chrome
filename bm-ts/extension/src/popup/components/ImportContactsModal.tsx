@@ -315,7 +315,9 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                           className="text-blueStrong underline hover:text-blueBrand"
                           onClick={(e) => {
                             e.preventDefault();
-                            chrome.tabs.create({ url: 'https://www.facebook.com/friends/birthdays' });
+                            chrome.tabs.create({
+                              url: 'https://www.facebook.com/friends/birthdays',
+                            });
                           }}
                         >
                           facebook.com/friends/birthdays

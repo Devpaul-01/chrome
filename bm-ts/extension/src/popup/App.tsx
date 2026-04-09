@@ -668,7 +668,9 @@ function AppShell() {
               />
             ) : authMode === 'verify-email-pending' ? (
               <div className="text-center py-6 px-4" role="status" aria-live="polite">
-                <p className="text-2xl mb-3" aria-hidden="true">&#9993;</p>
+                <p className="text-2xl mb-3" aria-hidden="true">
+                  &#9993;
+                </p>
                 <h2 className="text-lg font-bold text-blueStrong mb-2">Check your email</h2>
                 <p className="text-sm text-gray-700 mb-4">
                   We sent a verification link to <strong>{email}</strong>. Click the link to verify
