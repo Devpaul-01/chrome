@@ -109,7 +109,6 @@ import {
   isBackoffPaused,
   getConfirmationMode,
   setConfirmationMode,
-  ensureAlarmsPermission,
   setShouldAbort,
 } from '../utils/failsafe';
 import type { ConfirmationMode } from '../utils/failsafe';
@@ -575,15 +574,6 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return getAutomationConfig();
     }
     case 'automation.setEnabled': {
-      if (message.payload.enabled) {
-        const hasAlarms = await ensureAlarmsPermission();
-        if (!hasAlarms) {
-          throw new ApiError(403, {
-            detail:
-              'Alarms permission is required to enable automation. Please grant the permission and try again.',
-          });
-        }
-      }
       return updateAutomationEnabled(message.payload.enabled);
     }
     case 'automation.setInterval': {

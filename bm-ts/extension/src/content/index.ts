@@ -447,6 +447,48 @@ function createOverlay(): HTMLElement {
     }
   });
 
+  // Drag to reposition
+  if (header) {
+    header.style.cursor = 'grab';
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startLeft = 0;
+    let startTop = 0;
+
+    header.addEventListener('mousedown', (e) => {
+      if ((e.target as HTMLElement).closest('button')) return;
+      const rect = wrapper.getBoundingClientRect();
+      // Switch from right-anchored to left-anchored so dragging works in any direction
+      wrapper.style.right = 'auto';
+      wrapper.style.left = rect.left + 'px';
+      wrapper.style.top = rect.top + 'px';
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = rect.left;
+      startTop = rect.top;
+      isDragging = true;
+      header.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      const maxLeft = window.innerWidth - wrapper.offsetWidth;
+      const maxTop = window.innerHeight - wrapper.offsetHeight;
+      wrapper.style.left = Math.max(0, Math.min(maxLeft, startLeft + dx)) + 'px';
+      wrapper.style.top = Math.max(0, Math.min(maxTop, startTop + dy)) + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      header.style.cursor = 'grab';
+    });
+  }
+
   wrapper.focus();
   return wrapper;
 }

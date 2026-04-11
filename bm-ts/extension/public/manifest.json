@@ -4,8 +4,7 @@
   "version": "0.1.0",
   "description": "Helps you remember and send personalized birthday wishes to your Facebook friends.",
   "homepage_url": "https://birthdaymessaging.app/privacy",
-  "permissions": ["storage", "scripting", "activeTab", "tabs", "notifications"],
-  "optional_permissions": ["alarms"],
+  "permissions": ["storage", "scripting", "activeTab", "tabs", "notifications", "alarms"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "BirthdayMessaging"
