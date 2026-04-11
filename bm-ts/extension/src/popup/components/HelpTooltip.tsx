@@ -73,12 +73,13 @@ export default function HelpTooltip({ label, id }: HelpTooltipProps) {
           className="absolute bottom-full left-1/2 mb-1.5 z-50 w-56 max-w-xs rounded-lg text-xs px-3 py-2 leading-relaxed pointer-events-none"
           style={{
             transform: `translateX(calc(-50% - ${nudge}px))`,
-            background: 'rgba(229, 103, 23, 0.15)',
+            background: 'rgba(0, 128, 166, 0.28)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid #CA4F02',
-            borderLeft: '4px solid #CA4F02',
+            border: '1px solid #0080A6',
+            borderLeft: '4px solid #0080A6',
             color: '#574232',
+            fontWeight: 'bold',
             boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1)',
           }}
           onMouseEnter={show}
@@ -88,7 +89,7 @@ export default function HelpTooltip({ label, id }: HelpTooltipProps) {
           {/* Caret pointing downward — counter-nudged to always point at the button */}
           <span
             className="absolute top-full left-1/2 border-4 border-transparent"
-            style={{ transform: `translateX(calc(-50% + ${nudge}px))`, borderTopColor: '#CA4F02' }}
+            style={{ transform: `translateX(calc(-50% + ${nudge}px))`, borderTopColor: '#0080A6' }}
             aria-hidden="true"
           />
         </span>
