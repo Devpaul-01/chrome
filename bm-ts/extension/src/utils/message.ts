@@ -1,4 +1,4 @@
-import type { MessageTemplate, Contact, Post } from '../api/client';
+import type { MessageTemplate, Post } from '../api/client';
 
 export function shufflePick(list: string[]): string {
   return list[Math.floor(Math.random() * list.length)];
@@ -20,7 +20,7 @@ export function randomDelay(msMin = 5000, msMax = 15000): Promise<void> {
 // Template & Post selection (gender-aware, with fallback to 'all' / any)
 // ---------------------------------------------------------------------------
 
-type Gender = Contact['gender']; // 'MALE' | 'FEMALE' | 'NEUTRAL' | undefined
+export type Gender = 'MALE' | 'FEMALE' | 'NEUTRAL' | undefined;
 type TemplateGender = MessageTemplate['gender']; // 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL'
 
 function contactGenderToTemplateGender(g: Gender): TemplateGender {

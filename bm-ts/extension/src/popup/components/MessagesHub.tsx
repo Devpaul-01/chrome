@@ -1,4 +1,6 @@
 import type { ViewMode } from '../context/AppContext';
+import HelpTooltip from './HelpTooltip';
+import FeatureTip from './FeatureTip';
 
 interface ShortcutItem {
   label: string;
@@ -49,47 +51,6 @@ const IconPosts = () => (
   </svg>
 );
 
-const IconScheduling = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="28"
-    height="28"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="3" y1="10" x2="21" y2="10" />
-    <circle cx="12" cy="16" r="1" fill="currentColor" />
-  </svg>
-);
-
-const IconAnalytics = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="28"
-    height="28"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <line x1="18" y1="20" x2="18" y2="10" />
-    <line x1="12" y1="20" x2="12" y2="4" />
-    <line x1="6" y1="20" x2="6" y2="14" />
-    <line x1="2" y1="20" x2="22" y2="20" />
-  </svg>
-);
-
 const IconImages = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -125,20 +86,6 @@ const SHORTCUTS: ShortcutItem[] = [
     color: 'blue',
   },
   {
-    label: 'Scheduling',
-    description: 'Set send schedules',
-    icon: <IconScheduling />,
-    viewMode: 'scheduling',
-    color: 'blue',
-  },
-  {
-    label: 'Analytics',
-    description: 'View message stats',
-    icon: <IconAnalytics />,
-    viewMode: 'analytics',
-    color: 'orange',
-  },
-  {
     label: 'Image Library',
     description: 'Browse & upload images',
     icon: <IconImages />,
@@ -151,9 +98,15 @@ export default function MessagesHub({ onNavigate }: MessagesHubProps) {
   return (
     <div role="tabpanel" id="messages-panel" className="tab-content">
       <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--color-blue-strong)' }}>
-        Messages
+        Templates{' '}
+        <HelpTooltip label="Message Templates are sent as comments on birthday posts. Timeline Posts are written directly on friends' walls. Use the Image Library to store images for the [Image] keyword." />
       </h2>
-      <p className="muted mb-4">Choose a section to get started.</p>
+      <p className="muted mb-4">Create and manage your birthday message content.</p>
+
+      <FeatureTip
+        tipId="messages_templates"
+        message="Create your first message template to start sending personalised birthday wishes. You can also create timeline posts and upload images."
+      />
 
       <div className="messages-hub-grid">
         {SHORTCUTS.map((item) => (

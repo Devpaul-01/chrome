@@ -24,7 +24,9 @@ import Toast, { type ToastType } from '../components/Toast';
 
 // ---- shared type aliases -----------------------------------------------
 export type AuthMode = 'login' | 'register' | 'forgot-password' | 'verify-email-pending';
-export type TabType = 'home' | 'contacts' | 'messages' | 'account';
+export type TabType = 'home' | 'messages' | 'scheduling' | 'analytics' | 'account';
+// Future: re-enable contacts tab
+// export type TabType = 'home' | 'messages' | 'contacts' | 'account';
 export type ViewMode =
   | 'main'
   | 'change-password'
@@ -35,20 +37,23 @@ export type ViewMode =
   | 'queue'
   | 'history'
   | 'analytics'
+  | 'upcoming-birthdays'
   | 'posts'
   | 'postLibrary'
   | 'post-list'
   | 'groups'
   | 'images'
+  | 'smtp-settings'
+  | 'account-management'
+  | 'subscription'
+  | 'template-gallery'
+  // Contact view modes — kept for type-safety of restored UI files.
+  // Contact UI is currently disabled; contacts are populated via scraping.
   | 'contacts'
   | 'add-contact'
   | 'edit-contact'
   | 'import-contacts'
-  | 'birthday-calendar'
-  | 'smtp-settings'
-  | 'account-management'
-  | 'subscription'
-  | 'template-gallery';
+  | 'birthday-calendar';
 
 // ---- context shape -----------------------------------------------------
 interface AppContextValue {

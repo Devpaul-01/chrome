@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import Spinner from './Spinner';
 import { getErrorMessage, logError, validatePassword } from '../../utils/errors';
 import { sendBackgroundMessage } from '../api';
+import HelpTooltip from './HelpTooltip';
 
 interface ChangePasswordProps {
   onCancel: () => void;
@@ -88,7 +89,8 @@ export default function ChangePassword({ onCancel, onSuccess }: ChangePasswordPr
 
         <div className="mb-3">
           <label htmlFor="newPassword" className="block text-sm font-medium mb-1">
-            New Password
+            New Password{' '}
+            <HelpTooltip label="Must be at least 8 characters long. Use a mix of upper and lowercase letters, numbers, and symbols for a strong password." />
           </label>
           <input
             id="newPassword"

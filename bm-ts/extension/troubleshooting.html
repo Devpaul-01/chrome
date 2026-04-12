@@ -136,25 +136,26 @@
   <p>Work through this checklist:</p>
   <ol>
     <li>
-      <strong>Automation status</strong> — Go to <strong>Messages → Automation</strong> and confirm
-      the status shows <strong>Active</strong>. If it shows "Emergency Stop active", click the clear
-      button to resume.
+      <strong>Automation status</strong> — Go to the <strong>Scheduling</strong> tab →
+      <strong>Automation Settings</strong> and confirm the status shows <strong>Active</strong>.
+      If it shows “Emergency Stop active”, click the clear button to resume. Also check the
+      <strong>Automation Engine</strong> toggle on the Home tab.
     </li>
     <li>
-      <strong>Schedule is enabled</strong> — Go to <strong>Messages → Scheduling</strong> and verify
-      at least one schedule is toggled <strong>On</strong>.
+      <strong>Schedule is enabled</strong> — Go to the <strong>Scheduling</strong> tab and verify
+      at least one schedule exists under <strong>Birthday Message Schedule</strong>.
     </li>
     <li>
-      <strong>Template exists</strong> — Go to <strong>Messages → Templates</strong> and confirm you
-      have at least one saved template.
+      <strong>Template exists</strong> — Go to the <strong>Templates</strong> tab →
+      <strong>Message Templates</strong> and confirm you have at least one saved template.
     </li>
     <li>
       <strong>Chrome was open</strong> — The extension requires Chrome to be running at the scheduled
       check time. If Chrome was closed, the next check will run at the next scheduled interval.
     </li>
     <li>
-      <strong>Max messages not reached</strong> — Check <strong>Messages → Automation → Max Messages
-      Per Run</strong>. If set too low, messages may have been capped before reaching all birthdays.
+      <strong>Max messages not reached</strong> — Check <strong>Max Messages
+      Per Run</strong> in Automation Settings (Scheduling tab). If set too low, messages may have been capped before reaching all birthdays.
     </li>
     <li>
       <strong>Facebook is logged in</strong> — Open a Facebook tab and confirm you're logged in to
@@ -193,10 +194,10 @@
   <h2>Duplicate Messages / Messages Sent to Wrong People</h2>
   <p><strong>Symptoms:</strong> Some friends receive more than one message; wrong friends are being messaged.</p>
   <ol>
-    <li>Check <strong>Messages → History</strong> to see exactly who was messaged and when.</li>
+    <li>Check <strong>Message History</strong> to see exactly who was messaged and when.</li>
     <li>
-      If duplicates occurred today, click <strong>Clear Sent-Today</strong> in
-      <strong>Messages → Automation</strong> to reset the deduplication list, then reload Chrome
+      If duplicates occurred today, click <strong>Clear Sent-Today List</strong> in
+      <strong>Automation Settings</strong> (Scheduling tab) to reset the deduplication list, then reload Chrome
       before the next run.
     </li>
     <li>
@@ -213,17 +214,16 @@
   <h2>Template Not Being Used / Wrong Template Sent</h2>
   <ol>
     <li>
-      Go to <strong>Messages → Templates</strong> and confirm all intended templates are saved
-      (not just drafted).
+      Go to the <strong>Templates</strong> tab → <strong>Message Templates</strong> and confirm all
+      intended templates are saved (not just drafted).
     </li>
     <li>
-      Check the <strong>Gender</strong> field on each template. A template set to <strong>Male</strong>
-      or <strong>Female</strong> is only used for contacts with that gender. Set to <strong>All</strong>
-      to use for everyone.
+      Check the <strong>Days in Advance</strong> field on each template. A template set to
+      &ldquo;1 Day Early&rdquo; will only match a schedule that sends 1 day before the birthday.
     </li>
     <li>
-      If a contact's gender isn't set, the extension uses a neutral or "All" template. Update the
-      contact's gender in the <strong>Contacts</strong> tab to enable gender-specific templates.
+      If you have multiple templates, the extension picks one at random. Check
+      <strong>Message History</strong> to see which template was used for each send.
     </li>
   </ol>
 
@@ -231,15 +231,14 @@
   <h2>Timeline Post Not Appearing on Facebook</h2>
   <p><strong>Symptoms:</strong> Automation runs successfully but no post appears on the friend's timeline.</p>
   <ol>
-    <li>Go to <strong>Messages → Timeline Posts</strong> and confirm a post is created and enabled.</li>
-    <li>Check the post's <strong>Gender</strong> setting — the same rules apply as for templates.</li>
+    <li>Go to the <strong>Templates</strong> tab → <strong>Timeline Posts</strong> and confirm a post is created and enabled.</li>
     <li>
       Open Facebook manually and confirm you haven't been restricted from posting on friends' timelines
       (some privacy settings can block this).
     </li>
     <li>
-      Check <strong>Messages → History</strong> — the history entry shows whether a timeline post
-      was attempted alongside the Messenger message.
+      Check <strong>Message History</strong> — the history entry shows whether a timeline post
+      was attempted alongside the message.
     </li>
   </ol>
 
@@ -282,26 +281,24 @@
     </tbody>
   </table>
 
-  <!-- SMTP -->
-  <h2>SMTP / Email Notification Issues</h2>
+  <!-- Facebook Overlay Issues -->
+  <h2>Facebook Overlay Not Appearing</h2>
+  <p><strong>Symptoms:</strong> No floating sidebar appears when visiting Facebook.</p>
   <ol>
     <li>
-      Go to <strong>Account → SMTP Settings</strong> and verify all fields:
-      <ul>
-        <li><strong>Host</strong> — e.g. <code>smtp.gmail.com</code></li>
-        <li><strong>Port</strong> — typically <code>587</code> (TLS) or <code>465</code> (SSL)</li>
-        <li><strong>Username</strong> — your full email address</li>
-        <li><strong>Password</strong> — your email password or app-specific password</li>
-      </ul>
+      Make sure the extension is enabled in <code>chrome://extensions/</code> and check that
+      it has permission to run on Facebook pages.
     </li>
     <li>
-      <strong>Gmail users:</strong> You must use an <strong>App Password</strong>, not your regular
-      Google account password. Generate one at
-      <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">myaccount.google.com/apppasswords</a>.
+      Hard-refresh the Facebook page (<strong>Ctrl+Shift+R</strong>) — the overlay injects when the
+      page loads.
     </li>
     <li>
-      Check that your email provider allows third-party SMTP access. Some providers require you to
-      enable this in their security settings.
+      Check for conflicts with other extensions that modify Facebook's UI. Try disabling other
+      Facebook-related extensions temporarily.
+    </li>
+    <li>
+      If the overlay was hidden with <strong>Escape</strong>, reload the page to bring it back.
     </li>
   </ol>
 
@@ -309,7 +306,7 @@
   <h2>Extension Becomes Slow Over Time</h2>
   <ol>
     <li>
-      Go to <strong>Messages → History</strong> and delete old history entries you no longer need.
+      Go to <strong>Message History</strong> and export/delete old history entries you no longer need.
     </li>
     <li>Reload the extension from <code>chrome://extensions/</code>.</li>
     <li>Restart Chrome.</li>

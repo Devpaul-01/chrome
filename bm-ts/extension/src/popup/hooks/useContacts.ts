@@ -204,7 +204,7 @@ export function useContacts() {
           toCreate.length > 0
             ? sendBackgroundMessage<Contact[]>({
                 type: 'contacts.bulkCreate',
-                payload: toCreate,
+                payload: { contacts: toCreate },
               })
             : Promise.resolve([] as Contact[]),
         ]);

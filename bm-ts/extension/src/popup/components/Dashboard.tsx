@@ -6,6 +6,7 @@ import DashboardCharts from './DashboardCharts';
 import { getErrorMessage, logError } from '../../utils/errors';
 import wsClient from '../../api/websocket';
 import { sendBackgroundMessage } from '../api';
+import HelpTooltip from './HelpTooltip';
 
 export interface DashboardStats {
   total_messages_sent: number;
@@ -127,7 +128,8 @@ export default function Dashboard({ onClose: _onClose }: DashboardProps) {
           {/* Success Rate Hero */}
           <div className="bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-xl p-8 mb-6 text-center shadow-lg">
             <div className="text-xs opacity-90 font-semibold uppercase tracking-wider mb-3">
-              ✨ Success Rate
+              ✨ Success Rate{' '}
+              <HelpTooltip label="Percentage of messages delivered successfully out of all messages attempted. Failed messages (e.g. Facebook errors) lower this rate." />
             </div>
             <div className="text-6xl font-extrabold mb-2">{stats.success_rate}%</div>
             <div className="text-xs opacity-75">Messages delivered successfully</div>
@@ -136,7 +138,8 @@ export default function Dashboard({ onClose: _onClose }: DashboardProps) {
           {/* Messages Stats Grid */}
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-              📊 Message Statistics
+              📊 Message Statistics{' '}
+              <HelpTooltip label="Message counts by time period. 'Today' resets at midnight, 'This week' covers Monday–Sunday, and 'This month' covers the current calendar month." />
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               <DashboardStatsCard
@@ -182,7 +185,8 @@ export default function Dashboard({ onClose: _onClose }: DashboardProps) {
           {/* Upcoming & Queue */}
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-              🎂 Upcoming Activity
+              🎂 Upcoming Activity{' '}
+              <HelpTooltip label="'Upcoming' shows how many friends have birthdays in the next 30 days. 'In queue' shows messages waiting to be sent." />
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -207,7 +211,8 @@ export default function Dashboard({ onClose: _onClose }: DashboardProps) {
           {/* Automation Status */}
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-              ⚙️ Automation Status
+              ⚙️ Automation Status{' '}
+              <HelpTooltip label="Shows whether the automation engine is currently running. When active, it checks Facebook for birthdays at the interval configured in the Scheduling tab." />
             </h3>
             <div
               className={`rounded-lg p-5 shadow-md ${

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getErrorMessage, logError } from '../../utils/errors';
+import { sendBackgroundMessage } from '../api';
 import wsClient from '../../api/websocket';
 
 export interface QueuedMessage {
@@ -62,7 +63,7 @@ export function useMessageQueue() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await chrome.runtime.sendMessage({ type: 'messages.listQueue' });
+      const data = await sendBackgroundMessage<QueuedMessage[]>({ type: 'messages.listQueue' });
       setMessages(Array.isArray(data) ? data : []);
     } catch (err) {
       const errorMessage = getErrorMessage(err);
@@ -78,7 +79,7 @@ export function useMessageQueue() {
     setError(null);
     setSuccessMessage(null);
     try {
-      await chrome.runtime.sendMessage({ type: 'messages.cancelQueued', payload: { id } });
+      await sendBackgroundMessage({ type: 'messages.cancelQueued', payload: { id } });
       setMessages((prev) => prev.filter((m) => m.id !== id));
       setSuccessMessage('Message cancelled');
     } catch (err) {
@@ -92,7 +93,7 @@ export function useMessageQueue() {
     setError(null);
     setSuccessMessage(null);
     try {
-      await chrome.runtime.sendMessage({ type: 'messages.retryQueued', payload: { id } });
+      await sendBackgroundMessage({ type: 'messages.retryQueued', payload: { id } });
       setSuccessMessage('Message queued for retry');
       await loadQueue();
     } catch (err) {
@@ -104,7 +105,7 @@ export function useMessageQueue() {
     setError(null);
     setSuccessMessage(null);
     try {
-      await chrome.runtime.sendMessage({
+      await sendBackgroundMessage({
         type: 'messages.updateQueued',
         payload: { id, message_content: newContent },
       });
@@ -187,7 +188,9 @@ export function useMessageHistory() {
         ed.setHours(23, 59, 59, 999);
         payload.end_date = ed.toISOString();
       }
-      const data = await chrome.runtime.sendMessage({ type: 'messages.listHistory', payload });
+      const data = await sendBackgroundMessage<
+        { items: MessageHistoryItem[]; total: number } | MessageHistoryItem[]
+      >({ type: 'messages.listHistory', payload });
       if (data && typeof data === 'object' && 'items' in data) {
         setItems(Array.isArray(data.items) ? data.items : []);
         setTotalItems(typeof data.total === 'number' ? data.total : 0);
@@ -210,7 +213,7 @@ export function useMessageHistory() {
     if (!confirm('Are you sure you want to delete this history item?')) return;
     setError(null);
     try {
-      await chrome.runtime.sendMessage({ type: 'messages.deleteHistory', payload: { id } });
+      await sendBackgroundMessage({ type: 'messages.deleteHistory', payload: { id } });
       setItems((prev) => prev.filter((m) => m.id !== id));
       setTotalItems((t) => Math.max(0, t - 1));
     } catch (err) {

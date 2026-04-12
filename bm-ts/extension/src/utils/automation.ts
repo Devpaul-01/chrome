@@ -149,3 +149,51 @@ export async function setActionDelayMinutes(minutes: number): Promise<void> {
   const clamped = Math.max(1, Math.min(5, Math.round(minutes)));
   await chrome.storage.local.set({ [ACTION_DELAY_KEY]: clamped });
 }
+
+// ---------------------------------------------------------------------------
+// Preferred hours: restrict automation to a sensible time-of-day window.
+// Sending birthday messages at 3 AM is suspicious; real users operate during
+// waking hours.  When the alarm fires outside this window the run is skipped.
+// ---------------------------------------------------------------------------
+
+const PREFERRED_HOURS_KEY = 'bm_preferred_hours';
+
+export interface PreferredHours {
+  enabled: boolean;
+  /** Start hour in 24-hour format (0–23), inclusive. */
+  startHour: number;
+  /** End hour in 24-hour format (0–23), exclusive.  If end < start the window wraps past midnight. */
+  endHour: number;
+}
+
+const DEFAULT_PREFERRED_HOURS: PreferredHours = {
+  enabled: true,
+  startHour: 8,
+  endHour: 22,
+};
+
+export async function getPreferredHours(): Promise<PreferredHours> {
+  const result = await chrome.storage.local.get(PREFERRED_HOURS_KEY);
+  return result[PREFERRED_HOURS_KEY] ?? DEFAULT_PREFERRED_HOURS;
+}
+
+export async function setPreferredHours(hours: PreferredHours): Promise<void> {
+  const clamped: PreferredHours = {
+    enabled: hours.enabled,
+    startHour: Math.max(0, Math.min(23, Math.floor(hours.startHour))),
+    endHour: Math.max(0, Math.min(23, Math.floor(hours.endHour))),
+  };
+  await chrome.storage.local.set({ [PREFERRED_HOURS_KEY]: clamped });
+}
+
+/** Returns true if the current local hour falls within the preferred window. */
+export function isWithinPreferredHours(pref: PreferredHours): boolean {
+  if (!pref.enabled) return true; // feature disabled → always allow
+  const hour = new Date().getHours();
+  if (pref.startHour <= pref.endHour) {
+    // Normal range, e.g. 8–22
+    return hour >= pref.startHour && hour < pref.endHour;
+  }
+  // Wrapping range, e.g. 22–6 (night owls)
+  return hour >= pref.startHour || hour < pref.endHour;
+}

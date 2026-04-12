@@ -1,6 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { sendBackgroundMessage } from '../api';
 import Spinner from './Spinner';
+import HelpTooltip from './HelpTooltip';
+import FeatureTip from './FeatureTip';
 
 export interface Post {
   id: string;
@@ -31,7 +33,7 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [filterGender, setFilterGender] = useState<'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL'>('ALL');
+    const [filterGender] = useState<'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL'>('ALL');
     const [sortBy, setSortBy] = useState<'labelAsc' | 'labelDesc' | 'createdAsc' | 'createdDesc'>(
       'labelAsc',
     );
@@ -100,16 +102,11 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
       );
     }
 
-    const groupedPosts = {
-      MALE: sortedPosts.filter((p) => p.gender === 'MALE'),
-      FEMALE: sortedPosts.filter((p) => p.gender === 'FEMALE'),
-      NEUTRAL: sortedPosts.filter((p) => p.gender === 'NEUTRAL'),
-    };
-
     return (
       <div className="view-container">
         <h2 ref={headingRef} tabIndex={-1} className="text-lg font-bold text-blueStrong mb-3">
-          Birthday Posts
+          Birthday Posts{' '}
+          <HelpTooltip label="Your saved timeline post templates. These are posted to friends' Facebook walls on their birthdays. If you have multiple posts, one is chosen at random for variety." />
         </h2>
 
         <p className="text-xs text-gray-600 mb-5">
@@ -117,9 +114,15 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
           on their birthdays.
         </p>
 
+        <FeatureTip
+          tipId="post_library_intro"
+          message="Create post templates that will be posted on friends' timelines. The more templates you have, the more varied your birthday posts will be."
+        />
+
         <div className="card mb-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="block">
+            {/* Gender filter — commented out, feature not currently needed */}
+            {/* <label className="block">
               <span className="text-xs font-semibold text-textPrimary mb-2 block">
                 Filter by Gender
               </span>
@@ -135,7 +138,7 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
                 <option value="MALE">Male</option>
                 <option value="FEMALE">Female</option>
               </select>
-            </label>
+            </label> */}
 
             <label className="block">
               <span className="text-xs font-semibold text-textPrimary mb-2 block">Sort by</span>
@@ -176,84 +179,68 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
               </div>
             ) : (
               <>
-                {(['NEUTRAL', 'MALE', 'FEMALE'] as const).map((gender) => {
-                  const genderPosts = groupedPosts[gender];
-                  if (genderPosts.length === 0) return null;
-
-                  const genderLabel =
-                    gender === 'MALE' ? 'Male' : gender === 'FEMALE' ? 'Female' : 'All';
-                  const genderEmoji = gender === 'MALE' ? '♂️' : gender === 'FEMALE' ? '♀️' : '✨';
-
-                  return (
-                    <div key={gender} className="mb-6">
-                      <h3 className="text-sm font-bold text-textPrimary mb-3 pb-2 border-b-2 border-orangeBrand">
-                        {genderEmoji} {genderLabel} Posts ({genderPosts.length})
-                      </h3>
-
-                      {genderPosts.map((post) => (
-                        <div key={post.id} className="card mb-3">
-                          <div className="mb-3">
-                            <div className="flex items-start justify-between mb-2">
-                              <strong className="text-sm text-textPrimary flex-1">
-                                {post.label || 'Untitled Post'}
-                              </strong>
-                              <span className="badge badge-primary text-xs ml-2">
+                {/* Gender-grouped display — commented out, showing flat list instead */}
+                {sortedPosts.map((post) => (
+                  <div key={post.id} className="card mb-3">
+                    <div className="mb-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <strong className="text-sm text-textPrimary flex-1">
+                          {post.label || 'Untitled Post'}
+                        </strong>
+                        {/* <span className="badge badge-primary text-xs ml-2">
                                 {post.gender}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="mb-3">
-                            {expandedId === post.id ? (
-                              <div>
-                                <p className="whitespace-pre-wrap my-2 p-3 bg-surfaceSection rounded-lg text-sm text-textPrimary">
-                                  {post.content}
-                                </p>
-                                {post.image_url && (
-                                  <p className="text-xs text-gray-600 mt-2">
-                                    Image{' '}
-                                    <a
-                                      href={post.image_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-orange-600 hover:underline"
-                                    >
-                                      View Image
-                                    </a>
-                                  </p>
-                                )}
-                              </div>
-                            ) : (
-                              <p className="text-gray-600 text-sm overflow-hidden overflow-ellipsis whitespace-nowrap">
-                                {post.content.substring(0, 60)}
-                                {post.content.length > 60 ? '...' : ''}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setExpandedId(expandedId === post.id ? null : post.id)}
-                              className="btn-secondary text-xs py-1.5 px-3"
-                            >
-                              {expandedId === post.id ? '▲ Collapse' : '▼ Expand'}
-                            </button>
-                            <button
-                              onClick={() => handleDelete(post.id)}
-                              className="text-xs py-1.5 px-3 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium"
-                            >
-                              Delete
-                            </button>
-                          </div>
-
-                          <div className="mt-3 text-xs text-gray-400">
-                            Created: {new Date(post.created_at).toLocaleString()}
-                          </div>
-                        </div>
-                      ))}
+                              </span> */}
+                      </div>
                     </div>
-                  );
-                })}
+
+                    <div className="mb-3">
+                      {expandedId === post.id ? (
+                        <div>
+                          <p className="whitespace-pre-wrap my-2 p-3 bg-surfaceSection rounded-lg text-sm text-textPrimary">
+                            {post.content}
+                          </p>
+                          {post.image_url && (
+                            <p className="text-xs text-gray-600 mt-2">
+                              Image{' '}
+                              <a
+                                href={post.image_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-orange-600 hover:underline"
+                              >
+                                View Image
+                              </a>
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-gray-600 text-sm overflow-hidden overflow-ellipsis whitespace-nowrap">
+                          {post.content.substring(0, 60)}
+                          {post.content.length > 60 ? '...' : ''}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setExpandedId(expandedId === post.id ? null : post.id)}
+                        className="btn-secondary text-xs py-1.5 px-3"
+                      >
+                        {expandedId === post.id ? '▲ Collapse' : '▼ Expand'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(post.id)}
+                        className="text-xs py-1.5 px-3 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium"
+                      >
+                        Delete
+                      </button>
+                    </div>
+
+                    <div className="mt-3 text-xs text-gray-400">
+                      Created: {new Date(post.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
               </>
             )}
           </div>

@@ -1,3 +1,6 @@
+import HelpTooltip from './HelpTooltip';
+import FeatureTip from './FeatureTip';
+
 export type SavedTemplate = {
   id: string;
   greeting: string;
@@ -42,7 +45,10 @@ export default function TemplateGallery({
     <div className="p-4">
       {showHeader && (
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-800">Message Templates</h2>
+          <h2 className="text-xl font-semibold text-gray-800">
+            Message Templates{' '}
+            <HelpTooltip label="Templates are used for automated birthday messages sent as comments. Each template has a greeting, message body, and closing. If you have multiple templates, one is picked at random for variety." />
+          </h2>
           {onCreate && (
             <div>
               <button onClick={onCreate} className="btn-orange">
@@ -56,6 +62,14 @@ export default function TemplateGallery({
       {templates.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <p className="text-gray-500 mb-4">No templates yet.</p>
+          <FeatureTip
+            tipId="template_gallery_empty"
+            message="Create your first message template to start sending personalised birthday wishes automatically."
+          />
+          <FeatureTip
+            tipId="template_gallery_empty"
+            message="Create your first message template to start sending personalised birthday wishes automatically."
+          />
           {onCreate && (
             <button onClick={onCreate} className="btn-orange">
               Create Template
@@ -86,11 +100,12 @@ export default function TemplateGallery({
                 <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded text-xs font-medium">
                   {getDaysText(template.daysInAdvance)}
                 </div>
-                {template.gender !== 'ALL' && (
+                {/* Gender badge — commented out, feature not currently needed */}
+                {/* {template.gender !== 'ALL' && (
                   <div className="absolute top-2 left-2 bg-white/90 px-2 py-1 rounded text-xs font-medium capitalize">
                     {template.gender}
                   </div>
-                )}
+                )} */}
               </div>
 
               {/* Template Info */}

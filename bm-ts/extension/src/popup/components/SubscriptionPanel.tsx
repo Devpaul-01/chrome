@@ -8,6 +8,8 @@ import type {
 } from '../../api/client';
 import { sendBackgroundMessage } from '../api';
 import Spinner from './Spinner';
+import HelpTooltip from './HelpTooltip';
+import FeatureTip from './FeatureTip';
 
 /* ─── plan pricing constants (update when Stripe prices change) ─────────── */
 const PLANS = {
@@ -241,7 +243,15 @@ export default function SubscriptionPanel() {
 
       {/* ─── Section 1: Current Status ───────────────────────────────────── */}
       <div className="card">
-        <h2 className="text-lg font-semibold mb-4">Subscription Status</h2>
+        <h2 className="text-lg font-semibold mb-4">
+          Subscription Status{' '}
+          <HelpTooltip label="Your subscription status determines access to premium features. Active and Trialing subscriptions have full access. If your payment fails, you'll enter a grace period before losing access." />
+        </h2>
+
+        <FeatureTip
+          tipId="subscription_overview"
+          message="Choose a plan to unlock all features. You can switch between monthly and yearly plans anytime — charges are prorated."
+        />
         <div className="flex items-center gap-3 mb-3">
           <span
             className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${badge.className}`}
@@ -288,7 +298,10 @@ export default function SubscriptionPanel() {
 
       {/* ─── Section 2: Plan Comparison ──────────────────────────────────── */}
       <div className="card">
-        <h3 className="text-base font-semibold mb-4">Plans</h3>
+        <h3 className="text-base font-semibold mb-4">
+          Plans{' '}
+          <HelpTooltip label="Monthly is flexible with no commitment. Yearly saves 33% and is billed once per year. You can switch plans anytime — the difference is prorated on your next invoice." />
+        </h3>
         <div className="grid grid-cols-2 gap-3">
           {(
             Object.entries(PLANS) as Array<[keyof typeof PLANS, (typeof PLANS)[keyof typeof PLANS]]>
@@ -357,7 +370,10 @@ export default function SubscriptionPanel() {
       {/* ─── Section 3: Billing & Payment ────────────────────────────────── */}
       {hasStripeCustomer && (
         <div className="card">
-          <h3 className="text-base font-semibold mb-3">Billing & Payment</h3>
+          <h3 className="text-base font-semibold mb-3">
+            Billing & Payment{' '}
+            <HelpTooltip label="Opens the Stripe billing portal where you can update your credit card, view past invoices, and download receipts. All payment processing is handled securely by Stripe." />
+          </h3>
           <p className="text-xs text-gray-500 mb-4">
             Manage your payment methods, view invoices, and download receipts via the Stripe billing
             portal.

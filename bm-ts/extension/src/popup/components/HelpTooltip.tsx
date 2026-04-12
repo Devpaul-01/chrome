@@ -73,14 +73,14 @@ export default function HelpTooltip({ label, id }: HelpTooltipProps) {
           className="absolute bottom-full left-1/2 mb-1.5 z-50 w-56 max-w-xs rounded-lg text-xs px-3 py-2 leading-relaxed pointer-events-none"
           style={{
             transform: `translateX(calc(-50% - ${nudge}px))`,
-            background: 'rgba(0, 128, 166, 0.28)',
+            background: 'rgba(0, 78, 100, 0.92)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
             border: '1px solid #0080A6',
             borderLeft: '4px solid #0080A6',
-            color: '#574232',
-            fontWeight: 'bold',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1)',
+            color: '#f0f4f5',
+            fontWeight: 500,
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.12)',
           }}
           onMouseEnter={show}
           onMouseLeave={hide}

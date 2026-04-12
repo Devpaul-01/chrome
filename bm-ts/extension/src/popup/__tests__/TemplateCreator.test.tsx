@@ -134,7 +134,8 @@ describe('TemplateCreator', () => {
     expect(getClosingArea()).toBeInTheDocument();
   });
 
-  it('renders the gender select with three options', () => {
+  // Gender select is currently commented out in the component
+  it.skip('renders the gender select with three options', () => {
     render(<TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
     const select = getGenderSelect();
     const options = within(select).getAllByRole('option');
@@ -167,7 +168,8 @@ describe('TemplateCreator', () => {
     );
     expect(getTitleInput()).toHaveValue('Pre-filled Title');
     expect(getGreetingArea()).toHaveValue('Hey friend!');
-    expect(getGenderSelect()).toHaveValue('FEMALE');
+    // Gender select is currently commented out in the component
+    // expect(getGenderSelect()).toHaveValue('FEMALE');
   });
 
   // --- Validation -----------------------------------------------------------
@@ -269,7 +271,8 @@ describe('TemplateCreator', () => {
 
   // --- Gender select --------------------------------------------------------
 
-  it('allows changing the gender selection', async () => {
+  // Gender select is currently commented out in the component
+  it.skip('allows changing the gender selection', async () => {
     const user = userEvent.setup();
     render(<TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
     await user.selectOptions(getGenderSelect(), 'MALE');

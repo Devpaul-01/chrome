@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, extract, or_, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -87,13 +87,26 @@ async def get_dashboard_stats(
     )
     queued_messages = queued_result.scalar() or 0
 
-    # Upcoming birthdays (contacts with birthday within the next 30 days)
+    # Upcoming birthdays (contacts with birthday month/day within the next 30 days).
+    # Birthday year is stored as epoch (2000), so we compare month+day only.
+    today_md = now.month * 100 + now.day  # e.g. April 12 → 412
+    future = now + timedelta(days=30)
+    future_md = future.month * 100 + future.day
+
+    contact_md = extract('month', Contact.birthday) * literal(100) + extract('day', Contact.birthday)
+
+    if today_md <= future_md:
+        # Normal case: no year wrap (e.g. Apr 12 → May 12)
+        upcoming_filter = and_(contact_md >= today_md, contact_md <= future_md)
+    else:
+        # Year wrap (e.g. Dec 15 → Jan 14)
+        upcoming_filter = or_(contact_md >= today_md, contact_md <= future_md)
+
     upcoming_result = await db.execute(
         select(func.count(Contact.id)).where(
             and_(
                 Contact.user_id == current_user.id,
-                Contact.birthday >= today_start,
-                Contact.birthday <= today_start + timedelta(days=30),
+                upcoming_filter,
             )
         )
     )

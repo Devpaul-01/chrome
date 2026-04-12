@@ -39,8 +39,8 @@ export default function FeatureTip({ tipId, message }: FeatureTipProps) {
       role="status"
       className="flex items-start gap-2 rounded-lg px-3 py-2 mb-3 text-xs animate-fade-in"
       style={{
-        background: 'var(--color-orange-light)',
-        border: '1px solid rgba(229,103,23,0.25)',
+        background: 'rgba(229,103,23,0.18)',
+        border: '1px solid rgba(229,103,23,0.3)',
       }}
     >
       <span className="shrink-0 text-sm" aria-hidden="true">
