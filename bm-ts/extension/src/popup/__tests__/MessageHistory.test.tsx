@@ -114,13 +114,13 @@ describe('MessageHistory', () => {
   it('shows a spinner when isLoading is true', () => {
     mockHook({ isLoading: true });
     render(<MessageHistory onClose={vi.fn()} />);
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByLabelText('Loading')).toBeInTheDocument();
   });
 
   it('does not show a spinner when not loading', () => {
     mockHook({ isLoading: false });
     render(<MessageHistory onClose={vi.fn()} />);
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading')).not.toBeInTheDocument();
   });
 
   // --- Error banner ---------------------------------------------------------

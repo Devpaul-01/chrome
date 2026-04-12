@@ -30,42 +30,60 @@ const STEPS: WizardStep[] = [
     ],
   },
   {
-    icon: '⚙️',
-    title: 'Set Up Your Account',
-    content: [
-      'Head to the Account tab → SMTP Settings to configure email delivery notifications.',
-      'Your backend URL is already configured — you can update it any time in Settings.',
-    ],
-    note: 'You can change these settings at any time.',
-  },
-  {
     icon: '✉️',
     title: 'Create Your First Template',
     content: [
-      'Go to the Messages tab and click "+ New Template".',
-      'Write a greeting, message body, and closing. Use merge tags like [Tag Person] to personalise.',
-      'Set how many days before the birthday the message should be sent.',
+      'Go to the Templates tab → Message Templates and click "Create Template".',
+      'Write a greeting, message body (sentiment), and closing.',
+      'Use [Tag Person] to @mention friends by name automatically.',
+      'Optionally set "Days in Advance" to send early or as a follow-up.',
     ],
+    note: 'Create multiple templates — the extension picks one at random for variety.',
   },
   {
     icon: '📅',
-    title: 'Schedule Your Automation',
+    title: 'Set a Schedule',
     content: [
-      'Open the Scheduling tab to configure when the automation runs each day.',
-      'Set a message limit per run to stay within safe activity levels.',
-      'Enable automation to let the extension send messages automatically.',
+      'Open the Scheduling tab and add a birthday message schedule.',
+      'Choose when to send: on the birthday, days before, or days after.',
+      'Set your timezone so messages are sent at the right time.',
     ],
+  },
+  {
+    icon: '⚙️',
+    title: 'Configure Automation',
+    content: [
+      'In the Scheduling tab, scroll to Automation Settings.',
+      'Choose a check interval (how often to scan for birthdays).',
+      'Set a Send Confirmation mode — "Each message" is the safest option.',
+      'Adjust the delay between actions to reduce Facebook detection risk.',
+    ],
+    note: 'You can fine-tune Max Messages Per Run and other settings later.',
+  },
+  {
+    icon: '🖥️',
+    title: 'The Facebook Overlay',
+    content: [
+      'When you visit facebook.com/birthdays, a floating sidebar appears on the page.',
+      "It lists today's birthday friends with checkboxes — select who to message.",
+      'Use "Send to all" to send messages in one go, or click ▶ on a single friend.',
+      'Toggle features: DM (direct message), Post (timeline post), and Archive (archive chat after sending).',
+      'The status dot shows automation health: green = active, yellow = rate-limited, red = stopped.',
+    ],
+    note: 'Drag the title bar to reposition the overlay. Press Escape to hide it. Click ? for built-in tips.',
   },
   {
     icon: '🚀',
     title: "You're all set!",
     content: [
-      'Home — run automation, view message queue & history.',
-      'Contacts — manage your friends list and import birthdays.',
-      'Messages — create and edit message templates.',
-      'Account — SMTP, scheduling, and account options.',
+      "Home — toggle automation on, see today's summary and upcoming birthdays.",
+      'Dashboard — view delivery stats, success rate, and activity trends.',
+      'Templates — manage message templates, timeline posts, and images.',
+      'Scheduling — adjust schedules, timezone, and automation settings.',
+      'Message Queue — monitor pending, sent, and failed messages.',
+      'Account — update your profile and manage your subscription.',
     ],
-    note: 'Tip: Use Alt+H (Home) and Alt+D (Dashboard) for quick navigation.',
+    note: 'Tip: Use Alt+H (Home) and Alt+D (Dashboard) for quick navigation. Look for the ? icons throughout the app for contextual help.',
   },
 ];
 
@@ -164,7 +182,7 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
         </div>
 
         {/* Content */}
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-y-auto max-h-[45vh] pr-1">
           <div className="flex items-center gap-2">
             <span className="text-2xl" aria-hidden="true">
               {current.icon}

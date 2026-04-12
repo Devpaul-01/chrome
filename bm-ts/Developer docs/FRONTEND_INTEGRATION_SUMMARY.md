@@ -1,7 +1,7 @@
 # Frontend Integration Summary
 
-**Last Updated:** April 4, 2026  
-**Version:** 0.2.0  
+**Last Updated:** April 12, 2026  
+**Version:** 0.3.0  
 **Scope:** Complete architecture of the Chrome MV3 extension — covering the popup React app, background service worker, content scripts, build toolchain, state management, and how each layer communicates.
 
 ---
@@ -20,7 +20,7 @@ The BirthdayMessaging frontend is a Chrome Manifest V3 extension built with **Re
                        │ chrome.runtime.sendMessage
                        ▼
 ┌────────────────────────────────────────────────────────────────┐
-│  Background Service Worker (background/index.ts, 902 lines)    │
+│  Background Service Worker (background/index.ts, 926 lines)    │
 │  Receives BackgroundMessage, dispatches to api/client.ts       │
 │  Manages auth tokens, automation alarms, WebSocket lifecycle   │
 │  Returns { success: true, data } or { success: false, error }  │
@@ -32,7 +32,7 @@ The BirthdayMessaging frontend is a Chrome Manifest V3 extension built with **Re
 └────────────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────────────┐
-│  Content Script (content/index.ts, 962 lines)                  │
+│  Content Script (content/index.ts, 2,305 lines)                 │
 │  Injected into facebook.com/* at document_idle                 │
 │  DOM scraping, overlay UI, Messenger automation, timeline posts│
 │  Communicates with background via sendContentMessage()         │
@@ -87,22 +87,17 @@ Additional outputs: `chunks/*.js` (shared code), `assets/*` (CSS, images).
 ```json
 {
   "manifest_version": 3,
-  "permissions": ["storage", "scripting", "activeTab", "tabs"],
-  "optional_permissions": ["alarms"],
+  "permissions": ["storage", "scripting", "activeTab", "tabs", "notifications", "alarms"],
   "background": { "service_worker": "background.js", "type": "module" },
   "content_scripts": [{
     "matches": [
-      "https://www.facebook.com/birthdays*",
-      "https://www.facebook.com/messages/*",
-      "https://www.facebook.com/profile.php*"
+      "https://www.facebook.com/*"
     ],
     "js": ["content.js"],
     "run_at": "document_idle"
   }],
   "host_permissions": [
-    "https://www.facebook.com/birthdays*",
-    "https://www.facebook.com/messages/*",
-    "https://www.facebook.com/profile.php*",
+    "https://www.facebook.com/*",
     "http://localhost/*",
     "https://localhost/*"
   ],
@@ -115,7 +110,8 @@ Additional outputs: `chunks/*.js` (shared code), `assets/*` (CSS, images).
 | Permission | Used By | Purpose |
 |---|---|---|
 | `storage` | All contexts | `chrome.storage.local` for tokens, config, automation state |
-| `alarms` | Background | Periodic birthday-check automation alarm (optional permission) |
+| `notifications` | Background | Chrome notification API for birthday alerts |
+| `alarms` | Background | Periodic birthday-check automation alarm |
 | `tabs` | Background | Open/query Facebook birthday tabs for automation |
 | `activeTab` | Background | Inject content script on current tab |
 | `scripting` | Background | Programmatic script injection |
@@ -127,20 +123,20 @@ Additional outputs: `chunks/*.js` (shared code), `assets/*` (CSS, images).
 ```
 extension/src/
 ├── api/
-│   ├── client.ts          # 882 lines — HTTP client (58 exported functions, all types)
-│   ├── websocket.ts       # 243 lines — WebSocket client class with auto-reconnect
+│   ├── client.ts          # 925 lines — HTTP client (60 exported functions, all types)
+│   ├── websocket.ts       # 207 lines — WebSocket client class with auto-reconnect
 │   └── __tests__/
 ├── background/
-│   └── index.ts           # 902 lines — Service worker: message router, auth, automation
+│   └── index.ts           # 926 lines — Service worker: message router, auth, automation
 ├── content/
-│   ├── index.ts           # 962 lines — Content script: overlay, automation, scraper
+│   ├── index.ts           # 2,305 lines — Content script: overlay, automation, scraper
 │   ├── api.ts             # Bridge to background via chrome.runtime.sendMessage
-│   ├── dom-helpers.ts     # waitForElement(), delay() helpers
-│   ├── messenger.ts       # 413 lines — Messenger archive/unarchive automation
-│   └── timeline.ts        # 473 lines — Timeline post automation with image support
+│   ├── dom-helpers.ts     # 292 lines — waitForElement(), delay(), DOM utilities
+│   ├── messenger.ts       # 513 lines — Messenger archive/unarchive automation
+│   └── timeline.ts        # 512 lines — Timeline post automation with image support
 ├── popup/
 │   ├── main.tsx           # React root mount
-│   ├── App.tsx            # 840 lines — Root component, view routing, tab navigation
+│   ├── App.tsx            # 805 lines — Root component, view routing, tab navigation
 │   ├── api.ts             # sendBackgroundMessage() bridge
 │   ├── popup.css          # Tailwind-powered styles
 │   ├── context/
@@ -153,19 +149,23 @@ extension/src/
 │   │   ├── usePostComposer.ts
 │   │   ├── useSMTPConfig.ts
 │   │   └── useTemplateSegments.ts
-│   ├── components/        # 38 React components
+│   ├── components/        # 40 React components
 │   └── __tests__/
 └── utils/
     ├── accessibility.ts   # Screen reader announcements, focus trapping
     ├── automation.ts      # Automation config CRUD via chrome.storage.local
     ├── bridge.ts          # sendExtensionMessage() with retry for sleeping workers
+    ├── crash-recovery.ts  # Extension crash detection and recovery
     ├── errors.ts          # Error class hierarchy + parseApiError()
     ├── failsafe.ts        # Emergency stop, activity logging, rate limiting, confirmation mode
     ├── image.ts           # Canvas image composition for Facebook posts
     ├── logger.ts          # Dev-only structured logger
     ├── message.ts         # Message composition, keyword resolution, gender selection
     ├── messages.ts        # Discriminated-union message type definitions
-    └── storage.ts         # Token & config persistence via chrome.storage.local
+    ├── notifications.ts   # Chrome notification API helpers
+    ├── offline-queue.ts   # Offline message queueing for intermittent connectivity
+    ├── storage.ts         # Token & config persistence via chrome.storage.local
+    └── update-check.ts    # Extension update detection and notification
 ```
 
 ---
@@ -234,13 +234,13 @@ The `AppProvider` in `context/AppContext.tsx` provides global state via React Co
 |---|---|---|
 | `user` | `UserProfile \| null` | Authenticated user profile; `null` = logged out |
 | `isInitializing` | `boolean` | `true` while the initial `auth.me` call is in flight |
-| `viewMode` | `ViewMode` (22 values) | Current sub-view within the active tab |
-| `activeTab` | `TabType` | Bottom nav: `home`, `contacts`, `messages`, `account` |
+| `viewMode` | `ViewMode` (24 values) | Current sub-view within the active tab |
+| `activeTab` | `TabType` | Bottom nav: `home`, `contacts`, `messages`, `scheduling`, `account` |
 | `showToast()` | function | Imperatively show a toast notification |
 | `handleLogout()` | function | Clears tokens, disconnects WebSocket, resets state |
 | `refreshUser()` | function | Re-fetch user profile & reconnect WebSocket |
 
-**View modes** (22 total): `main`, `change-password`, `schedules`, `scheduling`, `automation`, `message-templates`, `queue`, `history`, `analytics`, `posts`, `postLibrary`, `post-list`, `groups`, `images`, `contacts`, `add-contact`, `edit-contact`, `import-contacts`, `birthday-calendar`, `smtp-settings`, `account-management`, `subscription`.
+**View modes** (24 total): `main`, `change-password`, `schedules`, `scheduling`, `automation`, `message-templates`, `queue`, `history`, `analytics`, `upcoming-birthdays`, `posts`, `postLibrary`, `post-list`, `groups`, `images`, `contacts`, `add-contact`, `edit-contact`, `import-contacts`, `birthday-calendar`, `smtp-settings`, `account-management`, `subscription`, `template-gallery`.
 
 Navigation is entirely state-driven — there are no browser routes. All view transitions go through `setViewMode()`.
 
@@ -265,7 +265,7 @@ All hooks follow the same patterns:
 - Forward errors to `showToast()` from `useAppContext()`
 - Expose `isSubmitting` and `message` for form UI feedback
 
-### Popup Components (36 total)
+### Popup Components (40 total)
 
 | Component | File | Description |
 |---|---|---|
@@ -289,7 +289,7 @@ All hooks follow the same patterns:
 | `ImageManager` | `ImageManager.tsx` | Full image library CRUD with upload |
 | `ImportContactsModal` | `ImportContactsModal.tsx` | Facebook scraper trigger + CSV import modal |
 | `KeywordInserter` | `KeywordInserter.tsx` | Insert `[Tag Person]`, `[Today]`, `[Image]` merge tags |
-| `MessageGroups` | `MessageGroups.tsx` | Message group CRUD (gender + segment combo) |
+| `MessageGroups` | `MessageGroups.tsx` | Message group CRUD (gender + segment combo) — **DEACTIVATED** |
 | `MessageHistory` | `MessageHistory.tsx` | Sent message history with search/filter |
 | `MessageQueue` | `MessageQueue.tsx` | Pending messages with edit/cancel/retry |
 | `MessagesHub` | `MessagesHub.tsx` | Messages tab landing page with navigation cards |
@@ -298,6 +298,7 @@ All hooks follow the same patterns:
 | `PostList` | `PostList.tsx` | List of saved timeline posts |
 | `ScheduleSettings` | `ScheduleSettings.tsx` | Birthday schedule configuration |
 | `SchedulingSettings` | `SchedulingSettings.tsx` | Advanced scheduling + automation controls |
+| `ScrollToTop` | `ScrollToTop.tsx` | Scroll-to-top button for long views |
 | `SegmentEditor` | `SegmentEditor.tsx` | Inline edit for legacy template segments |
 | `SMTPSettings` | `SMTPSettings.tsx` | SMTP host/port/credentials form |
 | `Spinner` | `Spinner.tsx` | Loading spinner with size variants |
@@ -305,6 +306,7 @@ All hooks follow the same patterns:
 | `TemplateCreator` | `TemplateCreator.tsx` | Full message template form (greeting/sentiment/closing/image/gender/days) |
 | `TemplateGallery` | `TemplateGallery.tsx` | Browse/edit/delete saved message templates |
 | `Toast` | `Toast.tsx` | Toast notification component (success/error/warning/info) |
+| `UpcomingBirthdays` | `UpcomingBirthdays.tsx` | Upcoming birthdays list view |
 
 ---
 
@@ -420,10 +422,10 @@ Receives an `AutomationRunPayload` from the background and executes three phases
 
 | Module | Lines | Functions |
 |---|---|---|
-| `content/index.ts` | 743 | `gatherBirthdayFriends()`, `fillMessageAndSend()`, `openMessageDialog()`, `scrapeBirthdayContactsFromPage()` |
-| `content/messenger.ts` | 483 | `archiveConversation()`, conversation lookup, MutationObserver for replies |
-| `content/timeline.ts` | 562 | `postToTimeline()`, `navigateToProfile()`, `openPostComposer()`, Nifty Images merge tags |
-| `content/dom-helpers.ts` | 33 | `waitForElement(selector, timeout)`, `delay(ms)` |
+| `content/index.ts` | 2,305 | `gatherBirthdayFriends()`, `fillMessageAndSend()`, `openMessageDialog()`, `scrapeBirthdayContactsFromPage()` |
+| `content/messenger.ts` | 513 | `archiveConversation()`, conversation lookup, MutationObserver for replies |
+| `content/timeline.ts` | 512 | `postToTimeline()`, `navigateToProfile()`, `openPostComposer()`, Nifty Images merge tags |
+| `content/dom-helpers.ts` | 292 | `waitForElement(selector, timeout)`, `delay(ms)`, DOM utilities |
 
 ### Contact Scraper
 
@@ -441,7 +443,7 @@ Returns `ScrapedContact[]` with `{ name, facebook_profile_url, birthday? }`.
 
 ## API Client Layer (`api/client.ts`)
 
-863 lines exporting 52 functions and all TypeScript interfaces. Every function follows the signature:
+863 lines exporting 60 functions and all TypeScript interfaces. Every function follows the signature:
 
 ```typescript
 (baseUrl: string, accessToken?: string, ...args) => Promise<T>
@@ -677,20 +679,20 @@ Global shortcuts registered in `AppProvider` via `keydown` listener:
 
 | Layer | Count |
 |---|---|
-| Popup React components | 36 |
+| Popup React components | 40 |
 | Custom hooks | 7 |
-| View modes (popup navigation states) | 21 |
-| Background message types (backend-calling) | 47 |
-| Background message types (local-only) | 17 |
-| **Total `BackgroundMessage` types** | **64** |
+| View modes (popup navigation states) | 24 |
+| Background message types (backend-calling) | 53 |
+| Background message types (local-only) | 20 |
+| **Total `BackgroundMessage` types** | **73** |
 | Content script message types | 3 |
-| `api/client.ts` exported functions | 52 |
+| `api/client.ts` exported functions | 60 |
 | `api/client.ts` exported interfaces | 30+ |
 | WebSocket event types | 5 |
 | `chrome.storage.local` keys | 8 |
-| Chrome permissions | 5 |
+| Chrome permissions | 6 |
 | npm dependencies (runtime) | 3 |
-| npm dependencies (dev) | 21 |
+| npm dependencies (dev) | 28 |
 
 ---
 

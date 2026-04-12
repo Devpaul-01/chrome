@@ -15,17 +15,13 @@ const QUEUE_KEY = 'bm_offline_queue';
 
 /** Prefixes of message types that are safe to queue and replay later. */
 const QUEUEABLE_PREFIXES = [
-  'contacts.create',
-  'contacts.update',
-  'contacts.delete',
-  'contacts.bulkCreate',
   'messages.updateQueued',
   'messages.cancelQueued',
   'messages.retryQueued',
   'messages.deleteHistory',
-  'messageGroups.create',
-  'messageGroups.update',
-  'messageGroups.delete',
+  // 'messageGroups.create',  // Commented out — feature not currently needed
+  // 'messageGroups.update',
+  // 'messageGroups.delete',
   'posts.create',
   'posts.update',
   'posts.delete',
@@ -47,6 +43,7 @@ const QUEUEABLE_PREFIXES = [
   'failsafe.clearEmergencyStop',
   'failsafe.clearActivityLog',
   'failsafe.setConfirmationMode',
+  'contacts.bulkCreate',
 ];
 
 interface QueuedItem {

@@ -2,6 +2,8 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import FacebookPostPreview from './FacebookPostPreview';
 import { useImageLibrary } from '../hooks/useImageLibrary';
 import ImageLibraryPicker from './ImageLibraryPicker';
+import HelpTooltip from './HelpTooltip';
+import FeatureTip from './FeatureTip';
 
 type PostForm = {
   content: string;
@@ -229,12 +231,19 @@ export default function PostEditor({
   return (
     <form onSubmit={onSubmit} aria-label="Post editor" className="card">
       <h3 className="text-base font-bold text-blueStrong mb-6 pb-2 border-b border-gray-200">
-        Create Timeline Post
+        Create Timeline Post{' '}
+        <HelpTooltip label="Timeline posts are written on friends' Facebook walls on their birthdays. This is different from message templates, which are sent as comments on birthday posts." />
       </h3>
+
+      <FeatureTip
+        tipId="post_editor_intro"
+        message="Timeline posts appear directly on your friends' Facebook walls. Use keywords like {First_Name} and [Image] to personalise each post."
+      />
 
       {activeTab === 'create' && (
         <>
-          <label className="block mb-5 mt-5">
+          {/* Gender Target — commented out, feature not currently needed */}
+          {/* <label className="block mb-5 mt-5">
             <span className="text-xs font-semibold text-textPrimary mb-2 block">Gender Target</span>
             <select
               value={postForm.gender}
@@ -251,11 +260,12 @@ export default function PostEditor({
               <option value="MALE">Male Friends</option>
               <option value="FEMALE">Female Friends</option>
             </select>
-          </label>
+          </label> */}
 
           <label className="block mb-5">
             <span className="text-xs font-semibold text-textPrimary mb-2 block">
-              Label / Description
+              Label / Description{' '}
+              <HelpTooltip label="A private name for this post — not shown to friends. Helps you identify it in your post library, e.g. 'Casual post' or 'Funny birthday'." />
             </span>
             <input
               type="text"
@@ -268,7 +278,8 @@ export default function PostEditor({
 
           <div className="mb-6">
             <label className="text-xs font-semibold text-textPrimary mb-2 block">
-              Post Content
+              Post Content{' '}
+              <HelpTooltip label="Write your birthday post here. Use {First_Name} to insert the friend's first name, {Last_Name} for their last name, {Today} for today's date, and [Image] to insert a random image from your library." />
             </label>
 
             <button
@@ -325,7 +336,8 @@ export default function PostEditor({
           {/* Font Customization */}
           <div className="mb-6">
             <label className="text-xs font-semibold text-textPrimary mb-3 block">
-              🎨 Text Style (appears on image)
+              🎨 Text Style (appears on image){' '}
+              <HelpTooltip label="Font customisation only applies when an image is attached. The text is overlaid on the image in the preview. Without an image, these settings have no visible effect." />
             </label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Font Family */}
@@ -369,6 +381,7 @@ export default function PostEditor({
           <div className="mb-6">
             <label className="text-xs font-semibold text-textPrimary mb-2 block">
               🖼️ Attach Image{' '}
+              <HelpTooltip label="Upload a specific image for this post, or pick one from your Image Library. Alternatively, use [Image] in your post content to have a random library image inserted at send time." />{' '}
               <span className="text-gray-400 font-normal">
                 (optional — or use [Image] for random)
               </span>

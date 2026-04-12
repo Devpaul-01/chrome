@@ -26,8 +26,6 @@
 import {
   CheckoutSessionRequest,
   SegmentType,
-  CreateContactPayload,
-  UpdateContactPayload,
   CreateMessageGroupPayload,
   UpdateMessageGroupPayload,
   CreatePostPayload,
@@ -38,27 +36,26 @@ import {
   CreateMessageTemplatePayload,
   UpdateMessageTemplatePayload,
   MessageTemplate,
-  Contact,
   Post,
   ListHistoryParams,
+  CreateContactPayload,
+  UpdateContactPayload,
 } from '../api/client';
 
 /**
  * Payload dispatched from background → content script to run the full automation loop.
  * currentDayTemplates: templates for days_in_advance === 0 (birthday today).
- * advanceEntries: templates for days_in_advance > 0 paired with the matching contacts.
- * followUpEntries: templates for days_in_advance < 0 paired with the matching contacts.
+ * advanceTemplates: templates for days_in_advance > 0 (sent before birthday).
+ * followUpTemplates: templates for days_in_advance < 0 (sent after birthday).
  * posts: timeline posts available for today.
- * contacts: full contacts list (used for gender lookup + sync).
  * sentToday: profile URLs already processed today (dedup guard).
  * maxMessages: cap per run (0 = unlimited).
  */
 export interface AutomationRunPayload {
   currentDayTemplates: MessageTemplate[];
-  advanceEntries: Array<{ template: MessageTemplate; contacts: Contact[] }>;
-  followUpEntries: Array<{ template: MessageTemplate; contacts: Contact[] }>;
+  advanceTemplates: MessageTemplate[];
+  followUpTemplates: MessageTemplate[];
   posts: Post[];
-  contacts: Contact[];
   sentToday: string[];
   maxMessages: number;
 }
@@ -111,6 +108,11 @@ export type BackgroundMessage =
   | { type: 'automation.setEnabled'; payload: { enabled: boolean } }
   | { type: 'automation.setInterval'; payload: { minutes: number } }
   | { type: 'automation.setMaxMessages'; payload: { max: number } }
+  | { type: 'automation.getPreferredHours' }
+  | {
+      type: 'automation.setPreferredHours';
+      payload: { enabled: boolean; startHour: number; endHour: number };
+    }
   | { type: 'automation.clearSentToday' }
   | { type: 'automation.recordSent'; payload: { friendId: string; friendName: string } }
   // Message queue messages
@@ -127,13 +129,6 @@ export type BackgroundMessage =
   | { type: 'dashboard.getStats' }
   | { type: 'dashboard.getConfigs' }
   | { type: 'dashboard.toggleConfig'; payload: { id: string; enabled: boolean } }
-  // Contact messages
-  | { type: 'contacts.list' }
-  | { type: 'contacts.create'; payload: CreateContactPayload }
-  | { type: 'contacts.update'; payload: { id: string } & UpdateContactPayload }
-  | { type: 'contacts.delete'; payload: { id: string } }
-  | { type: 'contacts.bulkCreate'; payload: CreateContactPayload[] }
-  | { type: 'contacts.scrapeFromFacebook' }
   // Message Group messages
   | { type: 'messageGroups.list' }
   | { type: 'messageGroups.create'; payload: CreateMessageGroupPayload }
@@ -166,4 +161,14 @@ export type BackgroundMessage =
   | { type: 'failsafe.clearActivityLog' }
   | { type: 'failsafe.getRateLimits' }
   | { type: 'failsafe.getConfirmationMode' }
-  | { type: 'failsafe.setConfirmationMode'; payload: { mode: string } };
+  | { type: 'failsafe.setConfirmationMode'; payload: { mode: string } }
+  | { type: 'rateLimit.status' }
+  | { type: 'rateLimit.record' }
+  // Contact message types — kept for type-safety of restored UI files.
+  // Runtime handlers for list/create/update/delete are commented out in background/index.ts.
+  | { type: 'contacts.list' }
+  | { type: 'contacts.create'; payload: CreateContactPayload }
+  | { type: 'contacts.update'; payload: UpdateContactPayload & { id: string } }
+  | { type: 'contacts.delete'; payload: { id: string } }
+  | { type: 'contacts.scrapeFromFacebook' }
+  | { type: 'contacts.bulkCreate'; payload: { contacts: CreateContactPayload[] } };

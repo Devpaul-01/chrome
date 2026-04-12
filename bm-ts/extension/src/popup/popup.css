@@ -1022,7 +1022,8 @@ kbd {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
 
-/* Contact search input style */
+/* Contact search input style — currently unused; contacts UI is disabled.
+   Uncomment when contacts tab is re-enabled.
 .contact-search-input {
   display: block;
   width: 100%;
@@ -1042,6 +1043,7 @@ kbd {
   border-color: var(--color-blue-strong);
   box-shadow: 0 0 0 3px rgba(42, 127, 160, 0.15);
 }
+*/
 
 /* Facebook post preview custom styles */
 .facebook-preview-img {

@@ -337,7 +337,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Greeting <span className="text-red-500">*</span>{' '}
-                  <HelpTooltip label="Use merge tags like [Tag Person] to insert the friend's name, [Today] for today's date, and [Image] for an image URL." />
+                  <HelpTooltip label="Use merge tags like [Tag Person] to insert the friend's name, [Today] for today's date, or [Image] for an image from your library." />
                 </label>
                 <button
                   type="button"
@@ -364,7 +364,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Sentiment <span className="text-red-500">*</span>{' '}
-                  <HelpTooltip label="The main body of your message — the personal, heartfelt part. Sits between the greeting and the closing." />
+                  <HelpTooltip label="The main body of your message — the personal, heartfelt part. This sits between the greeting and the closing." />
                 </label>
                 <button
                   type="button"
@@ -391,7 +391,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Closing <span className="text-red-500">*</span>{' '}
-                  <HelpTooltip label="A short sign-off line — e.g. 'Wishing you a wonderful day!' Keep it brief." />
+                  <HelpTooltip label="A short sign-off line, e.g. 'Wishing you a wonderful day!' Keep it brief." />
                 </label>
                 <button
                   type="button"
@@ -433,7 +433,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Days in Advance{' '}
-                <HelpTooltip label="Positive = days before the birthday; 0 = on the day; negative = days after. Useful for follow-up messages like 'Hope you had a great birthday yesterday!'" />
+                <HelpTooltip label="Positive values send before the birthday, 0 sends on the day, and negative values send after. Useful for follow-up messages like 'Hope you had a great birthday yesterday!'" />
               </label>
               <select
                 value={formData.daysInAdvance}
@@ -454,8 +454,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               </select>
             </div>
 
-            {/* Gender Filter */}
-            <div>
+            {/* Gender Filter — commented out, feature not currently needed */}
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Gender Filter{' '}
                 <HelpTooltip label="Restrict this template to contacts of a specific gender. 'All Genders' sends to everyone. Use gender-specific templates to personalise messages for male or female friends." />
@@ -475,7 +475,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                 <option value="FEMALE">Female</option>
                 <option value="NEUTRAL">Neutral</option>
               </select>
-            </div>
+            </div> */}
 
             {/* Attach Image */}
             <div>

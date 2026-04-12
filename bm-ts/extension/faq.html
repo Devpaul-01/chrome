@@ -123,7 +123,7 @@
     Once you set up a schedule, the extension runs a background check at your configured timing.
     It opens (or focuses) Facebook's birthday page, scans for today's birthdays, looks up your templates,
     and sends a message for each friend who hasn't already received one today. A deduplication guard
-    prevents double-sending. All activity is logged in <strong>Messages → History</strong>.
+    prevents double-sending. All activity is logged in <strong>Message History</strong> (Message Queue tab).
   </p>
 
   <!-- ── Account & Billing ── -->
@@ -151,8 +151,8 @@
 
   <h2>8. Can I change my email address?</h2>
   <p>
-    Email address changes are not currently supported through the extension. Contact support if you
-    need to migrate your account.
+    Yes. Go to <strong>Account → Profile</strong> and update your email address. Note that
+    changing your email may require re-verification.
   </p>
 
   <!-- ── Templates & Messages ── -->
@@ -165,39 +165,42 @@
   </p>
   <table aria-label="Merge tags reference">
     <thead>
-      <tr><th>Tag</th><th>Replaced with</th></tr>
+      <tr><th>Tag</th><th>Used in</th><th>Replaced with</th></tr>
     </thead>
     <tbody>
-      <tr><td><code>[Tag Person]</code></td><td>The friend's name (@mention on Facebook)</td></tr>
-      <tr><td><code>[Today]</code></td><td>Today's date (e.g. March 18, 2026)</td></tr>
-      <tr><td><code>[Image]</code></td><td>Inserts a randomly selected image from your Image Library into the message. If your library is empty, the keyword is ignored.</td></tr>
+      <tr><td><code>[Tag Person]</code></td><td>Message templates</td><td>The friend's name (@mention on Facebook)</td></tr>
+      <tr><td><code>{First_Name}</code></td><td>Timeline posts</td><td>The friend's first name</td></tr>
+      <tr><td><code>{Last_Name}</code></td><td>Timeline posts</td><td>The friend's last name</td></tr>
+      <tr><td><code>[Today]</code> / <code>{Today}</code></td><td>Both</td><td>Today's date (e.g. March 18, 2026)</td></tr>
+      <tr><td><code>[Image]</code></td><td>Both</td><td>A randomly selected image from your Image Library</td></tr>
     </tbody>
   </table>
 
   <h2>10. Can I have multiple templates?</h2>
   <p>
     Yes! You can create as many templates as you like. BirthdayMessaging randomly selects one each
-    time a message is sent, so your friends see variety. You can also tag templates by gender so that
-    only templates matching a contact's gender are used.
+    time a message is sent, so your friends see variety. Create templates with different tones
+    (formal, casual, humorous) to keep things fresh.
   </p>
 
   <h2>11. How do I pause automation without deleting my schedule?</h2>
   <p>
-    Go to <strong>Messages → Automation</strong> and click <strong>Emergency Stop 🛑</strong>. This
-    pauses all automation for 24 hours. To resume earlier, click the clear button next to the stop
-    notice. You can also toggle individual schedules off in <strong>Messages → Scheduling</strong>.
+    Go to the <strong>Scheduling</strong> tab → <strong>Automation Settings</strong> and click
+    <strong>Pause All Activity 🛑</strong>. This pauses all automation for 24 hours.
+    To resume earlier, click the clear button next to the stop notice. You can also toggle the
+    <strong>Automation Engine</strong> off from the Home tab.
   </p>
 
   <h2>12. Why didn't a message send on a friend's birthday?</h2>
   <p>Common reasons:</p>
   <ul>
-    <li>Automation was paused — check <strong>Messages → Automation</strong> status</li>
+    <li>Automation was paused — check the <strong>Home</strong> tab or the <strong>Scheduling → Automation Settings</strong> status</li>
     <li>The friend's birthday wasn't visible on Facebook's birthday feed that day</li>
     <li>The daily message limit was reached — check <strong>Max Messages Per Run</strong> in Automation settings</li>
     <li>Chrome wasn't running at the scheduled time — the extension requires Chrome to be open</li>
     <li>You weren't logged in to Facebook when the check ran</li>
   </ul>
-  <p>Check <strong>Messages → History</strong> and <strong>Messages → Queue</strong> for more detail.</p>
+  <p>Check <strong>Message History</strong> and <strong>Message Queue</strong> for more detail.</p>
 
   <!-- ── Contacts & Facebook ── -->
   <h2 class="section-heading">Contacts &amp; Facebook</h2>
@@ -243,10 +246,54 @@
     We monitor Facebook layout changes and release fixes as quickly as possible.
   </p>
 
-  <!-- ── Advanced: Templates &amp; Message Groups ── -->
-  <h2 class="section-heading">Advanced: Templates &amp; Message Groups</h2>
+  <!-- ── Facebook Overlay ── -->
+  <h2 class="section-heading">Facebook Overlay</h2>
 
-  <h2>17. How does a message template work?</h2>
+  <h2>17. What is the Facebook overlay?</h2>
+  <p>
+    When you visit any Facebook page, BirthdayMessaging injects a <strong>floating sidebar</strong>
+    directly on the page. It lists today's birthday friends with checkboxes, shows a template
+    preview, and lets you manually send messages without leaving Facebook.
+  </p>
+
+  <h2>18. How do I use the overlay to send messages manually?</h2>
+  <ol>
+    <li>Navigate to <code>facebook.com/friends/birthdays</code>.</li>
+    <li>The overlay appears on the right side of the page. Click <strong>Refresh</strong> to detect today's birthday friends.</li>
+    <li>Use the checkboxes to select which friends should receive a message.</li>
+    <li>Review the template preview — click 🔀 to shuffle to a different template.</li>
+    <li>Use the feature toggles to choose what to send: <strong>DM</strong> (direct message), <strong>Post</strong> (timeline post), or <strong>Archive</strong> (archive the chat after sending).</li>
+    <li>Click <strong>Send to all</strong> to send messages to all selected friends, or click <strong>▶</strong> on a single friend's row to send only to them.</li>
+  </ol>
+  <div class="highlight-box">
+    <strong>Safety tip:</strong> Messages are sent one at a time with a random delay between each
+    to mimic natural behaviour. Keep sending to 10 or fewer friends per hour.
+  </div>
+
+  <h2>19. What do the status dot colours mean?</h2>
+  <table aria-label="Status dot colour reference">
+    <thead>
+      <tr><th>Colour</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Green</strong></td><td>Automation is active and running normally.</td></tr>
+      <tr><td><strong>Yellow</strong></td><td>Rate-limited or outside your preferred sending hours.</td></tr>
+      <tr><td><strong>Red</strong></td><td>Emergency stop is active — all sending is paused.</td></tr>
+      <tr><td><strong>Grey</strong></td><td>Automation is disabled.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>20. How do I hide, move, or minimise the overlay?</h2>
+  <ul>
+    <li><strong>Hide:</strong> Press <strong>Escape</strong> while the overlay is focused.</li>
+    <li><strong>Move:</strong> Click and drag the title bar to reposition it anywhere on the page.</li>
+    <li><strong>Minimise:</strong> Click the <strong>−</strong> button in the top-right corner to collapse it to just the header. Click <strong>+</strong> to expand again.</li>
+  </ul>
+
+  <!-- ── Advanced: Templates ── -->
+  <h2 class="section-heading">Advanced: Templates</h2>
+
+  <h2>21. How does a message template work?</h2>
   <p>
     Each template is made of three parts that are joined together to form the final sent message:
   </p>
@@ -256,9 +303,7 @@
     <li><strong>Closing</strong> — a brief sign-off, e.g. <em>"Wishing you a wonderful day!"</em></li>
   </ul>
   <p>
-    BirthdayMessaging automatically picks a template whose <strong>Gender Filter</strong> matches
-    your contact's saved gender, falling back to an &ldquo;All Genders&rdquo; template if no
-    gender-specific match exists. The <strong>Days in Advance</strong> setting lets you use a
+    The <strong>Days in Advance</strong> setting lets you use a
     template early (e.g. &ldquo;1 Day Early&rdquo;) or as a follow-up
     (e.g. &ldquo;1 Day Late&rdquo;). If you have multiple eligible templates, one is chosen at
     random to keep messages feeling varied.
@@ -277,26 +322,17 @@
     see how the assembled message will look before saving.
   </p>
 
-  <h2>18. What are Message Groups and when should I use them?</h2>
+  <h2>22. What are timeline posts vs. message templates?</h2>
   <p>
-    Message Groups are an <strong>advanced</strong> feature for users who need fine-grained control
-    over how individual message <em>segments</em> are assembled. A segment is a single reusable
-    piece of content stored independently, identified by a UUID. A Message Group bundles selected
-    segments together and assigns a gender target to the bundle.
+    <strong>Message templates</strong> are sent as comments on Facebook birthday posts or via Messenger.
+    <strong>Timeline posts</strong> are posts made directly on a friend's Facebook wall/timeline.
+    You can use either or both — they are independent features.
   </p>
   <p>
-    <strong>Most users do not need Message Groups.</strong> The standard
-    <strong>Message Templates</strong> section (<em>Messages &rarr; Message Templates</em>) is the
-    recommended way to create and manage birthday messages. Message Groups are intended for
-    advanced setups where you maintain a large shared library of individual segment pieces and
-    want to mix and match them programmatically across sends.
+    Timeline posts support additional merge tags like <code>{First_Name}</code> and <code>{Last_Name}</code>,
+    font styling options, and image attachments. Create timeline posts from the
+    <strong>Templates &rarr; Timeline Posts</strong> section.
   </p>
-  <div class="highlight-box">
-    <strong>Quick rule of thumb:</strong> Use <strong>Message Templates</strong> to create
-    complete birthday messages with a Greeting, Sentiment, and Closing. Only use
-    <strong>Message Groups</strong> if you are building a curated pool of individually-addressable
-    segments and need to compose messages from them.
-  </div>
 
   </main>
 

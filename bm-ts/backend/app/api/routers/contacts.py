@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.api.deps import get_current_user
 from app.db.models import Contact, User
@@ -38,39 +39,68 @@ async def create_contact(
     return contact
 
 
-@router.post("/bulk", response_model=List[ContactOut], status_code=status.HTTP_201_CREATED)
+@router.post("/bulk", response_model=List[ContactOut], status_code=status.HTTP_200_OK)
 async def bulk_create_contacts(
     contacts_data: List[ContactCreate],
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ContactOut]:
-    """Create multiple contacts at once."""
-    contacts = [
-        Contact(
-            user_id=current_user.id,
-            name=data.name,
-            facebook_profile_url=data.facebook_profile_url,
-            birthday=data.birthday,
-            birthday_month_only=data.birthday_month_only,
-            gender=data.gender.value if data.gender else None,
-            notes=data.notes,
+    """Create or update multiple contacts at once (upsert on profile URL)."""
+    if not contacts_data:
+        return []
+
+    results: list[Contact] = []
+    for data in contacts_data:
+        stmt = (
+            pg_insert(Contact)
+            .values(
+                user_id=current_user.id,
+                name=data.name,
+                facebook_profile_url=data.facebook_profile_url,
+                birthday=data.birthday,
+                birthday_month_only=data.birthday_month_only,
+                gender=data.gender.value if data.gender else None,
+                notes=data.notes,
+            )
+            .on_conflict_do_update(
+                index_elements=["user_id", "facebook_profile_url"],
+                set_={
+                    "name": data.name,
+                    "birthday": data.birthday,
+                    "birthday_month_only": data.birthday_month_only,
+                    "gender": data.gender.value if data.gender else None,
+                    "notes": data.notes,
+                    "updated_at": text("now()"),
+                },
+            )
+            .returning(Contact)
         )
-        for data in contacts_data
-    ]
-    db.add_all(contacts)
+        result = await db.execute(stmt)
+        contact = result.scalar_one()
+        results.append(contact)
+
     await db.commit()
-    for contact in contacts:
+    for contact in results:
         await db.refresh(contact)
-    return contacts
+    return results
 
 
 @router.get("/", response_model=List[ContactOut])
 async def list_contacts(
+    updated_since: Optional[str] = Query(None, description="ISO timestamp; return only contacts updated after this time"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ContactOut]:
-    """List all contacts for the current user."""
-    stmt = select(Contact).where(Contact.user_id == current_user.id).order_by(Contact.name)
+    """List all contacts for the current user, optionally filtered by last update time."""
+    stmt = select(Contact).where(Contact.user_id == current_user.id)
+    if updated_since:
+        from datetime import datetime as dt
+        try:
+            cutoff = dt.fromisoformat(updated_since.replace("Z", "+00:00"))
+            stmt = stmt.where(Contact.updated_at > cutoff)
+        except ValueError:
+            pass  # ignore malformed timestamp, return all
+    stmt = stmt.order_by(Contact.name)
     result = await db.execute(stmt)
     return result.scalars().all()
 

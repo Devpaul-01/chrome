@@ -135,8 +135,8 @@
     picks one at random each day for variety.
   </p>
   <ol>
-    <li>Go to the <strong>Messages</strong> tab → <strong>Templates</strong>.</li>
-    <li>Click <strong>+ New Template</strong>.</li>
+    <li>Go to the <strong>Templates</strong> tab → <strong>Message Templates</strong>.</li>
+    <li>Click <strong>Create Template</strong>.</li>
     <li>Fill in the three fields:</li>
   </ol>
   <table aria-label="Template fields reference">
@@ -145,12 +145,13 @@
     </thead>
     <tbody>
       <tr><td><strong>Greeting</strong></td><td>Happy Birthday, [Tag Person]! 🎉</td><td>300 chars</td></tr>
-      <tr><td><strong>Body</strong></td><td>Wishing you an amazing day filled with joy!</td><td>1000 chars</td></tr>
+      <tr><td><strong>Body (Sentiment)</strong></td><td>Wishing you an amazing day filled with joy!</td><td>1000 chars</td></tr>
       <tr><td><strong>Closing</strong></td><td>— Your friend</td><td>300 chars</td></tr>
     </tbody>
   </table>
   <ol start="4">
-    <li>(Optional) Set a <strong>Gender</strong> filter if this template is better suited to a specific audience.</li>
+    <li>(Optional) Set <strong>Days in Advance</strong> to send the message early or as a follow-up after the birthday.</li>
+    <li>(Optional) Attach an image or use <code>[Image]</code> in your text to insert a random image from your Image Library.</li>
     <li>Click <strong>Save Template</strong>.</li>
   </ol>
 
@@ -160,8 +161,11 @@
       <tr><th>Tag</th><th>Replaced with</th></tr>
     </thead>
     <tbody>
-      <tr><td><code>[Tag Person]</code></td><td>The friend's name (Facebook @mention)</td></tr>
-      <tr><td><code>[Today]</code></td><td>Today's date (e.g. March 18, 2026)</td></tr>
+      <tr><td><code>[Tag Person]</code></td><td>The friend's name (Facebook @mention) — for message templates</td></tr>
+      <tr><td><code>{First_Name}</code></td><td>The friend's first name — for timeline posts</td></tr>
+      <tr><td><code>{Last_Name}</code></td><td>The friend's last name — for timeline posts</td></tr>
+      <tr><td><code>[Today]</code> / <code>{Today}</code></td><td>Today's date (e.g. March 18, 2026)</td></tr>
+      <tr><td><code>[Image]</code></td><td>A random image from your Image Library</td></tr>
     </tbody>
   </table>
 
@@ -169,30 +173,35 @@
   <div class="step-header"><span class="step-number">4</span> Set a Schedule</div>
   <p>Schedules tell the extension <em>when</em> to send messages relative to a friend's birthday.</p>
   <ol>
-    <li>Go to <strong>Messages</strong> → <strong>Scheduling</strong>.</li>
-    <li>Click <strong>+ New Schedule</strong>.</li>
-    <li>Set <strong>Days Before</strong>:
+    <li>Go to the <strong>Scheduling</strong> tab.</li>
+    <li>Under <strong>Birthday Message Schedule</strong>, choose a timing mode:</li>
+    <li>Set the timing:
       <ul>
-        <li><code>0</code> — send on the birthday itself</li>
-        <li><code>1</code> (positive) — send a day early</li>
-        <li><code>-1</code> (negative) — send a follow-up the day after</li>
+        <li><strong>On the birthday</strong> — send on the actual day</li>
+        <li><strong>Days before</strong> — send a message early (e.g. 1 day before)</li>
+        <li><strong>Days after</strong> — send a follow-up (e.g. "Hope you had a great birthday!")</li>
       </ul>
     </li>
-    <li>Toggle the schedule <strong>On</strong>.</li>
-    <li>Click <strong>Save</strong>.</li>
+    <li>Click <strong>Add Schedule</strong>.</li>
   </ol>
 
   <!-- Step 5 -->
-  <div class="step-header"><span class="step-number">5</span> Let Automation Run</div>
+  <div class="step-header"><span class="step-number">5</span> Configure Automation &amp; Go</div>
   <ol>
-    <li>Go to <strong>Messages</strong> → <strong>Automation</strong>.</li>
-    <li>Confirm the status shows <strong>Active</strong>.</li>
-    <li>Make sure you are logged in to Facebook in your browser.</li>
-    <li>The extension will automatically check Facebook's birthday feed at your scheduled times
-        and send messages on your behalf.</li>
+    <li>In the <strong>Scheduling</strong> tab, scroll to <strong>Automation Settings</strong>.</li>
+    <li>Choose a <strong>Check Interval</strong> (how often to scan for birthdays — default is 1 hour).</li>
+    <li>Set your preferred <strong>Send Confirmation</strong> mode:
+      <ul>
+        <li><strong>Each message</strong> — asks every time (safest)</li>
+        <li><strong>Per session</strong> — asks once per run</li>
+        <li><strong>Auto</strong> — sends without asking (higher ban risk)</li>
+      </ul>
+    </li>
+    <li>Go to the <strong>Home</strong> tab and turn the <strong>Automation Engine</strong> toggle to <strong>ON</strong>.</li>
+    <li>Make sure you are logged in to Facebook in your browser and Chrome stays open.</li>
   </ol>
   <div class="highlight-box">
-    <strong>Manual trigger:</strong> Click <strong>Run Check Now</strong> to immediately scan for
+    <strong>Manual trigger:</strong> Click <strong>Run Check Now</strong> in Automation Settings to immediately scan for
     today's birthdays without waiting for the next scheduled run.
   </div>
 
@@ -203,14 +212,49 @@
     <li>Detect friends with birthdays on Facebook</li>
     <li>Compose a personalized message using your templates</li>
     <li>Send messages via Facebook Messenger</li>
-    <li>Log all activity in <strong>Messages → History</strong></li>
+    <li>Log all activity in <strong>Message History</strong></li>
   </ul>
+
+  <!-- The Facebook Overlay -->
+  <h2>The Facebook Overlay</h2>
+  <p>
+    When you visit <code>facebook.com/birthdays</code> (or any Facebook page), BirthdayMessaging
+    adds a <strong>floating sidebar overlay</strong> directly on the page. This gives you manual
+    control alongside the automated system.
+  </p>
+  <h3>What's in the overlay</h3>
+  <table aria-label="Overlay sections reference">
+    <thead>
+      <tr><th>Section</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Status dot</strong></td><td>Green = automation active. Yellow = rate-limited or outside preferred hours. Red = emergency stop. Grey = disabled.</td></tr>
+      <tr><td><strong>Friend list</strong></td><td>Checkboxes for each friend whose birthday is today. Select who to message.</td></tr>
+      <tr><td><strong>Feature toggles</strong></td><td><strong>DM</strong> = send a direct message, <strong>Post</strong> = post on their timeline, <strong>Archive</strong> = archive the chat after sending.</td></tr>
+      <tr><td><strong>Template preview</strong></td><td>Shows the message that will be sent. Click 🔀 to shuffle to a different template.</td></tr>
+      <tr><td><strong>Send to all</strong></td><td>Sends messages to all checked friends with a random delay between each.</td></tr>
+      <tr><td><strong>Stats pills</strong></td><td>Messages sent vs. your safety caps. Sending pauses automatically when a cap is reached.</td></tr>
+    </tbody>
+  </table>
+  <h3>Overlay controls</h3>
+  <ul>
+    <li><strong>Refresh</strong> — re-scan the page for birthday friends and reload templates.</li>
+    <li><strong>▶ (per-friend)</strong> — send a message to just that one person.</li>
+    <li><strong>Stop</strong> — appears while sending; halts after the current message finishes.</li>
+    <li><strong>? (help)</strong> — toggles built-in tips inside the overlay.</li>
+    <li><strong>− / +</strong> — minimise or expand the panel.</li>
+  </ul>
+  <div class="highlight-box">
+    <strong>Tip:</strong> Drag the overlay's title bar to reposition it anywhere on the page.
+    Press <strong>Escape</strong> to hide it entirely.
+  </div>
 
   <h2>What's Next?</h2>
   <ul>
-    <li><strong>Add a timeline post</strong> (Messages → Timeline Posts) to also post on friends' walls.</li>
-    <li><strong>Import contacts</strong> (Contacts tab) to manage friends and their details manually.</li>
-    <li><strong>Review sent messages</strong> in Messages → History to see what was sent and when.</li>
+    <li><strong>Add a timeline post</strong> (Templates → Timeline Posts) to also post on friends' walls.</li>
+    <li><strong>Upload images</strong> (Templates → Image Library) to use with the <code>[Image]</code> keyword.</li>
+    <li><strong>Review sent messages</strong> in the Message Queue and Message History views.</li>
+    <li><strong>Check the Dashboard</strong> (Home → Analytics) for delivery stats and trends.</li>
     <li><strong>Upgrade your subscription</strong> in Account → Subscription to unlock more messages per day.</li>
   </ul>
 

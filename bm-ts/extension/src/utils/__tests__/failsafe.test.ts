@@ -60,48 +60,51 @@ describe('checkRateLimit', () => {
     expect(status.weekly.used).toBe(0);
   });
 
-  it('blocks after hourly cap (1/hour) is reached', async () => {
-    await recordMessageSent();
+  it('blocks after hourly cap (10/hour) is reached', async () => {
+    // Send 10 messages to hit the hourly cap
+    for (let i = 0; i < 10; i++) {
+      await recordMessageSent();
+    }
     const status = await checkRateLimit();
     expect(status.allowed).toBe(false);
     expect(status.reason).toContain('Hourly limit');
-    expect(status.hourly.used).toBe(1);
-    expect(status.hourly.cap).toBe(1);
+    expect(status.hourly.used).toBe(10);
+    expect(status.hourly.cap).toBe(10);
   });
 
-  it('blocks after daily cap (3/day) is reached', async () => {
-    // Simulate 3 messages sent at different hours today
+  it('blocks after daily cap (20/day) is reached', async () => {
+    // Simulate 20 messages sent at different hours today (all outside the hourly window)
     const now = Date.now();
-    const timestamps = [
-      new Date(now - 3 * 60 * 60 * 1000).toISOString(), // 3 hrs ago
-      new Date(now - 2 * 60 * 60 * 1000).toISOString(), // 2 hrs ago
-      new Date(now - 61 * 60 * 1000).toISOString(), // 61 min ago (outside hourly window)
-    ];
+    const timestamps: string[] = [];
+    for (let i = 0; i < 20; i++) {
+      // Spread across 2-22 hours ago so none cluster within the 1-hour window
+      timestamps.push(new Date(now - (2 + i) * 60 * 60 * 1000).toISOString());
+    }
     await chrome.storage.local.set({ bm_rate_limits: { timestamps } });
 
     const status = await checkRateLimit();
     expect(status.allowed).toBe(false);
     expect(status.reason).toContain('Daily limit');
-    expect(status.daily.used).toBe(3);
-    expect(status.daily.cap).toBe(3);
+    expect(status.daily.used).toBe(20);
+    expect(status.daily.cap).toBe(20);
   });
 
-  it('blocks after weekly cap (5/week) is reached', async () => {
+  it('blocks after weekly cap (50/week) is reached', async () => {
     const now = Date.now();
-    const timestamps = [
-      new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString(), // 6 days ago
-      new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-      new Date(now - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
-      new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-      new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-    ];
+    // Spread 50 timestamps across the last 7 days, all outside the hourly and daily windows
+    const timestamps: string[] = [];
+    for (let i = 0; i < 50; i++) {
+      // Spread evenly across ~2-7 days ago
+      const hoursAgo = 48 + i * 2.4; // 48h to ~168h ago
+      timestamps.push(new Date(now - hoursAgo * 60 * 60 * 1000).toISOString());
+    }
     await chrome.storage.local.set({ bm_rate_limits: { timestamps } });
 
     const status = await checkRateLimit();
     expect(status.allowed).toBe(false);
     expect(status.reason).toContain('Weekly limit');
-    expect(status.weekly.used).toBe(5);
-    expect(status.weekly.cap).toBe(5);
+    expect(status.weekly.used).toBe(50);
+    expect(status.weekly.cap).toBe(50);
   });
 
   it('prunes timestamps older than 7 days', async () => {

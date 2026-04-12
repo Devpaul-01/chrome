@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useMessageQueue, QueuedMessage } from '../hooks/useMessages';
 import Spinner from './Spinner';
 import { trapFocus, handleEscapeKey } from '../../utils/accessibility';
+import HelpTooltip from './HelpTooltip';
+import FeatureTip from './FeatureTip';
 
 interface MessageQueueProps {
   onClose: () => void;
@@ -127,7 +129,15 @@ export default function MessageQueue({ onClose: _onClose, compact = false }: Mes
 
   return (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-3">Message Queue</h2>
+      <h2 className="text-lg font-semibold mb-3">
+        Message Queue{' '}
+        <HelpTooltip label="Messages waiting to be sent. Pending messages will be delivered at the next automation run. Failed messages can be retried or edited before resending." />
+      </h2>
+
+      <FeatureTip
+        tipId="queue_overview"
+        message="Messages are queued here before being sent to Facebook. You can edit, retry failed messages, or cancel pending ones."
+      />
 
       {error && (
         <div className="error mb-3" role="alert">

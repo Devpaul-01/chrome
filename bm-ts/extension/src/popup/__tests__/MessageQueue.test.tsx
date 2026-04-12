@@ -102,13 +102,13 @@ describe('MessageQueue', () => {
   it('shows a spinner when isLoading is true', () => {
     mockHook({ isLoading: true });
     render(<MessageQueue onClose={vi.fn()} />);
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByLabelText('Loading')).toBeInTheDocument();
   });
 
   it('does not show spinner when isLoading is false', () => {
     mockHook({ isLoading: false });
     render(<MessageQueue onClose={vi.fn()} />);
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading')).not.toBeInTheDocument();
   });
 
   // --- Empty state ----------------------------------------------------------

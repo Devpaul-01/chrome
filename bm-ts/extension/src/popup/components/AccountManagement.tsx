@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Spinner from './Spinner';
+import HelpTooltip from './HelpTooltip';
 
 export type UserProfile = {
   email: string;
@@ -56,7 +57,8 @@ export default function AccountManagement({
           {/* First Name */}
           <div>
             <label htmlFor="firstName" className="block text-sm font-medium mb-1">
-              First Name
+              First Name{' '}
+              <HelpTooltip label="Your first name is used in the welcome greeting on the Home tab." />
             </label>
             <input
               type="text"
@@ -86,7 +88,8 @@ export default function AccountManagement({
           {/* Email */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
-              Email
+              Email{' '}
+              <HelpTooltip label="Your account email is used for login and password reset. Changing it here updates your account email." />
             </label>
             <input
               type="email"
@@ -102,7 +105,8 @@ export default function AccountManagement({
           {/* Phone */}
           <div>
             <label htmlFor="phone" className="block text-sm font-medium mb-1">
-              Phone
+              Phone{' '}
+              <HelpTooltip label="Optional. Use international format, e.g. +1 234 567 8900." />
             </label>
             <input
               type="tel"

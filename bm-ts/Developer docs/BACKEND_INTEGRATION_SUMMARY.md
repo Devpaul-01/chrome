@@ -1,7 +1,7 @@
 # Backend Integration Summary
 
-**Last Updated:** April 4, 2026  
-**Version:** 1.2.0  
+**Last Updated:** April 12, 2026  
+**Version:** 1.3.0  
 **Scope:** How the Chrome extension integrates with the FastAPI backend — covering every API route, its corresponding `client.ts` function, and the background service worker message type that triggers it.
 
 ---
@@ -14,7 +14,7 @@ The Chrome extension communicates with the backend exclusively through the backg
 Popup / Content Script
         │  chrome.runtime.sendMessage({ type: "..." })
         ▼
-Background Service Worker (background/index.ts, 902 lines)
+Background Service Worker (background/index.ts, 926 lines)
         │  calls api/client.ts functions
         ▼
 FastAPI Backend  (http://localhost:8000 in dev)
@@ -117,22 +117,29 @@ The `DashboardStats` interface in `client.ts` includes two fields that are **not
 | Background Message | `client.ts` Function | HTTP Method + Path |
 |---|---|---|
 | `contacts.list` | `listContacts()` | `GET /api/contacts/` |
-| `contacts.create` | `createContact(payload)` | `POST /api/contacts/` |
-| `contacts.update` | `updateContact(id, payload)` | `PUT /api/contacts/{id}` |
-| `contacts.delete` | `deleteContact(id)` | `DELETE /api/contacts/{id}` |
 | `contacts.bulkCreate` | `bulkCreateContacts(payload)` | `POST /api/contacts/bulk` |
-| `contacts.scrapeFromFacebook` | *(content script)* | — | Handled locally by content script; synced via `contacts.bulkCreate` |
 
 ---
 
-## Message Groups
+## Message Groups (DEACTIVATED)
+
+> **Note:** The message_groups router was deactivated on April 12, 2026 (commented out in `main.py` — "feature not currently needed"). The `client.ts` functions remain but are not called from the background worker.
+
+| Background Message | `client.ts` Function | HTTP Method + Path | Status |
+|---|---|---|---|
+| ~~`messageGroups.list`~~ | `listMessageGroups()` | `GET /api/message-groups/` | INACTIVE |
+| ~~`messageGroups.create`~~ | `createMessageGroup(payload)` | `POST /api/message-groups/` | INACTIVE |
+| ~~`messageGroups.update`~~ | `updateMessageGroup(id, payload)` | `PUT /api/message-groups/{id}` | INACTIVE |
+| ~~`messageGroups.delete`~~ | `deleteMessageGroup(id)` | `DELETE /api/message-groups/{id}` | INACTIVE |
+
+---
+
+## Rate Limits
 
 | Background Message | `client.ts` Function | HTTP Method + Path |
 |---|---|---|
-| `messageGroups.list` | `listMessageGroups()` | `GET /api/message-groups/` |
-| `messageGroups.create` | `createMessageGroup(payload)` | `POST /api/message-groups/` |
-| `messageGroups.update` | `updateMessageGroup(id, payload)` | `PUT /api/message-groups/{id}` |
-| `messageGroups.delete` | `deleteMessageGroup(id)` | `DELETE /api/message-groups/{id}` |
+| `rateLimit.status` | `getServerRateLimitStatus()` | `GET /api/rate-limits/status` |
+| `rateLimit.record` | `recordServerSend()` | `POST /api/rate-limits/record` |
 
 ---
 
@@ -208,6 +215,8 @@ These messages are handled entirely within the extension and do **not** call the
 | `automation.setEnabled` | `chrome.storage.local` | Toggle automation on/off |
 | `automation.setInterval` | `chrome.storage.local` | Set check frequency (minutes) |
 | `automation.setMaxMessages` | `chrome.storage.local` | Cap max sends per run |
+| `automation.getPreferredHours` | `chrome.storage.local` | Read preferred sending hours window |
+| `automation.setPreferredHours` | `chrome.storage.local` | Set preferred hours for automated sends |
 | `automation.clearSentToday` | `chrome.storage.local` | Reset `SentTodayRecord` deduplication list |
 | `automation.recordSent` | `chrome.storage.local` | Mark a profile URL as sent today |
 | `automation.scanFacebook` | content script | Dispatch `automation.runFull` payload to active Facebook tab |
@@ -258,9 +267,9 @@ All `client.ts` functions throw on non-2xx responses. The thrown object is an `A
 
 | Layer | Count |
 |---|---|
-| HTTP endpoints | 78 |
+| HTTP endpoints | 75 |
 | WebSocket endpoints | 1 |
-| `client.ts` exported functions | 58 |
-| Background message types that call the backend | 51 |
-| Background message types that are local-only | 26 *(automation × 7, config × 3, failsafe × 8, logout × 1, scrape × 1, others × 6)* |
-| **Total background message types** | **77** |
+| `client.ts` exported functions | 60 |
+| Background message types that call the backend | 53 |
+| Background message types that are local-only | 20 *(automation × 9, config × 3, failsafe × 8)* |
+| **Total background message types** | **73** |

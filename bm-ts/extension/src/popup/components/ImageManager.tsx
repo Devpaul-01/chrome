@@ -1,5 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useImageLibrary, MAX_LIBRARY_IMAGES } from '../hooks/useImageLibrary';
+import HelpTooltip from './HelpTooltip';
+import FeatureTip from './FeatureTip';
 
 export interface UserImage {
   id: string;
@@ -196,8 +198,14 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(
     return (
       <div className="view-container">
         <h2 ref={headingRef} tabIndex={-1} className="text-lg font-bold text-blueStrong mb-3">
-          Image Library
+          Image Library{' '}
+          <HelpTooltip label="Upload images to use in your birthday posts and templates. Use [Image] in your message content to insert a random image from this library at send time. All images are auto-resized to 1080×1350px for optimal Facebook display." />
         </h2>
+
+        <FeatureTip
+          tipId="image_library_intro"
+          message="Upload images here to use with the [Image] keyword in your posts and templates. A random image from your library will be inserted each time a message is sent."
+        />
 
         <p className="text-xs text-gray-600 mb-5">
           Upload and manage images for your birthday posts. Use [Image] in messages to insert a

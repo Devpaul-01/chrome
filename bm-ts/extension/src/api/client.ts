@@ -530,6 +530,7 @@ export async function getDashboardStats(
 // ========== Contact Management ==========
 /**
  * A stored contact representing a Facebook friend.
+ * Contacts are populated automatically when birthdays are scraped from Facebook.
  * `gender` drives pronoun/template selection during automation.
  * `birthday` is stored as `YYYY-MM-DD` or `MM-DD`.
  */
@@ -563,8 +564,13 @@ export interface UpdateContactPayload {
   notes?: string;
 }
 
-export async function listContacts(baseUrl: string, accessToken: string): Promise<Contact[]> {
-  return request(baseUrl, '/api/contacts/', 'GET', undefined, accessToken);
+export async function listContacts(
+  baseUrl: string,
+  accessToken: string,
+  updatedSince?: string,
+): Promise<Contact[]> {
+  const query = updatedSince ? `?updated_since=${encodeURIComponent(updatedSince)}` : '';
+  return request(baseUrl, `/api/contacts/${query}`, 'GET', undefined, accessToken);
 }
 
 export async function createContact(
@@ -995,4 +1001,35 @@ export async function exportHistoryCsv(baseUrl: string, accessToken: string): Pr
     throw new ApiError(response.status, await response.json().catch(() => undefined));
   }
   return response.blob();
+}
+
+// ========== Server-Side Rate Limits ==========
+
+export interface RateLimitBucket {
+  used: number;
+  cap: number;
+}
+
+export interface ServerRateLimitStatus {
+  allowed: boolean;
+  reason?: string;
+  hourly: RateLimitBucket;
+  daily: RateLimitBucket;
+  weekly: RateLimitBucket;
+}
+
+/** Check server-side rate limit status before sending a message. */
+export async function getServerRateLimitStatus(
+  baseUrl: string,
+  accessToken: string,
+): Promise<ServerRateLimitStatus> {
+  return request(baseUrl, '/api/rate-limits/status', 'GET', undefined, accessToken);
+}
+
+/** Record a successful send on the server and get updated counters. */
+export async function recordServerSend(
+  baseUrl: string,
+  accessToken: string,
+): Promise<ServerRateLimitStatus> {
+  return request(baseUrl, '/api/rate-limits/record', 'POST', undefined, accessToken);
 }

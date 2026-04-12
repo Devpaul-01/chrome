@@ -47,11 +47,18 @@ interface RateLimitRecord {
   timestamps: string[];
 }
 
-// Caps aligned with MANIFEST_AND_FAILSAFE_PLAN.md (line 59):
-// 1/hour, 3/day, 5/week.
-const HOURLY_CAP = 1;
-const DAILY_CAP = 3;
-const WEEKLY_CAP = 5;
+// Caps calibrated to match realistic human birthday-messaging behaviour:
+// A user may have 5–15 friends with birthdays on the same day and would
+// naturally message them in a single sitting.  Overly tight caps (e.g.
+// 1/hour) are MORE suspicious because no real person pauses for an hour
+// between birthday messages.
+//
+//  • Per-session burst:  10 messages  (covers a busy birthday day)
+//  • Daily ceiling:      20 messages  (handles multiple sessions / stragglers)
+//  • Weekly ceiling:     50 messages  (prevents long-term abuse)
+const HOURLY_CAP = 10;
+const DAILY_CAP = 20;
+const WEEKLY_CAP = 50;
 
 async function getRateLimitRecord(): Promise<RateLimitRecord> {
   const result = await chrome.storage.local.get(RATE_LIMIT_KEY);

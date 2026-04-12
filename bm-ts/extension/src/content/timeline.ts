@@ -13,7 +13,7 @@ const SHORT_DELAY = 1000;
 const MEDIUM_DELAY = 2000;
 const LONG_DELAY = 3000;
 
-import { waitForElement, delay, trySelectors, retryOperation } from './dom-helpers';
+import { waitForElement, delay, trySelectors, retryOperation, simulateClick } from './dom-helpers';
 
 /**
  * Interface for post content
@@ -139,7 +139,7 @@ export async function openPostComposer(): Promise<HTMLElement | null> {
     }
 
     // Click the trigger to open composer
-    composerTrigger.click();
+    await simulateClick(composerTrigger);
     await delay(SHORT_DELAY);
 
     // Wait for the composer dialog/modal to appear
@@ -470,7 +470,7 @@ export async function submitPost(): Promise<boolean> {
     }
 
     // Click the button
-    postButton.click();
+    await simulateClick(postButton);
 
     // Wait for post to be submitted
     await delay(LONG_DELAY);

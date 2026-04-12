@@ -1,8 +1,9 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Spinner from './Spinner';
 import { getErrorMessage, logError } from '../../utils/errors';
-import HelpTooltip from './HelpTooltip';
 import { sendBackgroundMessage } from '../api';
+import HelpTooltip from './HelpTooltip';
+import FeatureTip from './FeatureTip';
 
 export interface BirthdaySchedule {
   id: string;
@@ -12,6 +13,8 @@ export interface BirthdaySchedule {
   updated_at: string;
 }
 
+type TimingMode = 'before' | 'on' | 'after';
+
 interface ScheduleSettingsProps {
   onClose: () => void;
   showClose?: boolean;
@@ -19,20 +22,15 @@ interface ScheduleSettingsProps {
 
 export default function ScheduleSettings({ onClose, showClose = true }: ScheduleSettingsProps) {
   const [schedules, setSchedules] = useState<BirthdaySchedule[]>([]);
-  const [daysBeforeInput, setDaysBeforeInput] = useState('0');
+  const [timingMode, setTimingMode] = useState<TimingMode>('on');
+  const [daysInput, setDaysInput] = useState('1');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [utcTime, setUtcTime] = useState(() => new Date().toUTCString().replace(' GMT', ' UTC'));
 
   useEffect(() => {
     loadSchedules();
-    const timer = setInterval(
-      () => setUtcTime(new Date().toUTCString().replace(' GMT', ' UTC')),
-      1000,
-    );
-    return () => clearInterval(timer);
   }, []);
 
   async function loadSchedules() {
@@ -53,20 +51,26 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
     }
   }
 
+  function computeDaysBefore(): number {
+    if (timingMode === 'on') return 0;
+    const days = parseInt(daysInput, 10);
+    if (isNaN(days) || days < 1) return NaN;
+    return timingMode === 'before' ? days : -days;
+  }
+
   async function handleAddSchedule(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmitting(true);
     setMessage(null);
     setError(null);
 
-    const daysBefore = parseInt(daysBeforeInput, 10);
+    const daysBefore = computeDaysBefore();
     if (isNaN(daysBefore)) {
-      setError('Please enter a valid number');
+      setError('Please enter a valid number of days (1 or more)');
       setIsSubmitting(false);
       return;
     }
 
-    // Check if this schedule already exists
     if (schedules.some((s) => s.days_before === daysBefore)) {
       setError('A schedule for this timing already exists');
       setIsSubmitting(false);
@@ -78,8 +82,9 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
         type: 'schedules.create',
         payload: { days_before: daysBefore, enabled: true },
       });
-      setMessage('Schedule added successfully!');
-      setDaysBeforeInput('0');
+      setMessage('Schedule added!');
+      setTimingMode('on');
+      setDaysInput('1');
       await loadSchedules();
     } catch (err) {
       setError((err as Error).message);
@@ -128,14 +133,18 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
 
   return (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-3">Birthday Message Schedule</h2>
+      <h2 className="text-lg font-semibold mb-3">
+        Birthday Message Schedule{' '}
+        <HelpTooltip label="Schedules control when messages are sent relative to each friend's birthday. You can create multiple schedules — e.g. one for the day itself and another for a follow-up the day after." />
+      </h2>
       <p className="text-sm text-gray-600 mb-3">
-        Configure when to send birthday messages relative to the actual birthday date.
+        Choose when to send birthday messages relative to the actual birthday.
       </p>
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-xs text-textMuted font-medium">Current UTC time:</span>
-        <span className="utc-clock">{utcTime}</span>
-      </div>
+
+      <FeatureTip
+        tipId="schedule_setup"
+        message="Create at least one schedule to tell the extension when to send messages. Most users start with 'On the birthday' and add more later."
+      />
 
       {error && (
         <div className="error mb-3" role="alert">
@@ -156,25 +165,33 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
         <>
           {/* Add new schedule */}
           <form onSubmit={handleAddSchedule} className="mb-4">
-            <label htmlFor="daysBefore" className="block text-sm font-medium mb-1">
-              Send messages{' '}
-              <HelpTooltip label="Positive numbers = days before birthday (e.g. 3 = 3 days before). 0 = on the birthday. Negative numbers = days after (e.g. -1 = 1 day after)." />
+            <label className="block text-sm font-medium mb-2">
+              Send message{' '}
+              <HelpTooltip label="'Days before' sends the message early. 'On the birthday' sends on the actual day. 'Days after' sends a follow-up, e.g. 'Hope you had a great birthday!'" />
             </label>
-            <div className="flex gap-2 items-center mb-2">
-              <input
-                id="daysBefore"
-                type="number"
-                value={daysBeforeInput}
-                onChange={(e) => setDaysBeforeInput(e.target.value)}
-                placeholder="0"
-                className="input-field flex-1"
-                required
-              />
-              <span className="text-sm">day(s) before birthday</span>
+            <div className="flex gap-2 items-center mb-3">
+              <select
+                value={timingMode}
+                onChange={(e) => setTimingMode(e.target.value as TimingMode)}
+                className="input-field"
+                aria-label="Timing relative to birthday"
+              >
+                <option value="before">Days before</option>
+                <option value="on">On the birthday</option>
+                <option value="after">Days after</option>
+              </select>
+              {timingMode !== 'on' && (
+                <input
+                  type="number"
+                  min={1}
+                  value={daysInput}
+                  onChange={(e) => setDaysInput(e.target.value)}
+                  className="input-field w-20"
+                  required
+                  aria-label="Number of days"
+                />
+              )}
             </div>
-            <p className="text-xs text-gray-500 mb-3">
-              Use negative numbers for days after (e.g., -1 = 1 day after)
-            </p>
             <button
               type="submit"
               disabled={isSubmitting}
@@ -189,12 +206,8 @@ export default function ScheduleSettings({ onClose, showClose = true }: Schedule
 
           {/* List of schedules */}
           <div className="border-t pt-3">
-            <h3 className="text-sm font-semibold mb-2">Active Schedules</h3>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Spinner size="md" />
-              </div>
-            ) : schedules.length === 0 ? (
+            <h3 className="text-sm font-semibold mb-2">Your Schedules</h3>
+            {schedules.length === 0 ? (
               <p className="text-sm text-gray-500">
                 No schedules configured. Add one above to get started.
               </p>

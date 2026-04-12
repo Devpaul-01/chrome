@@ -19,10 +19,14 @@ const SHORTCUTS = [
 ];
 
 const TIPS = [
-  'Use [Tag Person] in templates to personalise each message automatically.',
-  'Set "Days in Advance" on templates to schedule messages before the birthday.',
-  'Import contacts from Facebook to quickly build your friends list.',
-  'Check the Dashboard for delivery stats and automation health.',
+  'Use [Tag Person] in message templates to @mention friends by name automatically.',
+  'Use {First_Name} and {Last_Name} in timeline posts to personalise each post.',
+  'Set "Days in Advance" on templates to send messages before or after the birthday.',
+  'Upload images to the Image Library and use [Image] to insert them randomly in posts.',
+  'Set the Delay Between Actions slider higher (3–5 min) to reduce Facebook ban risk.',
+  'Use "Each message" confirmation mode for the safest sending experience.',
+  'Check the Dashboard regularly for delivery stats and automation health.',
+  'Create multiple templates — the extension picks one at random for variety.',
 ];
 
 const DOCS = [
@@ -98,10 +102,10 @@ export default function HelpPanel({ open, onClose, onRestartTour }: HelpPanelPro
         <section>
           <h3 className="text-sm font-semibold text-textPrimary mb-2">Quick Start</h3>
           <ol className="text-xs text-textMuted space-y-1.5 list-decimal list-inside">
-            <li>Set up SMTP in Account → SMTP Settings</li>
-            <li>Create a message template in the Messages tab</li>
-            <li>Import contacts or add them manually</li>
-            <li>Enable automation on the Home tab</li>
+            <li>Create a message template in the Templates tab</li>
+            <li>Set a schedule in Scheduling (e.g. &ldquo;On the birthday&rdquo;)</li>
+            <li>Configure automation settings (check interval, confirmation mode)</li>
+            <li>Enable automation on the Home tab and keep Chrome open</li>
           </ol>
         </section>
 

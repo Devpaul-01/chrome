@@ -4,6 +4,8 @@ import { useMessageHistory, MessageHistoryItem } from '../hooks/useMessages';
 import { trapFocus, handleEscapeKey } from '../../utils/accessibility';
 import { getTokens, getBackendUrl } from '../../utils/storage';
 import { exportHistoryCsv } from '../../api/client';
+import HelpTooltip from './HelpTooltip';
+import FeatureTip from './FeatureTip';
 
 interface MessageHistoryProps {
   onClose: () => void;
@@ -124,7 +126,10 @@ export default function MessageHistory({
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">Message History</h2>
+        <h2 className="text-lg font-semibold">
+          Message History{' '}
+          <HelpTooltip label="A log of all messages sent by the extension. Use filters to find specific messages. 'Export all' downloads your complete history as a CSV file." />
+        </h2>
         {!compact && filteredMessages.length > 0 && (
           <div className="flex gap-2">
             <button
@@ -153,24 +158,30 @@ export default function MessageHistory({
 
       {/* Stats summary */}
       {!compact && (
-        <div className="grid grid-cols-4 gap-2 mb-4 text-center">
-          <div className="p-2 bg-gray-50 rounded">
-            <div className="text-xl font-bold text-blueStrong">{stats.total}</div>
-            <div className="text-xs text-gray-600">Total</div>
+        <>
+          <FeatureTip
+            tipId="history_overview"
+            message="Review your sent messages and track delivery status. Use the search and filters to find specific messages, or export to CSV for your records."
+          />
+          <div className="grid grid-cols-4 gap-2 mb-4 text-center">
+            <div className="p-2 bg-gray-50 rounded">
+              <div className="text-xl font-bold text-blueStrong">{stats.total}</div>
+              <div className="text-xs text-gray-600">Total</div>
+            </div>
+            <div className="p-2 bg-blue-50 rounded">
+              <div className="text-xl font-bold text-blue-600">{stats.sent}</div>
+              <div className="text-xs text-gray-600">Sent</div>
+            </div>
+            <div className="p-2 bg-green-50 rounded">
+              <div className="text-xl font-bold text-green-600">{stats.delivered}</div>
+              <div className="text-xs text-gray-600">Delivered</div>
+            </div>
+            <div className="p-2 bg-red-50 rounded">
+              <div className="text-xl font-bold text-red-600">{stats.failed}</div>
+              <div className="text-xs text-gray-600">Failed</div>
+            </div>
           </div>
-          <div className="p-2 bg-blue-50 rounded">
-            <div className="text-xl font-bold text-blue-600">{stats.sent}</div>
-            <div className="text-xs text-gray-600">Sent</div>
-          </div>
-          <div className="p-2 bg-green-50 rounded">
-            <div className="text-xl font-bold text-green-600">{stats.delivered}</div>
-            <div className="text-xs text-gray-600">Delivered</div>
-          </div>
-          <div className="p-2 bg-red-50 rounded">
-            <div className="text-xl font-bold text-red-600">{stats.failed}</div>
-            <div className="text-xs text-gray-600">Failed</div>
-          </div>
-        </div>
+        </>
       )}
 
       {/* Filters */}

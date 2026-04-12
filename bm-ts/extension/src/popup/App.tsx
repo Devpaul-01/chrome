@@ -27,13 +27,15 @@ import MessageHistory from './components/MessageHistory';
 import Dashboard from './components/Dashboard';
 import PostEditor from './components/PostEditor';
 import PostList from './components/PostList';
-import MessageGroups from './components/MessageGroups';
+// import MessageGroups from './components/MessageGroups'; // Commented out — feature not currently needed
 import ImageManager from './components/ImageManager';
-import ContactList from './components/ContactList';
-import ContactForm from './components/ContactForm';
-import ImportContactsModal from './components/ImportContactsModal';
-import BirthdayCalendar from './components/BirthdayCalendar';
 // import SMTPSettings from './components/SMTPSettings'; // Uncomment when SMTP/multi-platform support is added
+// Contacts UI — commented out; contacts are populated via scraping. Uncomment to re-enable manual UI.
+// import ContactList from './components/ContactList';
+// import ContactForm from './components/ContactForm';
+// import ImportContactsModal from './components/ImportContactsModal';
+// import BirthdayCalendar from './components/BirthdayCalendar';
+import UpcomingBirthdays from './components/UpcomingBirthdays';
 import MessagesHub from './components/MessagesHub';
 import HomeControls from './components/HomeControls';
 import AccountManagement from './components/AccountManagement';
@@ -53,27 +55,10 @@ import { getOnboardingComplete, setOnboardingComplete } from '../utils/storage';
 import wsClient from '../api/websocket';
 
 import { AppProvider, useAppContext, type AuthMode, type TabType } from './context/AppContext';
-import { useContacts } from './hooks/useContacts';
 import { useSMTPConfig } from './hooks/useSMTPConfig';
 import { useMessageTemplates } from './hooks/useMessageTemplates';
 import { usePostComposer } from './hooks/usePostComposer';
-
-const COMMON_TIMEZONES = [
-  'UTC',
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'America/Toronto',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Asia/Tokyo',
-  'Asia/Shanghai',
-  'Asia/Dubai',
-  'Australia/Sydney',
-  'Pacific/Auckland',
-];
+// import { useContacts } from './hooks/useContacts'; // Uncomment to re-enable contacts UI
 
 // ---- Root component: just the provider + error boundary -----------------
 export default function App() {
@@ -101,10 +86,10 @@ function AppShell() {
     refreshUser,
   } = useAppContext();
 
-  const contactsHook = useContacts();
   const _smtpHook = useSMTPConfig();
   const msgTemplates = useMessageTemplates();
   const post = usePostComposer();
+  // const contactsHook = useContacts(); // Uncomment to re-enable contacts UI
 
   // ---- Onboarding wizard --------------------------------------------------
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -167,7 +152,7 @@ function AppShell() {
   // ---- Account management (mutates user in context) ------------------
   const [isAccountSubmitting, setIsAccountSubmitting] = useState(false);
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
-  const [accountTimezone, setAccountTimezone] = useState(
+  const [accountTimezone] = useState(
     () =>
       (user as { timezone?: string } | null)?.timezone ||
       Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -250,8 +235,9 @@ function AppShell() {
       label: string;
     }[] = [
       { id: 'home', label: 'Home' },
-      { id: 'contacts', label: 'Contacts' },
-      { id: 'messages', label: 'Messages' },
+      { id: 'messages', label: 'Templates' },
+      { id: 'scheduling', label: 'Scheduling' },
+      // { id: 'contacts', label: 'Contacts' }, // Uncomment to re-enable contacts tab
       { id: 'account', label: 'Account' },
     ];
 
@@ -302,7 +288,6 @@ function AppShell() {
                 onClick={() => {
                   setActiveTab(tab.id);
                   setViewMode('main');
-                  contactsHook.setShowImportModal(false);
                 }}
                 onKeyDown={(e) => handleTabKeyDown(e, tabIndex)}
               >
@@ -325,22 +310,6 @@ function AppShell() {
         />
       );
     }
-    if (viewMode === 'scheduling') {
-      return (
-        <div>
-          <SchedulingSettings />
-          <button
-            className="btn mt-4"
-            onClick={() => {
-              setActiveTab('messages');
-              setViewMode('main');
-            }}
-          >
-            ← Back to Messages
-          </button>
-        </div>
-      );
-    }
     if (viewMode === 'queue') {
       return <MessageQueue onClose={() => setViewMode('main')} />;
     }
@@ -361,6 +330,16 @@ function AppShell() {
             ← Back to Home
           </button>
         </div>
+      );
+    }
+    if (viewMode === 'upcoming-birthdays') {
+      return (
+        <UpcomingBirthdays
+          onClose={() => {
+            setActiveTab('home');
+            setViewMode('main');
+          }}
+        />
       );
     }
     if (viewMode === 'template-gallery') {
@@ -417,9 +396,9 @@ function AppShell() {
                 }
               />
             </div>
-            <div className="mb-6">
+            {/* <div className="mb-6">
               <MessageGroups onClose={() => setViewMode('main')} showClose={false} />
-            </div>
+            </div> */}
             <button className="btn w-full" onClick={() => setViewMode('template-gallery')}>
               View/Edit Message Templates
             </button>
@@ -431,7 +410,7 @@ function AppShell() {
               setViewMode('main');
             }}
           >
-            ← Back to Messages
+            ← Back to Templates
           </button>
         </div>
       );
@@ -458,7 +437,7 @@ function AppShell() {
               setViewMode('main');
             }}
           >
-            ← Back to Messages
+            ← Back to Templates
           </button>
         </div>
       );
@@ -471,7 +450,8 @@ function AppShell() {
       );
     }
     if (viewMode === 'groups') {
-      return <MessageGroups onClose={() => setViewMode('main')} />;
+      return null; // MessageGroups commented out — feature not currently needed
+      // return <MessageGroups onClose={() => setViewMode('main')} />;
     }
     if (viewMode === 'images') {
       return (
@@ -484,52 +464,9 @@ function AppShell() {
               setViewMode('main');
             }}
           >
-            ← Back to Messages
+            ← Back to Templates
           </button>
         </div>
-      );
-    }
-    if (viewMode === 'contacts') {
-      return (
-        <ContactList
-          contacts={contactsHook.contacts}
-          onAddContact={() => setViewMode('add-contact')}
-          onImportContacts={() => contactsHook.setShowImportModal(true)}
-          onEditContact={(contact) => {
-            contactsHook.setEditingContact(contact);
-            setViewMode('edit-contact');
-          }}
-          onDeleteContact={contactsHook.handleDeleteContact}
-        />
-      );
-    }
-    if (viewMode === 'add-contact') {
-      return (
-        <ContactForm
-          onSubmit={contactsHook.handleAddContact}
-          onCancel={() => setViewMode('contacts')}
-          isSubmitting={contactsHook.isSubmitting}
-          message={contactsHook.message}
-        />
-      );
-    }
-    if (viewMode === 'edit-contact' && contactsHook.editingContact) {
-      return (
-        <ContactForm
-          contact={contactsHook.editingContact}
-          onSubmit={contactsHook.handleUpdateContact}
-          onCancel={() => {
-            contactsHook.setEditingContact(null);
-            setViewMode('contacts');
-          }}
-          isSubmitting={contactsHook.isSubmitting}
-          message={contactsHook.message}
-        />
-      );
-    }
-    if (viewMode === 'birthday-calendar') {
-      return (
-        <BirthdayCalendar contacts={contactsHook.contacts} onBack={() => setViewMode('contacts')} />
       );
     }
     // SMTP settings view — commented out until multi-platform support is added
@@ -540,6 +477,35 @@ function AppShell() {
     //       onSave={smtpHook.handleSaveSMTPConfig}
     //       isSubmitting={smtpHook.isSubmitting}
     //       message={smtpHook.message}
+    //     />
+    //   );
+    // }
+    // Contacts views — commented out; contacts are auto-populated via scraping.
+    // Uncomment to re-enable manual contacts management UI.
+    // if (viewMode === 'add-contact') {
+    //   return (
+    //     <ContactForm
+    //       onSubmit={(data) => contactsHook.createContact(data)}
+    //       onCancel={() => setViewMode('contacts')}
+    //       isSubmitting={contactsHook.isSubmitting}
+    //     />
+    //   );
+    // }
+    // if (viewMode === 'edit-contact' && contactsHook.selectedContact) {
+    //   return (
+    //     <ContactForm
+    //       contact={contactsHook.selectedContact}
+    //       onSubmit={(data) => contactsHook.updateContact(contactsHook.selectedContact!.id, data)}
+    //       onCancel={() => setViewMode('contacts')}
+    //       isSubmitting={contactsHook.isSubmitting}
+    //     />
+    //   );
+    // }
+    // if (viewMode === 'birthday-calendar') {
+    //   return (
+    //     <BirthdayCalendar
+    //       contacts={contactsHook.contacts}
+    //       onBack={() => setViewMode('main')}
     //     />
     //   );
     // }
@@ -571,35 +537,12 @@ function AppShell() {
               message="Enable automation on this page to start sending birthday messages automatically."
             />
             <HomeControls
-              contactCount={contactsHook.contacts.length}
               userName={user?.email?.split('@')[0] || 'User'}
-              onViewCalendar={() => setViewMode('birthday-calendar')}
               onViewAnalytics={() => setViewMode('analytics')}
+              onViewUpcomingBirthdays={() => setViewMode('upcoming-birthdays')}
+              // onViewCalendar={() => setViewMode('birthday-calendar')} // Uncomment to re-enable
             />
           </>
-        );
-
-      case 'contacts':
-        return (
-          <div role="tabpanel" id="contacts-panel" className="tab-content">
-            <FeatureTip
-              tipId="contacts_import"
-              message="Import contacts from Facebook to quickly populate your friends list."
-            />
-            <ContactList
-              contacts={contactsHook.contacts}
-              onAddContact={() => setViewMode('add-contact')}
-              onImportContacts={() => contactsHook.setShowImportModal(true)}
-              onEditContact={(contact) => {
-                contactsHook.setEditingContact(contact);
-                setViewMode('edit-contact');
-              }}
-              onDeleteContact={contactsHook.handleDeleteContact}
-            />
-            <button className="btn mt-2" onClick={() => setViewMode('birthday-calendar')}>
-              Birthday Calendar
-            </button>
-          </div>
         );
 
       case 'messages':
@@ -612,6 +555,31 @@ function AppShell() {
             <MessagesHub onNavigate={setViewMode} />
           </>
         );
+
+      case 'scheduling':
+        return (
+          <SchedulingSettings
+            timezone={accountTimezone}
+            onUpdateTimezone={handleUpdateTimezone}
+            isSubmitting={isAccountSubmitting}
+          />
+        );
+
+      // Contacts tab — currently disabled; contacts are populated via scraping.
+      // Uncomment to re-enable the manual contacts UI.
+      // case 'contacts':
+      //   return (
+      //     <ContactList
+      //       contacts={contactsHook.contacts}
+      //       isLoading={contactsHook.isLoading}
+      //       error={contactsHook.error}
+      //       onAdd={() => setViewMode('add-contact')}
+      //       onEdit={(c) => { contactsHook.selectContact(c); setViewMode('edit-contact'); }}
+      //       onDelete={(id) => contactsHook.deleteContact(id)}
+      //       onImport={() => contactsHook.setShowImportModal(true)}
+      //       onRefresh={() => contactsHook.loadContacts()}
+      //     />
+      //   );
 
       case 'account':
         return (
@@ -653,40 +621,7 @@ function AppShell() {
               </div>
             </div>
 
-            {/* Timezone Settings */}
-            <div className="card mb-6">
-              <h3 className="text-md font-semibold mb-4">Timezone Settings</h3>
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="accountTimezone" className="block text-sm font-medium mb-1">
-                    Your Timezone
-                  </label>
-                  <select
-                    id="accountTimezone"
-                    value={accountTimezone}
-                    onChange={(e) => setAccountTimezone(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
-                  >
-                    {COMMON_TIMEZONES.map((tz) => (
-                      <option key={tz} value={tz}>
-                        {tz}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    This timezone is used for scheduling birthday messages
-                  </p>
-                </div>
-                <button
-                  onClick={() => void handleUpdateTimezone(accountTimezone)}
-                  className="btn btn-block flex items-center justify-center gap-2"
-                  disabled={isAccountSubmitting}
-                >
-                  {isAccountSubmitting && <Spinner size="sm" />}
-                  <span>Update Timezone</span>
-                </button>
-              </div>
-            </div>
+            {/* Timezone Settings — moved to Scheduling tab */}
 
             {/* Restart Welcome Tour */}
             <div className="card mb-6">
@@ -850,13 +785,6 @@ function AppShell() {
         </footer>
       )}
 
-      {contactsHook.showImportModal && (
-        <ImportContactsModal
-          onClose={() => contactsHook.setShowImportModal(false)}
-          onImport={contactsHook.handleImportContacts}
-        />
-      )}
-
       {msgTemplates.showTemplateCreator && viewMode !== 'message-templates' && (
         <div className="modal-overlay">
           <div role="dialog" aria-modal="true" aria-label="Edit message template">
@@ -903,6 +831,17 @@ function AppShell() {
       {showOnboarding && (
         <OnboardingWizard onComplete={handleOnboardingDismiss} onSkip={handleOnboardingDismiss} />
       )}
+
+      {/* Import contacts modal — commented out; contacts populated via scraping.
+          Uncomment to re-enable manual import UI.
+      {contactsHook.showImportModal && (
+        <ImportContactsModal
+          onImport={(contacts) => contactsHook.bulkCreateContacts(contacts)}
+          onClose={() => contactsHook.setShowImportModal(false)}
+          isSubmitting={contactsHook.isSubmitting}
+        />
+      )}
+      */}
     </div>
   );
 }

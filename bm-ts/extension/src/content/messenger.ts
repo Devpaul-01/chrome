@@ -13,7 +13,57 @@ const DEFAULT_TIMEOUT = 10000;
 const RETRY_DELAY = 1000;
 const MAX_RETRIES = 3;
 
-import { waitForElement, delay, createStableMutationObserver, retryOperation } from './dom-helpers';
+import {
+  waitForElement,
+  delay,
+  createStableMutationObserver,
+  retryOperation,
+  simulateClick,
+} from './dom-helpers';
+
+/**
+ * Detects the Facebook UI language from the page's HTML lang attribute
+ * and returns the corresponding archive/unarchive terms.
+ */
+function detectFacebookLocale(): { archiveTerms: string[]; unarchiveTerms: string[] } {
+  const lang = (document.documentElement.lang || 'en').toLowerCase().split('-')[0];
+
+  // Core terms indexed by ISO 639-1 language code
+  const localeMap: Record<string, { archive: string[]; unarchive: string[] }> = {
+    en: { archive: ['archive'], unarchive: ['unarchive', 'move to inbox'] },
+    de: { archive: ['archivieren'], unarchive: ['dearchivieren', 'zum posteingang'] },
+    es: { archive: ['archivar'], unarchive: ['desarchivar'] },
+    fr: { archive: ['archiver'], unarchive: ['désarchiver'] },
+    pt: { archive: ['arquivar'], unarchive: ['desarquivar'] },
+    it: { archive: ['archivia'], unarchive: ['disarchivia'] },
+    pl: { archive: ['archiwizuj'], unarchive: ['cofnij archiwizację'] },
+    nl: { archive: ['archiveren'], unarchive: ['dearchiveren', 'verplaatsen naar inbox'] },
+    ja: { archive: ['アーカイブ'], unarchive: ['アーカイブ解除'] },
+    ko: { archive: ['보관'], unarchive: ['보관 해제'] },
+    zh: { archive: ['存档', '封存'], unarchive: ['取消存档', '解除封存'] },
+    ar: { archive: ['أرشفة'], unarchive: ['إلغاء الأرشفة'] },
+    hi: { archive: ['संग्रहित करें'], unarchive: ['असंग्रहित करें'] },
+    tr: { archive: ['arşivle'], unarchive: ['arşivden çıkar'] },
+    ru: { archive: ['архивировать'], unarchive: ['разархивировать'] },
+    vi: { archive: ['lưu trữ'], unarchive: ['bỏ lưu trữ'] },
+    th: { archive: ['เก็บถาวร'], unarchive: ['ยกเลิกการเก็บถาวร'] },
+  };
+
+  const detected = localeMap[lang];
+
+  // Always include English as fallback + data-testid patterns
+  const fallbackArchive = ['archive'];
+  const fallbackUnarchive = ['unarchive', 'move to inbox'];
+
+  return {
+    archiveTerms: detected
+      ? [...new Set([...detected.archive, ...fallbackArchive])]
+      : fallbackArchive,
+    unarchiveTerms: detected
+      ? [...new Set([...detected.unarchive, ...fallbackUnarchive])]
+      : fallbackUnarchive,
+  };
+}
 
 /**
  * Storage interface for tracking archived conversations
@@ -143,16 +193,8 @@ async function openConversationContextMenu(conversation: HTMLElement): Promise<H
 async function clickArchiveOption(menu: HTMLElement): Promise<boolean> {
   const menuItems = Array.from(menu.querySelectorAll('[role="menuitem"]'));
 
-  // Archive translations for supported locales
-  const archiveTerms = ['archive', 'archivieren', 'archivar', 'archiver', 'arquivar'];
-  const unarchiveTerms = [
-    'unarchive',
-    'dearchivieren',
-    'desarchivar',
-    'désarchiver',
-    'desarquivar',
-    'move to inbox',
-  ];
+  // Auto-detect locale for archive/unarchive terms
+  const { archiveTerms, unarchiveTerms } = detectFacebookLocale();
 
   const archiveItem = menuItems.find((item) => {
     const text = item.textContent?.toLowerCase() || '';
@@ -166,7 +208,7 @@ async function clickArchiveOption(menu: HTMLElement): Promise<boolean> {
     const byTestId = menu.querySelector<HTMLElement>('[data-testid*="archive"]');
     if (byTestId) {
       console.log('[BM Archive] Clicking archive option (found via data-testid)');
-      byTestId.click();
+      await simulateClick(byTestId);
       await delay(1000);
       return true;
     }
@@ -174,7 +216,7 @@ async function clickArchiveOption(menu: HTMLElement): Promise<boolean> {
 
   if (archiveItem) {
     console.log('[BM Archive] Clicking archive option');
-    (archiveItem as HTMLElement).click();
+    await simulateClick(archiveItem as HTMLElement);
     await delay(1000);
     return true;
   }
@@ -293,16 +335,8 @@ export async function archiveConversation(
 export async function unarchiveConversation(friendName: string): Promise<boolean> {
   console.log(`[BM Archive] Starting unarchive process for ${friendName}`);
 
-  // Unarchive translations for supported locales
-  const unarchiveTerms = [
-    'unarchive',
-    'move to inbox',
-    'dearchivieren',
-    'desarchivar',
-    'désarchiver',
-    'desarquivar',
-    'zum posteingang',
-  ];
+  // Auto-detect locale for unarchive terms
+  const { unarchiveTerms } = detectFacebookLocale();
 
   return retryOperation(
     async () => {
@@ -339,7 +373,7 @@ export async function unarchiveConversation(friendName: string): Promise<boolean
 
       if (unarchiveItem) {
         console.log('[BM Archive] Clicking unarchive option');
-        (unarchiveItem as HTMLElement).click();
+        await simulateClick(unarchiveItem as HTMLElement);
         await delay(1000);
 
         // Remove from storage

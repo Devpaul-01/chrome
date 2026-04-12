@@ -1,6 +1,6 @@
 ﻿# BirthdayMessaging (bm-ts) — MVP Checklist
 
-**Last Updated:** April 4, 2026
+**Last Updated:** April 12, 2026
 **Status:** Development-Complete / Pre-Production — All Phase 1 and Phase 2 features implemented on both backend and frontend. Facebook automation pipeline fully functional. Production infrastructure, deployment, and Chrome Web Store submission are the remaining blockers.
 
 ---
@@ -9,26 +9,26 @@
 
 This checklist tracks all remaining tasks required to ship bm-ts as a production-ready MVP. The application is **feature-complete for MVP scope** — all backend routers, database models, frontend components, content scripts, and the automation pipeline are built, tested, and wired together. The primary remaining work is **production infrastructure, deployment, and Chrome Web Store publication**.
 
-### Verified Codebase Statistics (April 4, 2026)
+### Verified Codebase Statistics (April 12, 2026)
 
 | Metric | Count |
 |--------|-------|
-| Backend Routers | 15 (+ 2 inline endpoints in main.py) |
-| Backend HTTP Endpoints | 78 + 1 WebSocket |
-| Backend ORM Models | 17 (17 tables, 5 enums, 32 indexes) |
-| Backend Tests | ~287 across 25 test files |
+| Backend Routers | 15 (+ 2 inline endpoints in main.py; message_groups deactivated) |
+| Backend HTTP Endpoints | 75 + 1 WebSocket |
+| Backend ORM Models | 18 (18 tables, 5 enums, 32 indexes) |
+| Backend Tests | 287 across 25 test files |
 | Backend Runtime Dependencies | 17 |
-| Backend LOC | ~4,860 Python |
-| Alembic Migrations | 5 |
-| Frontend Components | 38 (in components/) |
-| Frontend Custom Hooks | 8 (across 7 files + 1 context) |
-| Frontend Tests | 363 across 18 test files |
+| Backend LOC | ~5,324 Python |
+| Alembic Migrations | 7 |
+| Frontend Components | 40 (in components/) |
+| Frontend Custom Hooks | 7 (across 7 files + 1 context) |
+| Frontend Tests | 360 across 18 test files |
 | Frontend Runtime Dependencies | 3 (React, ReactDOM, react-calendar) |
-| API Client Functions | 58 |
-| Background Message Types | 77 |
-| Content Script Files | 5 (~2,192 lines) |
-| Utility Files | 14 (~2,063 lines) |
-| ViewMode States | 23 |
+| API Client Functions | 60 |
+| Background Message Types | 73 |
+| Content Script Files | 5 (~3,640 lines) |
+| Utility Files | 14 (~1,913 lines) |
+| ViewMode States | 24 |
 | CI/CD Workflows | 3 (Gitea Actions) |
 | User-Facing HTML Pages | 6 |
 
@@ -60,7 +60,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 #### Database Production Setup
 - [ ] Create production database instance
 - [ ] Run `alembic upgrade head` against production database
-- [ ] Verify all 17 tables and 32 indexes created
+- [ ] Verify all 18 tables and 32 indexes created
 - [ ] Configure connection pooling (PgBouncer or provider-managed)
 - [ ] Set up automatic backups (daily minimum)
 - [ ] Test backup restore procedure
@@ -148,8 +148,8 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
   - [ ] SendGrid delivery failures
 
 ### 5. Alembic Migration Testing
-- [ ] Test all 5 migrations up (upgrade) against clean PostgreSQL
-- [ ] Test all 5 migrations down (downgrade)
+- [ ] Test all 7 migrations up (upgrade) against clean PostgreSQL
+- [ ] Test all 7 migrations down (downgrade)
 - [ ] Document rollback procedure
 
 ---

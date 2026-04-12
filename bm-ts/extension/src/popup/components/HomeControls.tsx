@@ -1,33 +1,29 @@
 import { useEffect, useState } from 'react';
 import { sendBackgroundMessage } from '../api';
-import type { MessageGroup } from './MessageGroups';
+// import type { MessageGroup } from './MessageGroups'; // Commented out — feature not currently needed
+import type { DashboardStats } from './Dashboard';
 import Spinner from './Spinner';
+import HelpTooltip from './HelpTooltip';
+import FeatureTip from './FeatureTip';
 
-const FEATURE_FLAGS_KEY = 'bm_feature_flags';
 const ACTIVE_GROUP_KEY = 'bm_active_group_id';
 
-interface FeatureFlags {
-  makePost: boolean;
-  sendMessage: boolean;
-}
-
 interface HomeControlsProps {
-  contactCount: number;
-  onViewCalendar: () => void;
+  // onViewCalendar: () => void; // Uncomment to re-enable Birthday Calendar
   onViewAnalytics: () => void;
+  onViewUpcomingBirthdays: () => void;
   userName: string;
 }
 
 export default function HomeControls({
-  contactCount,
-  onViewCalendar,
   onViewAnalytics,
+  onViewUpcomingBirthdays,
   userName,
 }: HomeControlsProps) {
   const [automationEnabled, setAutomationEnabled] = useState(false);
-  const [flags, setFlags] = useState<FeatureFlags>({ makePost: true, sendMessage: true });
-  const [groups, setGroups] = useState<MessageGroup[]>([]);
-  const [activeGroupId, setActiveGroupId] = useState('');
+  // const [groups, setGroups] = useState<MessageGroup[]>([]); // Commented out — feature not currently needed
+  // const [activeGroupId, setActiveGroupId] = useState('');
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,17 +36,20 @@ export default function HomeControls({
     setIsLoading(true);
     setError(null);
     try {
-      const [config, groupData, stored] = await Promise.all([
+      const [config, _stored, stats] = await Promise.all([
         sendBackgroundMessage<{ enabled: boolean }>({ type: 'automation.getConfig' }),
-        sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' }).catch(
-          () => [] as MessageGroup[],
-        ),
-        chrome.storage.local.get([FEATURE_FLAGS_KEY, ACTIVE_GROUP_KEY]),
+        // Message groups commented out — feature not currently needed
+        // sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' }).catch(
+        //   () => [] as MessageGroup[],
+        // ),
+        chrome.storage.local.get([ACTIVE_GROUP_KEY]),
+        sendBackgroundMessage<DashboardStats>({ type: 'dashboard.getStats' }).catch(() => null),
       ]);
       setAutomationEnabled(config?.enabled ?? false);
-      setGroups(Array.isArray(groupData) ? groupData : []);
-      if (stored[FEATURE_FLAGS_KEY]) setFlags(stored[FEATURE_FLAGS_KEY] as FeatureFlags);
-      if (stored[ACTIVE_GROUP_KEY]) setActiveGroupId(stored[ACTIVE_GROUP_KEY] as string);
+      // setGroups(Array.isArray(groupData) ? groupData : []);
+      // Message-group selection is currently disabled.
+      void _stored[ACTIVE_GROUP_KEY];
+      setDashboardStats(stats);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -71,15 +70,29 @@ export default function HomeControls({
     }
   }
 
-  async function updateFlag(key: keyof FeatureFlags, value: boolean) {
-    const next = { ...flags, [key]: value };
-    setFlags(next);
-    await chrome.storage.local.set({ [FEATURE_FLAGS_KEY]: next });
-  }
+  // async function updateActiveGroup(id: string) { // Commented out — feature not currently needed
+  //   setActiveGroupId(id);
+  //   await chrome.storage.local.set({ [ACTIVE_GROUP_KEY]: id });
+  // }
 
-  async function updateActiveGroup(id: string) {
-    setActiveGroupId(id);
-    await chrome.storage.local.set({ [ACTIVE_GROUP_KEY]: id });
+  function formatNextCheck(dateString?: string): string {
+    if (!dateString) return 'Not scheduled';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+
+    if (diffMins < 1) return 'Soon';
+    if (diffMins < 60) return `in ${diffMins}m`;
+    if (diffHours < 24) return `in ${diffHours}h`;
+
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   if (isLoading) {
@@ -106,13 +119,21 @@ export default function HomeControls({
         </p>
       </div>
 
+      <FeatureTip
+        tipId="home_automation"
+        message="Enable automation on this page to start sending birthday messages automatically. Make sure you have at least one template and schedule configured."
+      />
+
       {/* Master Power Toggle */}
       <div
         className={`card power-card ${automationEnabled ? 'power-card--on' : 'power-card--off'}`}
       >
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h3 className="font-bold text-textPrimary leading-tight">Automation Engine</h3>
+            <h3 className="font-bold text-textPrimary leading-tight">
+              Automation Engine{' '}
+              <HelpTooltip label="When enabled, the extension automatically checks Facebook for birthdays and sends messages on your behalf at the interval you've configured in Scheduling." />
+            </h3>
             <p className="text-xs text-textMuted mt-1">
               {automationEnabled
                 ? 'Running — birthday messages will be sent automatically'
@@ -132,47 +153,49 @@ export default function HomeControls({
         </div>
       </div>
 
-      {/* Feature Switches */}
-      <div className="card space-y-3">
-        <h3 className="text-sm font-bold text-textPrimary">Feature Switches</h3>
-
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-textPrimary">Send Message</p>
-            <p className="text-xs text-textMuted">Send DMs to birthday contacts</p>
+      {/* Inline Dashboard Summary */}
+      {dashboardStats && (
+        <div className="card">
+          <h3 className="text-sm font-bold text-textPrimary mb-3">
+            Today&apos;s Summary{' '}
+            <HelpTooltip label="A quick snapshot of today's messaging activity. Click 'Analytics' below for detailed stats and charts." />
+          </h3>
+          <div className="grid grid-cols-3 gap-3 text-center mb-3">
+            <div>
+              <div className="text-2xl font-bold text-blueStrong">
+                {dashboardStats.messages_sent_today}
+              </div>
+              <div className="text-xs text-textMuted">Sent Today</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-orangeStrong">
+                {dashboardStats.success_rate}%
+              </div>
+              <div className="text-xs text-textMuted">Success</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-blueStrong">
+                {dashboardStats.queued_messages}
+              </div>
+              <div className="text-xs text-textMuted">In Queue</div>
+            </div>
           </div>
-          <button
-            role="switch"
-            aria-checked={flags.sendMessage}
-            aria-label="Toggle send message"
-            onClick={() => updateFlag('sendMessage', !flags.sendMessage)}
-            className={`feature-toggle ${flags.sendMessage ? 'feature-toggle--on' : ''}`}
-          >
-            <span className="feature-toggle-thumb" />
-          </button>
-        </div>
-
-        <div className="border-t border-gray-100" />
-
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-textPrimary">Make Post</p>
-            <p className="text-xs text-textMuted">Post on birthday contacts&apos; timelines</p>
+          <div className="flex items-center justify-between text-xs text-textMuted border-t border-gray-100 pt-2">
+            <span>
+              🎂 {dashboardStats.friends_with_upcoming_birthdays} upcoming birthday
+              {dashboardStats.friends_with_upcoming_birthdays !== 1 ? 's' : ''}
+            </span>
+            <span>
+              Next check:{' '}
+              {automationEnabled ? formatNextCheck(dashboardStats.next_scheduled_check) : 'Off'}{' '}
+              <HelpTooltip label="The next time the extension will scan Facebook for birthdays. Requires Chrome to be open and Facebook to be logged in." />
+            </span>
           </div>
-          <button
-            role="switch"
-            aria-checked={flags.makePost}
-            aria-label="Toggle make post"
-            onClick={() => updateFlag('makePost', !flags.makePost)}
-            className={`feature-toggle ${flags.makePost ? 'feature-toggle--on' : ''}`}
-          >
-            <span className="feature-toggle-thumb" />
-          </button>
         </div>
-      </div>
+      )}
 
-      {/* Active Message Group Selector */}
-      <div className="card">
+      {/* Active Message Group Selector — commented out, feature not currently needed */}
+      {/* <div className="card">
         <label className="block">
           <span className="text-sm font-bold text-textPrimary mb-2 block">
             Active Message Group
@@ -196,33 +219,76 @@ export default function HomeControls({
             </select>
           )}
         </label>
-      </div>
+      </div> */}
 
-      {/* Quick Stats */}
-      <div className="card">
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <div className="text-2xl font-bold text-blueStrong">{contactCount}</div>
-            <div className="text-xs text-textMuted">Contacts</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-blueStrong">{groups.length}</div>
-            <div className="text-xs text-textMuted">Groups</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-orangeStrong">{contactCount}</div>
-            <div className="text-xs text-textMuted">Birthdays</div>
-          </div>
-        </div>
-      </div>
+      {/* Open Facebook Birthdays */}
+      <a
+        href="https://www.facebook.com/friends/birthdays"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn w-full text-center block"
+      >
+        Open Facebook Birthdays
+      </a>
 
-      {/* Shortcuts */}
-      <button onClick={onViewCalendar} className="btn w-full">
-        View Birthday Calendar
-      </button>
-      <button onClick={onViewAnalytics} className="btn-primary btn-block">
-        View Analytics
-      </button>
+      {/* Analytics & Upcoming Birthdays */}
+      <div className="messages-hub-grid">
+        <button
+          onClick={onViewAnalytics}
+          className="messages-hub-card messages-hub-card--orange"
+          aria-label="Analytics"
+        >
+          <span className="messages-hub-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="18" y1="20" x2="18" y2="10" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="6" y1="20" x2="6" y2="14" />
+              <line x1="2" y1="20" x2="22" y2="20" />
+            </svg>
+          </span>
+          <span className="messages-hub-label">Analytics</span>
+          <span className="messages-hub-desc">View message stats</span>
+        </button>
+        <button
+          onClick={onViewUpcomingBirthdays}
+          className="messages-hub-card messages-hub-card--blue"
+          aria-label="Upcoming Birthdays"
+        >
+          <span className="messages-hub-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M4 21v-2a4 4 0 0 1 3-3.87" />
+              <circle cx="12" cy="7" r="4" />
+              <path d="M12 2v1" />
+              <path d="M9 4l3-2 3 2" />
+            </svg>
+          </span>
+          <span className="messages-hub-label">Birthdays</span>
+          <span className="messages-hub-desc">Upcoming birthdays</span>
+        </button>
+      </div>
     </div>
   );
 }

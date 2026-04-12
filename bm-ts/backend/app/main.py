@@ -16,11 +16,12 @@ from app.api.routers import (
     dashboard,
     websocket,
     contacts,
-    message_groups,
+    # message_groups,  # Commented out — feature not currently needed
     message_templates,
     posts,
     images,
     birthday_configs,
+    rate_limits,
     smtp,
 )
 from app.core.config import settings
@@ -41,7 +42,7 @@ openapi_tags = [
     {"name": "schedules", "description": "Birthday schedule management (days-before triggers)"},
     {"name": "messages", "description": "Message queue and delivery history"},
     {"name": "dashboard", "description": "Dashboard statistics and analytics"},
-    {"name": "contacts", "description": "Contact (friend) management"},
+    {"name": "contacts", "description": "Contact (friend) management — auto-populated via scraping"},
     {"name": "message-groups", "description": "Named groups of message templates"},
     {"name": "message-templates", "description": "Individual message templates within groups"},
     {"name": "posts", "description": "Timeline post templates with image overlays"},
@@ -104,9 +105,11 @@ app.include_router(messages.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(websocket.router)
 
-# Phase 2 - Contact and message management
+# Phase 2 - Contacts (populated automatically via scraping; UI currently disabled)
 app.include_router(contacts.router, prefix="/api", tags=["contacts"])
-app.include_router(message_groups.router, prefix="/api", tags=["message-groups"])
+
+# Phase 2 - Message management
+# app.include_router(message_groups.router, prefix="/api", tags=["message-groups"])  # Commented out — feature not currently needed
 app.include_router(message_templates.router, prefix="/api", tags=["message-templates"])
 
 # Phase 2 - Posts and images
@@ -115,6 +118,9 @@ app.include_router(images.router, prefix="/api", tags=["images"])
 
 # Phase 2 - Birthday configurations
 app.include_router(birthday_configs.router, prefix="/api", tags=["birthday-configs"])
+
+# Phase 2 - Rate limiting
+app.include_router(rate_limits.router, prefix="/api", tags=["rate-limits"])
 
 
 @app.get("/health", summary="Service health")

@@ -407,6 +407,35 @@ class Contact(Base):
     __table_args__ = (
         Index("idx_contact_user_birthday", "user_id", "birthday"),
         Index("idx_contact_user_gender", "user_id", "gender"),
+        Index("uq_contact_user_profile_url", "user_id", "facebook_profile_url", unique=True),
+    )
+
+
+class SendRateLimit(Base):
+    """
+    Server-side record of message-send timestamps for rate-limit enforcement.
+
+    One row per user, holding a JSON array of ISO-8601 timestamps pruned to a
+    7-day rolling window.  The backend enforces hourly/daily/weekly caps so that
+    clearing browser storage cannot bypass limits.
+    """
+
+    __tablename__ = "send_rate_limits"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    timestamps = Column(JSON(), nullable=False, server_default=text("'[]'::json"))
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_send_rate_limit_user", "user_id", unique=True),
     )
 
 
