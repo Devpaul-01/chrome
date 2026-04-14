@@ -14,7 +14,7 @@ the days offset, and an optional message-group / post association.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
@@ -138,7 +138,7 @@ async def update_birthday_config(
     if data.enabled is not None:
         config.enabled = data.enabled
     
-    config.updated_at = datetime.utcnow()
+    config.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(config)
     return config
@@ -166,7 +166,7 @@ async def toggle_birthday_config(
         )
     
     config.enabled = data.enabled
-    config.updated_at = datetime.utcnow()
+    config.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(config)
     return config

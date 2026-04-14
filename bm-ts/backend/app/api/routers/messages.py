@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from io import StringIO
 import csv
 from uuid import UUID
@@ -18,7 +18,7 @@ from app.schemas.messages import (
     MessageHistoryItem,
     MessageHistoryPage,
 )
-from app.schemas.password_reset import MessageResponse
+from app.schemas.common import MessageResponse
 from app.schemas.common import DeleteResponse
 from app.api.routers.websocket import broadcast_message_queue_update, broadcast_message_history_update
 
@@ -69,7 +69,7 @@ async def create_queued_message(
             "status": message.status,
             "scheduled_send_time": message.scheduled_send_time.isoformat(),
         },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     })
     
     return message
@@ -121,7 +121,7 @@ async def update_queued_message(
             "status": message.status,
             "scheduled_send_time": message.scheduled_send_time.isoformat(),
         },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     })
     
     return message
@@ -163,7 +163,7 @@ async def cancel_queued_message(
     await broadcast_message_queue_update(current_user.id, {
         "action": "deleted",
         "message": {"id": message_id_str},
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     })
     return DeleteResponse()
 
@@ -210,7 +210,7 @@ async def retry_failed_message(
             "status": message.status,
             "scheduled_send_time": message.scheduled_send_time.isoformat(),
         },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     })
     
     return message
@@ -287,7 +287,7 @@ async def delete_message_history(
     await broadcast_message_history_update(current_user.id, {
         "action": "deleted",
         "message": {"id": message_id_str},
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     })
     return DeleteResponse()
 

@@ -1,7 +1,7 @@
 ﻿# BirthdayMessaging (bm-ts) — MVP Checklist
 
-**Last Updated:** April 12, 2026
-**Status:** Development-Complete / Pre-Production — All Phase 1 and Phase 2 features implemented on both backend and frontend. Facebook automation pipeline fully functional. Production infrastructure, deployment, and Chrome Web Store submission are the remaining blockers.
+**Last Updated:** April 13, 2026
+**Status:** Development-Complete / Pre-Production — All features implemented on both backend and frontend. Facebook automation pipeline fully functional. Production infrastructure, deployment, and Chrome Web Store submission are the remaining blockers.
 
 ---
 
@@ -152,11 +152,19 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Test all 7 migrations down (downgrade)
 - [ ] Document rollback procedure
 
+### 6. Clarify / Remove Redundant `psycopg[binary]` Dependency
+**Status:** Not Started
+
+- [ ] Verify which parts of the codebase require `psycopg` (likely only Alembic sync scripts)
+- [ ] If only Alembic, move `psycopg[binary]>=3.1` from `[project.dependencies]` to `[project.optional-dependencies]` dev/alembic group
+- [ ] `asyncpg` remains as the async runtime driver and stays in core dependencies
+- [ ] Update `backend/Dockerfile` if the psycopg install step changes
+
 ---
 
 ## P2 — Medium Priority (Post-Launch Enhancements)
 
-### 6. Image Upload/Storage
+### 7. Image Upload/Storage
 **Status:** URL-based only — `POST /images/upload-file` stores base64 data URIs directly in DB
 
 - [ ] Set up cloud object storage (S3, CloudFlare R2, or local volume)
@@ -165,7 +173,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Add storage cleanup on image deletion
 - [ ] Add image size/format/dimension validation
 
-### 7. Extended Test Coverage
+### 8. Extended Test Coverage
 
 #### Backend Gaps
 - [ ] Integration test: password reset flow (request -> email -> reset)
@@ -185,22 +193,29 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
   - [ ] Subscribe -> verify active -> cancel
 - [ ] Browser compatibility testing (Chrome stable, Edge, Brave)
 
-### 8. Offline Queue Wiring
-**Status:** `offline-queue.ts` is fully scaffolded (queues write ops when offline, replays on reconnect) but **not imported** by the background service worker
-
-- [ ] Import and initialize offline queue in background `index.ts`
-- [ ] Test offline -> online replay behavior
-
 ### 9. Content Script Resilience
 - [ ] Add error recovery for automation failures (retry individual friend on DOM error)
 - [ ] Add mutation observer stability improvements
 - [ ] Test with various Facebook layouts (desktop, different languages)
 
+### 10. Document / Re-enable Contact Management UI
+**Status:** Intentionally Disabled
+
+- Contact create/update/delete is commented out in `background/index.ts` and navigation in `App.tsx`
+- Contacts are currently populated only via the automation scraping pipeline
+- [ ] When ready to expose contact management to users, re-enable handlers in `background/index.ts` and restore `ContactForm`/`ContactList` navigation in `App.tsx`
+
+### 11. Document / Re-enable SMTPSettings UI
+**Status:** Intentionally Disabled
+
+- `SMTPSettings.tsx` is imported but not accessible via navigation in `App.tsx`
+- [ ] When SMTP-based sending is ready for users, restore the `smtp-settings` view entry in the Account dropdown navigation
+
 ---
 
 ## P3 — Low Priority (Nice to Have)
 
-### 10. Feature Enhancements
+### 12. Feature Enhancements
 - [ ] Template bulk import/export
 - [ ] Template usage statistics
 - [ ] Schedule preview (show next run dates)
@@ -214,7 +229,8 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Video tutorials (embedded)
 - [ ] In-app FAQ search
 
-### 11. API & Backend Polish
+
+### 13. API & Backend Polish
 - [ ] Standardize error responses across all non-DELETE endpoints
 - [ ] API versioning strategy (v1, v2)
 - [ ] JWT secret rotation strategy
@@ -225,13 +241,13 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Response caching where appropriate
 - [ ] Load testing (100+ concurrent users)
 
-### 12. Operations Documentation
+### 14. Operations Documentation
 - [ ] Production deployment guide (step-by-step)
 - [ ] Monitoring guide
 - [ ] Incident response runbook
 - [ ] Scaling guide
 
-### 13. Comprehensive User Documentation
+### 15. Comprehensive User Documentation
 - [ ] Full user guide (installation, templates, schedules, automation, contacts, SMTP, subscriptions)
 - [ ] Creating templates guide with examples
 - [ ] Merge tags and personalization guide
@@ -246,8 +262,8 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 2. **`POST /images/upload-file`** — Stores base64 data URIs directly in DB (`# TODO: Upload to cloud storage`). Works but not scalable.
 3. **Image storage** — All image handling is URL-based or base64-in-DB. No cloud object storage configured.
 4. **Subscription proration** — `change-plan` modal shows generic Stripe proration message, no calculated amount preview from Stripe API.
-5. **Offline queue** — `offline-queue.ts` fully scaffolded but not wired into the background service worker.
-6. **No backend test CI** — Backend deploy pipeline exists, but tests are not run automatically on PR.
+5. **No backend test CI** — Backend deploy pipeline exists, but tests are not run automatically on PR.
+6. **Redundant database drivers** — Both `asyncpg>=0.28` (async runtime) and `psycopg[binary]>=3.1` (sync) in runtime deps; `psycopg` may only be needed for Alembic and should move to optional deps.
 
 ---
 
@@ -267,7 +283,6 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 
 ### Soon
 9. [ ] Add backend test CI pipeline
-10. [ ] Wire offline queue into background service worker
 11. [ ] Expand test coverage (background worker, hooks, E2E)
 12. [ ] Set up cloud image storage (if needed beyond URL-based)
 13. [ ] Soft launch to beta group and iterate on feedback

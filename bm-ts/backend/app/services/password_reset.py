@@ -11,6 +11,7 @@ Rate limiting on the endpoint is handled upstream in the auth router.
 
 import asyncio
 import hashlib
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -22,6 +23,8 @@ from app.db.models import User, PasswordResetToken
 
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+
+logger = logging.getLogger(__name__)
 
 async def create_reset_token(user: User, db: AsyncSession) -> str:
     """Create a password reset token for a user"""
@@ -149,8 +152,21 @@ async def send_reset_email(email: str, token: str) -> None:
 
     try:
         sg = SendGridAPIClient(settings.sendgrid_api_key)
-        await asyncio.to_thread(sg.send, message)
-        print(f"Password reset email sent to {email}")
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            try:
+                await asyncio.to_thread(sg.send, message)
+                logger.info("Password reset email sent to %s", email)
+                return
+            except Exception as exc:
+                last_exc = exc
+                if attempt < 2:
+                    await asyncio.sleep(2 ** attempt)  # 1 s, 2 s
+                    logger.warning(
+                        "Retry %d/2 sending reset email to %s: %s",
+                        attempt + 1, email, exc,
+                    )
+        logger.error("Failed to send reset email to %s after 3 attempts: %s", email, last_exc)
     except Exception as e:
-        print(f"Failed to send reset email to {email}: {e}")
+        logger.error("Failed to send reset email to %s: %s", email, e)
         

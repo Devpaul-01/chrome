@@ -40,7 +40,6 @@ export type ViewMode =
   | 'upcoming-birthdays'
   | 'posts'
   | 'postLibrary'
-  | 'post-list'
   | 'groups'
   | 'images'
   | 'smtp-settings'
@@ -91,6 +90,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const connectWebSocket = useCallback(async () => {
+    if (wsClient.isConnected()) return;
     try {
       const wsConfig = await sendBackgroundMessage<{ wsUrl: string; token: string }>({
         type: 'config.getWSConfig',

@@ -218,6 +218,35 @@ async function openOrFocusFacebookBirthdaysTab(): Promise<chrome.tabs.Tab> {
 }
 
 /**
+ * Short-lived in-memory cache for templates and posts fetched from the backend.
+ * Prevents redundant API calls when automation scans run in quick succession
+ * (e.g. alarm fires while a manual scan is still in progress).
+ * TTL: 5 minutes — long enough to skip duplicate fetches, short enough that
+ * template edits are picked up promptly.
+ */
+const _BACKEND_DATA_TTL_MS = 5 * 60 * 1000;
+let _cachedBackendData: {
+  templates: MessageTemplate[];
+  posts: Post[];
+  fetchedAt: number;
+} | null = null;
+
+async function fetchBackendDataCached(): Promise<{
+  templates: MessageTemplate[];
+  posts: Post[];
+}> {
+  if (_cachedBackendData && Date.now() - _cachedBackendData.fetchedAt < _BACKEND_DATA_TTL_MS) {
+    return _cachedBackendData;
+  }
+  const [templates, posts] = (await Promise.all([
+    runAuthAware((accessToken, url) => listMessageTemplates(url, accessToken)),
+    runAuthAware((accessToken, url) => listPosts(url, accessToken)),
+  ])) as [MessageTemplate[], Post[]];
+  _cachedBackendData = { templates, posts, fetchedAt: Date.now() };
+  return _cachedBackendData;
+}
+
+/**
  * Core automation scan: fetches templates / posts / contacts from the backend,
  * groups them by days_in_advance, opens the Facebook birthdays page, and
  * dispatches the full automation payload to the content script.
@@ -263,10 +292,7 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
   let posts: Post[] = [];
 
   try {
-    [templates, posts] = (await Promise.all([
-      runAuthAware((accessToken, url) => listMessageTemplates(url, accessToken)),
-      runAuthAware((accessToken, url) => listPosts(url, accessToken)),
-    ])) as [MessageTemplate[], Post[]];
+    ({ templates, posts } = await fetchBackendDataCached());
   } catch (err) {
     logger.error('handleAutomationScan: failed to fetch backend data', err);
     notifyAutomationFailed(
@@ -419,6 +445,32 @@ type BackgroundResponse =
   | Contact[]
   | null;
 
+/**
+ * Process a UserProfile response from the backend to split the `name` field
+ * into `firstName` and `lastName` for the frontend.
+ */
+function processUserProfile(profile: UserProfile): UserProfile {
+  if (profile.name) {
+    const parts = profile.name.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return {
+        ...profile,
+        firstName: parts[0],
+        lastName: '',
+      };
+    } else {
+      const lastName = parts.pop() || '';
+      const firstName = parts.join(' ');
+      return {
+        ...profile,
+        firstName,
+        lastName,
+      };
+    }
+  }
+  return profile;
+}
+
 /** Convenience wrapper used throughout `handleMessage` to call an API function with automatic auth. */
 async function runAuthAware<T>(call: AuthCall<T>): Promise<T> {
   return withAuth(call);
@@ -465,7 +517,8 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       );
     }
     case 'auth.me': {
-      return runAuthAware((accessToken, url) => me(url, accessToken));
+      const profile = await runAuthAware((accessToken, url) => me(url, accessToken));
+      return processUserProfile(profile);
     }
     case 'templates.list': {
       return runAuthAware((accessToken, url) =>
@@ -734,9 +787,10 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
     }
     // User Profile handlers
     case 'auth.updateProfile': {
-      return runAuthAware((accessToken, url) =>
+      const profile = await runAuthAware((accessToken, url) =>
         updateUserProfile(url, accessToken, message.payload),
       );
+      return processUserProfile(profile);
     }
     // Message Template handlers
     case 'messageTemplates.list': {

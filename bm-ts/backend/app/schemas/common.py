@@ -11,3 +11,11 @@ class DeleteResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
+class MessageResponse(BaseModel):
+    message: str

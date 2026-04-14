@@ -25,12 +25,12 @@ const FAILURE_BACKOFF_KEY = 'bm_failure_backoff';
 // Confirmation mode
 // ---------------------------------------------------------------------------
 
-export type ConfirmationMode = 'each' | 'session';
+export type ConfirmationMode = 'each' | 'session' | 'auto';
 
 export async function getConfirmationMode(): Promise<ConfirmationMode> {
   const result = await chrome.storage.local.get(CONFIRMATION_MODE_KEY);
   const val = result[CONFIRMATION_MODE_KEY];
-  if (val === 'each' || val === 'session') return val;
+  if (val === 'each' || val === 'session' || val === 'auto') return val;
   return 'each'; // default: safest mode
 }
 

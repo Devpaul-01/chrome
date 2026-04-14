@@ -13,7 +13,7 @@ scheduler can pick the right group when composing birthday messages.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
@@ -122,7 +122,7 @@ async def update_message_group(
     if data.segment_ids is not None:
         message_group.segment_ids = [str(sid) for sid in data.segment_ids]
     
-    message_group.updated_at = datetime.utcnow()
+    message_group.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(message_group)
     return message_group

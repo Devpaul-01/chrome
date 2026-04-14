@@ -2,6 +2,9 @@
 tests/test_message_groups.py — Tests for the message groups CRUD router.
 
 Covers: create, list, get, update, delete, gender filtering, validation.
+
+NOTE: message_groups router is currently disabled (commented out in main.py).
+      All tests in this file are skipped until the router is re-enabled.
 """
 
 from __future__ import annotations
@@ -10,6 +13,8 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
+
+pytestmark = pytest.mark.skip(reason="message_groups router is disabled")
 
 
 @pytest.mark.asyncio

@@ -9,6 +9,8 @@ schemas/password_reset.py — Pydantic schemas for password-reset and change-pas
 
 from pydantic import BaseModel, EmailStr, constr
 
+from app.schemas.common import MessageResponse  # noqa: F401 — re-exported for backwards compat
+
 
 class RequestPasswordResetRequest(BaseModel):
     email: EmailStr
@@ -24,5 +26,4 @@ class ChangePasswordRequest(BaseModel):
     new_password: constr(min_length=8, max_length=128) = ...  # Enforce length bounds
 
 
-class MessageResponse(BaseModel):
-    message: str
+

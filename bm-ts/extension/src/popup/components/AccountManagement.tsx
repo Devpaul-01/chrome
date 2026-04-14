@@ -40,8 +40,6 @@ export default function AccountManagement({
     await onUpdateProfile({
       firstName: firstName.trim() || undefined,
       lastName: lastName.trim() || undefined,
-      email: email.trim(),
-      phone: phone.trim() || undefined,
     });
   };
 

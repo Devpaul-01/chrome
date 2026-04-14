@@ -15,7 +15,7 @@
  * calls to the background service worker.
  */
 
-import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AuthForm from './components/AuthForm';
 import TemplateCreator, { type TemplateFormData } from './components/TemplateCreator';
 import SubscriptionPanel from './components/SubscriptionPanel';
@@ -55,7 +55,6 @@ import { getOnboardingComplete, setOnboardingComplete } from '../utils/storage';
 import wsClient from '../api/websocket';
 
 import { AppProvider, useAppContext, type AuthMode, type TabType } from './context/AppContext';
-import { useSMTPConfig } from './hooks/useSMTPConfig';
 import { useMessageTemplates } from './hooks/useMessageTemplates';
 import { usePostComposer } from './hooks/usePostComposer';
 // import { useContacts } from './hooks/useContacts'; // Uncomment to re-enable contacts UI
@@ -86,7 +85,6 @@ function AppShell() {
     refreshUser,
   } = useAppContext();
 
-  const _smtpHook = useSMTPConfig();
   const msgTemplates = useMessageTemplates();
   const post = usePostComposer();
   // const contactsHook = useContacts(); // Uncomment to re-enable contacts UI
@@ -152,10 +150,11 @@ function AppShell() {
   // ---- Account management (mutates user in context) ------------------
   const [isAccountSubmitting, setIsAccountSubmitting] = useState(false);
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
-  const [accountTimezone] = useState(
+  const accountTimezone = useMemo(
     () =>
       (user as { timezone?: string } | null)?.timezone ||
       Intl.DateTimeFormat().resolvedOptions().timeZone,
+    [user],
   );
   const [showAccountDeleteConfirm, setShowAccountDeleteConfirm] = useState(false);
 
@@ -235,8 +234,8 @@ function AppShell() {
       label: string;
     }[] = [
       { id: 'home', label: 'Home' },
-      { id: 'messages', label: 'Templates' },
-      { id: 'scheduling', label: 'Scheduling' },
+      { id: 'messages', label: 'Create' },
+      { id: 'scheduling', label: 'Schedule' },
       // { id: 'contacts', label: 'Contacts' }, // Uncomment to re-enable contacts tab
       { id: 'account', label: 'Account' },
     ];
@@ -418,7 +417,9 @@ function AppShell() {
     if (viewMode === 'posts') {
       return (
         <div>
-          <h2 className="text-lg font-bold text-blueStrong mb-3">Create Timeline Post</h2>
+          <h2 className="text-lg font-bold text-blueStrong mb-3">
+            {post.editingPostId ? 'Edit Timeline Post' : 'Create Timeline Post'}
+          </h2>
           <p className="text-xs text-gray-600 mb-4">
             Design a birthday post to be sent to friends&apos; timelines on their special day.
           </p>
@@ -427,12 +428,17 @@ function AppShell() {
             setPostForm={post.setPostForm}
             onSubmit={post.handlePostSubmit}
             isSubmitting={post.isSubmitting}
+            isEditing={!!post.editingPostId}
+            onCancelEdit={() => {
+              post.cancelEditing();
+            }}
             message={null}
             onViewPosts={() => setViewMode('postLibrary')}
           />
           <button
             className="btn mt-4"
             onClick={() => {
+              post.cancelEditing();
               setActiveTab('messages');
               setViewMode('main');
             }}
@@ -445,7 +451,13 @@ function AppShell() {
     if (viewMode === 'postLibrary') {
       return (
         <div>
-          <PostList onClose={() => setViewMode('posts')} />
+          <PostList
+            onClose={() => setViewMode('posts')}
+            onEdit={(p) => {
+              post.startEditing(p);
+              setViewMode('posts');
+            }}
+          />
         </div>
       );
     }
@@ -537,7 +549,7 @@ function AppShell() {
               message="Enable automation on this page to start sending birthday messages automatically."
             />
             <HomeControls
-              userName={user?.email?.split('@')[0] || 'User'}
+              userName={user?.firstName || user?.email?.split('@')[0] || 'User'}
               onViewAnalytics={() => setViewMode('analytics')}
               onViewUpcomingBirthdays={() => setViewMode('upcoming-birthdays')}
               // onViewCalendar={() => setViewMode('birthday-calendar')} // Uncomment to re-enable

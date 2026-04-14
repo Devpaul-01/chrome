@@ -1,8 +1,8 @@
-import { useState, useEffect, FormEvent, useRef } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import Spinner from './Spinner';
-import FacebookPostPreview from './FacebookPostPreview';
-import { useImageLibrary } from '../hooks/useImageLibrary';
-import ImageLibraryPicker from './ImageLibraryPicker';
+// [IMAGE DISABLED] import FacebookPostPreview from './FacebookPostPreview';
+// [IMAGE DISABLED] import { useImageLibrary } from '../hooks/useImageLibrary';
+// [IMAGE DISABLED] import ImageLibraryPicker from './ImageLibraryPicker';
 import SegmentEditor from './SegmentEditor';
 import HelpTooltip from './HelpTooltip';
 
@@ -11,7 +11,6 @@ export type TemplateFormData = {
   sentiment: string;
   closing: string;
   imageUrl: string | null;
-  imageFile: File | null;
   templateTitle: string;
   daysInAdvance: number;
   gender: 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL';
@@ -31,7 +30,6 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     sentiment: initialData?.sentiment || '',
     closing: initialData?.closing || '',
     imageUrl: initialData?.imageUrl || null,
-    imageFile: null,
     templateTitle: initialData?.templateTitle || '',
     daysInAdvance: initialData?.daysInAdvance || 0,
     gender: initialData?.gender || 'ALL',
@@ -42,7 +40,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     if (initialData) return;
     chrome.storage.local.get(TEMPLATE_DRAFT_KEY).then((stored) => {
       if (stored[TEMPLATE_DRAFT_KEY]) {
-        setFormData((prev) => ({ ...prev, ...stored[TEMPLATE_DRAFT_KEY], imageFile: null }));
+        setFormData((prev) => ({ ...prev, ...stored[TEMPLATE_DRAFT_KEY] }));
       }
     });
   }, [initialData]);
@@ -50,117 +48,86 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
   // Persist draft to storage on change (only when creating)
   useEffect(() => {
     if (initialData) return;
-    const { imageFile: _imageFile, ...persistable } = formData;
-    chrome.storage.local.set({ [TEMPLATE_DRAFT_KEY]: persistable });
+    chrome.storage.local.set({ [TEMPLATE_DRAFT_KEY]: formData });
   }, [formData, initialData]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'create' | 'preview'>('create');
-  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  // [IMAGE DISABLED] const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isGenerating, setIsGenerating] = useState<'greeting' | 'sentiment' | 'closing' | null>(
     null,
   );
-  const [isUploadingPreview, setIsUploadingPreview] = useState(false);
-  const [showLibraryPicker, setShowLibraryPicker] = useState(false);
-  const [librarySaveMsg, setLibrarySaveMsg] = useState<string | null>(null);
-  const {
-    images: libraryImages,
-    isLoading: isLoadingLibrary,
-    isFull: libraryFull,
-    saveToLibrary,
-  } = useImageLibrary();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // [IMAGE DISABLED] const [isUploadingPreview, setIsUploadingPreview] = useState(false);
+  // [IMAGE DISABLED] const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+  // [IMAGE DISABLED] const [librarySaveMsg, setLibrarySaveMsg] = useState<string | null>(null);
+  // [IMAGE DISABLED] const {
+  // [IMAGE DISABLED]   images: libraryImages,
+  // [IMAGE DISABLED]   isLoading: isLoadingLibrary,
+  // [IMAGE DISABLED]   isFull: libraryFull,
+  // [IMAGE DISABLED]   saveToLibrary,
+  // [IMAGE DISABLED] } = useImageLibrary();
+  // [IMAGE DISABLED] const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Optimal post dimensions
-  const FACEBOOK_WIDTH = 1080;
-  const FACEBOOK_HEIGHT = 1350;
-
-  const resizeImageForFacebook = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          // Create canvas with Facebook optimal dimensions
-          const canvas = document.createElement('canvas');
-          canvas.width = FACEBOOK_WIDTH;
-          canvas.height = FACEBOOK_HEIGHT;
-          const ctx = canvas.getContext('2d');
-
-          if (!ctx) {
-            reject(new Error('Failed to get canvas context'));
-            return;
-          }
-
-          // Calculate scaling to cover the canvas while maintaining aspect ratio
-          const imgAspect = img.width / img.height;
-          const canvasAspect = FACEBOOK_WIDTH / FACEBOOK_HEIGHT;
-
-          let drawWidth, drawHeight, offsetX, offsetY;
-
-          if (imgAspect > canvasAspect) {
-            // Image is wider than canvas - fit height, crop width
-            drawHeight = FACEBOOK_HEIGHT;
-            drawWidth = img.width * (FACEBOOK_HEIGHT / img.height);
-            offsetX = (FACEBOOK_WIDTH - drawWidth) / 2;
-            offsetY = 0;
-          } else {
-            // Image is taller than canvas - fit width, crop height
-            drawWidth = FACEBOOK_WIDTH;
-            drawHeight = img.height * (FACEBOOK_WIDTH / img.width);
-            offsetX = 0;
-            offsetY = (FACEBOOK_HEIGHT - drawHeight) / 2;
-          }
-
-          // Fill with white background
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, FACEBOOK_WIDTH, FACEBOOK_HEIGHT);
-
-          // Draw image centered and cropped
-          ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-
-          // Convert to base64 with good quality
-          resolve(canvas.toDataURL('image/jpeg', 0.9));
-        };
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        setError('Image size must be less than 10MB');
-        return;
-      }
-
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
-      }
-
-      setIsProcessingImage(true);
-      setError(null);
-
-      try {
-        const resizedImage = await resizeImageForFacebook(file);
-        setFormData({
-          ...formData,
-          imageUrl: resizedImage,
-          imageFile: file,
-        });
-      } catch {
-        setError('Failed to process image. Please try another file.');
-      } finally {
-        setIsProcessingImage(false);
-      }
-    }
-  };
+  // [IMAGE DISABLED] Optimal post dimensions
+  // [IMAGE DISABLED] const FACEBOOK_WIDTH = 1080;
+  // [IMAGE DISABLED] const FACEBOOK_HEIGHT = 1350;
+  //
+  // [IMAGE DISABLED] const resizeImageForFacebook = (file: File): Promise<string> => {
+  //   return new Promise((resolve, reject) => {
+  //     const reader = new FileReader();
+  //     reader.onload = (e) => {
+  //       const img = new Image();
+  //       img.onload = () => {
+  //         const canvas = document.createElement('canvas');
+  //         canvas.width = FACEBOOK_WIDTH;
+  //         canvas.height = FACEBOOK_HEIGHT;
+  //         const ctx = canvas.getContext('2d');
+  //         if (!ctx) { reject(new Error('Failed to get canvas context')); return; }
+  //         const imgAspect = img.width / img.height;
+  //         const canvasAspect = FACEBOOK_WIDTH / FACEBOOK_HEIGHT;
+  //         let drawWidth, drawHeight, offsetX, offsetY;
+  //         if (imgAspect > canvasAspect) {
+  //           drawHeight = FACEBOOK_HEIGHT;
+  //           drawWidth = img.width * (FACEBOOK_HEIGHT / img.height);
+  //           offsetX = (FACEBOOK_WIDTH - drawWidth) / 2;
+  //           offsetY = 0;
+  //         } else {
+  //           drawWidth = FACEBOOK_WIDTH;
+  //           drawHeight = img.height * (FACEBOOK_WIDTH / img.width);
+  //           offsetX = 0;
+  //           offsetY = (FACEBOOK_HEIGHT - drawHeight) / 2;
+  //         }
+  //         ctx.fillStyle = '#ffffff';
+  //         ctx.fillRect(0, 0, FACEBOOK_WIDTH, FACEBOOK_HEIGHT);
+  //         ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+  //         resolve(canvas.toDataURL('image/jpeg', 0.9));
+  //       };
+  //       img.onerror = () => reject(new Error('Failed to load image'));
+  //       img.src = e.target?.result as string;
+  //     };
+  //     reader.onerror = () => reject(new Error('Failed to read file'));
+  //     reader.readAsDataURL(file);
+  //   });
+  // };
+  //
+  // [IMAGE DISABLED] const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     if (file.size > 10 * 1024 * 1024) { setError('Image size must be less than 10MB'); return; }
+  //     if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
+  //     setIsProcessingImage(true);
+  //     setError(null);
+  //     try {
+  //       const resizedImage = await resizeImageForFacebook(file);
+  //       setFormData({ ...formData, imageUrl: resizedImage, imageFile: file });
+  //     } catch {
+  //       setError('Failed to process image. Please try another file.');
+  //     } finally {
+  //       setIsProcessingImage(false);
+  //     }
+  //   }
+  // };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -237,83 +204,19 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
       .filter(Boolean)
       .join('\n\n');
 
-    const hasImageKeyword = completeMessage.includes('[Image]');
-    const libraryPreviewUrl = libraryImages.length > 0 ? libraryImages[0].url : null;
+    // [IMAGE DISABLED] Image-based preview branches removed — text only for now.
+    // const hasImageKeyword = completeMessage.includes('[Image]');
+    // const libraryPreviewUrl = libraryImages.length > 0 ? libraryImages[0].url : null;
+    // ... image preview / add-to-library / library-picker branches were here ...
 
-    const handleAddToLibrary = async () => {
-      if (!formData.imageUrl) return;
-      setIsUploadingPreview(true);
-      setLibrarySaveMsg(null);
-      try {
-        await saveToLibrary(formData.imageUrl, `template_${Date.now()}.jpg`);
-        setLibrarySaveMsg('✓ Image saved to library');
-      } catch (err) {
-        setLibrarySaveMsg(`Error: ${(err as Error).message}`);
-      } finally {
-        setIsUploadingPreview(false);
-      }
-    };
-
-    if (formData.imageUrl) {
-      return (
-        <div className="space-y-3">
-          <FacebookPostPreview imageUrl={formData.imageUrl} text={completeMessage} />
-          <div className="text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
-          {librarySaveMsg && (
-            <p
-              className={`text-xs font-medium ${
-                librarySaveMsg.startsWith('Error') ? 'text-red-600' : 'text-green-600'
-              }`}
-            >
-              {librarySaveMsg}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleAddToLibrary}
-              disabled={isUploadingPreview || libraryFull}
-              className="btn-primary flex-1"
-              title={libraryFull ? 'Library full (20/20)' : undefined}
-            >
-              {isUploadingPreview ? 'Saving...' : 'Add to Library'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setFormData({ ...formData, imageUrl: null })}
-              disabled={isUploadingPreview}
-              className="btn-secondary flex-1"
-            >
-              Remove
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    if (hasImageKeyword && libraryPreviewUrl) {
-      return (
-        <div className="space-y-2">
-          <p className="text-xs text-gray-500 italic">
-            Preview uses first library image — a random image will be picked when sending.
-          </p>
-          <FacebookPostPreview
-            imageUrl={libraryPreviewUrl}
-            text={completeMessage.replace(/\[Image\]/g, '')}
-          />
-        </div>
-      );
-    }
-
-    if (hasImageKeyword && libraryImages.length === 0) {
-      return (
-        <div className="text-xs text-amber-600 bg-amber-50 rounded p-3">
-          ⚠️ [Image] keyword found but your library is empty. Upload images in Image Library first.
-        </div>
-      );
-    }
-
-    return <FacebookPostPreview imageUrl={null} text={completeMessage} />;
+    return (
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Message preview</p>
+        <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">
+          {completeMessage || '(no message content yet)'}
+        </pre>
+      </div>
+    );
   };
 
   return (
@@ -337,7 +240,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Greeting <span className="text-red-500">*</span>{' '}
-                  <HelpTooltip label="Use merge tags like [Tag Person] to insert the friend's name, [Today] for today's date, or [Image] for an image from your library." />
+                  <HelpTooltip label="Use {First_Name} to insert the friend's first name, {Last_Name} for their last name, or {Today} for today's date." />
                 </label>
                 <button
                   type="button"
@@ -477,8 +380,8 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               </select>
             </div> */}
 
-            {/* Attach Image */}
-            <div>
+            {/* [IMAGE DISABLED] Attach Image section — hidden until image support is re-enabled */}
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Attach Image{' '}
                 <span className="text-gray-400 font-normal text-xs">
@@ -543,7 +446,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                   )}
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
         ) : (
           renderPreview()
@@ -566,9 +469,6 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
             >
               Preview
             </button>
-            <button type="button" className="flex-1 btn-outline-orange">
-              Send Test
-            </button>
             <button
               type="button"
               onClick={() => {
@@ -577,7 +477,6 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                   sentiment: '',
                   closing: '',
                   imageUrl: null,
-                  imageFile: null,
                   templateTitle: '',
                   daysInAdvance: 0,
                   gender: 'ALL',

@@ -12,6 +12,8 @@ export function composeImageFromUrl(
   fontFamily: string | undefined,
   fontSize: number | undefined,
   fontColor: string | undefined,
+  textX: number = 0.5,
+  textY: number = 0.5,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -56,17 +58,19 @@ export function composeImageFromUrl(
         // Draw image
         ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
-        // Gradient overlay for text legibility
-        const overlayGradient = ctx.createLinearGradient(
-          0,
-          FACEBOOK_HEIGHT - 500,
-          0,
-          FACEBOOK_HEIGHT,
-        );
+        // Gradient overlay centred on text position
+        const textCenterX = textX * FACEBOOK_WIDTH;
+        const textCenterY = textY * FACEBOOK_HEIGHT;
+        const GRADIENT_HALF_HEIGHT = 300;
+        const gradTop = Math.max(0, textCenterY - GRADIENT_HALF_HEIGHT);
+        const gradBottom = Math.min(FACEBOOK_HEIGHT, textCenterY + GRADIENT_HALF_HEIGHT);
+        const overlayGradient = ctx.createLinearGradient(0, gradTop, 0, gradBottom);
         overlayGradient.addColorStop(0, 'rgba(0,0,0,0)');
-        overlayGradient.addColorStop(1, 'rgba(0,0,0,0.6)');
+        overlayGradient.addColorStop(0.4, 'rgba(0,0,0,0.5)');
+        overlayGradient.addColorStop(0.6, 'rgba(0,0,0,0.5)');
+        overlayGradient.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = overlayGradient;
-        ctx.fillRect(0, FACEBOOK_HEIGHT - 500, FACEBOOK_WIDTH, 500);
+        ctx.fillRect(0, gradTop, FACEBOOK_WIDTH, gradBottom - gradTop);
 
         // Text settings
         const appliedFont = fontFamily || 'Arial';
@@ -104,24 +108,24 @@ export function composeImageFromUrl(
 
         const displayLines = lines.slice(0, 6);
         const totalTextHeight = displayLines.length * lineHeight;
-        const startY = FACEBOOK_HEIGHT - 280 - totalTextHeight / 2;
+        const startY = textCenterY - totalTextHeight / 2;
 
         // Draw text with drop shadow
         displayLines.forEach((line, idx) => {
           const y = startY + idx * lineHeight;
           ctx.fillStyle = 'rgba(0,0,0,0.5)';
-          ctx.fillText(line, FACEBOOK_WIDTH / 2 + 2, y + 2);
+          ctx.fillText(line, textCenterX + 2, y + 2);
           ctx.fillStyle = appliedColor;
-          ctx.fillText(line, FACEBOOK_WIDTH / 2, y);
+          ctx.fillText(line, textCenterX, y);
         });
 
         // Ellipsis indicator when text was truncated
         if (lines.length > 6) {
           const ellipsisY = startY + 6 * lineHeight;
           ctx.fillStyle = 'rgba(0,0,0,0.5)';
-          ctx.fillText('...', FACEBOOK_WIDTH / 2 + 2, ellipsisY + 2);
+          ctx.fillText('...', textCenterX + 2, ellipsisY + 2);
           ctx.fillStyle = appliedColor;
-          ctx.fillText('...', FACEBOOK_WIDTH / 2, ellipsisY);
+          ctx.fillText('...', textCenterX, ellipsisY);
         }
 
         resolve(canvas.toDataURL('image/jpeg', 0.92));

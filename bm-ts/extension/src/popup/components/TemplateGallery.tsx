@@ -20,7 +20,6 @@ type Props = {
   onDelete: (templateId: string) => void;
   onCreate?: () => void;
   showHeader?: boolean;
-  showCreate?: boolean;
 };
 
 export default function TemplateGallery({
@@ -47,7 +46,7 @@ export default function TemplateGallery({
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-800">
             Message Templates{' '}
-            <HelpTooltip label="Templates are used for automated birthday messages sent as comments. Each template has a greeting, message body, and closing. If you have multiple templates, one is picked at random for variety." />
+            <HelpTooltip label="Templates are used for automated birthday messages sent as private direct messages. Each template has a greeting, message body, and closing. If you have multiple templates, one is picked at random for variety." />
           </h2>
           {onCreate && (
             <div>
@@ -62,10 +61,6 @@ export default function TemplateGallery({
       {templates.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <p className="text-gray-500 mb-4">No templates yet.</p>
-          <FeatureTip
-            tipId="template_gallery_empty"
-            message="Create your first message template to start sending personalised birthday wishes automatically."
-          />
           <FeatureTip
             tipId="template_gallery_empty"
             message="Create your first message template to start sending personalised birthday wishes automatically."

@@ -53,18 +53,18 @@ from app.schemas.auth import (
     RefreshRequest,
     TokenResponse,
     UserProfile,
+    UserProfileUpdate,
 )
+from app.schemas.common import MessageResponse
 from app.schemas.password_reset import (
     RequestPasswordResetRequest,
     ResetPasswordRequest,
     ChangePasswordRequest,
-    MessageResponse,
 )
 from app.schemas.email_verification import (
     RequestEmailVerificationRequest,
     VerifyEmailRequest,
 )
-from app.schemas.smtp import UserProfileUpdate
 from app.services.password_reset import (
     create_reset_token,
     verify_reset_token,
@@ -199,15 +199,14 @@ async def register(
         metadata_payload={},
     )
     db.add(user)
-    await db.flush()
     await db.commit()
     await db.refresh(user)
     # Send email verification; do not fail registration if email sending fails
     try:
         token = await create_verification_token(user, db)
         await send_verification_email(user.email, token)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Failed to send verification email to %s: %s", user.email, e)
     return MessageResponse(message="Account created. Please check your email to verify your account before logging in.")
 
 
@@ -410,7 +409,15 @@ async def revoke_session(
 @router.get("/me", response_model=UserProfile)
 async def me(current_user: User = Depends(get_current_user_allow_unverified)) -> UserProfile:
     """Return the profile of the currently authenticated user."""
-    return current_user
+    metadata = current_user.metadata_payload or {}
+    return UserProfile(
+        id=current_user.id,
+        email=current_user.email,
+        created_at=current_user.created_at,
+        email_verified=current_user.email_verified,
+        name=metadata.get("name"),
+        timezone=metadata.get("timezone"),
+    )
 
 
 @router.post("/request-password-reset", response_model=MessageResponse)
@@ -834,24 +841,35 @@ async def change_password(
 @router.put("/profile", response_model=UserProfile)
 async def update_profile(
     data: UserProfileUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_allow_unverified),
     db: AsyncSession = Depends(get_db),
 ) -> UserProfile:
     """Update user profile information"""
+    metadata = current_user.metadata_payload or {}
+    
     if data.name is not None:
         # Store in metadata for now since User model doesn't have name field
-        metadata = current_user.metadata_payload or {}
         metadata["name"] = data.name
-        current_user.metadata_payload = metadata
     
     if data.timezone is not None:
-        metadata = current_user.metadata_payload or {}
         metadata["timezone"] = data.timezone
+    
+    if data.name is not None or data.timezone is not None:
         current_user.metadata_payload = metadata
     
     await db.commit()
     await db.refresh(current_user)
-    return current_user
+    
+    # Extract metadata for response
+    metadata = current_user.metadata_payload or {}
+    return UserProfile(
+        id=current_user.id,
+        email=current_user.email,
+        created_at=current_user.created_at,
+        email_verified=current_user.email_verified,
+        name=metadata.get("name"),
+        timezone=metadata.get("timezone"),
+    )
 
 
 @router.delete("/account", response_model=MessageResponse)
@@ -867,7 +885,7 @@ async def delete_account(
 
 @router.get("/data-export")
 async def export_user_data(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_allow_unverified),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """Export all data associated with the current user as a JSON file.
@@ -914,7 +932,7 @@ async def export_user_data(
     )
     message_templates = [
         {
-            "template_title": r.template_title,
+            "template_title": r.title,
             "greeting": r.greeting,
             "sentiment": r.sentiment,
             "closing": r.closing,
@@ -949,7 +967,7 @@ async def export_user_data(
     contacts = [
         {
             "name": r.name,
-            "profile_url": r.profile_url,
+            "profile_url": r.facebook_profile_url,
             "birthday": r.birthday.isoformat() if r.birthday else None,
             "gender": str(r.gender) if r.gender else None,
             "notes": r.notes,

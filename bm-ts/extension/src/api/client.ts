@@ -116,6 +116,8 @@ export interface UserProfile {
   created_at: string;
   email_verified?: boolean;
   name?: string;
+  firstName?: string;
+  lastName?: string;
   timezone?: string;
 }
 
@@ -696,6 +698,10 @@ export interface Post {
   image_url?: string;
   gender: 'MALE' | 'FEMALE' | 'NEUTRAL';
   is_default: boolean;
+  label?: string;
+  font_family?: string;
+  font_size?: number;
+  font_color?: string;
   created_at: string;
   updated_at: string;
 }
@@ -705,6 +711,10 @@ export interface CreatePostPayload {
   image_url?: string;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   is_default?: boolean;
+  label?: string;
+  font_family?: string;
+  font_size?: number;
+  font_color?: string;
 }
 
 export interface UpdatePostPayload {
@@ -712,6 +722,10 @@ export interface UpdatePostPayload {
   image_url?: string;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   is_default?: boolean;
+  label?: string;
+  font_family?: string;
+  font_size?: number;
+  font_color?: string;
 }
 
 export async function listPosts(baseUrl: string, accessToken: string): Promise<Post[]> {
@@ -843,7 +857,8 @@ export async function updateSMTPConfig(
 
 // ========== User Profile Management ==========
 export interface UpdateUserProfilePayload {
-  name?: string;
+  firstName?: string;
+  lastName?: string;
   timezone?: string;
 }
 
@@ -852,7 +867,20 @@ export async function updateUserProfile(
   accessToken: string,
   payload: UpdateUserProfilePayload,
 ): Promise<UserProfile> {
-  return request(baseUrl, '/auth/profile', 'PUT', payload as unknown as JsonValue, accessToken);
+  // Combine firstName and lastName into a single name field for the backend
+  const backendPayload: Record<string, unknown> = {};
+
+  if (payload.firstName !== undefined || payload.lastName !== undefined) {
+    const firstName = payload.firstName?.trim() || '';
+    const lastName = payload.lastName?.trim() || '';
+    backendPayload.name = `${firstName} ${lastName}`.trim();
+  }
+
+  if (payload.timezone !== undefined) {
+    backendPayload.timezone = payload.timezone;
+  }
+
+  return request(baseUrl, '/auth/profile', 'PUT', backendPayload as JsonValue, accessToken);
 }
 
 export async function deleteUserAccount(
@@ -991,16 +1019,42 @@ export async function toggleBirthdayConfig(
   return request(baseUrl, `/api/birthday-configs/${id}/toggle`, 'PATCH', { enabled }, accessToken);
 }
 
-/** Download full message history as CSV from the backend. */
-export async function exportHistoryCsv(baseUrl: string, accessToken: string): Promise<Blob> {
-  const response = await fetch(`${baseUrl}/api/messages/history/export`, {
-    method: 'GET',
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+/**
+ * Variant of `request()` that returns a `Blob` instead of parsed JSON.
+ * Applies the same AbortController timeout and `Authorization: Bearer` header,
+ * and throws `ApiError` on non-2xx responses.
+ */
+async function requestBlob(baseUrl: string, path: string, accessToken?: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      method: 'GET',
+      headers,
+      signal: controller.signal,
+    });
+  } catch (fetchErr) {
+    if ((fetchErr as Error).name === 'AbortError') {
+      throw new Error(`Request timed out: GET ${path}`);
+    }
+    throw fetchErr;
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!response.ok) {
     throw new ApiError(response.status, await response.json().catch(() => undefined));
   }
   return response.blob();
+}
+
+/** Download full message history as CSV from the backend. */
+export async function exportHistoryCsv(baseUrl: string, accessToken: string): Promise<Blob> {
+  return requestBlob(baseUrl, '/api/messages/history/export', accessToken);
 }
 
 // ========== Server-Side Rate Limits ==========

@@ -66,17 +66,26 @@ export function selectPost(posts: Post[], gender: Gender): Post | null {
 
 // ---------------------------------------------------------------------------
 // Keyword resolution
-// [Tag Person] → friend's name
-// [Today]      → localised date string
-// [Image]      → stripped (image attached separately via clipboard)
+// [Tag Person]   → friend's full name
+// [Today]        → localised date string
+// [Image]        → stripped (image attached separately via clipboard)
+// {First_Name}   → friend's first name (curly-brace style used in post editor)
+// {Last_Name}    → friend's last name (or full name if single word)
+// {Today}        → localised date string (curly-brace style used in post editor)
 // ---------------------------------------------------------------------------
 
 export function resolveKeywords(text: string, friend: { name: string }): string {
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  const nameParts = friend.name.trim().split(/\s+/);
+  const firstName = nameParts[0];
+  const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : nameParts[0];
   return text
     .replace(/\[Tag Person\]/gi, friend.name)
     .replace(/\[Today\]/gi, today)
-    .replace(/\[Image\]/gi, '');
+    .replace(/\[Image\]/gi, '')
+    .replace(/\{First_Name\}/gi, firstName)
+    .replace(/\{Last_Name\}/gi, lastName)
+    .replace(/\{Today\}/gi, today);
 }
 
 /**

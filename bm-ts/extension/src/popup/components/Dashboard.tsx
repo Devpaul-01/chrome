@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import Spinner from './Spinner';
 import { useMessageHistory, useMessageQueue } from '../hooks/useMessages';
 import DashboardStatsCard from './DashboardStatsCard';
@@ -24,12 +24,17 @@ interface DashboardProps {
   onClose: () => void;
 }
 
-export default function Dashboard({ onClose: _onClose }: DashboardProps) {
+const Dashboard = memo(function Dashboard({ onClose: _onClose }: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { trends: computeHistoryTrends, live: historyLive } = useMessageHistory();
+  const {
+    trends: computeHistoryTrends,
+    live: historyLive,
+    stats: historyStats,
+  } = useMessageHistory();
   const { live: queueLive } = useMessageQueue();
+  const historyTrends = useMemo(() => computeHistoryTrends(7), [computeHistoryTrends]);
 
   useEffect(() => {
     loadStats();
@@ -158,24 +163,11 @@ export default function Dashboard({ onClose: _onClose }: DashboardProps) {
                 value={stats.messages_sent_this_month}
                 variant="pink"
               />
-              <DashboardStatsCard
-                title="Failed"
-                value={(() => {
-                  try {
-                    // use history stats for failed count
-                    // eslint-disable-next-line react-hooks/rules-of-hooks
-                    const { stats: historyStats } = useMessageHistory();
-                    return historyStats?.failed ?? 0;
-                  } catch {
-                    return 0;
-                  }
-                })()}
-                variant="red"
-              />
+              <DashboardStatsCard title="Failed" value={historyStats?.failed ?? 0} variant="red" />
             </div>
 
             <div className="mt-4">
-              <DashboardCharts {...computeHistoryTrends(7)} />
+              <DashboardCharts {...historyTrends} />
               <div className="text-xs text-gray-500 mt-2">
                 Live: {historyLive || queueLive ? 'on' : 'off'}
               </div>
@@ -249,4 +241,6 @@ export default function Dashboard({ onClose: _onClose }: DashboardProps) {
       {/* (removed duplicate unified layout) */}
     </div>
   );
-}
+});
+
+export default Dashboard;

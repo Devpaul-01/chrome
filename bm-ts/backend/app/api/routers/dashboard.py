@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import NamedTuple
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, and_, func, extract, or_, literal
@@ -11,6 +12,21 @@ from app.schemas.dashboard import DashboardStats
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
+# ---------------------------------------------------------------------------
+# Per-user TTL cache (30 s) — avoids redundant DB round-trips when the
+# dashboard polls frequently.  Keyed by user UUID; each entry stores the
+# response model and its creation timestamp.
+# ---------------------------------------------------------------------------
+_STATS_TTL = timedelta(seconds=30)
+
+
+class _CacheEntry(NamedTuple):
+    stats: DashboardStats
+    expires_at: datetime
+
+
+_stats_cache: dict[str, _CacheEntry] = {}
+
 
 @router.get("/stats", response_model=DashboardStats)
 async def get_dashboard_stats(
@@ -18,7 +34,13 @@ async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db),
 ):
     """Get dashboard statistics for the current user"""
-    now = datetime.utcnow()
+    user_id = str(current_user.id)
+    now = datetime.now(timezone.utc)
+
+    # Return cached stats if still fresh
+    cached = _stats_cache.get(user_id)
+    if cached is not None and now < cached.expires_at:
+        return cached.stats
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = today_start - timedelta(days=today_start.weekday())
     month_start = today_start.replace(day=1)
@@ -112,7 +134,7 @@ async def get_dashboard_stats(
     )
     friends_with_upcoming_birthdays = upcoming_result.scalar() or 0
 
-    return DashboardStats(
+    stats = DashboardStats(
         total_messages_sent=total_messages_sent,
         messages_sent_today=messages_sent_today,
         messages_sent_this_week=messages_sent_this_week,
@@ -121,3 +143,6 @@ async def get_dashboard_stats(
         friends_with_upcoming_birthdays=friends_with_upcoming_birthdays,
         queued_messages=queued_messages,
     )
+
+    _stats_cache[user_id] = _CacheEntry(stats=stats, expires_at=now + _STATS_TTL)
+    return stats
