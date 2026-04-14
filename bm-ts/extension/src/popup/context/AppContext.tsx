@@ -17,6 +17,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { UserProfile } from '../../api/client';
 import { sendBackgroundMessage } from '../api';
 import { logError } from '../../utils/errors';
+import { logger } from '../../utils/logger';
 import { announceToScreenReader } from '../../utils/accessibility';
 import { getTokens } from '../../utils/storage';
 import wsClient from '../../api/websocket';
@@ -40,7 +41,6 @@ export type ViewMode =
   | 'upcoming-birthdays'
   | 'posts'
   | 'postLibrary'
-  | 'groups'
   | 'images'
   | 'smtp-settings'
   | 'account-management'
@@ -98,8 +98,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       wsClient.connect({
         url: wsConfig.wsUrl,
         token: wsConfig.token,
-        onConnect: () => console.log('[App] WebSocket connected'),
-        onDisconnect: () => console.log('[App] WebSocket disconnected'),
+        onConnect: () => logger.log('[App] WebSocket connected'),
+        onDisconnect: () => logger.log('[App] WebSocket disconnected'),
         onError: (error) => logError(error, 'WebSocket'),
       });
     } catch (wsError) {

@@ -136,18 +136,6 @@ describe('TemplateGallery', () => {
     expect(screen.queryByText(/^FEMALE$/)).not.toBeInTheDocument();
   });
 
-  // Gender badge is currently commented out in the component
-  it.skip('shows a "MALE" gender badge when gender is "MALE"', () => {
-    render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ gender: 'MALE' })]} />);
-    expect(screen.getByText('MALE')).toBeInTheDocument();
-  });
-
-  // Gender badge is currently commented out in the component
-  it.skip('shows a "FEMALE" gender badge when gender is "FEMALE"', () => {
-    render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ gender: 'FEMALE' })]} />);
-    expect(screen.getByText('FEMALE')).toBeInTheDocument();
-  });
-
   // --- Image rendering ------------------------------------------------------
 
   it('shows an emoji placeholder when imageUrl is null', () => {

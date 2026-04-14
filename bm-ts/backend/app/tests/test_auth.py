@@ -40,6 +40,7 @@ def _make_request(user_agent: str = "pytest") -> Request:
             "scheme": "http",
             "query_string": b"",
             "root_path": "",
+            "server": ("localhost", 8000),
             "headers": [(b"user-agent", user_agent.encode("utf-8"))],
             "client": ("127.0.0.1", 12345),
         }

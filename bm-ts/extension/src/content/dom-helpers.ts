@@ -2,6 +2,8 @@
  * dom-helpers.ts — Shared DOM utility functions for content scripts.
  */
 
+import { logger } from '../utils/logger';
+
 /**
  * Wait for an element to appear in the DOM.
  */
@@ -85,7 +87,7 @@ export async function retryOperation<T>(
       if (attempt < maxRetries) {
         const jitter = Math.random() * 0.3 + 0.85; // 0.85–1.15
         const backoffDelay = baseDelay * Math.pow(2, attempt) * jitter;
-        console.warn(
+        logger.warn(
           `[BM] Retry ${attempt + 1}/${maxRetries} after ${Math.round(backoffDelay)}ms: ${
             lastError.message
           }`,
@@ -202,13 +204,13 @@ export function createStableMutationObserver(
         if (result instanceof Promise) {
           result.catch((err) => {
             const error = err instanceof Error ? err : new Error(String(err));
-            console.error('[BM Observer] Async callback error:', error);
+            logger.error('[BM Observer] Async callback error:', error);
             onError?.(error);
           });
         }
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
-        console.error('[BM Observer] Callback error:', error);
+        logger.error('[BM Observer] Callback error:', error);
         onError?.(error);
       }
     }, debounceMs);
@@ -228,13 +230,13 @@ export function createStableMutationObserver(
         detachCheckInterval = setInterval(() => {
           if (disconnected) return;
           if (currentTarget && !document.contains(currentTarget)) {
-            console.warn('[BM Observer] Target detached from DOM');
+            logger.warn('[BM Observer] Target detached from DOM');
             observer?.disconnect();
             // Try to find a replacement target
             if (currentConfig) {
               const newTarget = document.querySelector<HTMLElement>('[role="log"], [role="main"]');
               if (newTarget) {
-                console.log('[BM Observer] Reconnecting to new target');
+                logger.log('[BM Observer] Reconnecting to new target');
                 currentTarget = newTarget;
                 observer?.observe(newTarget, currentConfig);
               }
@@ -323,7 +325,7 @@ export function runSelectorHealthCheck(): SelectorHealthReport {
   const score = probes.length > 0 ? passed.length / probes.length : 1;
 
   if (failed.length > 0) {
-    console.warn(
+    logger.warn(
       `[BM Health] Selector health-check: ${passed.length}/${probes.length} passed. ` +
         `Failed: ${failed.join(', ')}. Facebook may have updated their DOM.`,
     );

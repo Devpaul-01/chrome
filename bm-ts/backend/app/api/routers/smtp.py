@@ -6,6 +6,12 @@ routers/smtp.py — Endpoints for managing the user's SMTP configuration.
 
 SMTP passwords are encrypted at rest using Fernet symmetric encryption
 (see ``core/encryption.py``).  API responses mask the password field.
+
+Note: ``decrypt_value`` is not currently called in this router because no
+backend service sends email via the user's SMTP server yet.  When a
+server-side email service is implemented, use
+``core.encryption.decrypt_value(config.password)`` to retrieve the
+cleartext password before connecting to the SMTP server.
 """
 
 from __future__ import annotations

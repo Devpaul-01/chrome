@@ -11,7 +11,6 @@ import {
   MessageHistoryItem,
   MessageHistoryPage,
   DashboardStats,
-  MessageGroup,
   Post,
   UserImage,
   SMTPConfig,
@@ -45,10 +44,6 @@ import {
   listMessageHistory,
   deleteMessageHistory,
   getDashboardStats,
-  // listMessageGroups,  // Commented out — feature not currently needed
-  // createMessageGroup,
-  // updateMessageGroup,
-  // deleteMessageGroup,
   listPosts,
   createPost,
   updatePost,
@@ -424,8 +419,6 @@ type BackgroundResponse =
   | MessageHistoryItem[]
   | MessageHistoryPage
   | DashboardStats
-  | MessageGroup
-  | MessageGroup[]
   | Post
   | Post[]
   | UserImage
@@ -734,24 +727,6 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       );
     }
 
-    // Message Group handlers — commented out, feature not currently needed
-    // case 'messageGroups.list': {
-    //   return runAuthAware((accessToken, url) => listMessageGroups(url, accessToken));
-    // }
-    // case 'messageGroups.create': {
-    //   return runAuthAware((accessToken, url) =>
-    //     createMessageGroup(url, accessToken, message.payload),
-    //   );
-    // }
-    // case 'messageGroups.update': {
-    //   const { id, ...payload } = message.payload;
-    //   return runAuthAware((accessToken, url) => updateMessageGroup(url, accessToken, id, payload));
-    // }
-    // case 'messageGroups.delete': {
-    //   return runAuthAware((accessToken, url) =>
-    //     deleteMessageGroup(url, accessToken, message.payload.id),
-    //   );
-    // }
     // Post handlers
     case 'posts.list': {
       return runAuthAware((accessToken, url) => listPosts(url, accessToken));

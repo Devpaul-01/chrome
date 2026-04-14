@@ -3,6 +3,7 @@
  */
 
 import { logError } from '../utils/errors';
+import { logger } from '../utils/logger';
 
 export type WebSocketEventType =
   | 'connected'
@@ -105,7 +106,7 @@ class WebSocketClient {
    * Handle connection opened
    */
   private handleOpen(): void {
-    console.log('[WebSocket] Connected');
+    logger.log('[WebSocket] Connected');
     this.reconnectAttempts = 0;
 
     // Send the JWT as the first message instead of in the query string
@@ -123,7 +124,7 @@ class WebSocketClient {
   private handleMessage(event: MessageEvent): void {
     try {
       const message: WebSocketMessage = JSON.parse(event.data);
-      console.log('[WebSocket] Message received:', message.type);
+      logger.log('[WebSocket] Message received:', message.type);
 
       // Emit event to all subscribers
       const listeners = this.eventListeners.get(message.type);
@@ -146,7 +147,7 @@ class WebSocketClient {
    * Handle connection error
    */
   private handleError(event: Event): void {
-    console.error('[WebSocket] Error:', event);
+    logger.error('[WebSocket] Error:', event);
     const error = new Error('WebSocket connection error');
     this.config?.onError?.(error);
   }
@@ -155,7 +156,7 @@ class WebSocketClient {
    * Handle connection closed
    */
   private handleClose(event: CloseEvent): void {
-    console.log('[WebSocket] Disconnected:', event.code, event.reason);
+    logger.log('[WebSocket] Disconnected:', event.code, event.reason);
     this.stopPingTimer();
     this.config?.onDisconnect?.();
 
@@ -170,7 +171,7 @@ class WebSocketClient {
    */
   private handleReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('[WebSocket] Max reconnect attempts reached');
+      logger.error('[WebSocket] Max reconnect attempts reached');
       const error = new Error('Failed to connect to WebSocket server after multiple attempts');
       this.config?.onError?.(error);
       return;
@@ -178,7 +179,7 @@ class WebSocketClient {
 
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * this.reconnectAttempts;
-    console.log(
+    logger.log(
       `[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
     );
 

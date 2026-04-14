@@ -159,10 +159,6 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     setError(null);
 
     try {
-      // TODO: Replace with actual AI API call (OpenAI, Claude, etc.)
-      // Simulating AI generation with predefined templates for now
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
       const suggestions = {
         greeting: [
           'Hey {First_Name}, hope your day is as awesome as you are!',

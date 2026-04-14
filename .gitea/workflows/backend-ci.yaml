@@ -1,0 +1,48 @@
+name: Backend CI
+run-name: ${{ gitea.actor }} — backend CI (${{ gitea.ref_name }})
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  backend-ci:
+    name: Pytest · Ruff
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: bm-ts/backend
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Python setup ─────────────────────────────────────────────────────────
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ── Install dependencies ─────────────────────────────────────────────────
+      - name: Install dependencies
+        run: |
+          pip install -e ".[test]"
+          pip install ruff
+
+      # ── Ruff lint ────────────────────────────────────────────────────────────
+      - name: Ruff lint
+        run: ruff check app/
+
+      # ── Ruff format check ────────────────────────────────────────────────────
+      - name: Ruff format check
+        run: ruff format --check app/
+
+      # ── Pytest ───────────────────────────────────────────────────────────────
+      - name: Run tests
+        run: python -m pytest --tb=short -q

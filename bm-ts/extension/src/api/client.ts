@@ -32,7 +32,8 @@ export class ApiError extends Error {
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null | undefined;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- accepts any JSON-serialisable payload
+type JsonBody = object | unknown[] | string | number | boolean | null | undefined;
 
 /**
  * Central HTTP dispatcher for all backend requests.
@@ -51,7 +52,7 @@ async function request<T>(
   baseUrl: string,
   path: string,
   method: HttpMethod,
-  body?: JsonValue,
+  body?: JsonBody,
   accessToken?: string,
 ): Promise<T> {
   const headers: Record<string, string> = {
@@ -176,13 +177,13 @@ export async function register(
     baseUrl,
     '/auth/register',
     'POST',
-    payload as unknown as JsonValue,
+    payload,
   );
 }
 
 /** Authenticate with email + password and return a token pair. */
 export async function login(baseUrl: string, payload: RegisterPayload): Promise<TokenResponse> {
-  return request<TokenResponse>(baseUrl, '/auth/login', 'POST', payload as unknown as JsonValue);
+  return request<TokenResponse>(baseUrl, '/auth/login', 'POST', payload);
 }
 
 /** Exchange a valid refresh token for a new access/refresh token pair. */
@@ -254,7 +255,7 @@ export async function createCheckoutSession(
     baseUrl,
     '/subscription/create-checkout-session',
     'POST',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }
@@ -282,7 +283,7 @@ export async function changeSubscriptionPlan(
     baseUrl,
     '/subscription/change-plan',
     'POST',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }
@@ -312,7 +313,7 @@ export async function requestPasswordReset(
   baseUrl: string,
   payload: RequestPasswordResetPayload,
 ): Promise<{ message: string }> {
-  return request(baseUrl, '/auth/request-password-reset', 'POST', payload as unknown as JsonValue);
+  return request(baseUrl, '/auth/request-password-reset', 'POST', payload);
 }
 
 /** Ask the backend to send an email-verification link. */
@@ -324,7 +325,7 @@ export async function requestEmailVerification(
     baseUrl,
     '/auth/request-email-verification',
     'POST',
-    payload as unknown as JsonValue,
+    payload,
   );
 }
 
@@ -332,7 +333,7 @@ export async function resetPassword(
   baseUrl: string,
   payload: ResetPasswordPayload,
 ): Promise<{ message: string }> {
-  return request(baseUrl, '/auth/reset-password', 'POST', payload as unknown as JsonValue);
+  return request(baseUrl, '/auth/reset-password', 'POST', payload);
 }
 
 export async function changePassword(
@@ -344,7 +345,7 @@ export async function changePassword(
     baseUrl,
     '/auth/change-password',
     'POST',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }
@@ -378,7 +379,7 @@ export async function createSchedule(
   accessToken: string,
   payload: CreateSchedulePayload,
 ): Promise<BirthdaySchedule> {
-  return request(baseUrl, '/api/schedules/', 'POST', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, '/api/schedules/', 'POST', payload, accessToken);
 }
 
 export async function updateSchedule(
@@ -391,7 +392,7 @@ export async function updateSchedule(
     baseUrl,
     `/api/schedules/${id}`,
     'PUT',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }
@@ -438,7 +439,7 @@ export async function updateQueuedMessage(
     baseUrl,
     `/api/messages/queue/${id}`,
     'PUT',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }
@@ -580,7 +581,7 @@ export async function createContact(
   accessToken: string,
   payload: CreateContactPayload,
 ): Promise<Contact> {
-  return request(baseUrl, '/api/contacts/', 'POST', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, '/api/contacts/', 'POST', payload, accessToken);
 }
 
 export async function updateContact(
@@ -593,7 +594,7 @@ export async function updateContact(
     baseUrl,
     `/api/contacts/${id}`,
     'PUT',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }
@@ -615,7 +616,7 @@ export async function bulkCreateContacts(
     baseUrl,
     '/api/contacts/bulk',
     'POST',
-    contacts as unknown as JsonValue,
+    contacts,
     accessToken,
   );
 }
@@ -658,7 +659,7 @@ export async function createMessageGroup(
     baseUrl,
     '/api/message-groups/',
     'POST',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }
@@ -673,7 +674,7 @@ export async function updateMessageGroup(
     baseUrl,
     `/api/message-groups/${id}`,
     'PUT',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }
@@ -737,7 +738,7 @@ export async function createPost(
   accessToken: string,
   payload: CreatePostPayload,
 ): Promise<Post> {
-  return request(baseUrl, '/api/posts/', 'POST', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, '/api/posts/', 'POST', payload, accessToken);
 }
 
 export async function updatePost(
@@ -746,7 +747,7 @@ export async function updatePost(
   id: string,
   payload: UpdatePostPayload,
 ): Promise<Post> {
-  return request(baseUrl, `/api/posts/${id}`, 'PUT', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, `/api/posts/${id}`, 'PUT', payload, accessToken);
 }
 
 export async function deletePost(
@@ -785,7 +786,7 @@ export async function createImage(
     baseUrl,
     '/api/images/upload',
     'POST',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }
@@ -805,7 +806,7 @@ export async function uploadImageFile(
     baseUrl,
     '/api/images/upload-file',
     'POST',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }
@@ -852,7 +853,7 @@ export async function updateSMTPConfig(
   accessToken: string,
   payload: UpdateSMTPConfigPayload,
 ): Promise<SMTPConfig> {
-  return request(baseUrl, '/smtp/config', 'PUT', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, '/smtp/config', 'PUT', payload, accessToken);
 }
 
 // ========== User Profile Management ==========
@@ -880,7 +881,7 @@ export async function updateUserProfile(
     backendPayload.timezone = payload.timezone;
   }
 
-  return request(baseUrl, '/auth/profile', 'PUT', backendPayload as JsonValue, accessToken);
+  return request(baseUrl, '/auth/profile', 'PUT', backendPayload, accessToken);
 }
 
 export async function deleteUserAccount(
@@ -939,7 +940,7 @@ export async function createMessageTemplate(
     baseUrl,
     '/api/message-templates',
     'POST',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }
@@ -971,7 +972,7 @@ export async function updateMessageTemplate(
     baseUrl,
     `/api/message-templates/${templateId}`,
     'PUT',
-    payload as unknown as JsonValue,
+    payload,
     accessToken,
   );
 }

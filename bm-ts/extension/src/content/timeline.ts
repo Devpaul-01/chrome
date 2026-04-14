@@ -14,6 +14,7 @@ const MEDIUM_DELAY = 2000;
 const LONG_DELAY = 3000;
 
 import { waitForElement, delay, trySelectors, retryOperation, simulateClick } from './dom-helpers';
+import { logger } from '../utils/logger';
 
 /**
  * Interface for post content
@@ -40,12 +41,12 @@ interface NiftyImagesMergeTags {
  * Navigate to a friend's profile/timeline
  */
 export async function navigateToProfile(profileUrl: string): Promise<boolean> {
-  console.log(`[BM Timeline] Navigating to profile: ${profileUrl}`);
+  logger.log(`[BM Timeline] Navigating to profile: ${profileUrl}`);
 
   try {
     // If we're already on the profile, no need to navigate
     if (window.location.href.includes(profileUrl)) {
-      console.log('[BM Timeline] Already on profile page');
+      logger.log('[BM Timeline] Already on profile page');
       return true;
     }
 
@@ -77,14 +78,14 @@ export async function navigateToProfile(profileUrl: string): Promise<boolean> {
       document.querySelector('[data-pagelet="ProfileTimeline"]') !== null;
 
     if (!isProfilePage) {
-      console.error('[BM Timeline] Failed to verify profile page load');
+      logger.error('[BM Timeline] Failed to verify profile page load');
       return false;
     }
 
-    console.log('[BM Timeline] Successfully navigated to profile');
+    logger.log('[BM Timeline] Successfully navigated to profile');
     return true;
   } catch (error) {
-    console.error('[BM Timeline] Error navigating to profile:', error);
+    logger.error('[BM Timeline] Error navigating to profile:', error);
     return false;
   }
 }
@@ -93,7 +94,7 @@ export async function navigateToProfile(profileUrl: string): Promise<boolean> {
  * Open the post composer on a friend's timeline
  */
 export async function openPostComposer(): Promise<HTMLElement | null> {
-  console.log('[BM Timeline] Opening post composer...');
+  logger.log('[BM Timeline] Opening post composer...');
 
   try {
     // Selectors ordered: structural/language-agnostic first, then English-specific
@@ -134,7 +135,7 @@ export async function openPostComposer(): Promise<HTMLElement | null> {
     }
 
     if (!composerTrigger) {
-      console.error('[BM Timeline] Could not find post composer trigger');
+      logger.error('[BM Timeline] Could not find post composer trigger');
       return null;
     }
 
@@ -146,15 +147,15 @@ export async function openPostComposer(): Promise<HTMLElement | null> {
     const composerDialog = await waitForElement('[role="dialog"], [role="presentation"]', 5000);
 
     if (!composerDialog) {
-      console.warn('[BM Timeline] Composer dialog not found, checking for inline composer');
+      logger.warn('[BM Timeline] Composer dialog not found, checking for inline composer');
       // Sometimes composer is inline, not a dialog
       return composerTrigger;
     }
 
-    console.log('[BM Timeline] Post composer opened successfully');
+    logger.log('[BM Timeline] Post composer opened successfully');
     return composerDialog;
   } catch (error) {
-    console.error('[BM Timeline] Error opening post composer:', error);
+    logger.error('[BM Timeline] Error opening post composer:', error);
     return null;
   }
 }
@@ -166,7 +167,7 @@ export async function insertPostContent(
   content: string,
   containerElement?: HTMLElement,
 ): Promise<boolean> {
-  console.log('[BM Timeline] Inserting post content...');
+  logger.log('[BM Timeline] Inserting post content...');
 
   try {
     const searchRoot = containerElement || document;
@@ -184,13 +185,13 @@ export async function insertPostContent(
     for (const selector of textboxSelectors) {
       textbox = searchRoot.querySelector<HTMLElement>(selector);
       if (textbox && !textbox.getAttribute('aria-hidden')) {
-        console.log(`[BM Timeline] Found textbox: ${selector}`);
+        logger.log(`[BM Timeline] Found textbox: ${selector}`);
         break;
       }
     }
 
     if (!textbox) {
-      console.error('[BM Timeline] Could not find post textbox');
+      logger.error('[BM Timeline] Could not find post textbox');
       return false;
     }
 
@@ -223,7 +224,7 @@ export async function insertPostContent(
     const insertedText = textbox.textContent || textbox.innerText || '';
 
     if (!insertedText.includes(content.substring(0, 20))) {
-      console.warn('[BM Timeline] Content verification failed, retrying with alternative method');
+      logger.warn('[BM Timeline] Content verification failed, retrying with alternative method');
 
       // Alternative method: use document.execCommand (deprecated but sometimes works)
       textbox.focus();
@@ -231,10 +232,10 @@ export async function insertPostContent(
       document.execCommand('insertText', false, content);
     }
 
-    console.log('[BM Timeline] Post content inserted successfully');
+    logger.log('[BM Timeline] Post content inserted successfully');
     return true;
   } catch (error) {
-    console.error('[BM Timeline] Error inserting post content:', error);
+    logger.error('[BM Timeline] Error inserting post content:', error);
     return false;
   }
 }
@@ -281,7 +282,7 @@ export function processNiftyImagesMergeTags(
     }
   }
 
-  console.log(`[BM Timeline] Processed Nifty Images URL: ${processedUrl}`);
+  logger.log(`[BM Timeline] Processed Nifty Images URL: ${processedUrl}`);
   return processedUrl;
 }
 
@@ -292,7 +293,7 @@ export async function attachImageToPost(
   imageUrl: string,
   mergeTags?: NiftyImagesMergeTags,
 ): Promise<boolean> {
-  console.log(`[BM Timeline] Attaching image: ${imageUrl}`);
+  logger.log(`[BM Timeline] Attaching image: ${imageUrl}`);
 
   try {
     // Process merge tags if this is a Nifty Images URL
@@ -302,7 +303,7 @@ export async function attachImageToPost(
     }
 
     // Fetch the image
-    console.log('[BM Timeline] Fetching image...');
+    logger.log('[BM Timeline] Fetching image...');
     const response = await fetch(processedUrl, {
       mode: 'cors',
       credentials: 'omit',
@@ -313,7 +314,7 @@ export async function attachImageToPost(
     }
 
     const blob = await response.blob();
-    console.log(`[BM Timeline] Image fetched, size: ${blob.size} bytes, type: ${blob.type}`);
+    logger.log(`[BM Timeline] Image fetched, size: ${blob.size} bytes, type: ${blob.type}`);
 
     // Ensure we have an image blob
     if (!blob.type.startsWith('image/')) {
@@ -321,7 +322,7 @@ export async function attachImageToPost(
     }
 
     // Copy image to clipboard
-    console.log('[BM Timeline] Copying image to clipboard...');
+    logger.log('[BM Timeline] Copying image to clipboard...');
     await navigator.clipboard.write([
       new ClipboardItem({
         [blob.type]: blob,
@@ -368,16 +369,16 @@ export async function attachImageToPost(
     );
 
     if (!imagePreview) {
-      console.warn('[BM Timeline] Could not verify image attachment');
+      logger.warn('[BM Timeline] Could not verify image attachment');
       // Don't fail - image might still be processing
     } else {
-      console.log('[BM Timeline] Image attachment verified');
+      logger.log('[BM Timeline] Image attachment verified');
     }
 
-    console.log('[BM Timeline] Image attached successfully');
+    logger.log('[BM Timeline] Image attached successfully');
     return true;
   } catch (error) {
-    console.error('[BM Timeline] Error attaching image:', error);
+    logger.error('[BM Timeline] Error attaching image:', error);
     return false;
   }
 }
@@ -386,7 +387,7 @@ export async function attachImageToPost(
  * Submit the post
  */
 export async function submitPost(): Promise<boolean> {
-  console.log('[BM Timeline] Submitting post...');
+  logger.log('[BM Timeline] Submitting post...');
 
   try {
     // Selectors: structural first, then locale-specific aria-labels
@@ -422,7 +423,7 @@ export async function submitPost(): Promise<boolean> {
           postButton.hasAttribute('disabled');
 
         if (!isDisabled) {
-          console.log(`[BM Timeline] Found post button: ${selector}`);
+          logger.log(`[BM Timeline] Found post button: ${selector}`);
           break;
         }
         postButton = null;
@@ -453,7 +454,7 @@ export async function submitPost(): Promise<boolean> {
         document.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]') ??
         (document.activeElement as HTMLElement | null);
       if (textbox) {
-        console.log('[BM Timeline] No Post button found — dispatching Enter key on textbox');
+        logger.log('[BM Timeline] No Post button found — dispatching Enter key on textbox');
         textbox.dispatchEvent(
           new KeyboardEvent('keydown', {
             key: 'Enter',
@@ -465,7 +466,7 @@ export async function submitPost(): Promise<boolean> {
         await delay(LONG_DELAY);
         return true;
       }
-      console.error('[BM Timeline] Could not find Post button');
+      logger.error('[BM Timeline] Could not find Post button');
       return false;
     }
 
@@ -480,14 +481,14 @@ export async function submitPost(): Promise<boolean> {
     const postSuccess = !composerDialog;
 
     if (postSuccess) {
-      console.log('[BM Timeline] Post submitted successfully');
+      logger.log('[BM Timeline] Post submitted successfully');
     } else {
-      console.warn('[BM Timeline] Post submission unclear - dialog still open');
+      logger.warn('[BM Timeline] Post submission unclear - dialog still open');
     }
 
     return true;
   } catch (error) {
-    console.error('[BM Timeline] Error submitting post:', error);
+    logger.error('[BM Timeline] Error submitting post:', error);
     return false;
   }
 }
@@ -496,7 +497,7 @@ export async function submitPost(): Promise<boolean> {
  * Main function to post to a friend's timeline
  */
 export async function postToTimeline(post: TimelinePost): Promise<boolean> {
-  console.log(`[BM Timeline] Starting timeline post for ${post.friendName}`);
+  logger.log(`[BM Timeline] Starting timeline post for ${post.friendName}`);
 
   try {
     return await retryOperation(
@@ -540,7 +541,7 @@ export async function postToTimeline(post: TimelinePost): Promise<boolean> {
 
           const imageAttached = await attachImageToPost(post.imageUrl, mergeTags);
           if (!imageAttached) {
-            console.warn('[BM Timeline] Image attachment failed, continuing without image');
+            logger.warn('[BM Timeline] Image attachment failed, continuing without image');
           }
 
           await delay(MEDIUM_DELAY);
@@ -552,14 +553,14 @@ export async function postToTimeline(post: TimelinePost): Promise<boolean> {
           throw new Error('Failed to submit post');
         }
 
-        console.log(`[BM Timeline] Successfully posted to ${post.friendName}'s timeline`);
+        logger.log(`[BM Timeline] Successfully posted to ${post.friendName}'s timeline`);
         return true;
       },
       2,
       2000,
     ); // retry up to 2 times with 2s base delay
   } catch (error) {
-    console.error('[BM Timeline] Error posting to timeline after retries:', error);
+    logger.error('[BM Timeline] Error posting to timeline after retries:', error);
     return false;
   }
 }
@@ -571,7 +572,7 @@ export async function batchPostToTimelines(
   posts: TimelinePost[],
   delayBetweenPosts: number = 5000,
 ): Promise<{ success: number; failed: number; results: boolean[] }> {
-  console.log(`[BM Timeline] Starting batch post for ${posts.length} friends`);
+  logger.log(`[BM Timeline] Starting batch post for ${posts.length} friends`);
 
   const results: boolean[] = [];
   let successCount = 0;
@@ -589,12 +590,12 @@ export async function batchPostToTimelines(
 
     // Wait between posts to avoid rate limiting
     if (posts.indexOf(post) < posts.length - 1) {
-      console.log(`[BM Timeline] Waiting ${delayBetweenPosts}ms before next post...`);
+      logger.log(`[BM Timeline] Waiting ${delayBetweenPosts}ms before next post...`);
       await delay(delayBetweenPosts);
     }
   }
 
-  console.log(`[BM Timeline] Batch complete: ${successCount} success, ${failedCount} failed`);
+  logger.log(`[BM Timeline] Batch complete: ${successCount} success, ${failedCount} failed`);
 
   return {
     success: successCount,

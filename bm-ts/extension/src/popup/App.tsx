@@ -27,7 +27,6 @@ import MessageHistory from './components/MessageHistory';
 import Dashboard from './components/Dashboard';
 import PostEditor from './components/PostEditor';
 import PostList from './components/PostList';
-// import MessageGroups from './components/MessageGroups'; // Commented out — feature not currently needed
 import ImageManager from './components/ImageManager';
 // import SMTPSettings from './components/SMTPSettings'; // Uncomment when SMTP/multi-platform support is added
 // Contacts UI — commented out; contacts are populated via scraping. Uncomment to re-enable manual UI.
@@ -395,9 +394,6 @@ function AppShell() {
                 }
               />
             </div>
-            {/* <div className="mb-6">
-              <MessageGroups onClose={() => setViewMode('main')} showClose={false} />
-            </div> */}
             <button className="btn w-full" onClick={() => setViewMode('template-gallery')}>
               View/Edit Message Templates
             </button>
@@ -460,10 +456,6 @@ function AppShell() {
           />
         </div>
       );
-    }
-    if (viewMode === 'groups') {
-      return null; // MessageGroups commented out — feature not currently needed
-      // return <MessageGroups onClose={() => setViewMode('main')} />;
     }
     if (viewMode === 'images') {
       return (

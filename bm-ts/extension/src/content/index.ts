@@ -56,6 +56,7 @@ import {
   getPreferredHours,
   isWithinPreferredHours,
 } from '../utils/automation';
+import { logger } from '../utils/logger';
 
 /** Maximum messages the manual "Send to all" flow will send per session (safety cap). */
 const MAX_MESSAGES_PER_SESSION = 5;
@@ -1396,63 +1397,6 @@ async function renderQueueStatus() {
 }
 
 // Message group selector — commented out, feature not currently needed
-// const ACTIVE_GROUP_KEY = 'bm_active_group_id';
-
-// /** Renders a group selector dropdown so users can switch active message groups without leaving Facebook. */
-// async function renderGroupSelector() {
-//   const container = overlay.querySelector<HTMLDivElement>('#bm-group-selector');
-//   if (!container) return;
-//
-//   try {
-//     interface GroupItem { id: string; name: string; gender: string }
-//     const groups = await sendContentMessage<GroupItem[]>({ type: 'messageGroups.list' });
-//
-//     if (!Array.isArray(groups) || groups.length === 0) {
-//       container.style.display = 'none';
-//       return;
-//     }
-//
-//     container.style.display = '';
-//     container.innerHTML = '';
-//
-//     const stored = await chrome.storage.local.get(ACTIVE_GROUP_KEY);
-//     const activeId = (stored[ACTIVE_GROUP_KEY] as string) || '';
-//
-//     const wrapper = document.createElement('div');
-//     wrapper.className = 'bm-inner-section';
-//
-//     const label = document.createElement('div');
-//     label.className = 'bm-section-label';
-//     label.textContent = 'Message Group';
-//     wrapper.appendChild(label);
-//
-//     const select = document.createElement('select');
-//     select.className = 'bm-select';
-//
-//     const defaultOpt = document.createElement('option');
-//     defaultOpt.value = '';
-//     defaultOpt.textContent = '— Select a group —';
-//     select.appendChild(defaultOpt);
-//
-//     groups.forEach((g) => {
-//       const opt = document.createElement('option');
-//       opt.value = g.id;
-//       opt.textContent = `${g.name} (${g.gender})`;
-//       if (g.id === activeId) opt.selected = true;
-//       select.appendChild(opt);
-//     });
-//
-//     select.addEventListener('change', async () => {
-//       await chrome.storage.local.set({ [ACTIVE_GROUP_KEY]: select.value });
-//     });
-//
-//     wrapper.appendChild(select);
-//     container.appendChild(wrapper);
-//   } catch {
-//     container.style.display = 'none';
-//   }
-// }
-
 /** Renders feature flag quick-toggles in the overlay. */
 async function renderFeatureToggles() {
   const container = overlay.querySelector<HTMLDivElement>('#bm-toggles');
@@ -1730,7 +1674,7 @@ if (window.location.href.includes('/birthdays') || window.location.href.includes
   setTimeout(() => {
     const report = runSelectorHealthCheck();
     if (report.failed.length > 0) {
-      console.warn('[BM] Selector health-check failures:', report.failed);
+      logger.warn('[BM] Selector health-check failures:', report.failed);
     }
   }, 3000);
 }
@@ -1741,7 +1685,7 @@ if (window.location.href.includes('/birthdays') || window.location.href.includes
   setTimeout(() => {
     const report = runSelectorHealthCheck();
     if (report.failed.length > 0) {
-      console.warn('[BM] Selector health-check failures:', report.failed);
+      logger.warn('[BM] Selector health-check failures:', report.failed);
     }
   }, 3000);
 }
@@ -2088,10 +2032,10 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
             type: 'contacts.bulkCreate',
             payload: { contacts: contactPayloads },
           });
-          console.log(`[BM] Persisted ${contactPayloads.length} birthday contacts to DB`);
+          logger.log(`[BM] Persisted ${contactPayloads.length} birthday contacts to DB`);
         }
       } catch (err) {
-        console.warn('[BM] Failed to persist birthday contacts:', err);
+        logger.warn('[BM] Failed to persist birthday contacts:', err);
       }
     }
 
@@ -2150,7 +2094,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
         await simulateBrowsing();
         await randomDelay(delayMin, delayMax);
       } catch (err) {
-        console.error(`[BM] Error processing ${friend.name}:`, err);
+        logger.error(`[BM] Error processing ${friend.name}:`, err);
         const { shouldPause } = await recordSendFailure();
         await addActivityLogEntry(
           'error',
@@ -2188,11 +2132,11 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
             type: 'contacts.bulkCreate',
             payload: { contacts: contactPayloads },
           });
-          console.log(`[BM] Persisted ${contactPayloads.length} scraped contacts to DB`);
+          logger.log(`[BM] Persisted ${contactPayloads.length} scraped contacts to DB`);
         }
       } catch (err) {
         // Non-critical — don't block automation if contact persistence fails
-        console.warn('[BM] Failed to persist scraped contacts:', err);
+        logger.warn('[BM] Failed to persist scraped contacts:', err);
       }
     }
 
@@ -2256,7 +2200,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
           await simulateBrowsing();
           await randomDelay(delayMin, delayMax);
         } catch (err) {
-          console.error(`[BM] Error processing advance/follow-up for ${friend.name}:`, err);
+          logger.error(`[BM] Error processing advance/follow-up for ${friend.name}:`, err);
           const { shouldPause } = await recordSendFailure();
           await addActivityLogEntry(
             'error',
@@ -2274,7 +2218,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
   }
 
   await addActivityLogEntry('info', `Automation run complete. Total sent: ${sent}`);
-  console.log(`[BM] Automation run complete. Total sent: ${sent}`);
+  logger.log(`[BM] Automation run complete. Total sent: ${sent}`);
 }
 
 // ============================================================

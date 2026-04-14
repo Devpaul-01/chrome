@@ -18,6 +18,22 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # run backend tests before building the image
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install backend dependencies
+        working-directory: bm-ts/backend
+        run: |
+          pip install -e ".[test]"
+
+      - name: Run backend tests
+        working-directory: bm-ts/backend
+        run: |
+          python -m pytest --tb=short -q
+
       # log into gitea registry so i can push images
       - name: Login to registry
         run: |

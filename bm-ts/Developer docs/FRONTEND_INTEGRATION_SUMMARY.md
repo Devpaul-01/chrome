@@ -1,7 +1,7 @@
 # Frontend Integration Summary
 
-**Last Updated:** April 12, 2026  
-**Version:** 0.3.0  
+**Last Updated:** April 14, 2026  
+**Version:** 0.4.0  
 **Scope:** Complete architecture of the Chrome MV3 extension — covering the popup React app, background service worker, content scripts, build toolchain, state management, and how each layer communicates.
 
 ---
@@ -20,7 +20,7 @@ The BirthdayMessaging frontend is a Chrome Manifest V3 extension built with **Re
                        │ chrome.runtime.sendMessage
                        ▼
 ┌────────────────────────────────────────────────────────────────┐
-│  Background Service Worker (background/index.ts, 926 lines)    │
+│  Background Service Worker (background/index.ts, 994 lines)    │
 │  Receives BackgroundMessage, dispatches to api/client.ts       │
 │  Manages auth tokens, automation alarms, WebSocket lifecycle   │
 │  Returns { success: true, data } or { success: false, error }  │
@@ -32,7 +32,7 @@ The BirthdayMessaging frontend is a Chrome Manifest V3 extension built with **Re
 └────────────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────────────┐
-│  Content Script (content/index.ts, 2,305 lines)                 │
+│  Content Script (content/index.ts, 2,474 lines)                 │
 │  Injected into facebook.com/* at document_idle                 │
 │  DOM scraping, overlay UI, Messenger automation, timeline posts│
 │  Communicates with background via sendContentMessage()         │
@@ -123,20 +123,20 @@ Additional outputs: `chunks/*.js` (shared code), `assets/*` (CSS, images).
 ```
 extension/src/
 ├── api/
-│   ├── client.ts          # 925 lines — HTTP client (60 exported functions, all types)
-│   ├── websocket.ts       # 207 lines — WebSocket client class with auto-reconnect
+│   ├── client.ts          # 1,090 lines — HTTP client (60 exported functions, all types)
+│   ├── websocket.ts       # 243 lines — WebSocket client class with auto-reconnect
 │   └── __tests__/
 ├── background/
-│   └── index.ts           # 926 lines — Service worker: message router, auth, automation
+│   └── index.ts           # 994 lines — Service worker: message router, auth, automation
 ├── content/
-│   ├── index.ts           # 2,305 lines — Content script: overlay, automation, scraper
+│   ├── index.ts           # 2,474 lines — Content script: overlay, automation, scraper
 │   ├── api.ts             # Bridge to background via chrome.runtime.sendMessage
-│   ├── dom-helpers.ts     # 292 lines — waitForElement(), delay(), DOM utilities
-│   ├── messenger.ts       # 513 lines — Messenger archive/unarchive automation
-│   └── timeline.ts        # 512 lines — Timeline post automation with image support
+│   ├── dom-helpers.ts     # 335 lines — waitForElement(), delay(), DOM utilities
+│   ├── messenger.ts       # 609 lines — Messenger archive/unarchive automation
+│   └── timeline.ts        # 605 lines — Timeline post automation with image support
 ├── popup/
 │   ├── main.tsx           # React root mount
-│   ├── App.tsx            # 805 lines — Root component, view routing, tab navigation
+│   ├── App.tsx            # 851 lines — Root component, view routing, tab navigation
 │   ├── api.ts             # sendBackgroundMessage() bridge
 │   ├── popup.css          # Tailwind-powered styles
 │   ├── context/
@@ -163,7 +163,6 @@ extension/src/
     ├── message.ts         # Message composition, keyword resolution, gender selection
     ├── messages.ts        # Discriminated-union message type definitions
     ├── notifications.ts   # Chrome notification API helpers
-    ├── offline-queue.ts   # Offline message queueing for intermittent connectivity
     ├── storage.ts         # Token & config persistence via chrome.storage.local
     └── update-check.ts    # Extension update detection and notification
 ```
@@ -240,7 +239,7 @@ The `AppProvider` in `context/AppContext.tsx` provides global state via React Co
 | `handleLogout()` | function | Clears tokens, disconnects WebSocket, resets state |
 | `refreshUser()` | function | Re-fetch user profile & reconnect WebSocket |
 
-**View modes** (24 total): `main`, `change-password`, `schedules`, `scheduling`, `automation`, `message-templates`, `queue`, `history`, `analytics`, `upcoming-birthdays`, `posts`, `postLibrary`, `post-list`, `groups`, `images`, `contacts`, `add-contact`, `edit-contact`, `import-contacts`, `birthday-calendar`, `smtp-settings`, `account-management`, `subscription`, `template-gallery`.
+**View modes** (22 total): `main`, `change-password`, `schedules`, `scheduling`, `automation`, `message-templates`, `queue`, `history`, `analytics`, `upcoming-birthdays`, `posts`, `postLibrary`, `images`, `contacts`, `add-contact`, `edit-contact`, `import-contacts`, `birthday-calendar`, `smtp-settings`, `account-management`, `subscription`, `template-gallery`.
 
 Navigation is entirely state-driven — there are no browser routes. All view transitions go through `setViewMode()`.
 
@@ -422,10 +421,10 @@ Receives an `AutomationRunPayload` from the background and executes three phases
 
 | Module | Lines | Functions |
 |---|---|---|
-| `content/index.ts` | 2,305 | `gatherBirthdayFriends()`, `fillMessageAndSend()`, `openMessageDialog()`, `scrapeBirthdayContactsFromPage()` |
-| `content/messenger.ts` | 513 | `archiveConversation()`, conversation lookup, MutationObserver for replies |
-| `content/timeline.ts` | 512 | `postToTimeline()`, `navigateToProfile()`, `openPostComposer()`, Nifty Images merge tags |
-| `content/dom-helpers.ts` | 292 | `waitForElement(selector, timeout)`, `delay(ms)`, DOM utilities |
+| `content/index.ts` | 2,474 | `gatherBirthdayFriends()`, `fillMessageAndSend()`, `openMessageDialog()`, `scrapeBirthdayContactsFromPage()` |
+| `content/messenger.ts` | 609 | `archiveConversation()`, conversation lookup, MutationObserver for replies |
+| `content/timeline.ts` | 605 | `postToTimeline()`, `navigateToProfile()`, `openPostComposer()`, Nifty Images merge tags |
+| `content/dom-helpers.ts` | 335 | `waitForElement(selector, timeout)`, `delay(ms)`, DOM utilities |
 
 ### Contact Scraper
 
@@ -443,7 +442,7 @@ Returns `ScrapedContact[]` with `{ name, facebook_profile_url, birthday? }`.
 
 ## API Client Layer (`api/client.ts`)
 
-863 lines exporting 60 functions and all TypeScript interfaces. Every function follows the signature:
+1,090 lines exporting 60 functions and all TypeScript interfaces. Every function follows the signature:
 
 ```typescript
 (baseUrl: string, accessToken?: string, ...args) => Promise<T>

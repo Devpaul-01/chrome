@@ -1,6 +1,6 @@
 ﻿# BirthdayMessaging (bm-ts) — MVP Checklist
 
-**Last Updated:** April 13, 2026
+**Last Updated:** April 15, 2026
 **Status:** Development-Complete / Pre-Production — All features implemented on both backend and frontend. Facebook automation pipeline fully functional. Production infrastructure, deployment, and Chrome Web Store submission are the remaining blockers.
 
 ---
@@ -9,38 +9,38 @@
 
 This checklist tracks all remaining tasks required to ship bm-ts as a production-ready MVP. The application is **feature-complete for MVP scope** — all backend routers, database models, frontend components, content scripts, and the automation pipeline are built, tested, and wired together. The primary remaining work is **production infrastructure, deployment, and Chrome Web Store publication**.
 
-### Verified Codebase Statistics (April 12, 2026)
+### Verified Codebase Statistics (April 14, 2026)
 
 | Metric | Count |
 |--------|-------|
-| Backend Routers | 15 (+ 2 inline endpoints in main.py; message_groups deactivated) |
-| Backend HTTP Endpoints | 75 + 1 WebSocket |
-| Backend ORM Models | 18 (18 tables, 5 enums, 32 indexes) |
-| Backend Tests | 287 across 25 test files |
-| Backend Runtime Dependencies | 17 |
+| Backend Routers | 15 active + 1 deactivated (+ 2 inline endpoints in main.py; message_groups deactivated) |
+| Backend HTTP Endpoints | 75 active + 1 WebSocket (80 total defined incl. deactivated message_groups) |
+| Backend ORM Models | 18 (18 tables, 5 enums, 34 indexes) |
+| Backend Tests | 287 across 24 test files |
+| Backend Runtime Dependencies | 16 (`aiosqlite` moved to `[project.optional-dependencies]` test group) |
 | Backend LOC | ~5,324 Python |
 | Alembic Migrations | 7 |
 | Frontend Components | 40 (in components/) |
 | Frontend Custom Hooks | 7 (across 7 files + 1 context) |
-| Frontend Tests | 360 across 18 test files |
+| Frontend Tests | 393 across 21 test files |
 | Frontend Runtime Dependencies | 3 (React, ReactDOM, react-calendar) |
 | API Client Functions | 60 |
-| Background Message Types | 73 |
-| Content Script Files | 5 (~3,640 lines) |
-| Utility Files | 14 (~1,913 lines) |
-| ViewMode States | 24 |
-| CI/CD Workflows | 3 (Gitea Actions) |
+| Background Message Types | 73 active (76 defined; 3 commented out) |
+| Content Script Files | 5 (~4,095 lines) |
+| Utility Files | 13 (~2,043 lines) |
+| ViewMode States | 24 (18 active + 5 disabled/commented + 1 transitional) |
+| CI/CD Workflows | 4 (Gitea Actions: frontend-ci, backend-ci, deploy, dependency-scan) |
 | User-Facing HTML Pages | 6 |
 
 ### What Remains (Priority Order)
 
 1. **P0 — Production Infrastructure** — Cloud provider, managed PostgreSQL, domain + TLS, environment configuration
 2. **P0 — Chrome Web Store Submission** — Listing assets, permissions justification, production build testing
-3. **P1 — Backend Test CI** — Automated pytest/linting on PR (deploy pipeline exists, test pipeline does not)
+3. ~~**P1 — Backend Test CI**~~ — ✅ DONE (`backend-ci.yaml`: Ruff lint+format, pytest, pip-audit)
 4. **P1 — Monitoring & Observability** — Error tracking, uptime monitoring, alerting
 5. **P1 — End-to-End Testing** — Manual verification of all critical user flows in production
 6. **P2 — Image Upload/Storage** — Currently URL-based; needs S3/R2 for actual file uploads
-7. **P2 — Extended Test Coverage** — E2E (Playwright), background worker tests, hook tests
+7. **P2 — Extended Test Coverage** — E2E (Playwright), expand background worker & hook tests, more integration tests
 8. **P3 — Nice to Have** — Dark mode, i18n, interactive tutorials, analytics improvements
 
 ---
@@ -107,15 +107,19 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
   - [ ] Small tile icon (128x128)
   - [ ] Large tile icon (440x280)
   - [ ] Marquee image (1400x560)
+- [ ] Remove `localhost/*` from `host_permissions` in `manifest.json` before production build (Chrome Web Store will reject)
 - [ ] Prepare permissions justification document:
   - `storage` — Save user preferences and auth tokens
   - `scripting` — Inject content scripts on Facebook
   - `activeTab` — Access current tab for automation
   - `tabs` — Query Facebook tabs for automation
   - `notifications` — OS-level alerts for automation events
-  - `alarms` (optional) — Schedule periodic birthday checks
+  - `alarms` — Schedule periodic birthday checks
+  - `clipboardWrite` — Fill message input fields and attach images via clipboard API
   - `host_permissions` (facebook.com) — Automate birthday messages
 - [ ] Confirm privacy policy URL (already created: `privacy-policy.html`)
+- [ ] Replace `[SUPPORT_EMAIL]` placeholder in `privacy-policy.html` and `terms-of-service.html`
+- [ ] Add `clipboardWrite` justification to privacy policy (currently not documented; permission IS used)
 - [ ] Set support email
 - [ ] Submit for Chrome Web Store review
 
@@ -124,14 +128,16 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 ## P1 — High Priority (Required Shortly After Launch)
 
 ### 3. Backend Test CI Pipeline
-**Status:** Missing — Deploy pipeline exists (`deploy.yaml`) but no automated test runs on PR
+**Status:** ✅ DONE (April 15, 2026)
 
-- [ ] Create `.gitea/workflows/backend-ci.yaml`:
-  - [ ] Run `pytest` on all ~287 tests
-  - [ ] Run linting (`ruff` or `flake8`)
-  - [ ] Run type checking (`mypy`) — optional
-  - [ ] Report code coverage (`pytest-cov`, target >80%)
-- [ ] Wire to run on PR to `main`/`develop`
+- [x] Created `.gitea/workflows/backend-ci.yaml`:
+  - [x] Run `pytest` on all 287 tests (24 files)
+  - [x] Run linting (`ruff check` + `ruff format --check`)
+  - [ ] Run type checking (`mypy`) — optional, not yet added
+  - [ ] Report code coverage (`pytest-cov`, target >80%) — not yet added
+- [x] Wired to run on PR to `main`/`develop`
+- [x] Created `.gitea/workflows/dependency-scan.yaml` (pip-audit for Python CVE scanning)
+- [x] Added pytest step to existing `deploy.yaml` pipeline
 
 ### 4. Monitoring & Observability
 **Status:** Not Started
@@ -160,6 +166,18 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] `asyncpg` remains as the async runtime driver and stays in core dependencies
 - [ ] Update `backend/Dockerfile` if the psycopg install step changes
 
+### 6b. Move `aiosqlite` to Optional (Test) Dependencies
+**Status:** ✅ DONE (April 15, 2026)
+
+- [x] Moved `aiosqlite>=0.20` from `[project.dependencies]` to `[project.optional-dependencies]` test group
+- [x] Verified `pip install -e ".[test]"` still works for test runs
+
+### 6c. Gunicorn Production Configuration
+**Status:** Not Started — Dockerfile uses bare `gunicorn` command with no config file
+
+- [ ] Create `gunicorn.conf.py` with production-appropriate settings (timeout, graceful-timeout, max-requests, max-requests-jitter)
+- [ ] Update Dockerfile CMD to reference config file
+
 ---
 
 ## P2 — Medium Priority (Post-Launch Enhancements)
@@ -184,8 +202,10 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Target: >80% code coverage
 
 #### Frontend/Extension Gaps
-- [ ] Background service worker tests (0 coverage currently)
-- [ ] Custom hook tests (0 coverage currently)
+- [x] Background service worker tests (`background/__tests__/index.test.ts` — 9 tests)
+- [x] Custom hook tests (`useMessages.test.ts` — 18 tests, `useImageLibrary.test.ts` — 10 tests)
+- [ ] Expand background service worker test coverage (currently minimal)
+- [ ] Add hook tests for remaining 5 untested hooks (`useContacts`, `usePostComposer`, `useSMTPConfig`, `useTemplateSegments`, `useMessageTemplates`)
 - [ ] E2E testing framework (Playwright or Puppeteer)
 - [ ] Critical E2E flows:
   - [ ] Install -> register -> login -> create template -> schedule -> verify
@@ -258,12 +278,17 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 
 ## Known Technical Debt
 
-1. **`POST /send-birthday-message`** — Stub endpoint that returns `{"status": "sent"}` without doing anything. Content scripts handle actual sending. Kept for rate limiting and auth enforcement.
+1. **`POST /send-birthday-message`** — Stub endpoint that returns **501 Not Implemented**. Content scripts handle actual sending. Kept for rate limiting and auth enforcement.
 2. **`POST /images/upload-file`** — Stores base64 data URIs directly in DB (`# TODO: Upload to cloud storage`). Works but not scalable.
 3. **Image storage** — All image handling is URL-based or base64-in-DB. No cloud object storage configured.
 4. **Subscription proration** — `change-plan` modal shows generic Stripe proration message, no calculated amount preview from Stripe API.
-5. **No backend test CI** — Backend deploy pipeline exists, but tests are not run automatically on PR.
-6. **Redundant database drivers** — Both `asyncpg>=0.28` (async runtime) and `psycopg[binary]>=3.1` (sync) in runtime deps; `psycopg` may only be needed for Alembic and should move to optional deps.
+5. **Redundant database drivers** — Both `asyncpg>=0.28` (async runtime) and `psycopg[binary]>=3.1` (sync) in runtime deps; `psycopg` may only be needed for Alembic and should move to optional deps.
+6. **`localhost/*` in manifest.json `host_permissions`** — Development-only, must be removed before Chrome Web Store submission.
+7. **CORS default extension ID** — `config.py` defaults CORS to legacy extension ID `cpobkmncaokclgimgcefglokgigjlcoj`. New published extension will have a different ID; must override via `CORS_ORIGINS` env var.
+8. **`clipboardWrite` undocumented** — Permission is requested in manifest and actively used (message filling, image attachment), but not justified in `privacy-policy.html`.
+9. **`[SUPPORT_EMAIL]` placeholders** — Both `privacy-policy.html` and `terms-of-service.html` contain `[SUPPORT_EMAIL]` placeholder text.
+10. **No gunicorn config file** — Production Dockerfile uses bare `gunicorn` command without tuning for timeouts, graceful shutdown, or worker recycling.
+11. **No Stripe test/live mode distinction** — `config.py` validates Stripe key isn't a placeholder but doesn't warn or block if test keys are used in production environment.
 
 ---
 
@@ -282,7 +307,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 8. [ ] Set up basic monitoring (Sentry + uptime check)
 
 ### Soon
-9. [ ] Add backend test CI pipeline
+9. [x] ~~Add backend test CI pipeline~~ (DONE — `backend-ci.yaml`, `dependency-scan.yaml`, pytest in `deploy.yaml`)
 11. [ ] Expand test coverage (background worker, hooks, E2E)
 12. [ ] Set up cloud image storage (if needed beyond URL-based)
 13. [ ] Soft launch to beta group and iterate on feedback

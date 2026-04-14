@@ -132,8 +132,15 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
         db_status = "unavailable"
     return {"status": "ok", "database": db_status}
 
-# TODO: Implement actual birthday message sending logic (currently a stub)
-@app.post("/send-birthday-message")
+@app.post("/send-birthday-message", status_code=501)
 @limiter.limit("1/45seconds")
 async def send_message(request: Request, _user: User = Depends(get_current_user)):
-    return {"status": "sent"}
+    """Birthday messages are sent client-side by the content script.
+
+    This endpoint exists as a placeholder for potential future server-side
+    sending.  It is not used by the extension and always returns 501.
+    """
+    return JSONResponse(
+        status_code=501,
+        content={"detail": "Not implemented. Birthday messages are sent by the content script."},
+    )

@@ -105,13 +105,6 @@ async def test_delete_nonexistent_message_template(async_client: AsyncClient) ->
     assert resp.status_code == 404
 
 
-@pytest.mark.skip(reason="message_groups router is disabled")
-@pytest.mark.asyncio
-async def test_delete_nonexistent_message_group(async_client: AsyncClient) -> None:
-    resp = await async_client.delete(f"/api/message-groups/{uuid4()}")
-    assert resp.status_code == 404
-
-
 @pytest.mark.asyncio
 async def test_delete_nonexistent_image(async_client: AsyncClient) -> None:
     resp = await async_client.delete(f"/api/images/{uuid4()}")
@@ -142,13 +135,6 @@ async def test_get_nonexistent_message_template(async_client: AsyncClient) -> No
     assert resp.status_code == 404
 
 
-@pytest.mark.skip(reason="message_groups router is disabled")
-@pytest.mark.asyncio
-async def test_get_nonexistent_message_group(async_client: AsyncClient) -> None:
-    resp = await async_client.get(f"/api/message-groups/{uuid4()}")
-    assert resp.status_code == 404
-
-
 @pytest.mark.asyncio
 async def test_get_nonexistent_image(async_client: AsyncClient) -> None:
     resp = await async_client.get(f"/api/images/{uuid4()}")
@@ -176,13 +162,6 @@ async def test_update_nonexistent_post(async_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_update_nonexistent_message_template(async_client: AsyncClient) -> None:
     resp = await async_client.put(f"/api/message-templates/{uuid4()}", json={"title": "X"})
-    assert resp.status_code == 404
-
-
-@pytest.mark.skip(reason="message_groups router is disabled")
-@pytest.mark.asyncio
-async def test_update_nonexistent_message_group(async_client: AsyncClient) -> None:
-    resp = await async_client.put(f"/api/message-groups/{uuid4()}", json={"name": "X"})
     assert resp.status_code == 404
 
 
@@ -252,15 +231,6 @@ async def test_create_message_template_missing_title(async_client: AsyncClient) 
         "greeting": "Hi",
         "sentiment": "Body",
         "closing": "Bye",
-    })
-    assert resp.status_code == 422
-
-
-@pytest.mark.skip(reason="message_groups router is disabled")
-@pytest.mark.asyncio
-async def test_create_message_group_missing_name(async_client: AsyncClient) -> None:
-    resp = await async_client.post("/api/message-groups", json={
-        "segment_ids": [],
     })
     assert resp.status_code == 422
 
@@ -409,18 +379,6 @@ async def test_message_template_response_schema(async_client: AsyncClient) -> No
                 "days_in_advance", "created_at"]:
         assert key in data, f"MessageTemplate missing key: {key}"
     assert isinstance(data["days_in_advance"], int)
-
-
-@pytest.mark.skip(reason="message_groups router is disabled")
-@pytest.mark.asyncio
-async def test_message_group_response_schema(async_client: AsyncClient) -> None:
-    payload = {"name": "Schema Group", "gender": "FEMALE", "segment_ids": []}
-    resp = await async_client.post("/api/message-groups", json=payload)
-    assert resp.status_code == 201
-    data = resp.json()
-    for key in ["id", "name", "gender", "segment_ids", "created_at"]:
-        assert key in data, f"MessageGroup missing key: {key}"
-    assert isinstance(data["segment_ids"], list)
 
 
 @pytest.mark.asyncio
@@ -631,18 +589,6 @@ async def test_message_templates_filter_by_gender(async_client: AsyncClient) -> 
     assert items[0]["gender"] == "MALE"
 
 
-@pytest.mark.skip(reason="message_groups router is disabled")
-@pytest.mark.asyncio
-async def test_message_groups_filter_by_gender(async_client: AsyncClient) -> None:
-    await async_client.post("/api/message-groups", json={"name": "M", "gender": "MALE", "segment_ids": []})
-    await async_client.post("/api/message-groups", json={"name": "F", "gender": "FEMALE", "segment_ids": []})
-
-    resp = await async_client.get("/api/message-groups", params={"gender": "FEMALE"})
-    items = resp.json()
-    assert len(items) == 1
-    assert items[0]["gender"] == "FEMALE"
-
-
 @pytest.mark.asyncio
 async def test_birthday_configs_filter_by_mode(async_client: AsyncClient) -> None:
     await async_client.post("/api/birthday-configs", json={"mode": "ON_DAY", "days_offset": 0})
@@ -844,20 +790,6 @@ async def test_message_templates_sorted_by_created_at_desc(async_client: AsyncCl
     created = [t["created_at"] for t in items]
     assert created == sorted(created, reverse=True), \
         f"Templates not sorted desc: {created}"
-
-
-@pytest.mark.skip(reason="message_groups router is disabled")
-@pytest.mark.asyncio
-async def test_message_groups_sorted_by_created_at_desc(async_client: AsyncClient) -> None:
-    """Message groups list is sorted by created_at descending."""
-    for name in ["GroupA", "GroupB", "GroupC"]:
-        await async_client.post("/api/message-groups", json={"name": name, "segment_ids": []})
-
-    resp = await async_client.get("/api/message-groups")
-    items = resp.json()
-    created = [g["created_at"] for g in items]
-    assert created == sorted(created, reverse=True), \
-        f"Groups not sorted desc: {created}"
 
 
 @pytest.mark.asyncio
