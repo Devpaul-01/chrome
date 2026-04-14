@@ -284,9 +284,7 @@ describe('TemplateCreator', () => {
     const user = userEvent.setup();
     render(<TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
     await user.click(screen.getByRole('button', { name: /preview/i }));
-    await waitFor(() =>
-      expect(screen.getByText(/message preview/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/message preview/i)).toBeInTheDocument());
   });
 
   it('Cancel button returns to the create tab from preview', async () => {
@@ -294,14 +292,10 @@ describe('TemplateCreator', () => {
     render(<TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
     // Navigate to preview tab
     await user.click(screen.getByRole('button', { name: /preview/i }));
-    await waitFor(() =>
-      expect(screen.getByText(/message preview/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/message preview/i)).toBeInTheDocument());
     // Cancel resets form AND sets activeTab back to 'create'
     await user.click(screen.getByRole('button', { name: /cancel/i }));
-    await waitFor(() =>
-      expect(screen.queryByText(/message preview/i)).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText(/message preview/i)).not.toBeInTheDocument());
     expect(getGreetingArea()).toBeInTheDocument();
   });
 
