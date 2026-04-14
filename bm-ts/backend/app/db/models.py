@@ -396,7 +396,7 @@ class Contact(Base):
     name = Column(Text(), nullable=False)
     facebook_profile_url = Column(Text(), nullable=False)
     birthday = Column(DateTime(timezone=True), nullable=False)
-    birthday_month_only = Column(Boolean, nullable=False, server_default=text("false"))
+    birthday_month_only = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     gender = Column(gender_enum)
     notes = Column(Text())
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))

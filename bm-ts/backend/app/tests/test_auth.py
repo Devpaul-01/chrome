@@ -37,6 +37,9 @@ def _make_request(user_agent: str = "pytest") -> Request:
             "type": "http",
             "method": "POST",
             "path": "/auth/refresh",
+            "scheme": "http",
+            "query_string": b"",
+            "root_path": "",
             "headers": [(b"user-agent", user_agent.encode("utf-8"))],
             "client": ("127.0.0.1", 12345),
         }

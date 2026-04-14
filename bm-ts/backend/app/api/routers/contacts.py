@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.api.deps import get_current_user
 from app.db.models import Contact, User
@@ -39,7 +39,7 @@ async def create_contact(
     return contact
 
 
-@router.post("/bulk", response_model=List[ContactOut], status_code=status.HTTP_200_OK)
+@router.post("/bulk", response_model=List[ContactOut], status_code=status.HTTP_201_CREATED)
 async def bulk_create_contacts(
     contacts_data: List[ContactCreate],
     current_user: User = Depends(get_current_user),
@@ -50,33 +50,34 @@ async def bulk_create_contacts(
         return []
 
     results: list[Contact] = []
+    now = datetime.now(timezone.utc)
     for data in contacts_data:
-        stmt = (
-            pg_insert(Contact)
-            .values(
+        stmt = select(Contact).where(
+            Contact.user_id == current_user.id,
+            Contact.facebook_profile_url == data.facebook_profile_url,
+        )
+        result = await db.execute(stmt)
+        contact = result.scalar_one_or_none()
+
+        if contact:
+            contact.name = data.name
+            contact.birthday = data.birthday
+            contact.birthday_month_only = data.birthday_month_only or False
+            contact.gender = data.gender.value if data.gender else None
+            contact.notes = data.notes
+            contact.updated_at = now
+        else:
+            contact = Contact(
                 user_id=current_user.id,
                 name=data.name,
                 facebook_profile_url=data.facebook_profile_url,
                 birthday=data.birthday,
-                birthday_month_only=data.birthday_month_only,
+                birthday_month_only=data.birthday_month_only or False,
                 gender=data.gender.value if data.gender else None,
                 notes=data.notes,
             )
-            .on_conflict_do_update(
-                index_elements=["user_id", "facebook_profile_url"],
-                set_={
-                    "name": data.name,
-                    "birthday": data.birthday,
-                    "birthday_month_only": data.birthday_month_only,
-                    "gender": data.gender.value if data.gender else None,
-                    "notes": data.notes,
-                    "updated_at": text("now()"),
-                },
-            )
-            .returning(Contact)
-        )
-        result = await db.execute(stmt)
-        contact = result.scalar_one()
+            db.add(contact)
+
         results.append(contact)
 
     await db.commit()

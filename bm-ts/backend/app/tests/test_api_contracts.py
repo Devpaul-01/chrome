@@ -1,5 +1,5 @@
 ﻿"""
-tests/test_api_contracts.py — API contract tests verifying status codes,
+tests/test_api_contracts.py � API contract tests verifying status codes,
 required fields, pagination, filtering, sorting, and response schemas
 for every endpoint.
 """
@@ -18,9 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import MessageHistory, MessageQueue, User
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 # 1. STATUS CODE CONTRACTS
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_health_returns_200(async_client: AsyncClient) -> None:
@@ -56,7 +56,6 @@ async def test_unauthenticated_multiple_endpoints() -> None:
             "/api/posts",
             "/api/schedules",
             "/api/message-templates",
-            "/api/message-groups",
             "/api/images",
             "/api/messages/queue",
             "/api/messages/history",
@@ -106,6 +105,7 @@ async def test_delete_nonexistent_message_template(async_client: AsyncClient) ->
     assert resp.status_code == 404
 
 
+@pytest.mark.skip(reason="message_groups router is disabled")
 @pytest.mark.asyncio
 async def test_delete_nonexistent_message_group(async_client: AsyncClient) -> None:
     resp = await async_client.delete(f"/api/message-groups/{uuid4()}")
@@ -142,6 +142,7 @@ async def test_get_nonexistent_message_template(async_client: AsyncClient) -> No
     assert resp.status_code == 404
 
 
+@pytest.mark.skip(reason="message_groups router is disabled")
 @pytest.mark.asyncio
 async def test_get_nonexistent_message_group(async_client: AsyncClient) -> None:
     resp = await async_client.get(f"/api/message-groups/{uuid4()}")
@@ -178,6 +179,7 @@ async def test_update_nonexistent_message_template(async_client: AsyncClient) ->
     assert resp.status_code == 404
 
 
+@pytest.mark.skip(reason="message_groups router is disabled")
 @pytest.mark.asyncio
 async def test_update_nonexistent_message_group(async_client: AsyncClient) -> None:
     resp = await async_client.put(f"/api/message-groups/{uuid4()}", json={"name": "X"})
@@ -190,9 +192,9 @@ async def test_update_nonexistent_birthday_config(async_client: AsyncClient) -> 
     assert resp.status_code == 404
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 # 2. REQUIRED FIELD VALIDATION (422 for missing fields)
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_register_missing_email(async_client: AsyncClient) -> None:
@@ -254,6 +256,7 @@ async def test_create_message_template_missing_title(async_client: AsyncClient) 
     assert resp.status_code == 422
 
 
+@pytest.mark.skip(reason="message_groups router is disabled")
 @pytest.mark.asyncio
 async def test_create_message_group_missing_name(async_client: AsyncClient) -> None:
     resp = await async_client.post("/api/message-groups", json={
@@ -321,9 +324,9 @@ async def test_create_queued_message_missing_content(async_client: AsyncClient) 
     assert resp.status_code == 422
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 # 3. RESPONSE SCHEMA VALIDATION
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_dashboard_stats_schema(async_client: AsyncClient) -> None:
@@ -408,6 +411,7 @@ async def test_message_template_response_schema(async_client: AsyncClient) -> No
     assert isinstance(data["days_in_advance"], int)
 
 
+@pytest.mark.skip(reason="message_groups router is disabled")
 @pytest.mark.asyncio
 async def test_message_group_response_schema(async_client: AsyncClient) -> None:
     payload = {"name": "Schema Group", "gender": "FEMALE", "segment_ids": []}
@@ -451,7 +455,7 @@ async def test_smtp_config_response_schema(async_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_birthday_config_response_schema(async_client: AsyncClient) -> None:
-    payload = {"mode": "normal", "days_offset": 0, "enabled": True}
+    payload = {"mode": "ON_DAY", "days_offset": 0, "enabled": True}
     resp = await async_client.post("/api/birthday-configs", json=payload)
     assert resp.status_code == 201
     data = resp.json()
@@ -529,13 +533,6 @@ async def test_delete_response_schema_all_resources(async_client: AsyncClient) -
     resp = await async_client.delete(f"/api/message-templates/{tmpl_resp.json()['id']}")
     assert resp.json() == {"status": "deleted"}
 
-    # Message group
-    grp_resp = await async_client.post("/api/message-groups", json={
-        "name": "Del Grp", "segment_ids": [],
-    })
-    resp = await async_client.delete(f"/api/message-groups/{grp_resp.json()['id']}")
-    assert resp.json() == {"status": "deleted"}
-
     # Image
     img_resp = await async_client.post("/api/images/upload", json={
         "url": "https://example.com/del.jpg",
@@ -545,15 +542,15 @@ async def test_delete_response_schema_all_resources(async_client: AsyncClient) -
 
     # Birthday config
     cfg_resp = await async_client.post("/api/birthday-configs", json={
-        "mode": "normal", "days_offset": 0,
+        "mode": "ON_DAY", "days_offset": 0,
     })
     resp = await async_client.delete(f"/api/birthday-configs/{cfg_resp.json()['id']}")
     assert resp.json() == {"status": "deleted"}
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 # 4. PAGINATION
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_history_pagination_multiple_pages(
@@ -599,9 +596,9 @@ async def test_history_pagination_multiple_pages(
     assert data["total"] == 7
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 # 5. FILTERING
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 
 _POST_BASE = {
     "image_url": "https://x.com/i.png", "label": "L",
@@ -634,6 +631,7 @@ async def test_message_templates_filter_by_gender(async_client: AsyncClient) -> 
     assert items[0]["gender"] == "MALE"
 
 
+@pytest.mark.skip(reason="message_groups router is disabled")
 @pytest.mark.asyncio
 async def test_message_groups_filter_by_gender(async_client: AsyncClient) -> None:
     await async_client.post("/api/message-groups", json={"name": "M", "gender": "MALE", "segment_ids": []})
@@ -647,22 +645,22 @@ async def test_message_groups_filter_by_gender(async_client: AsyncClient) -> Non
 
 @pytest.mark.asyncio
 async def test_birthday_configs_filter_by_mode(async_client: AsyncClient) -> None:
-    await async_client.post("/api/birthday-configs", json={"mode": "normal", "days_offset": 0})
-    await async_client.post("/api/birthday-configs", json={"mode": "advance", "days_offset": -1})
+    await async_client.post("/api/birthday-configs", json={"mode": "ON_DAY", "days_offset": 0})
+    await async_client.post("/api/birthday-configs", json={"mode": "EARLY", "days_offset": -1})
 
-    resp = await async_client.get("/api/birthday-configs", params={"mode": "advance"})
+    resp = await async_client.get("/api/birthday-configs", params={"mode": "EARLY"})
     items = resp.json()
     assert len(items) == 1
-    assert items[0]["mode"] == "advance"
+    assert items[0]["mode"] == "EARLY"
 
 
 @pytest.mark.asyncio
 async def test_birthday_configs_filter_by_enabled(async_client: AsyncClient) -> None:
     await async_client.post("/api/birthday-configs", json={
-        "mode": "normal", "days_offset": 0, "enabled": True,
+        "mode": "ON_DAY", "days_offset": 0, "enabled": True,
     })
     await async_client.post("/api/birthday-configs", json={
-        "mode": "followup", "days_offset": 1, "enabled": False,
+        "mode": "BELATED", "days_offset": 1, "enabled": False,
     })
 
     resp = await async_client.get("/api/birthday-configs", params={"enabled": "true"})
@@ -741,9 +739,9 @@ async def test_posts_no_filter_returns_all(async_client: AsyncClient) -> None:
     assert len(resp.json()) == 2
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 # 6. SORTING
-# ═══════════════════════════════════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_contacts_sorted_by_name(async_client: AsyncClient) -> None:
@@ -848,6 +846,7 @@ async def test_message_templates_sorted_by_created_at_desc(async_client: AsyncCl
         f"Templates not sorted desc: {created}"
 
 
+@pytest.mark.skip(reason="message_groups router is disabled")
 @pytest.mark.asyncio
 async def test_message_groups_sorted_by_created_at_desc(async_client: AsyncClient) -> None:
     """Message groups list is sorted by created_at descending."""
@@ -879,10 +878,10 @@ async def test_images_sorted_by_created_at_desc(async_client: AsyncClient) -> No
 @pytest.mark.asyncio
 async def test_birthday_configs_sorted_by_mode_and_offset(async_client: AsyncClient) -> None:
     """Birthday configs are sorted by mode ASC, then days_offset ASC."""
-    await async_client.post("/api/birthday-configs", json={"mode": "normal", "days_offset": 0})
-    await async_client.post("/api/birthday-configs", json={"mode": "advance", "days_offset": -2})
-    await async_client.post("/api/birthday-configs", json={"mode": "advance", "days_offset": -5})
-    await async_client.post("/api/birthday-configs", json={"mode": "followup", "days_offset": 1})
+    await async_client.post("/api/birthday-configs", json={"mode": "ON_DAY", "days_offset": 0})
+    await async_client.post("/api/birthday-configs", json={"mode": "EARLY", "days_offset": -2})
+    await async_client.post("/api/birthday-configs", json={"mode": "EARLY", "days_offset": -5})
+    await async_client.post("/api/birthday-configs", json={"mode": "BELATED", "days_offset": 1})
 
     resp = await async_client.get("/api/birthday-configs")
     items = resp.json()
@@ -890,6 +889,6 @@ async def test_birthday_configs_sorted_by_mode_and_offset(async_client: AsyncCli
     assert modes == sorted(modes), f"Configs not sorted by mode: {modes}"
 
     # Within same mode, offsets should be ascending
-    advance_offsets = [c["days_offset"] for c in items if c["mode"] == "advance"]
+    advance_offsets = [c["days_offset"] for c in items if c["mode"] == "EARLY"]
     assert advance_offsets == sorted(advance_offsets), \
         f"Advance offsets not sorted: {advance_offsets}"

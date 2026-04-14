@@ -1,7 +1,7 @@
 """
 schemas/birthday_config.py — Pydantic schemas for birthday automation configuration.
 
-  BirthdayModeEnum      — advance / normal / followup message timing modes
+  BirthdayModeEnum      — EARLY / ON_DAY / BELATED message timing modes (matches DB ENUM)
   BirthdayConfigCreate  — POST /api/birthday-configs body (includes mode-aware offset validator)
   BirthdayConfigUpdate  — PUT  /api/birthday-configs/{id} body (all fields optional)
   BirthdayConfigToggle  — PATCH /api/birthday-configs/{id}/toggle body (enable/disable only)
@@ -15,15 +15,15 @@ from enum import Enum
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, FieldValidationInfo
 
 from app.schemas.enums import GenderEnum
 
 
 class BirthdayModeEnum(str, Enum):
-    ADVANCE = "advance"
-    NORMAL = "normal"
-    FOLLOWUP = "followup"
+    EARLY = "EARLY"
+    ON_DAY = "ON_DAY"
+    BELATED = "BELATED"
 
 
 class BirthdayConfigCreate(BaseModel):
@@ -35,15 +35,16 @@ class BirthdayConfigCreate(BaseModel):
     archive_enabled: bool = False
     enabled: bool = True
 
-    @validator("days_offset")
-    def validate_days_offset(cls, v, values):
-        mode = values.get("mode")
-        if mode == BirthdayModeEnum.ADVANCE and not (-7 <= v <= -1):
-            raise ValueError("For advance mode, days_offset must be between -7 and -1")
-        elif mode == BirthdayModeEnum.NORMAL and v != 0:
-            raise ValueError("For normal mode, days_offset must be 0")
-        elif mode == BirthdayModeEnum.FOLLOWUP and not (1 <= v <= 7):
-            raise ValueError("For followup mode, days_offset must be between 1 and 7")
+    @field_validator("days_offset", mode="before")
+    @classmethod
+    def validate_days_offset(cls, v: int, info: FieldValidationInfo) -> int:
+        mode = info.data.get("mode")
+        if mode == BirthdayModeEnum.EARLY and not (-7 <= v <= -1):
+            raise ValueError("For EARLY mode, days_offset must be between -7 and -1")
+        elif mode == BirthdayModeEnum.ON_DAY and v != 0:
+            raise ValueError("For ON_DAY mode, days_offset must be 0")
+        elif mode == BirthdayModeEnum.BELATED and not (1 <= v <= 7):
+            raise ValueError("For BELATED mode, days_offset must be between 1 and 7")
         return v
 
 

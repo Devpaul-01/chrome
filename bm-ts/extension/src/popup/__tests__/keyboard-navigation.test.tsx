@@ -11,7 +11,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import React from 'react';
 
 // ---------------------------------------------------------------------------
 // MessageQueue — modal focus trap & Escape key
@@ -116,16 +115,38 @@ describe('MessageQueue – keyboard navigation', () => {
 // AutomationSettings — aria-pressed on interval presets
 // ---------------------------------------------------------------------------
 
+vi.mock('../api', () => ({
+  sendBackgroundMessage: vi.fn().mockResolvedValue({
+    enabled: true,
+    checkInterval: 60,
+    timezone: 'UTC',
+    birthdayLeadDays: 0,
+    birthdayWindowDays: 1,
+    maxMessagesPerDay: 10,
+    confirmationMode: 'each',
+    messageDelay: 0,
+    confirmBeforeSend: true,
+    schedulingStrategy: 'fixed',
+    preferredSendHour: 9,
+  }),
+}));
+
+import AutomationSettings from '../components/AutomationSettings';
+
 describe('AutomationSettings – keyboard accessibility', () => {
   it('interval preset buttons have aria-pressed reflecting active state', async () => {
-    // This is a structural test — we verify the aria-pressed attribute exists
-    // in the component source. We import and check the rendered output.
-    // Since AutomationSettings has heavy API dependencies, we verify
-    // the pattern was applied via a snapshot of the component's preset rendering.
-    // A full integration test would require mocking the entire API layer.
-    //
-    // The actual implementation was verified via code review:
-    // aria-pressed={config.checkInterval === preset.value}
-    expect(true).toBe(true); // Placeholder — verified via code review
+    render(<AutomationSettings onClose={vi.fn()} />);
+
+    // Wait for the component to load config and render presets
+    const buttons = await screen.findAllByRole('button', { name: /hour|hours/i });
+    expect(buttons.length).toBeGreaterThan(0);
+
+    // The 1h / 60-minute preset should be aria-pressed=true (matches checkInterval: 60)
+    const activeButton = buttons.find((btn) => btn.getAttribute('aria-pressed') === 'true');
+    expect(activeButton).toBeTruthy();
+
+    // Non-active presets should have aria-pressed=false
+    const inactiveButtons = buttons.filter((btn) => btn.getAttribute('aria-pressed') === 'false');
+    expect(inactiveButtons.length).toBeGreaterThan(0);
   });
 });

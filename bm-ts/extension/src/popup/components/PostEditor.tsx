@@ -13,6 +13,8 @@ type PostForm = {
   fontFamily?: string;
   fontSize?: number;
   fontColor?: string;
+  textX?: number;
+  textY?: number;
 };
 
 type Props = {
@@ -21,6 +23,8 @@ type Props = {
   onSubmit: (e: FormEvent<HTMLFormElement>) => Promise<void>;
   isSubmitting: boolean;
   message: string | null;
+  isEditing?: boolean;
+  onCancelEdit?: () => void;
   onViewPosts?: () => void;
 };
 
@@ -30,15 +34,16 @@ export default function PostEditor({
   onSubmit,
   isSubmitting,
   message,
+  isEditing = false,
+  onCancelEdit,
   onViewPosts,
 }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [showKeywords, setShowKeywords] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
-  const [activeTab, _setActiveTab] = useState<'create' | 'preview'>('create');
   const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { images: libraryImages, isLoading: isLoadingLibrary } = useImageLibrary();
 
   // Optimal post dimensions
@@ -136,6 +141,27 @@ export default function PostEditor({
     }
   };
 
+  const generatePostContent = async () => {
+    setIsGenerating(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const suggestions = [
+        'Happy Birthday {First_Name}! 🎂 Wishing you a day filled with joy and all the things you love!',
+        'Happy Birthday {First_Name}! Hope this year brings you everything you wished for! 🎉🎈',
+        '{First_Name}, wishing you the happiest of birthdays today! Hope your day is as wonderful as you are! 🥳',
+        'Happy Birthday to an amazing person! {First_Name}, hope today is everything you deserve and more! 🎂',
+        "Sending birthday wishes your way, {First_Name}! Hope you're celebrating surrounded by people who love you! 🎉",
+        'Another year, another reason to celebrate! Happy Birthday {First_Name}! Wishing you all the best! 🎈',
+        '{First_Name}, may your birthday be as bright and wonderful as the joy you bring to everyone around you! 🎂',
+        "It's your special day, {First_Name}! Wishing you a birthday full of laughter, love, and great memories! 🥳",
+      ];
+      const pick = suggestions[Math.floor(Math.random() * suggestions.length)];
+      setPostForm({ ...postForm, content: pick });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const insertKeyword = (keyword: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -170,24 +196,18 @@ export default function PostEditor({
 
     if (previewImage) {
       return (
-        <div className="space-y-3">
+        <div className="space-y-2">
           <FacebookPostPreview
             imageUrl={previewImage}
             text={previewText}
             fontFamily={postForm.fontFamily}
             fontSize={postForm.fontSize}
             fontColor={postForm.fontColor}
+            textX={postForm.textX ?? 0.5}
+            textY={postForm.textY ?? 0.5}
+            onTextPositionChange={(x, y) => setPostForm({ ...postForm, textX: x, textY: y })}
           />
-          <div className="text-center text-xs text-gray-600">1080×1350px (Optimized)</div>
-          <div className="flex justify-center">
-            <button
-              type="button"
-              onClick={() => setPostForm({ ...postForm, image_url: '' })}
-              className="btn-secondary text-xs py-1.5 px-4"
-            >
-              Remove Image
-            </button>
-          </div>
+          <p className="text-center text-xs text-gray-400">1080×1350px · drag text to reposition</p>
         </div>
       );
     }
@@ -232,108 +252,85 @@ export default function PostEditor({
     <form onSubmit={onSubmit} aria-label="Post editor" className="card">
       <h3 className="text-base font-bold text-blueStrong mb-6 pb-2 border-b border-gray-200">
         Create Timeline Post{' '}
-        <HelpTooltip label="Timeline posts are written on friends' Facebook walls on their birthdays. This is different from message templates, which are sent as comments on birthday posts." />
+        <HelpTooltip label="Timeline posts are written directly on friends' Facebook walls on their birthdays. This is different from message templates, which are sent as private direct messages." />
       </h3>
 
       <FeatureTip
         tipId="post_editor_intro"
-        message="Timeline posts appear directly on your friends' Facebook walls. Use keywords like {First_Name} and [Image] to personalise each post."
+        message="Timeline posts appear directly on your friends' Facebook walls. Use the ✨ Generate button for suggestions, or write your own."
       />
 
-      {activeTab === 'create' && (
-        <>
-          {/* Gender Target — commented out, feature not currently needed */}
-          {/* <label className="block mb-5 mt-5">
-            <span className="text-xs font-semibold text-textPrimary mb-2 block">Gender Target</span>
-            <select
-              value={postForm.gender}
-              onChange={(event) =>
-                setPostForm({
-                  ...postForm,
-                  gender: event.target.value as 'NEUTRAL' | 'MALE' | 'FEMALE',
-                })
-              }
-              className="text-field w-full"
-              aria-label="gender target"
-            >
-              <option value="NEUTRAL">Neutral (Any)</option>
-              <option value="MALE">Male Friends</option>
-              <option value="FEMALE">Female Friends</option>
-            </select>
-          </label> */}
+      <>
+        <label className="block mb-5">
+          <span className="text-xs font-semibold text-textPrimary mb-2 block">
+            Label / Description{' '}
+            <HelpTooltip label="A private name for this post — not shown to friends. Helps you identify it in your post library, e.g. 'Casual post' or 'Funny birthday'." />
+          </span>
+          <input
+            type="text"
+            value={postForm.label}
+            onChange={(event) => setPostForm({ ...postForm, label: event.target.value })}
+            placeholder="e.g., Casual Birthday Post"
+            className="text-field w-full"
+            required
+          />
+        </label>
 
-          <label className="block mb-5">
-            <span className="text-xs font-semibold text-textPrimary mb-2 block">
-              Label / Description{' '}
-              <HelpTooltip label="A private name for this post — not shown to friends. Helps you identify it in your post library, e.g. 'Casual post' or 'Funny birthday'." />
-            </span>
-            <input
-              type="text"
-              value={postForm.label}
-              onChange={(event) => setPostForm({ ...postForm, label: event.target.value })}
-              placeholder="e.g., Casual Birthday Post"
-              className="text-field w-full"
-            />
-          </label>
-
-          <div className="mb-6">
-            <label className="text-xs font-semibold text-textPrimary mb-2 block">
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-semibold text-textPrimary">
               Post Content{' '}
-              <HelpTooltip label="Write your birthday post here. Use {First_Name} to insert the friend's first name, {Last_Name} for their last name, {Today} for today's date, and [Image] to insert a random image from your library." />
+              <HelpTooltip label="Write your birthday post here. Use {First_Name} to insert the friend's first name, {Last_Name} for their last name, or {Today} for today's date." />
             </label>
-
             <button
               type="button"
-              onClick={() => setShowKeywords(!showKeywords)}
-              className="btn mb-3"
+              onClick={generatePostContent}
+              disabled={isGenerating}
+              className="btn-outline-orange"
             >
-              {showKeywords ? '− Hide Keywords' : '+ Insert Keyword'}
+              {isGenerating ? <>⏳ Generating...</> : <>✨ Generate</>}
             </button>
-
-            {showKeywords && (
-              <div className="flex gap-2 mb-3 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => insertKeyword('{First_Name}')}
-                  className="btn-sm-blue"
-                >
-                  {'{First_Name}'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertKeyword('{Last_Name}')}
-                  className="btn-sm-blue"
-                >
-                  {'{Last_Name}'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertKeyword('{Today}')}
-                  className="btn-sm-blue"
-                >
-                  {'{Today}'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertKeyword('[Image]')}
-                  className="btn-sm-blue"
-                >
-                  [Image]
-                </button>
-              </div>
-            )}
-
-            <textarea
-              ref={textareaRef}
-              value={postForm.content}
-              onChange={(event) => setPostForm({ ...postForm, content: event.target.value })}
-              className="text-field w-full"
-              rows={6}
-              placeholder="Write your birthday post... Use {First_Name}, {Last_Name}, {Today}, or [Image]"
-            />
           </div>
 
-          {/* Font Customization */}
+          <div className="flex gap-2 mb-3 flex-wrap" aria-label="Insert keyword">
+            <span className="text-xs text-gray-500 self-center">Insert:</span>
+            <button
+              type="button"
+              onClick={() => insertKeyword('{First_Name}')}
+              className="btn-sm-blue"
+            >
+              {'{First_Name}'}
+            </button>
+            <button
+              type="button"
+              onClick={() => insertKeyword('{Last_Name}')}
+              className="btn-sm-blue"
+            >
+              {'{Last_Name}'}
+            </button>
+            <button type="button" onClick={() => insertKeyword('{Today}')} className="btn-sm-blue">
+              {'{Today}'}
+            </button>
+            <button type="button" onClick={() => insertKeyword('[Image]')} className="btn-sm-blue">
+              {'[Image]'}
+            </button>
+          </div>
+
+          <textarea
+            ref={textareaRef}
+            value={postForm.content}
+            onChange={(event) => setPostForm({ ...postForm, content: event.target.value })}
+            className="text-field w-full"
+            rows={6}
+            placeholder="Write your birthday post... Use {First_Name}, {Last_Name}, {Today}, or [Image]"
+          />
+          <div className="text-right text-xs text-gray-400 mt-1">
+            {postForm.content.length} chars
+          </div>
+        </div>
+
+        {/* Font Customization — only shown when an image is attached */}
+        {postForm.image_url || postForm.content.includes('[Image]') ? (
           <div className="mb-6">
             <label className="text-xs font-semibold text-textPrimary mb-3 block">
               🎨 Text Style (appears on image){' '}
@@ -367,127 +364,108 @@ export default function PostEditor({
                 <input
                   type="range"
                   min="48"
-                  max="100"
+                  max="96"
                   step="4"
                   value={postForm.fontSize || 48}
                   onChange={(e) => setPostForm({ ...postForm, fontSize: parseInt(e.target.value) })}
                   className="w-full"
                 />
               </div>
+
+              {/* Font Color */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-2 block">Font Color</label>
+                <input
+                  type="color"
+                  value={postForm.fontColor || '#ffffff'}
+                  onChange={(e) => setPostForm({ ...postForm, fontColor: e.target.value })}
+                  className="w-full h-9 rounded cursor-pointer border border-gray-200"
+                  title="Pick text colour for image overlay"
+                />
+              </div>
             </div>
           </div>
+        ) : null}
 
-          {/* Image */}
-          <div className="mb-6">
-            <label className="text-xs font-semibold text-textPrimary mb-2 block">
-              🖼️ Attach Image{' '}
-              <HelpTooltip label="Upload a specific image for this post, or pick one from your Image Library. Alternatively, use [Image] in your post content to have a random library image inserted at send time." />{' '}
-              <span className="text-gray-400 font-normal">
-                (optional — or use [Image] for random)
-              </span>
-            </label>
-            {postForm.image_url ? (
-              <div>
-                <img
-                  src={postForm.image_url}
-                  alt="Attached image for birthday post"
-                  className="w-full rounded-lg shadow-sm mb-2"
-                  style={{ maxHeight: '180px', objectFit: 'contain' }}
-                />
+        {/* Image */}
+        <div className="mb-6">
+          <label className="text-xs font-semibold text-textPrimary mb-2 block">
+            🖼️ Attach Image{' '}
+            <HelpTooltip label="Upload a specific image for this post, or pick one from your Image Library. Alternatively, use [Image] in your post content to have a random library image inserted at send time." />{' '}
+            <span className="text-gray-400 font-normal">
+              (optional — or use [Image] for random)
+            </span>
+          </label>
+          {postForm.image_url ? (
+            <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
+              <img
+                src={postForm.image_url}
+                alt="Selected image"
+                className="w-12 h-12 object-cover rounded flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-700 font-medium">Image attached</p>
+                <p className="text-xs text-gray-400">Preview shown below</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPostForm({ ...postForm, image_url: '' })}
+                className="flex-shrink-0 rounded-md bg-gray-600 hover:bg-gray-700 active:bg-gray-800 text-white text-xs font-semibold px-3 py-1 transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setPostForm({ ...postForm, image_url: '' })}
-                  className="btn-secondary text-xs py-1 px-3"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessingImage}
+                  className="btn flex-1 text-sm"
                 >
-                  Remove Image
+                  {isProcessingImage ? '⏳ Resizing to 1080×1350…' : '📁 Upload'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setShowLibraryPicker(!showLibraryPicker)}
+                  className="btn flex-1 text-sm"
+                >
+                  🖼️ From Library
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isProcessingImage}
-                    className="btn flex-1 text-sm"
-                  >
-                    {isProcessingImage ? '⏳ Processing...' : '📁 Upload'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowLibraryPicker(!showLibraryPicker)}
-                    className="btn flex-1 text-sm"
-                  >
-                    🖼️ From Library
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="sr-only"
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  />
-                </div>
-                {imageError && <p className="text-xs text-red-600">{imageError}</p>}
-                {showLibraryPicker && (
-                  <ImageLibraryPicker
-                    images={libraryImages}
-                    isLoading={isLoadingLibrary}
-                    onSelect={(img) => {
-                      setPostForm({ ...postForm, image_url: img.url });
-                      setShowLibraryPicker(false);
-                    }}
-                    onClose={() => setShowLibraryPicker(false)}
-                    selectedUrl={postForm.image_url}
-                  />
-                )}
-              </div>
-            )}
-          </div>
+              {imageError && <p className="text-xs text-red-600">{imageError}</p>}
+              {showLibraryPicker && (
+                <ImageLibraryPicker
+                  images={libraryImages}
+                  isLoading={isLoadingLibrary}
+                  onSelect={(img) => {
+                    setPostForm({ ...postForm, image_url: img.url });
+                    setShowLibraryPicker(false);
+                  }}
+                  onClose={() => setShowLibraryPicker(false)}
+                  selectedUrl={postForm.image_url}
+                />
+              )}
+            </div>
+          )}
+        </div>
 
-          {/* Spacer */}
-          <div className="h-6" />
-
-          <div className="bg-white/80 rounded-lg p-5 shadow-sm border border-gray-200">
-            <div className="text-xs font-semibold text-textPrimary mb-3">📝 Available Keywords</div>
-            <ul className="text-xs text-gray-600 space-y-1 ml-4" style={{ listStyleType: 'disc' }}>
-              <li>
-                <code className="bg-surfaceSection px-1.5 py-0.5 rounded text-orangeStrong">
-                  {'{First_Name}'}
-                </code>{' '}
-                - Friend&apos;s first name
-              </li>
-              <li>
-                <code className="bg-surfaceSection px-1.5 py-0.5 rounded text-orangeStrong">
-                  {'{Last_Name}'}
-                </code>{' '}
-                - Friend&apos;s last name
-              </li>
-              <li>
-                <code className="bg-surfaceSection px-1.5 py-0.5 rounded text-orangeStrong">
-                  {'{Today}'}
-                </code>{' '}
-                - Current date
-              </li>
-              <li>
-                <code className="bg-surfaceSection px-1.5 py-0.5 rounded text-orangeStrong">
-                  {'[Image]'}
-                </code>{' '}
-                - Random image from library
-              </li>
-            </ul>
-          </div>
-
-          {/* Live Preview while editing */}
-          <div className="mb-6">
-            <div className="text-xs font-semibold text-textPrimary mb-2">Preview</div>
-            <div>{renderPreview()}</div>
-          </div>
-        </>
-      )}
-      {activeTab === 'preview' && renderPreview()}
+        {/* Live Preview while editing */}
+        <div className="mb-6">
+          <div className="text-xs font-semibold text-textPrimary mb-2">Preview</div>
+          <div>{renderPreview()}</div>
+        </div>
+      </>
 
       {message && (
         <div
@@ -506,10 +484,20 @@ export default function PostEditor({
         aria-disabled={isSubmitting || contentEmpty ? 'true' : 'false'}
         className="btn-primary btn-block mb-3 py-3 font-semibold"
       >
-        {isSubmitting ? 'Saving...' : 'Save Post'}
+        {isSubmitting ? 'Saving...' : isEditing ? 'Update Post' : 'Save Post'}
       </button>
 
-      {onViewPosts && (
+      {isEditing && onCancelEdit && (
+        <button
+          type="button"
+          onClick={onCancelEdit}
+          className="btn-secondary btn-block mb-3 py-3 font-semibold"
+        >
+          Cancel Edit
+        </button>
+      )}
+
+      {!isEditing && onViewPosts && (
         <button
           type="button"
           onClick={onViewPosts}

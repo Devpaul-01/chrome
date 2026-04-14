@@ -3,7 +3,7 @@ import { sendBackgroundMessage } from '../api';
 import { getErrorMessage, logError } from '../../utils/errors';
 import { useAppContext } from '../context/AppContext';
 import type { Contact } from '../components/ContactList';
-import type { UpdateContactPayload } from '../../api/client';
+import type { CreateContactPayload, UpdateContactPayload } from '../../api/client';
 
 // Normalises various contact shapes (frontend form or legacy) to the canonical
 // API payload.  Pass `opts.id` when building an update payload.
@@ -93,8 +93,9 @@ export function useContacts() {
       setIsSubmitting(true);
       setMessage(null);
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const payload = normalizeContactFields(contact as Record<string, unknown>) as any;
+        const payload = normalizeContactFields(
+          contact as Record<string, unknown>,
+        ) as unknown as CreateContactPayload;
         const newContact = await sendBackgroundMessage<Contact>({
           type: 'contacts.create',
           payload,
@@ -121,10 +122,9 @@ export function useContacts() {
       setIsSubmitting(true);
       setMessage(null);
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mapped = normalizeContactFields(contact as Record<string, unknown>, {
           id: editingContact.id,
-        }) as unknown as { id: string } & UpdateContactPayload;
+        }) as unknown as UpdateContactPayload & { id: string };
         const updated = await sendBackgroundMessage<Contact>({
           type: 'contacts.update',
           payload: mapped,

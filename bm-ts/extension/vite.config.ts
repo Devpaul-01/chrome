@@ -37,7 +37,7 @@ function buildContentScriptIIFE(outDir: string): Plugin {
   };
 }
 
-export default defineConfig(async () => {
+export default defineConfig(async ({ mode }) => {
   const lightningModule = await import("vite-plugin-lightningcss").catch(() => undefined);
   const lightning =
     lightningModule && "default" in lightningModule
@@ -58,7 +58,7 @@ export default defineConfig(async () => {
   build: {
     outDir,
     emptyOutDir: true,
-    sourcemap: false,
+    sourcemap: mode === 'staging',
     rollupOptions: {
       input: {
         popup: resolve(__dirname, "popup.html"),

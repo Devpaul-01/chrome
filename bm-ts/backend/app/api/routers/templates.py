@@ -12,7 +12,7 @@ Segments are the atomic building-blocks composed by
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
@@ -91,7 +91,7 @@ async def update_template(
         segment.content = data.content
     if data.label is not None:
         segment.label = data.label
-    segment.updated_at = datetime.utcnow()
+    segment.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(segment)
     return segment
@@ -113,7 +113,7 @@ async def delete_template(
     segment = result.scalar_one_or_none()
     if not segment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
-    segment.deleted_at = datetime.utcnow()
+    segment.deleted_at = datetime.now(timezone.utc)
     await db.commit()
     return DeleteResponse()
 

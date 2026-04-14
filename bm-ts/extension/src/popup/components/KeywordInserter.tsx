@@ -12,7 +12,7 @@ export default function KeywordInserter({ onInsert, compact = false }: KeywordIn
     { value: '{First_Name}', label: 'First Name', description: "Friend's first name" },
     { value: '{Last_Name}', label: 'Last Name', description: "Friend's last name" },
     { value: '{Today}', label: 'Today', description: 'Current date' },
-    { value: '[Image]', label: 'Random Image', description: 'Random image from your library' },
+    // [IMAGE DISABLED] { value: '[Image]', label: 'Random Image', description: 'Random image from your library' },
   ];
 
   if (compact) {
@@ -81,7 +81,7 @@ export default function KeywordInserter({ onInsert, compact = false }: KeywordIn
         <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
           <li>Keywords are replaced when messages are sent</li>
           <li>Use them in greetings, body, or closing segments</li>
-          <li>[Image] inserts a random image from your library</li>
+          {/* [IMAGE DISABLED] <li>[Image] inserts a random image from your library</li> */}
         </ul>
       </div>
     </div>

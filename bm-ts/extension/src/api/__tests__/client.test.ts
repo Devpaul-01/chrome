@@ -103,14 +103,14 @@ describe('API request helpers (via login)', () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
-          total_messages: 0,
-          successful_messages: 0,
-          failed_messages: 0,
-          pending_messages: 0,
+          total_messages_sent: 0,
+          messages_sent_today: 0,
+          messages_sent_this_week: 0,
+          messages_sent_this_month: 0,
           success_rate: 0,
-          total_contacts: 0,
-          upcoming_birthdays: 0,
-          active_schedules: 0,
+          friends_with_upcoming_birthdays: 0,
+          queued_messages: 0,
+          automation_enabled: false,
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       ),

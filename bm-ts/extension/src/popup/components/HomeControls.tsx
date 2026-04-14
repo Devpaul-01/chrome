@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
 import { sendBackgroundMessage } from '../api';
-// import type { MessageGroup } from './MessageGroups'; // Commented out — feature not currently needed
 import type { DashboardStats } from './Dashboard';
 import Spinner from './Spinner';
 import HelpTooltip from './HelpTooltip';
 import FeatureTip from './FeatureTip';
-
-const ACTIVE_GROUP_KEY = 'bm_active_group_id';
 
 interface HomeControlsProps {
   // onViewCalendar: () => void; // Uncomment to re-enable Birthday Calendar
@@ -36,19 +33,15 @@ export default function HomeControls({
     setIsLoading(true);
     setError(null);
     try {
-      const [config, _stored, stats] = await Promise.all([
+      const [config, stats] = await Promise.all([
         sendBackgroundMessage<{ enabled: boolean }>({ type: 'automation.getConfig' }),
         // Message groups commented out — feature not currently needed
         // sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' }).catch(
         //   () => [] as MessageGroup[],
         // ),
-        chrome.storage.local.get([ACTIVE_GROUP_KEY]),
         sendBackgroundMessage<DashboardStats>({ type: 'dashboard.getStats' }).catch(() => null),
       ]);
       setAutomationEnabled(config?.enabled ?? false);
-      // setGroups(Array.isArray(groupData) ? groupData : []);
-      // Message-group selection is currently disabled.
-      void _stored[ACTIVE_GROUP_KEY];
       setDashboardStats(stats);
     } catch (err) {
       setError((err as Error).message);

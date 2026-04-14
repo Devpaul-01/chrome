@@ -438,20 +438,6 @@ Image processing failures return generic user-friendly messages instead of leaki
 - [ ] Add custom `RequestValidationError` handler with human-readable summary
 - [ ] Add axe-core scans for remaining complex components (AuthForm, ContactForm, etc.)
 
-### Recently Completed
-- [x] Modal focus traps (MessageQueue, MessageHistory)
-- [x] Tab dropdown keyboard navigation (ArrowLeft/Right, ArrowDown, Escape)
-- [x] Content script overlay accessibility (focus, Escape, ARIA labels)
-- [x] Static HTML pages (skip links, headings, table labels, landmarks)
-- [x] WCAG 2.2 target size minimum (24×24px)
-- [x] `role="alert"` / `role="status"` on all error/success messages
-- [x] `aria-pressed` on AutomationSettings interval preset buttons
-- [x] Descriptive image alt text (ImageManager, PostEditor)
-- [x] Backend exception message leak fixed (images.py)
-- [x] CSP header updated for AT compatibility
-- [x] vitest-axe automated testing integration
-- [x] Spinner `role="status"` moved from `<img>` to wrapper `<div>`
-
 ### User Preferences
 - [ ] Allow users to disable animations (beyond prefers-reduced-motion)
 - [ ] Configurable keyboard shortcuts

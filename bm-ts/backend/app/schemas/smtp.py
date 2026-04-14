@@ -3,7 +3,6 @@ schemas/smtp.py — Pydantic schemas for SMTP configuration and user-profile upd
 
   SMTPConfigUpdate   — POST/PUT /smtp/config body
   SMTPConfigOut      — GET  /smtp/config response (password masked)
-  UserProfileUpdate  — PATCH /auth/profile body
 
 Passwords are encrypted at rest via Fernet (see ``core/encryption.py``)
 and masked to ``••••••••`` in all API responses.
@@ -54,8 +53,3 @@ class SMTPConfigOut(BaseModel):
         """Mask the SMTP password so it is never returned via the API."""
         if self.password:
             object.__setattr__(self, "password", "••••••••")
-
-
-class UserProfileUpdate(BaseModel):
-    name: Optional[str] = Field(None, max_length=255)
-    timezone: Optional[str] = Field(None, max_length=100)

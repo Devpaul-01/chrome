@@ -7,6 +7,7 @@ stored as SHA-256 hashes, single-use, and emailed via SendGrid.
 
 import asyncio
 import hashlib
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -18,6 +19,8 @@ from app.db.models import User, EmailVerificationToken
 
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+
+logger = logging.getLogger(__name__)
 
 
 essential_expiry_hours = 24
@@ -134,7 +137,20 @@ async def send_verification_email(email: str, token: str) -> None:
 
     try:
         sg = SendGridAPIClient(settings.sendgrid_api_key)
-        await asyncio.to_thread(sg.send, message)
-        print(f"Verification email sent to {email}")
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            try:
+                await asyncio.to_thread(sg.send, message)
+                logger.info("Verification email sent to %s", email)
+                return
+            except Exception as exc:
+                last_exc = exc
+                if attempt < 2:
+                    await asyncio.sleep(2 ** attempt)  # 1 s, 2 s
+                    logger.warning(
+                        "Retry %d/2 sending verification email to %s: %s",
+                        attempt + 1, email, exc,
+                    )
+        logger.error("Failed to send verification email to %s after 3 attempts: %s", email, last_exc)
     except Exception as e:
-        print(f"Failed to send verification email to {email}: {e}")
+        logger.error("Failed to send verification email to %s: %s", email, e)

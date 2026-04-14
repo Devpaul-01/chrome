@@ -1,6 +1,7 @@
 """
 WebSocket router for real-time updates
 """
+import asyncio
 import json
 import logging
 from typing import Dict
@@ -133,7 +134,6 @@ async def websocket_endpoint(
         await websocket.accept()
 
         # Wait up to 10 s for an auth message
-        import asyncio
         try:
             raw = await asyncio.wait_for(websocket.receive_text(), timeout=10.0)
             msg = json.loads(raw)
@@ -178,6 +178,8 @@ async def websocket_endpoint(
 
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
+        if user is not None:
+            manager.disconnect(websocket, user.id)
         try:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         except:

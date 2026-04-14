@@ -189,7 +189,9 @@ async def sync_subscription_record(
     same user are transitioned to ``PAST_DUE`` first, enforcing the one-active-
     subscription-per-user invariant at the application level as a safety net.
     """
-    if data.get("status") == "ACTIVE":
+    normalized_status = (data.get("status") or "").upper()
+
+    if normalized_status == "ACTIVE":
         await db.execute(
             update(SubscriptionRecord)
             .where(
@@ -208,7 +210,7 @@ async def sync_subscription_record(
     record = result.scalar_one_or_none()
     payload = {
         "user_id": user_id,
-        "status": data.get("status"),
+        "status": normalized_status,
         "price_id": data.get("items", {}).get("data", [])[0].get("price", {}).get("id")
         if data.get("items")
         else None,

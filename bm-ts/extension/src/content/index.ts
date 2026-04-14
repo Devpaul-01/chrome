@@ -2516,39 +2516,6 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
 }
 
 // ── Scrape result caching (4-hour TTL) ──────────────────────────────────────
-const SCRAPE_CACHE_KEY = 'bm_scrape_cache';
-const SCRAPE_CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
-
-interface ScrapeCache {
-  contacts: ScrapedContact[];
-  cachedAt: number;
-  pageUrl: string;
-}
-
-async function _getCachedScrapeResult(): Promise<ScrapedContact[] | null> {
-  try {
-    const result = await chrome.storage.local.get(SCRAPE_CACHE_KEY);
-    const cache: ScrapeCache | undefined = result[SCRAPE_CACHE_KEY];
-    if (!cache) return null;
-    // Expired?
-    if (Date.now() - cache.cachedAt > SCRAPE_CACHE_TTL_MS) return null;
-    // Same page?
-    if (cache.pageUrl !== window.location.href) return null;
-    return cache.contacts;
-  } catch {
-    return null;
-  }
-}
-
-async function _cacheScrapeResult(contacts: ScrapedContact[]): Promise<void> {
-  const cache: ScrapeCache = {
-    contacts,
-    cachedAt: Date.now(),
-    pageUrl: window.location.href,
-  };
-  await chrome.storage.local.set({ [SCRAPE_CACHE_KEY]: cache });
-}
-
 chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
   // Security: reject messages not from our own extension
   if (sender.id !== chrome.runtime.id) return false;

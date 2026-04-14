@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
@@ -110,8 +110,14 @@ async def update_post(
         post.image_url = data.image_url
     if data.label is not None:
         post.label = data.label
-    
-    post.updated_at = datetime.utcnow()
+    if data.font_family is not None:
+        post.font_family = data.font_family
+    if data.font_size is not None:
+        post.font_size = data.font_size
+    if data.font_color is not None:
+        post.font_color = data.font_color
+
+    post.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(post)
     return post

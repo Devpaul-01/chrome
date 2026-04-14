@@ -12,6 +12,7 @@ Schema hierarchy:
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, constr
@@ -64,6 +65,12 @@ class UserProfile(BaseModel):
     email: EmailStr
     created_at: datetime
     email_verified: bool = False
+    name: str | None = None
+    timezone: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class UserProfileUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=255)
+    timezone: Optional[str] = Field(None, max_length=100)

@@ -42,10 +42,9 @@ class Settings(BaseSettings):
     @classmethod
     def validate_stripe_api_key(cls, v: str) -> str:
         if v in {"sk_test_placeholder", ""}:
-            import warnings
-            warnings.warn(
-                "STRIPE_API_KEY is set to a placeholder. Stripe billing will not work.",
-                stacklevel=2,
+            raise ValueError(
+                "STRIPE_API_KEY is a placeholder. Set a real Stripe key (live or test) before starting. "
+                "The app cannot start in a silently degraded billing state."
             )
         return v
 

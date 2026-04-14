@@ -10,12 +10,16 @@ export interface Post {
   gender: 'MALE' | 'FEMALE' | 'NEUTRAL';
   image_url?: string;
   label: string;
+  font_family?: string;
+  font_size?: number;
+  font_color?: string;
   created_at: string;
   updated_at: string;
 }
 
 interface PostListProps {
   onClose: () => void;
+  onEdit?: (post: Post) => void;
 }
 
 interface PostListPropsExtended extends PostListProps {
@@ -27,15 +31,14 @@ export interface PostListHandle {
 }
 
 const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
-  ({ onClose, showClose = true }, ref) => {
+  ({ onClose, showClose = true, onEdit }, ref) => {
     const headingRef = useRef<HTMLHeadingElement>(null);
     const [posts, setPosts] = useState<Post[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [filterGender] = useState<'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL'>('ALL');
     const [sortBy, setSortBy] = useState<'labelAsc' | 'labelDesc' | 'createdAsc' | 'createdDesc'>(
-      'labelAsc',
+      'createdDesc',
     );
 
     useImperativeHandle(ref, () => ({
@@ -78,9 +81,7 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
       }
     }
 
-    const filteredPosts = posts.filter(
-      (post) => filterGender === 'ALL' || post.gender === filterGender,
-    );
+    const filteredPosts = posts;
 
     // Sort filtered posts according to sortBy selection
     const sortedPosts = [...filteredPosts];
@@ -105,7 +106,7 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
     return (
       <div className="view-container">
         <h2 ref={headingRef} tabIndex={-1} className="text-lg font-bold text-blueStrong mb-3">
-          Birthday Posts{' '}
+          Birthday Posts ({posts.length}){' '}
           <HelpTooltip label="Your saved timeline post templates. These are posted to friends' Facebook walls on their birthdays. If you have multiple posts, one is chosen at random for variety." />
         </h2>
 
@@ -175,7 +176,10 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
           <div>
             {filteredPosts.length === 0 ? (
               <div className="text-center py-8 text-gray-500 bg-white/80 rounded-lg">
-                No posts found. Create your first post to get started.
+                <p className="mb-3">No posts yet. Create your first timeline post.</p>
+                <button onClick={onClose} className="btn-primary text-sm py-2 px-4">
+                  + Create Post
+                </button>
               </div>
             ) : (
               <>
@@ -200,17 +204,13 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
                             {post.content}
                           </p>
                           {post.image_url && (
-                            <p className="text-xs text-gray-600 mt-2">
-                              Image{' '}
-                              <a
-                                href={post.image_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-orange-600 hover:underline"
-                              >
-                                View Image
-                              </a>
-                            </p>
+                            <div className="mt-2">
+                              <img
+                                src={post.image_url}
+                                alt="Post image preview"
+                                className="rounded-lg max-h-32 object-cover w-full"
+                              />
+                            </div>
                           )}
                         </div>
                       ) : (
@@ -228,6 +228,14 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
                       >
                         {expandedId === post.id ? '▲ Collapse' : '▼ Expand'}
                       </button>
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(post)}
+                          className="text-xs py-1.5 px-3 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors font-medium"
+                        >
+                          Edit
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(post.id)}
                         className="text-xs py-1.5 px-3 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium"

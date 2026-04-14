@@ -18,7 +18,7 @@ from app.api.deps import get_current_user
 from app.db.models import SMTPConfig, User
 from app.db.session import get_db
 from app.schemas.smtp import SMTPConfigOut, SMTPConfigUpdate
-from app.core.encryption import encrypt_value, decrypt_value
+from app.core.encryption import encrypt_value
 
 router = APIRouter(prefix="/smtp", tags=["smtp"])
 
