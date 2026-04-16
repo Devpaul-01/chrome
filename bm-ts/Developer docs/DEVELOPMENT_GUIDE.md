@@ -54,7 +54,7 @@ Before starting, ensure you have:
 
 ```powershell
 docker --version    # Should show Docker version 20+
-node --version      # Should show Node v18+ 
+node --version      # Should show Node v18+
 ```
 
 ---
@@ -69,6 +69,7 @@ cd bm-ts
 ```
 
 **This script automatically:**
+
 - ✅ Checks Docker is running
 - ✅ Starts PostgreSQL database (port 5432)
 - ✅ Starts FastAPI backend (port 8000)
@@ -79,6 +80,7 @@ cd bm-ts
 **Wait for:** "All done! Load extension/dist in Chrome"
 
 **Important:** After starting, wait 5-10 seconds for the backend to fully initialize before using the extension. You can verify it's ready:
+
 ```powershell
 curl http://localhost:8000/health
 # Should return: {"status":"ok"}
@@ -101,6 +103,7 @@ curl http://localhost:8000/health
 3. Backend will register user in PostgreSQL database
 
 **Test credentials (if you ran backend earlier):**
+
 - Email: `test@example.com`
 - Password: `Test123456!`
 
@@ -116,6 +119,7 @@ cd bm-ts
 ```
 
 Services that start:
+
 - **PostgreSQL** → `localhost:5432`
 - **Backend API** → `localhost:8000`
 - **Extension built** → `extension/dist/`
@@ -150,11 +154,13 @@ cd bm-ts
 Stops all Docker containers cleanly.
 
 **Important:** Your database data persists between restarts! When you shutdown:
+
 - ✅ Containers are stopped and removed
 - ✅ Database volume (with all users, templates, etc.) remains intact
 - ✅ Extension stays loaded in Chrome
 
 **After computer restart:**
+
 1. Open VSCode
 2. Run `.\startup.ps1` (~8 seconds)
 3. Everything works - no reconfiguration needed!
@@ -172,6 +178,7 @@ Stops all Docker containers cleanly.
 **Cause:** Extension code changed but Chrome still using old cached version.
 
 **Fix:**
+
 1. Go to `chrome://extensions/`
 2. Find BirthdayMessaging
 3. Click 🔄 reload icon
@@ -180,17 +187,20 @@ Stops all Docker containers cleanly.
 ### Backend Not Responding
 
 **Check status:**
+
 ```powershell
 docker ps    # Should show backend-db-1 and backend-backend-1
 ```
 
 **Test health:**
+
 ```powershell
 curl http://localhost:8000/health
 # Should return: {"status":"ok"}
 ```
 
 **Fix:**
+
 ```powershell
 cd bm-ts\backend
 docker-compose restart backend
@@ -200,6 +210,7 @@ docker-compose logs backend    # Check for errors
 ### Database Connection Failed
 
 **Fix:**
+
 ```powershell
 cd bm-ts\backend
 docker-compose down
@@ -209,6 +220,7 @@ docker-compose up -d
 ### Extension Not Loading in Chrome
 
 **Checklist:**
+
 - [ ] Did you run `npm run build`?
 - [ ] Are you loading the `dist` folder (not `extension`)?
 - [ ] Any errors in `chrome://extensions/` page?
@@ -219,6 +231,7 @@ docker-compose up -d
 **Cause:** Backend may not be fully ready yet, or database connection issue.
 
 **Fix:**
+
 1. Wait 5-10 seconds after running `startup.ps1`
 2. Verify backend health:
    ```powershell
@@ -242,6 +255,7 @@ docker-compose up -d
 **Symptoms:** `startup.ps1` fails with "Docker is not running"
 
 **Fix:**
+
 1. Open Docker Desktop from Start menu
 2. Wait for whale icon to be steady (not animated)
 3. Run `.\startup.ps1` again
@@ -254,7 +268,7 @@ docker-compose up -d
 
 ### Startup Scripts
 
-```powershell
+````powershell
 # Start everything (Docker, backend, build extension)
 cd bm-ts
 .\startup.ps1
@@ -294,7 +308,7 @@ docker exec backend-db-1 psql -U postgres -d birthdaymessaging -c "\dt"
 
 # Check database users
 docker exec backend-db-1 psql -U postgres -d birthdaymessaging -c "SELECT email, created_at FROM users;"
-```
+````
 
 ### Frontend Commands
 
@@ -389,12 +403,14 @@ PASSWORD_RESET_URL_BASE=http://localhost:5173/reset-password
 ### Backend Debugging
 
 **View logs:**
+
 ```powershell
 cd bm-ts\backend
 docker-compose logs -f backend
 ```
 
 **Test API directly:**
+
 ```powershell
 # Health check
 Invoke-RestMethod -Uri http://localhost:8000/health
@@ -409,27 +425,31 @@ Invoke-RestMethod -Uri "http://localhost:8000/auth/login" -Method Post -Body $bo
 ```
 
 **API Documentation:**
+
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
 ### Frontend Debugging
 
 **Popup debugging:**
+
 1. Click extension icon to open popup
 2. Right-click anywhere in popup → **Inspect**
 3. DevTools Console shows errors and logs
 
 **Background script debugging:**
+
 1. Go to `chrome://extensions/`
 2. Find BirthdayMessaging
 3. Click **"service worker"** link
 4. Console shows background script logs with structured logging:
    - ℹ️ Info messages
-   - ✅ Success messages  
+   - ✅ Success messages
    - ⚠️ Warnings
    - ❌ Errors with context
 
 **Content script debugging:**
+
 1. Open Facebook in Chrome
 2. Press F12 to open DevTools
 3. Check Console for extension messages on Facebook
@@ -476,6 +496,7 @@ bm-ts/
 ### Technology Stack
 
 **Backend:**
+
 - FastAPI (Python) - Web framework
 - PostgreSQL 15 - Database
 - SQLAlchemy 2.0 - ORM
@@ -485,6 +506,7 @@ bm-ts/
 - Docker - Containerization
 
 **Frontend:**
+
 - React 18 - UI framework
 - TypeScript - Type safety
 - Tailwind CSS v4 - Styling
@@ -493,11 +515,11 @@ bm-ts/
 
 ### What Runs Where
 
-| Service | Location | Port | Auto-reload? |
-|---------|----------|------|--------------|
-| PostgreSQL | Docker container | 5432 | No |
+| Service     | Location         | Port | Auto-reload?       |
+| ----------- | ---------------- | ---- | ------------------ |
+| PostgreSQL  | Docker container | 5432 | No                 |
 | Backend API | Docker container | 8000 | Yes (volume mount) |
-| Extension | Chrome browser | N/A | No (manual reload) |
+| Extension   | Chrome browser   | N/A  | No (manual reload) |
 
 **Important:** The extension is **not a server**. It's static files loaded by Chrome. After rebuilding, you must manually reload it in `chrome://extensions/`.
 
@@ -508,24 +530,29 @@ bm-ts/
 Recent improvements to prevent recurring issues:
 
 ### 1. Backend Password Hashing
+
 **Problem:** bcrypt library caused initialization crashes  
 **Fix:** Switched to argon2 (more secure, no issues)  
 **Files:** `backend/pyproject.toml`, `backend/app/core/security.py`
 
 ### 2. Extension Message Port Errors
+
 **Problem:** Background service worker async handling was broken  
 **Fix:** Proper promise-based message handling with response validation  
 **Files:** `extension/src/background/index.ts`, `extension/src/utils/bridge.ts`
 
 ### 3. Forgot to Reload Extension
+
 **Problem:** Developers forgot to reload extension after rebuilding  
 **Fix:** Reload extension in browser, manage extension
 
 ### 4. Complex Setup Process
+
 **Problem:** Manual multi-step setup was error-prone  
 **Fix:** Single `startup.ps1` script does everything automatically
 
 ### 5. Poor Error Messages
+
 **Problem:** Hard to debug issues  
 **Fix:** Added structured logging with emojis and context  
 **Files:** `extension/src/utils/logger.ts`, `extension/src/background/index.ts`
@@ -543,10 +570,12 @@ Recent improvements to prevent recurring issues:
 ### After Making Changes
 
 **Backend:**
+
 - Just save files - auto-reloads via Docker volume mount
 - Check logs if something breaks: `docker-compose logs backend`
 
 **Frontend:**
+
 1. Run `npm run build` (or `npm run reload`)
 2. Reload extension in `chrome://extensions/`
 3. Close and reopen extension popup
@@ -604,6 +633,7 @@ LOG_LEVEL=INFO
 Backend URL is stored in `chrome.storage.local` (defaults to `http://localhost:8000`).
 
 To change it:
+
 1. Open extension popup
 2. Look for backend URL setting (if available in UI)
 3. Or use Chrome DevTools → Application → Storage → Local Storage
@@ -615,12 +645,14 @@ To change it:
 If you encounter issues not covered here:
 
 1. **Check logs:**
+
    ```powershell
    cd bm-ts\backend
    docker-compose logs backend --tail=50
    ```
 
 2. **Verify services:**
+
    ```powershell
    docker ps    # Should show 2 containers running
    ```
@@ -630,6 +662,7 @@ If you encounter issues not covered here:
    - Background: `chrome://extensions/` → service worker
 
 4. **Try clean restart:**
+
    ```powershell
    cd bm-ts
    .\shutdown.ps1
@@ -649,22 +682,26 @@ If you encounter issues not covered here:
 ## 🎓 Tips & Tricks
 
 **Keep terminals organized:**
+
 - Terminal 1: Backend logs (`docker-compose logs -f backend`)
 - Terminal 2: Main work (editing, building, git)
 - Terminal 3: Database commands (when needed)
 
 **Browser DevTools shortcuts:**
+
 - `Ctrl+Shift+I` - Open DevTools
 - `Ctrl+R` - Reload page
 - `F12` - Toggle DevTools
 
 **VS Code extensions (recommended):**
+
 - Docker (manage containers from VS Code)
 - Pylance (Python IntelliSense)
 - ESLint (JavaScript linting)
 - Prettier (code formatting)
 
 **Git workflow:**
+
 ```powershell
 # Good commit message
 git commit -m "feat: add birthday schedule editing"
@@ -690,6 +727,7 @@ After setup, you should have:
 **If all checked ✓, you're ready to develop!** 🚀
 
 **Remember:** Your database data persists between restarts. After shutdown:
+
 - User accounts remain in database
 - Templates and settings preserved
 - Extension stays loaded in Chrome

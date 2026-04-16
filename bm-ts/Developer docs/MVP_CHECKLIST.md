@@ -11,26 +11,26 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 
 ### Verified Codebase Statistics (April 14, 2026)
 
-| Metric | Count |
-|--------|-------|
-| Backend Routers | 15 active + 1 deactivated (+ 2 inline endpoints in main.py; message_groups deactivated) |
-| Backend HTTP Endpoints | 75 active + 1 WebSocket (80 total defined incl. deactivated message_groups) |
-| Backend ORM Models | 18 (18 tables, 5 enums, 34 indexes) |
-| Backend Tests | 287 across 24 test files |
-| Backend Runtime Dependencies | 15 (`aiosqlite` moved to `[project.optional-dependencies]` test group; `psycopg[binary]` moved to alembic group) |
-| Backend LOC | ~5,324 Python |
-| Alembic Migrations | 7 |
-| Frontend Components | 40 (in components/) |
-| Frontend Custom Hooks | 7 (across 7 files + 1 context) |
-| Frontend Tests | 417 across 24 test files |
-| Frontend Runtime Dependencies | 3 (React, ReactDOM, react-calendar) |
-| API Client Functions | 60 |
-| Background Message Types | 73 active (76 defined; 3 commented out) |
-| Content Script Files | 5 (~4,095 lines) |
-| Utility Files | 13 (~2,043 lines) |
-| ViewMode States | 24 (18 active + 5 disabled/commented + 1 transitional) |
-| CI/CD Workflows | 4 (Gitea Actions: frontend-ci, backend-ci, deploy, dependency-scan) |
-| User-Facing HTML Pages | 6 |
+| Metric                        | Count                                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Backend Routers               | 15 active + 1 deactivated (+ 2 inline endpoints in main.py; message_groups deactivated)                          |
+| Backend HTTP Endpoints        | 75 active + 1 WebSocket (80 total defined incl. deactivated message_groups)                                      |
+| Backend ORM Models            | 18 (18 tables, 5 enums, 34 indexes)                                                                              |
+| Backend Tests                 | 287 across 24 test files                                                                                         |
+| Backend Runtime Dependencies  | 15 (`aiosqlite` moved to `[project.optional-dependencies]` test group; `psycopg[binary]` moved to alembic group) |
+| Backend LOC                   | ~5,324 Python                                                                                                    |
+| Alembic Migrations            | 7                                                                                                                |
+| Frontend Components           | 40 (in components/)                                                                                              |
+| Frontend Custom Hooks         | 7 (across 7 files + 1 context)                                                                                   |
+| Frontend Tests                | 417 across 24 test files                                                                                         |
+| Frontend Runtime Dependencies | 3 (React, ReactDOM, react-calendar)                                                                              |
+| API Client Functions          | 60                                                                                                               |
+| Background Message Types      | 73 active (76 defined; 3 commented out)                                                                          |
+| Content Script Files          | 5 (~4,095 lines)                                                                                                 |
+| Utility Files                 | 13 (~2,043 lines)                                                                                                |
+| ViewMode States               | 24 (18 active + 5 disabled/commented + 1 transitional)                                                           |
+| CI/CD Workflows               | 4 (Gitea Actions: frontend-ci, backend-ci, deploy, dependency-scan)                                              |
+| User-Facing HTML Pages        | 6                                                                                                                |
 
 ### What Remains (Priority Order)
 
@@ -48,9 +48,11 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 ## P0 — Production Blockers (Must Complete Before Launch)
 
 ### 1. Production Infrastructure Setup
+
 **Status:** Not Started
 
 #### Cloud Infrastructure
+
 - [ ] Choose cloud provider (Render, Fly.io, AWS, DigitalOcean)
 - [ ] Set up managed PostgreSQL (15+)
 - [ ] Set up backend hosting (container service)
@@ -58,6 +60,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Set up object storage for images (S3, CloudFlare R2 — optional for MVP, URL-only is acceptable)
 
 #### Database Production Setup
+
 - [ ] Create production database instance
 - [ ] Run `alembic upgrade head` against production database
 - [ ] Verify all 18 tables and 32 indexes created
@@ -66,6 +69,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Test backup restore procedure
 
 #### Backend Production Deployment
+
 - [ ] Configure production environment variables:
   - [ ] `JWT_SECRET_KEY` (generate strong 64+ char random key)
   - [ ] `DATABASE_URL` (production PostgreSQL connection string)
@@ -84,6 +88,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Test API accessible from internet
 
 #### End-to-End Production Verification
+
 - [ ] Fresh user registration + email verification
 - [ ] Login + token refresh flow
 - [ ] Template creation + scheduling
@@ -95,6 +100,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Automation sends a test message
 
 ### 2. Chrome Web Store Submission
+
 **Status:** Not Started — Legacy extension exists in Web Store; new build will replace it
 
 - [ ] Build production extension (`npm run build`)
@@ -128,6 +134,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 ## P1 — High Priority (Required Shortly After Launch)
 
 ### 3. Backend Test CI Pipeline
+
 **Status:** ✅ DONE (April 15, 2026)
 
 - [x] Created `.gitea/workflows/backend-ci.yaml`:
@@ -140,6 +147,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [x] Added pytest step to existing `deploy.yaml` pipeline
 
 ### 4. Monitoring & Observability
+
 **Status:** Not Started
 
 - [ ] Set up error tracking (Sentry or Rollbar)
@@ -154,11 +162,13 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
   - [ ] SendGrid delivery failures
 
 ### 5. Alembic Migration Testing
+
 - [ ] Test all 7 migrations up (upgrade) against clean PostgreSQL
 - [ ] Test all 7 migrations down (downgrade)
 - [ ] Document rollback procedure
 
 ### 6. Clarify / Remove Redundant `psycopg[binary]` Dependency
+
 **Status:** ✅ DONE
 
 - [x] Verify which parts of the codebase require `psycopg` — only Alembic sync scripts
@@ -167,6 +177,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [x] Dockerfile installs `.[alembic]` to include psycopg
 
 ### 6a. Gunicorn Production Configuration
+
 **Status:** ✅ DONE
 
 - [x] Created `gunicorn.conf.py` with production settings (4 workers, UvicornWorker, timeout=120, graceful-timeout=30, max-requests=1000, max-requests-jitter=50)
@@ -177,6 +188,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 ## P2 — Medium Priority (Post-Launch Enhancements)
 
 ### 7. Image Upload/Storage
+
 **Status:** URL-based only — `POST /images/upload-file` stores base64 data URIs directly in DB
 
 - [ ] Set up cloud object storage (S3, CloudFlare R2, or local volume)
@@ -188,6 +200,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 ### 8. Extended Test Coverage
 
 #### Backend Gaps
+
 - [ ] Integration test: password reset flow (request -> email -> reset)
 - [ ] Integration test: Stripe subscription flow (checkout -> webhook -> status)
 - [ ] Database test: migration up/down verification
@@ -196,6 +209,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Target: >80% code coverage
 
 #### Frontend/Extension Gaps
+
 - [x] Background service worker tests (`background/__tests__/index.test.ts` — 9 tests)
 - [x] Custom hook tests (`useMessages.test.ts` — 18 tests, `useImageLibrary.test.ts` — 10 tests)
 - [x] Custom hook tests: `usePostComposer.test.ts` — 6 tests, `useTemplateSegments.test.ts` — 9 tests, `useMessageTemplates.test.ts` — 9 tests
@@ -209,11 +223,13 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Browser compatibility testing (Chrome stable, Edge, Brave)
 
 ### 9. Content Script Resilience
+
 - [ ] Add error recovery for automation failures (retry individual friend on DOM error)
 - [ ] Add mutation observer stability improvements
 - [ ] Test with various Facebook layouts (desktop, different languages)
 
 ### 10. Document / Re-enable Contact Management UI
+
 **Status:** Intentionally Disabled
 
 - Contact create/update/delete is commented out in `background/index.ts` and navigation in `App.tsx`
@@ -221,6 +237,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] When ready to expose contact management to users, re-enable handlers in `background/index.ts` and restore `ContactForm`/`ContactList` navigation in `App.tsx`
 
 ### 11. Document / Re-enable SMTPSettings UI
+
 **Status:** Intentionally Disabled
 
 - `SMTPSettings.tsx` is imported but not accessible via navigation in `App.tsx`
@@ -231,6 +248,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 ## P3 — Low Priority (Nice to Have)
 
 ### 12. Feature Enhancements
+
 - [ ] Template bulk import/export
 - [ ] Template usage statistics
 - [ ] Schedule preview (show next run dates)
@@ -244,8 +262,8 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Video tutorials (embedded)
 - [ ] In-app FAQ search
 
-
 ### 13. API & Backend Polish
+
 - [ ] Standardize error responses across all non-DELETE endpoints
 - [ ] API versioning strategy (v1, v2)
 - [ ] JWT secret rotation strategy
@@ -257,12 +275,14 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Load testing (100+ concurrent users)
 
 ### 14. Operations Documentation
+
 - [ ] Production deployment guide (step-by-step)
 - [ ] Monitoring guide
 - [ ] Incident response runbook
 - [ ] Scaling guide
 
 ### 15. Comprehensive User Documentation
+
 - [ ] Full user guide (installation, templates, schedules, automation, contacts, SMTP, subscriptions)
 - [ ] Creating templates guide with examples
 - [ ] Merge tags and personalization guide
@@ -290,11 +310,13 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 ## Actionable Next Steps
 
 ### This Week
+
 1. [ ] Choose cloud provider and provision infrastructure (database + backend hosting + domain)
 2. [ ] Configure all production environment variables
 3. [ ] Deploy backend and run Alembic migrations
 
 ### Next Week
+
 4. [ ] Test end-to-end user flows against production API
 5. [ ] Build production extension and test in Chrome
 6. [ ] Prepare Chrome Web Store listing assets
@@ -302,7 +324,8 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 8. [ ] Set up basic monitoring (Sentry + uptime check)
 
 ### Soon
+
 9. [x] ~~Add backend test CI pipeline~~ (DONE — `backend-ci.yaml`, `dependency-scan.yaml`, pytest in `deploy.yaml`)
-11. [ ] Expand test coverage (background worker, hooks, E2E)
-12. [ ] Set up cloud image storage (if needed beyond URL-based)
-13. [ ] Soft launch to beta group and iterate on feedback
+10. [ ] Expand test coverage (background worker, hooks, E2E)
+11. [ ] Set up cloud image storage (if needed beyond URL-based)
+12. [ ] Soft launch to beta group and iterate on feedback

@@ -56,8 +56,8 @@
   --ease-spring: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Typography */
-  --font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial;
+  --font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
 
 /* Slightly larger base for improved visual accessibility.
@@ -80,8 +80,15 @@ html {
 /* Custom font-family utility used in popup.css (falls back to sans) */
 @layer utilities {
   .font-inter {
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
-      'Helvetica Neue', Arial;
+    font-family:
+      Inter,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      'Helvetica Neue',
+      Arial;
   }
 }
 
@@ -109,7 +116,8 @@ html {
     cursor: pointer;
     margin-top: var(--space-btn-gap);
     margin-bottom: var(--space-btn-gap);
-    transition: background-color var(--duration-normal) var(--ease-out),
+    transition:
+      background-color var(--duration-normal) var(--ease-out),
       box-shadow var(--duration-normal) var(--ease-out),
       transform var(--duration-fast) var(--ease-out);
   }
@@ -147,7 +155,8 @@ html {
     margin-top: var(--space-btn-gap);
     margin-bottom: var(--space-btn-gap);
     box-shadow: var(--shadow-btn-orange);
-    transition: background-color var(--duration-normal) var(--ease-out),
+    transition:
+      background-color var(--duration-normal) var(--ease-out),
       box-shadow var(--duration-normal) var(--ease-out),
       transform var(--duration-fast) var(--ease-out);
   }
@@ -185,7 +194,8 @@ html {
     cursor: pointer;
     margin-top: var(--space-btn-gap);
     margin-bottom: var(--space-btn-gap);
-    transition: background-color var(--duration-normal) var(--ease-out),
+    transition:
+      background-color var(--duration-normal) var(--ease-out),
       transform var(--duration-fast) var(--ease-out);
   }
   .btn-outline-orange:hover:not(:disabled) {
@@ -221,7 +231,8 @@ html {
     cursor: pointer;
     margin-top: var(--space-btn-gap);
     margin-bottom: var(--space-btn-gap);
-    transition: background-color var(--duration-normal) var(--ease-out),
+    transition:
+      background-color var(--duration-normal) var(--ease-out),
       transform var(--duration-fast) var(--ease-out);
   }
   .btn-danger:hover:not(:disabled) {
@@ -260,7 +271,8 @@ html {
     border-radius: var(--radius-md);
     cursor: pointer;
     box-shadow: 0 1px 4px rgba(42, 127, 160, 0.2);
-    transition: background-color var(--duration-normal) var(--ease-out),
+    transition:
+      background-color var(--duration-normal) var(--ease-out),
       box-shadow var(--duration-normal) var(--ease-out),
       transform var(--duration-fast) var(--ease-out);
   }
@@ -295,7 +307,8 @@ html {
     border-radius: var(--radius-md);
     cursor: pointer;
     box-shadow: 0 1px 4px rgba(220, 38, 38, 0.2);
-    transition: background-color var(--duration-normal) var(--ease-out),
+    transition:
+      background-color var(--duration-normal) var(--ease-out),
       box-shadow var(--duration-normal) var(--ease-out),
       transform var(--duration-fast) var(--ease-out);
   }
@@ -356,7 +369,8 @@ html {
   object-fit: contain;
   margin: 0 auto 0.5rem;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
-  transition: transform var(--duration-slow) var(--ease-out),
+  transition:
+    transform var(--duration-slow) var(--ease-out),
     filter var(--duration-slow) var(--ease-out);
 }
 
@@ -392,7 +406,8 @@ html {
   white-space: nowrap;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  transition: background-color var(--duration-normal) var(--ease-out),
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out),
     transform var(--duration-fast) var(--ease-out);
 }
@@ -429,8 +444,10 @@ html {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out), visibility var(--duration-fast) var(--ease-out);
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    visibility var(--duration-fast) var(--ease-out);
   z-index: 1000;
   box-shadow: var(--shadow-dropdown);
 }
@@ -454,8 +471,10 @@ html {
   cursor: pointer;
   white-space: nowrap;
   display: block;
-  transition: background-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out), padding-left var(--duration-fast) var(--ease-out);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    padding-left var(--duration-fast) var(--ease-out);
 }
 
 .tab-dropdown-item:hover {
@@ -479,7 +498,8 @@ html {
 }
 
 .card--interactive {
-  transition: transform var(--duration-normal) var(--ease-out),
+  transition:
+    transform var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out);
 }
 .card--interactive:hover {
@@ -506,8 +526,11 @@ html {
   border: none;
   outline: none;
   background: var(--color-orange-strong);
-  box-shadow: 0 2px 6px rgba(202, 79, 2, 0.2), 0 1px 2px rgba(202, 79, 2, 0.1);
-  transition: background-color var(--duration-normal) var(--ease-out),
+  box-shadow:
+    0 2px 6px rgba(202, 79, 2, 0.2),
+    0 1px 2px rgba(202, 79, 2, 0.1);
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out),
     transform var(--duration-fast) var(--ease-out);
 }
@@ -515,17 +538,23 @@ html {
 .card .auth-btn:hover {
   background: var(--color-orange-brand);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(202, 79, 2, 0.3), 0 2px 4px rgba(202, 79, 2, 0.2);
+  box-shadow:
+    0 4px 12px rgba(202, 79, 2, 0.3),
+    0 2px 4px rgba(202, 79, 2, 0.2);
 }
 
 .card .auth-btn:active {
   transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(202, 79, 2, 0.2), 0 1px 2px rgba(202, 79, 2, 0.1);
+  box-shadow:
+    0 1px 3px rgba(202, 79, 2, 0.2),
+    0 1px 2px rgba(202, 79, 2, 0.1);
 }
 .card .auth-btn.active {
   font-weight: 700;
   background: var(--color-blue-strong);
-  box-shadow: 0 4px 12px rgba(42, 127, 160, 0.35), 0 2px 4px rgba(42, 127, 160, 0.25),
+  box-shadow:
+    0 4px 12px rgba(42, 127, 160, 0.35),
+    0 2px 4px rgba(42, 127, 160, 0.25),
     inset 0 0 0 2px rgba(255, 255, 255, 0.3);
 }
 
@@ -553,7 +582,8 @@ html {
   outline: none;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-btn-orange);
-  transition: background-color var(--duration-normal) var(--ease-out),
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out),
     transform var(--duration-fast) var(--ease-out);
   margin-top: var(--space-btn-gap);
@@ -563,7 +593,9 @@ html {
 .btn-primary:hover:not(:disabled) {
   background: var(--color-orange-brand);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(202, 79, 2, 0.35), 0 3px 6px rgba(202, 79, 2, 0.25);
+  box-shadow:
+    0 6px 16px rgba(202, 79, 2, 0.35),
+    0 3px 6px rgba(202, 79, 2, 0.25);
 }
 
 .btn-primary:focus {
@@ -590,12 +622,15 @@ html {
   font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.08em;
-  transition: background-color var(--duration-normal) var(--ease-out),
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out),
     transform var(--duration-fast) var(--ease-out);
   border: none;
   outline: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.15),
+    0 1px 2px rgba(0, 0, 0, 0.1);
   margin-top: var(--space-btn-gap);
   margin-bottom: var(--space-btn-gap);
 }
@@ -603,12 +638,16 @@ html {
 .btn-secondary:hover {
   background-color: #374151;
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .btn-secondary:active {
   transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .btn-secondary:focus {
@@ -635,7 +674,9 @@ html {
 
 .input-field:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(42, 127, 160, 0.15), 0 2px 8px rgba(42, 127, 160, 0.2);
+  box-shadow:
+    0 0 0 3px rgba(42, 127, 160, 0.15),
+    0 2px 8px rgba(42, 127, 160, 0.2);
 }
 
 .segment-type,
@@ -687,7 +728,9 @@ html {
 .card .segment-type:hover,
 .card .input:hover,
 .card textarea:hover {
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(229, 231, 235, 1),
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(229, 231, 235, 1),
     0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -699,7 +742,9 @@ html {
 .card input:focus,
 .card textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(42, 127, 160, 0.15), 0 2px 8px rgba(42, 127, 160, 0.2);
+  box-shadow:
+    0 0 0 3px rgba(42, 127, 160, 0.15),
+    0 2px 8px rgba(42, 127, 160, 0.2);
   transform: translateY(-1px);
 }
 
@@ -1019,7 +1064,9 @@ kbd {
   font-family: 'Courier New', monospace;
   font-size: 0.75rem;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
 
 /* Contact search input style — currently unused; contacts UI is disabled.
@@ -1078,7 +1125,8 @@ kbd {
   border-radius: var(--radius-pill);
   border: 2px solid #d1d5db;
   cursor: pointer;
-  transition: background-color var(--duration-normal) var(--ease-out),
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
     color var(--duration-normal) var(--ease-out),
     border-color var(--duration-normal) var(--ease-out);
   background: transparent;
@@ -1159,8 +1207,10 @@ kbd {
   cursor: pointer;
   text-align: center;
   color: #fff;
-  transition: transform var(--duration-normal) var(--ease-out),
-    box-shadow var(--duration-normal) var(--ease-out), filter var(--duration-normal) var(--ease-out);
+  transition:
+    transform var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    filter var(--duration-normal) var(--ease-out);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
   min-height: 5.5rem;
 }
@@ -1224,7 +1274,8 @@ kbd {
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--duration-normal) var(--ease-out),
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
     color var(--duration-normal) var(--ease-out);
 }
 

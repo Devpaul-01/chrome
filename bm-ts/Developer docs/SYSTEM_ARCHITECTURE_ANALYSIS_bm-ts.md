@@ -1,6 +1,5 @@
 # BirthdayMessaging (bm-ts) System Architecture Analysis
 
-
 **Generated:** February 1, 2026  
 **Last Updated:** April 13, 2026  
 **Version:** 1.7.0  
@@ -28,8 +27,8 @@
 **Actionable Recommendations:**
 
 1. **Increase test coverage**: Add E2E tests (Playwright); add background worker and hook tests; target >80% code coverage.
-3. **Productionize deployment**: Managed PostgreSQL, HTTPS reverse proxy, and monitoring.
-4. **Prepare Chrome Web Store listing**: Complete manifest metadata, screenshots, and privacy policy.
+2. **Productionize deployment**: Managed PostgreSQL, HTTPS reverse proxy, and monitoring.
+3. **Prepare Chrome Web Store listing**: Complete manifest metadata, screenshots, and privacy policy.
 
 **Overall Assessment:**
 
@@ -37,27 +36,27 @@ bm-ts is a feature-complete, development-ready system with a fully operational a
 
 ### Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 0.1.0 | January 2026 | Initial system architecture analysis |
-| 0.2.0 | February 1, 2026 | **Phase 1 Implementation Complete** — Added 4 database tables, 15 API endpoints, 7 new frontend components. |
-| 0.3.0 | February 7, 2026 | **Architecture Verification** — Updated to reflect actual implemented state. |
-| 0.4.0 | February 11, 2026 | **Phase 2 UI Scaffolding Complete** — Added 6 new React components, enhanced tab navigation. 8th router (WebSocket) registered. |
-| 0.5.0 | February 12, 2026 | **Full Documentation Audit** — Corrected password hashing (Argon2, not bcrypt), updated router count to 8, verified 29 components / 24 API client functions / 32 background message types. DDL confirmed complete with all 7 tables. Documented WebSocket/real-time architecture, accessibility utilities. Removed 3000+ lines of obsolete legacy migration scaffolding code (all features now implemented). |
-| 0.6.0 | February 14–20, 2026 | **Phase 2 Full Activation** — All Phase 2 routers registered (contacts, message_groups, message_templates, posts, images, birthday_configs, smtp). 13 models and 13 tables active. Auth router extended with `PUT /auth/profile` and `DELETE /auth/account`. Rate limiting added via `slowapi`. API contract aligned (PATCH→PUT for schedules, standardised DELETE responses, `/api` prefixes). 35 extension component files; 49 API client functions; 59 background message types; App.tsx grew to 1477 lines. |
-| 0.7.0 | February 20, 2026 | **Documentation Realignment** — Comprehensive audit corrected all stale counts and status flags to reflect the actually-implemented codebase. Identified remaining production gaps: email service, SMTP password encryption, stub endpoint, and test coverage. |
-| 0.8.0 | February 21, 2026 | **Facebook Automation Pipeline Complete** — `runFullAutomation()` in content/index.ts: 2-phase loop (live birthday feed + advance/follow-up from contacts DB). Gender-aware `selectTemplate`/`selectPost` with priority (exact → neutral → any). `resolveKeywords` for `[Tag Person]`/`[Today]`/`[Image]`. `handleAutomationScan` rewritten: fetches all data, opens /birthdays tab, dispatches `automation.runFull`. Sent-today deduplication (`SentTodayRecord`, chrome.storage). `maxMessages` cap. `AutomationRunPayload` + `ContentScriptMessage` types. 3 new background message types — 62 total. `ContactForm` gender selector. `AutomationSettings` max-messages + clear-sent-today controls. `submitPost` Enter-key fallback. |
-| 0.9.0 | February 23, 2026 | **Documentation Audit & Correction** — Full code audit correcting all stale counts. `dashboard.getConfigs` and `dashboard.toggleConfig` confirmed fully implemented (call `listBirthdayConfigs`/`toggleBirthdayConfig`). App.tsx refactored from 1477 → 698 lines with 8 extracted hook files (`useContacts`, `useSMTPConfig`, `useMessageTemplates`, `usePostComposer`, `useApi`, `useImageLibrary`, `useMessages`, `useTemplateSegments`) + `AppContext.tsx`. Corrected counts: background/index.ts 750 lines / 64 message types; client.ts 760 lines / 52 functions; content/index.ts 618 lines; navigation refactored to 4 tabs (Home/Contacts/Messages/Account) with 17 view modes. Removed stale TODO flags for dashboard config handlers. |
-| 1.0.0 | February 24, 2026 | **Full Accuracy Audit** — Second code audit correcting remaining stale metrics. Model and table count corrected: 13 → **14** (models.py and ddl.sql both contain 14 entries; the 0.6.0 count of 13 was an off-by-one). Component count corrected: 35 → **38** (three previously undocumented components added to inventory: `HomeControls.tsx`, `ImageLibraryPicker.tsx`, `MessagesHub.tsx`; sub-component count updated from 12 → 15). Line counts corrected: background/index.ts 750 → **715**; client.ts 760 → **667**; content/index.ts 618 → **613**; App.tsx 698 → **651**. Images endpoint URL corrected in § 2.3 and BACKEND_INTEGRATION_SUMMARY (`POST /api/images/` → `POST /api/images/upload`). Evaluation summary and all metric tables updated to reflect verified counts. |
-| 1.1.0 | March 1, 2026 | **Comprehensive Code Audit** — Full codebase re-verification corrected 30+ stale metrics across all documentation. Router count clarified: **15** `include_router()` calls + **2** inline app routes (not "17 routers"). `ddl.sql` confirmed removed from codebase — schema managed via `models.py` + Alembic. Component count corrected: 38 → **34** (4 phantom entries removed: `Config.tsx`, `MessageTemplates.tsx`, `TabbedDashboard.tsx`, `TemplateList.tsx`). Hook files corrected: 8 → **7** (`useApi` does not exist). Line counts corrected: App.tsx 651 → **668**; background/index.ts 715 → **780**; client.ts 667 → **825**; content/index.ts 613 → **741**; timeline.ts 575 → **562**; messenger.ts 511 → **483**; models.py 373 → **499**; accessibility.ts 216 → **237**. API client functions corrected: 52 → **52** (confirmed). Messages queue endpoint corrected: `PATCH` → **`PUT`**. Extension test suite documented: **214 tests** across 11 files (95 unit + 119 component). `db/` directory listing corrected: removed nonexistent `database.py`, `connect_db.py`, `db_config.py`; confirmed actual files: `base.py`, `models.py`, `session.py`. Removed phantom `async_test_db.py` from test listing. Python dependency count corrected: 13 → **14**. |
-| 1.2.0 | March 9, 2026 | **Full Codebase Audit & Bug Fixes** — Fixed critical `import asyncio` bug in `password_reset.py` that caused `NameError` at runtime (reset emails silently failed). Removed hardcoded SendGrid credentials from source code comment. Updated stale TODO docstring to reflect actual SendGrid implementation. Component count corrected: 34 → **36** (35 in `components/` + `Toast.tsx`). Line counts re-verified: App.tsx 668 → **570**; background/index.ts 780 → **1,131**; client.ts 825 → **783**; content/index.ts 741 → **1,130**; timeline.ts 562 → **660**; messenger.ts 483 → **620**; models.py 499 → **589**; accessibility.ts 237 → **226**. Extension test suite corrected: 214/11 → **266 tests across 13 files** (95 unit + 171 component). Email service status upgraded from "not configured" to "SendGrid integrated". Python dependency count corrected: 14 → **15** (`sendgrid>=6.11` added). API client functions confirmed: **52**. Background message types confirmed: **64**. |
-| 1.3.0 | March 13, 2026 | **Comprehensive Accuracy Audit** — Full line-by-line verification of every metric against actual codebase. Model/table count corrected: 14 → **15** (RevokedToken was undocumented, confirmed via separate Alembic migration `a1b2c3d4e5f6_create_revoked_tokens.py`). Component count corrected: 36 → **38** (38 .tsx files in `components/`). Background message types corrected: 64 → **72** across **15 categories** (added failsafe category with 8 message types). Line counts re-verified against terminal: App.tsx → **673**; background/index.ts → **865**; client.ts → **767**; content/index.ts → **892**; timeline.ts → **467**; messenger.ts → **461**; models.py → **404**; accessibility.ts → **211**. Extension tests corrected: 266 → **283** across 13 files (97 unit + 186 component). Backend tests corrected: 4 → **7** (5 in test_auth.py + 2 in test_templates.py). Utility files: 9 → **10** (added failsafe.ts at 370 lines; total ~1,484 lines). Manifest section updated to match actual manifest.json (3 `content_scripts.matches` patterns including profile.php, narrowed `host_permissions`, `alarms` in `optional_permissions`, `type: "module"` on service worker). **CRITICAL BUG IDENTIFIED**: `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` are referenced in `password_reset.py` but NOT defined in `config.py` Settings — `send_reset_email()` will crash with `AttributeError`. Known code gaps and recommendations updated accordingly. |
-| 1.4.0 | March 14, 2026 | **Security Hardening & Email Config Fix** — CRITICAL BUG FIXED: `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` added to `config.py` Settings class; `password_reset.py` updated to use `settings.*` (removed `os.environ.get()`); `SMTP_ENCRYPTION_KEY` validator rejects placeholder `"generate-with-fernet"` at startup. New `SecurityHeadersMiddleware` in `security_headers.py` adds 5 OWASP headers (HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy). New `validators.py` with reusable `sanitize_text()` (strip, null-byte rejection, 10K max) applied to 6 schema files (auth, contact, post, message_template, smtp, template). SMTP GET/PUT endpoints now return masked password `"••••••••"` instead of real values. `.env.example` updated with all new env vars. |
-| 1.5.0 | April 1, 2026 | **Comprehensive Codebase Audit** — Full re-verification of every metric against actual codebase. **Model/table count corrected: 15 → 17** (UserSession and EmailVerificationToken were undocumented; separate Alembic migrations exist for both). Auth router expanded: 9 → **15 endpoints** (added `/revoke`, `/sessions`, `DELETE /sessions/{id}`, `/request-email-verification`, `/verify-email`, `/data-export`). Subscription router expanded: 2 → **6 endpoints** (added `/cancel`, `/reactivate`, `/change-plan`, `/billing-portal`). Messages router expanded: 7 → **8** (added `/history/export`). Templates router: 4 → **5** (added `/preview`). **Total HTTP endpoints: 65 → 77** (75 router + 2 inline). **API client functions: 52 → 58** (882 lines, up from 767). **Background message types: 72 → 77** (902 lines, up from 865). **ViewMode states: 17 → 19** (added `schedules`, `automation`, `post-list`). App.tsx grew: 673 → **840** lines. AppContext.tsx: 164 → **180** lines. models.py: 404 → **449** lines. content/index.ts: 892 → **960** lines. **Backend tests massively expanded: 7 → 176 tests, 2 → 20 files** (all Phase 2 routers tested, integration tests, API contracts, DB constraints). **Extension tests: 283 → 297 tests, 13 → 15 files**. Service files: 3 → **4** (`email_verification.py` added). Schema files confirmed: **17**. SMTP passwords now encrypted at rest (Fernet). Email verification and user sessions fully implemented. Two security hardening passes complete. Known gap: All 6 pre-existing test failures have been fixed in v1.8.0 (5 auth KeyError:'path' resolved, 1 subscription assertion resolved). All tests now pass. |
-| 1.5.1 | April 4, 2026 | **Documentation Accuracy Audit** — Corrected stale metrics across all developer docs. **Backend test count corrected: 176/20 → 230 tests across 25 files** (6 new test files added since v1.5.0: test_audit_log, test_encryption, test_rate_limiter, test_security_headers, test_stripe_service, test_validators). **Extension test count corrected: 297 → 294** (precise recount). **Auth router: 15 → 17 endpoints** (2 HTML pages for email verification + password reset excluded from OpenAPI schema). **Total HTTP endpoints: 77 → 78** (76 router + 2 inline). **ViewMode states: 19 → 22** (full recount from AppContext.tsx: `postLibrary`, `post-list`, `import-contacts` were uncounted). Content scripts total: ~1,893 lines. FRONTEND_INTEGRATION_SUMMARY updated: all line counts re-verified (client.ts 882, background 902, content 962, App.tsx 840, messenger 413, timeline 473), manifest.json corrected (`alarms` in optional\_permissions, narrowed content\_scripts.matches), `failsafe.ts` added to utils listing. BACKEND_INTEGRATION_SUMMARY updated: missing auth endpoints (email verification, sessions, data export), subscription endpoints (cancel/reactivate/change-plan/billing-portal), messages CSV export added; SMTP status corrected to Fernet-encrypted; totals table corrected. MVP_CHECKLIST: component count corrected 42 → 38, ORM model count 15 → 17. BACKEND_TESTING_GUIDE: email status updated from "not configured" to SendGrid. |
-| 1.6.0 | April 12, 2026 | **Comprehensive Codebase Audit** — Full re-verification of every metric against actual codebase. **Model/table count corrected: 17 → 18** (SendRateLimit model and `send_rate_limits` table added for send rate tracking). **Alembic migrations: 5 → 7** (added `e5f6g7h8i9j0_add_birthday_month_only` and `f6g7h8i9j0k1_add_contact_upsert_and_rate_limits`). **message_groups router DEACTIVATED** (commented out in main.py — "feature not currently needed"); **rate_limits router ADDED** (2 endpoints: `GET /api/rate-limits/status`, `POST /api/rate-limits/record`). **HTTP endpoints corrected: 78 → 75 active** (message_groups -5, rate_limits +2, birthday_configs corrected 7→6). **JWT library: python-jose → PyJWT** (`pyjwt[crypto]>=2.8` in pyproject.toml). **auth.py expanded: 641 → 923 lines**. **Backend tests: 230 → 287** (test_api_contracts expanded 14→71). **Backend LOC: ~4,860 → 5,324** Python (excl tests). models.py: 449→472 lines. **Frontend components: 38 → 40** (SchedulingSettings.tsx, ScrollToTop.tsx added). App.tsx: 840→805 lines. AppContext.tsx: 180→186 lines. **ViewMode: 22 → 24** (added `scheduling`, `birthday-calendar`). **TabType: 4 → 5** (added `analytics`). client.ts: 882→925 lines; **58 → 60 exported functions** (getServerRateLimitStatus, recordServerSend). background/index.ts: 902→926 lines; **77 → 73 message handlers** (message_groups handlers removed, rate_limits added). **Content scripts: ~1,893 → 3,640 lines** (index.ts 960→2,305; dom-helpers.ts 27→292; messenger.ts 413→513; timeline.ts 473→512). **Utils: 10 → 14 files** (crash-recovery.ts, notifications.ts, offline-queue.ts, update-check.ts added). **Frontend tests: 294 → 360 across 15 → 18 files** (dom-helpers.test.ts, messenger.test.ts added). **Frontend TS LOC: ~15,097 → 17,510**. **Manifest updated**: `notifications` and `alarms` promoted to required permissions; `optional_permissions` removed; content_scripts.matches broadened to `https://www.facebook.com/*`; host_permissions simplified; CSP block added. **DevDependencies: 22 → 28** (vitest-axe, axe-core, @vitest/coverage-v8, jsdom, lightningcss, vite-plugin-lightningcss added). |
-| 1.7.0 | April 13, 2026 | **Documentation Accuracy Audit & Code Improvements** — Full re-verification of all doc metrics against actual codebase after P0–P3 gap implementations. **Code improvements applied**: SendGrid retry logic with 3-attempt exponential backoff added to `password_reset.py` (134→145 lines) and `email_verification.py` (117→128 lines); per-user 30s TTL in-memory cache added to `GET /api/dashboard/stats` (dashboard.py→125 lines); 5-minute service worker template/post cache added to background/index.ts (926→972 lines); `tsconfig.json` tightened with `noUnusedLocals`/`noUnusedParameters`; vite sourcemaps changed from `false` to conditional `mode === 'staging'`; `@typescript-eslint/no-explicit-any` suppressions replaced with proper type casts in `useContacts.ts`. **`offline-queue.ts` REMOVED** (dead code, 0 imports) — utils: 14→13 files, ~1,913→~1,800 lines. **`MessageResponse` schema added** to `common.py`; re-exported from `password_reset.py` and `email_verification.py` schemas. **`requestBlob()` helper** added to `client.ts` (925→977 lines). **DashboardCharts.tsx** rewritten for WCAG 1.1.1 compliance + React.memo. **Dashboard.tsx** wrapped with React.memo + useMemo. **AppContext.tsx** WebSocket reconnection guard added. **14 test/component files**: unused imports removed for strict tsconfig compliance. **Doc corrections**: Architecture diagram "38 comps"→"40 comps"; SMTP config table "plaintext"→"Fernet-encrypted"; component inventory table: 4 missing components added (FeatureTip, HelpPanel, HelpTooltip, OnboardingWizard), 6 commented-out imports noted (BirthdayCalendar, ContactForm, ContactList, ImportContactsModal, MessageGroups, SMTPSettings); API client Auth category corrected (11)→(10), Rate Limits (2) row added; background worker and hook test status upgraded ❌→✅ Basic (3 test files: index.test.ts, useImageLibrary.test.ts, useMessages.test.ts); extension test files: 18→21; `alembic.ini` status corrected "not actively used"→"actively used"; websocket.py: 153→173 lines; auth.py: 923→941 lines. **All stale line counts and file counts updated throughout.** Backend LOC: ~5,324→~5,401. Extension TS LOC: ~17,510→~17,680. Hooks: 1,054→1,105 lines. Content scripts: ~3,640→~3,646 lines. |
-| 1.8.0 | April 14, 2026 | **Codebase Metrics Audit** — All source file line counts re-verified and corrected. `client.ts` 977→1,090 lines; `background/index.ts` 972→994 lines; `content/index.ts` 2,292→2,474 lines; `content/dom-helpers.ts` 305→335 lines; `content/messenger.ts` 519→609 lines; `content/timeline.ts` 512→605 lines; `App.tsx` 815→851 lines; `AppContext.tsx` 186→199 lines; `websocket.ts` 207→243 lines. Hook line counts corrected: `useContacts` 232→253; `useImageLibrary` 80→90; `useMessages` 287→313; `useMessageTemplates` 131→139; `usePostComposer` 149→175; `useSMTPConfig` 53→58; `useTemplateSegments` 173→184. Utility line counts corrected: `accessibility` 211→236; `automation` 168→199; `bridge` 108→118; `crash-recovery` 62→70; `errors` 173→197; `failsafe` 377→441; `image` 119→140; `logger` 28→43; `message` 91→103; `messages` 170→174; `notifications` 77→88; `storage` 114→124; `update-check` 102→117. **ViewMode states corrected: 24→22** (`post-list` and `groups` removed from AppContext.tsx union). **Backend test count corrected: 269→287** (24 test files); `test_api_contracts.py` per-file count corrected 64→71. |
+| Version | Date                 | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1.0   | January 2026         | Initial system architecture analysis                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 0.2.0   | February 1, 2026     | **Phase 1 Implementation Complete** — Added 4 database tables, 15 API endpoints, 7 new frontend components.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 0.3.0   | February 7, 2026     | **Architecture Verification** — Updated to reflect actual implemented state.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 0.4.0   | February 11, 2026    | **Phase 2 UI Scaffolding Complete** — Added 6 new React components, enhanced tab navigation. 8th router (WebSocket) registered.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 0.5.0   | February 12, 2026    | **Full Documentation Audit** — Corrected password hashing (Argon2, not bcrypt), updated router count to 8, verified 29 components / 24 API client functions / 32 background message types. DDL confirmed complete with all 7 tables. Documented WebSocket/real-time architecture, accessibility utilities. Removed 3000+ lines of obsolete legacy migration scaffolding code (all features now implemented).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 0.6.0   | February 14–20, 2026 | **Phase 2 Full Activation** — All Phase 2 routers registered (contacts, message_groups, message_templates, posts, images, birthday_configs, smtp). 13 models and 13 tables active. Auth router extended with `PUT /auth/profile` and `DELETE /auth/account`. Rate limiting added via `slowapi`. API contract aligned (PATCH→PUT for schedules, standardised DELETE responses, `/api` prefixes). 35 extension component files; 49 API client functions; 59 background message types; App.tsx grew to 1477 lines.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 0.7.0   | February 20, 2026    | **Documentation Realignment** — Comprehensive audit corrected all stale counts and status flags to reflect the actually-implemented codebase. Identified remaining production gaps: email service, SMTP password encryption, stub endpoint, and test coverage.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 0.8.0   | February 21, 2026    | **Facebook Automation Pipeline Complete** — `runFullAutomation()` in content/index.ts: 2-phase loop (live birthday feed + advance/follow-up from contacts DB). Gender-aware `selectTemplate`/`selectPost` with priority (exact → neutral → any). `resolveKeywords` for `[Tag Person]`/`[Today]`/`[Image]`. `handleAutomationScan` rewritten: fetches all data, opens /birthdays tab, dispatches `automation.runFull`. Sent-today deduplication (`SentTodayRecord`, chrome.storage). `maxMessages` cap. `AutomationRunPayload` + `ContentScriptMessage` types. 3 new background message types — 62 total. `ContactForm` gender selector. `AutomationSettings` max-messages + clear-sent-today controls. `submitPost` Enter-key fallback.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 0.9.0   | February 23, 2026    | **Documentation Audit & Correction** — Full code audit correcting all stale counts. `dashboard.getConfigs` and `dashboard.toggleConfig` confirmed fully implemented (call `listBirthdayConfigs`/`toggleBirthdayConfig`). App.tsx refactored from 1477 → 698 lines with 8 extracted hook files (`useContacts`, `useSMTPConfig`, `useMessageTemplates`, `usePostComposer`, `useApi`, `useImageLibrary`, `useMessages`, `useTemplateSegments`) + `AppContext.tsx`. Corrected counts: background/index.ts 750 lines / 64 message types; client.ts 760 lines / 52 functions; content/index.ts 618 lines; navigation refactored to 4 tabs (Home/Contacts/Messages/Account) with 17 view modes. Removed stale TODO flags for dashboard config handlers.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 1.0.0   | February 24, 2026    | **Full Accuracy Audit** — Second code audit correcting remaining stale metrics. Model and table count corrected: 13 → **14** (models.py and ddl.sql both contain 14 entries; the 0.6.0 count of 13 was an off-by-one). Component count corrected: 35 → **38** (three previously undocumented components added to inventory: `HomeControls.tsx`, `ImageLibraryPicker.tsx`, `MessagesHub.tsx`; sub-component count updated from 12 → 15). Line counts corrected: background/index.ts 750 → **715**; client.ts 760 → **667**; content/index.ts 618 → **613**; App.tsx 698 → **651**. Images endpoint URL corrected in § 2.3 and BACKEND_INTEGRATION_SUMMARY (`POST /api/images/` → `POST /api/images/upload`). Evaluation summary and all metric tables updated to reflect verified counts.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 1.1.0   | March 1, 2026        | **Comprehensive Code Audit** — Full codebase re-verification corrected 30+ stale metrics across all documentation. Router count clarified: **15** `include_router()` calls + **2** inline app routes (not "17 routers"). `ddl.sql` confirmed removed from codebase — schema managed via `models.py` + Alembic. Component count corrected: 38 → **34** (4 phantom entries removed: `Config.tsx`, `MessageTemplates.tsx`, `TabbedDashboard.tsx`, `TemplateList.tsx`). Hook files corrected: 8 → **7** (`useApi` does not exist). Line counts corrected: App.tsx 651 → **668**; background/index.ts 715 → **780**; client.ts 667 → **825**; content/index.ts 613 → **741**; timeline.ts 575 → **562**; messenger.ts 511 → **483**; models.py 373 → **499**; accessibility.ts 216 → **237**. API client functions corrected: 52 → **52** (confirmed). Messages queue endpoint corrected: `PATCH` → **`PUT`**. Extension test suite documented: **214 tests** across 11 files (95 unit + 119 component). `db/` directory listing corrected: removed nonexistent `database.py`, `connect_db.py`, `db_config.py`; confirmed actual files: `base.py`, `models.py`, `session.py`. Removed phantom `async_test_db.py` from test listing. Python dependency count corrected: 13 → **14**.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 1.2.0   | March 9, 2026        | **Full Codebase Audit & Bug Fixes** — Fixed critical `import asyncio` bug in `password_reset.py` that caused `NameError` at runtime (reset emails silently failed). Removed hardcoded SendGrid credentials from source code comment. Updated stale TODO docstring to reflect actual SendGrid implementation. Component count corrected: 34 → **36** (35 in `components/` + `Toast.tsx`). Line counts re-verified: App.tsx 668 → **570**; background/index.ts 780 → **1,131**; client.ts 825 → **783**; content/index.ts 741 → **1,130**; timeline.ts 562 → **660**; messenger.ts 483 → **620**; models.py 499 → **589**; accessibility.ts 237 → **226**. Extension test suite corrected: 214/11 → **266 tests across 13 files** (95 unit + 171 component). Email service status upgraded from "not configured" to "SendGrid integrated". Python dependency count corrected: 14 → **15** (`sendgrid>=6.11` added). API client functions confirmed: **52**. Background message types confirmed: **64**.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 1.3.0   | March 13, 2026       | **Comprehensive Accuracy Audit** — Full line-by-line verification of every metric against actual codebase. Model/table count corrected: 14 → **15** (RevokedToken was undocumented, confirmed via separate Alembic migration `a1b2c3d4e5f6_create_revoked_tokens.py`). Component count corrected: 36 → **38** (38 .tsx files in `components/`). Background message types corrected: 64 → **72** across **15 categories** (added failsafe category with 8 message types). Line counts re-verified against terminal: App.tsx → **673**; background/index.ts → **865**; client.ts → **767**; content/index.ts → **892**; timeline.ts → **467**; messenger.ts → **461**; models.py → **404**; accessibility.ts → **211**. Extension tests corrected: 266 → **283** across 13 files (97 unit + 186 component). Backend tests corrected: 4 → **7** (5 in test_auth.py + 2 in test_templates.py). Utility files: 9 → **10** (added failsafe.ts at 370 lines; total ~1,484 lines). Manifest section updated to match actual manifest.json (3 `content_scripts.matches` patterns including profile.php, narrowed `host_permissions`, `alarms` in `optional_permissions`, `type: "module"` on service worker). **CRITICAL BUG IDENTIFIED**: `EMAIL_FROM_ADDRESS` and `PASSWORD_RESET_URL_BASE` are referenced in `password_reset.py` but NOT defined in `config.py` Settings — `send_reset_email()` will crash with `AttributeError`. Known code gaps and recommendations updated accordingly.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 1.4.0   | March 14, 2026       | **Security Hardening & Email Config Fix** — CRITICAL BUG FIXED: `EMAIL_FROM_ADDRESS`, `PASSWORD_RESET_URL_BASE`, and `SENDGRID_API_KEY` added to `config.py` Settings class; `password_reset.py` updated to use `settings.*` (removed `os.environ.get()`); `SMTP_ENCRYPTION_KEY` validator rejects placeholder `"generate-with-fernet"` at startup. New `SecurityHeadersMiddleware` in `security_headers.py` adds 5 OWASP headers (HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy). New `validators.py` with reusable `sanitize_text()` (strip, null-byte rejection, 10K max) applied to 6 schema files (auth, contact, post, message_template, smtp, template). SMTP GET/PUT endpoints now return masked password `"••••••••"` instead of real values. `.env.example` updated with all new env vars.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 1.5.0   | April 1, 2026        | **Comprehensive Codebase Audit** — Full re-verification of every metric against actual codebase. **Model/table count corrected: 15 → 17** (UserSession and EmailVerificationToken were undocumented; separate Alembic migrations exist for both). Auth router expanded: 9 → **15 endpoints** (added `/revoke`, `/sessions`, `DELETE /sessions/{id}`, `/request-email-verification`, `/verify-email`, `/data-export`). Subscription router expanded: 2 → **6 endpoints** (added `/cancel`, `/reactivate`, `/change-plan`, `/billing-portal`). Messages router expanded: 7 → **8** (added `/history/export`). Templates router: 4 → **5** (added `/preview`). **Total HTTP endpoints: 65 → 77** (75 router + 2 inline). **API client functions: 52 → 58** (882 lines, up from 767). **Background message types: 72 → 77** (902 lines, up from 865). **ViewMode states: 17 → 19** (added `schedules`, `automation`, `post-list`). App.tsx grew: 673 → **840** lines. AppContext.tsx: 164 → **180** lines. models.py: 404 → **449** lines. content/index.ts: 892 → **960** lines. **Backend tests massively expanded: 7 → 176 tests, 2 → 20 files** (all Phase 2 routers tested, integration tests, API contracts, DB constraints). **Extension tests: 283 → 297 tests, 13 → 15 files**. Service files: 3 → **4** (`email_verification.py` added). Schema files confirmed: **17**. SMTP passwords now encrypted at rest (Fernet). Email verification and user sessions fully implemented. Two security hardening passes complete. Known gap: All 6 pre-existing test failures have been fixed in v1.8.0 (5 auth KeyError:'path' resolved, 1 subscription assertion resolved). All tests now pass.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 1.5.1   | April 4, 2026        | **Documentation Accuracy Audit** — Corrected stale metrics across all developer docs. **Backend test count corrected: 176/20 → 230 tests across 25 files** (6 new test files added since v1.5.0: test_audit_log, test_encryption, test_rate_limiter, test_security_headers, test_stripe_service, test_validators). **Extension test count corrected: 297 → 294** (precise recount). **Auth router: 15 → 17 endpoints** (2 HTML pages for email verification + password reset excluded from OpenAPI schema). **Total HTTP endpoints: 77 → 78** (76 router + 2 inline). **ViewMode states: 19 → 22** (full recount from AppContext.tsx: `postLibrary`, `post-list`, `import-contacts` were uncounted). Content scripts total: ~1,893 lines. FRONTEND_INTEGRATION_SUMMARY updated: all line counts re-verified (client.ts 882, background 902, content 962, App.tsx 840, messenger 413, timeline 473), manifest.json corrected (`alarms` in optional_permissions, narrowed content_scripts.matches), `failsafe.ts` added to utils listing. BACKEND_INTEGRATION_SUMMARY updated: missing auth endpoints (email verification, sessions, data export), subscription endpoints (cancel/reactivate/change-plan/billing-portal), messages CSV export added; SMTP status corrected to Fernet-encrypted; totals table corrected. MVP_CHECKLIST: component count corrected 42 → 38, ORM model count 15 → 17. BACKEND_TESTING_GUIDE: email status updated from "not configured" to SendGrid.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 1.6.0   | April 12, 2026       | **Comprehensive Codebase Audit** — Full re-verification of every metric against actual codebase. **Model/table count corrected: 17 → 18** (SendRateLimit model and `send_rate_limits` table added for send rate tracking). **Alembic migrations: 5 → 7** (added `e5f6g7h8i9j0_add_birthday_month_only` and `f6g7h8i9j0k1_add_contact_upsert_and_rate_limits`). **message_groups router DEACTIVATED** (commented out in main.py — "feature not currently needed"); **rate_limits router ADDED** (2 endpoints: `GET /api/rate-limits/status`, `POST /api/rate-limits/record`). **HTTP endpoints corrected: 78 → 75 active** (message_groups -5, rate_limits +2, birthday_configs corrected 7→6). **JWT library: python-jose → PyJWT** (`pyjwt[crypto]>=2.8` in pyproject.toml). **auth.py expanded: 641 → 923 lines**. **Backend tests: 230 → 287** (test_api_contracts expanded 14→71). **Backend LOC: ~4,860 → 5,324** Python (excl tests). models.py: 449→472 lines. **Frontend components: 38 → 40** (SchedulingSettings.tsx, ScrollToTop.tsx added). App.tsx: 840→805 lines. AppContext.tsx: 180→186 lines. **ViewMode: 22 → 24** (added `scheduling`, `birthday-calendar`). **TabType: 4 → 5** (added `analytics`). client.ts: 882→925 lines; **58 → 60 exported functions** (getServerRateLimitStatus, recordServerSend). background/index.ts: 902→926 lines; **77 → 73 message handlers** (message_groups handlers removed, rate_limits added). **Content scripts: ~1,893 → 3,640 lines** (index.ts 960→2,305; dom-helpers.ts 27→292; messenger.ts 413→513; timeline.ts 473→512). **Utils: 10 → 14 files** (crash-recovery.ts, notifications.ts, offline-queue.ts, update-check.ts added). **Frontend tests: 294 → 360 across 15 → 18 files** (dom-helpers.test.ts, messenger.test.ts added). **Frontend TS LOC: ~15,097 → 17,510**. **Manifest updated**: `notifications` and `alarms` promoted to required permissions; `optional_permissions` removed; content_scripts.matches broadened to `https://www.facebook.com/*`; host_permissions simplified; CSP block added. **DevDependencies: 22 → 28** (vitest-axe, axe-core, @vitest/coverage-v8, jsdom, lightningcss, vite-plugin-lightningcss added).                                                                                       |
+| 1.7.0   | April 13, 2026       | **Documentation Accuracy Audit & Code Improvements** — Full re-verification of all doc metrics against actual codebase after P0–P3 gap implementations. **Code improvements applied**: SendGrid retry logic with 3-attempt exponential backoff added to `password_reset.py` (134→145 lines) and `email_verification.py` (117→128 lines); per-user 30s TTL in-memory cache added to `GET /api/dashboard/stats` (dashboard.py→125 lines); 5-minute service worker template/post cache added to background/index.ts (926→972 lines); `tsconfig.json` tightened with `noUnusedLocals`/`noUnusedParameters`; vite sourcemaps changed from `false` to conditional `mode === 'staging'`; `@typescript-eslint/no-explicit-any` suppressions replaced with proper type casts in `useContacts.ts`. **`offline-queue.ts` REMOVED** (dead code, 0 imports) — utils: 14→13 files, ~1,913→~1,800 lines. **`MessageResponse` schema added** to `common.py`; re-exported from `password_reset.py` and `email_verification.py` schemas. **`requestBlob()` helper** added to `client.ts` (925→977 lines). **DashboardCharts.tsx** rewritten for WCAG 1.1.1 compliance + React.memo. **Dashboard.tsx** wrapped with React.memo + useMemo. **AppContext.tsx** WebSocket reconnection guard added. **14 test/component files**: unused imports removed for strict tsconfig compliance. **Doc corrections**: Architecture diagram "38 comps"→"40 comps"; SMTP config table "plaintext"→"Fernet-encrypted"; component inventory table: 4 missing components added (FeatureTip, HelpPanel, HelpTooltip, OnboardingWizard), 6 commented-out imports noted (BirthdayCalendar, ContactForm, ContactList, ImportContactsModal, MessageGroups, SMTPSettings); API client Auth category corrected (11)→(10), Rate Limits (2) row added; background worker and hook test status upgraded ❌→✅ Basic (3 test files: index.test.ts, useImageLibrary.test.ts, useMessages.test.ts); extension test files: 18→21; `alembic.ini` status corrected "not actively used"→"actively used"; websocket.py: 153→173 lines; auth.py: 923→941 lines. **All stale line counts and file counts updated throughout.** Backend LOC: ~5,324→~5,401. Extension TS LOC: ~17,510→~17,680. Hooks: 1,054→1,105 lines. Content scripts: ~3,640→~3,646 lines. |
+| 1.8.0   | April 14, 2026       | **Codebase Metrics Audit** — All source file line counts re-verified and corrected. `client.ts` 977→1,090 lines; `background/index.ts` 972→994 lines; `content/index.ts` 2,292→2,474 lines; `content/dom-helpers.ts` 305→335 lines; `content/messenger.ts` 519→609 lines; `content/timeline.ts` 512→605 lines; `App.tsx` 815→851 lines; `AppContext.tsx` 186→199 lines; `websocket.ts` 207→243 lines. Hook line counts corrected: `useContacts` 232→253; `useImageLibrary` 80→90; `useMessages` 287→313; `useMessageTemplates` 131→139; `usePostComposer` 149→175; `useSMTPConfig` 53→58; `useTemplateSegments` 173→184. Utility line counts corrected: `accessibility` 211→236; `automation` 168→199; `bridge` 108→118; `crash-recovery` 62→70; `errors` 173→197; `failsafe` 377→441; `image` 119→140; `logger` 28→43; `message` 91→103; `messages` 170→174; `notifications` 77→88; `storage` 114→124; `update-check` 102→117. **ViewMode states corrected: 24→22** (`post-list` and `groups` removed from AppContext.tsx union). **Backend test count corrected: 269→287** (24 test files); `test_api_contracts.py` per-file count corrected 64→71.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 ---
 
@@ -110,12 +109,13 @@ The system follows a client-server architecture where the extension acts as a th
 
 **⚠️ Known Gaps (non-blocking for development):**
 
-| Gap | Detail |
-|-----|--------|
-| Test coverage | no E2E tests |
+| Gap                  | Detail                                                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test coverage        | no E2E tests                                                                                                                                                                                            |
 | CI/CD and monitoring | Frontend CI (.gitea/workflows/frontend-ci.yaml) and backend CI (.gitea/workflows/backend-ci.yaml) exist; dependency scanning via `dependency-scan.yaml`; deploy pipeline includes pytest; no monitoring |
 
 **System Status:**
+
 - ✅ Development-ready with Docker Compose
 - ✅ SendGrid email service fully configured for password reset and email verification (Mar 14, 2026) — all config fields in `config.py` Settings
 - ✅ Security headers middleware active (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cache-Control)
@@ -200,8 +200,11 @@ The system follows a client-server architecture where the extension acts as a th
 ```
 
 ### 1.2 Technology Stack
+
 `popup.css`
+
 #### Backend
+
 - **Language**: Python 3.11+
 - **Framework**: FastAPI 0.110+
 - **ORM**: SQLAlchemy 2.0 (async)
@@ -212,6 +215,7 @@ The system follows a client-server architecture where the extension acts as a th
 - **Containerization**: Docker with docker-compose
 
 #### Frontend (Chrome Extension)
+
 - **Language**: TypeScript 5.5+
 - **UI Framework**: React 18.2
 - **Build Tool**: Vite 7.3
@@ -221,6 +225,7 @@ The system follows a client-server architecture where the extension acts as a th
 - **Package Manager**: npm
 
 #### Infrastructure
+
 - **Development**: Local Docker Compose (PostgreSQL + backend)
 - **Database Initialization**: Alembic migrations applied on container startup
 - **API Documentation**: Markdown contracts + Swagger UI at `/docs`
@@ -239,22 +244,22 @@ backend/
 │   ├── api/
 │   │   ├── deps.py                # get_current_user dependency (124 lines — Bearer token, JWT decode, token type, session validation, email_verified, account lockout)
 │   │   └── routers/
-│   │       ├── auth.py            # Authentication + password reset + email verification + sessions + profile/account + data export (941 lines, 17 endpoints) 
-│   │       ├── templates.py       # Template segment CRUD 
-│   │       ├── subscription.py    # Subscription management 
-│   │       ├── webhook.py         # Stripe webhook handler 
-│   │       ├── schedules.py       # Birthday schedule management 
-│   │       ├── messages.py        # Message queue & history 
-│   │       ├── dashboard.py       # Dashboard analytics (per-user 30s TTL cache) 
-│   │       ├── websocket.py       # WebSocket real-time updates 
-│   │       ├── contacts.py        # Contact CRUD + bulk import 
+│   │       ├── auth.py            # Authentication + password reset + email verification + sessions + profile/account + data export (941 lines, 17 endpoints)
+│   │       ├── templates.py       # Template segment CRUD
+│   │       ├── subscription.py    # Subscription management
+│   │       ├── webhook.py         # Stripe webhook handler
+│   │       ├── schedules.py       # Birthday schedule management
+│   │       ├── messages.py        # Message queue & history
+│   │       ├── dashboard.py       # Dashboard analytics (per-user 30s TTL cache)
+│   │       ├── websocket.py       # WebSocket real-time updates
+│   │       ├── contacts.py        # Contact CRUD + bulk import
 │   │       ├── message_groups.py  # Message group management (INACTIVE — commented out in main.py)
-│   │       ├── message_templates.py # Complete message templates 
-│   │       ├── posts.py           # Timeline post templates 
-│   │       ├── images.py          # User image library 
-│   │       ├── birthday_configs.py # Birthday automation configs 
-│   │       ├── rate_limits.py     # Send rate limit tracking (2 endpoints) 
-│   │       └── smtp.py            # SMTP configuration 
+│   │       ├── message_templates.py # Complete message templates
+│   │       ├── posts.py           # Timeline post templates
+│   │       ├── images.py          # User image library
+│   │       ├── birthday_configs.py # Birthday automation configs
+│   │       ├── rate_limits.py     # Send rate limit tracking (2 endpoints)
+│   │       └── smtp.py            # SMTP configuration
 │   ├── core/
 │   │   ├── config.py              # Pydantic Settings (env-based; incl. sendgrid_api_key, email_from_address, password_reset_url_base, email_verification_url_base) (102 lines)
 │   │   ├── jwt.py                 # JWT token creation/decoding (access + refresh, iss/aud claims) (69 lines)
@@ -402,7 +407,7 @@ backend/
 | `expires_at` | TIMESTAMPTZ | 1-hour expiration |
 | `used_at` | TIMESTAMPTZ, nullable | |
 
-**email_verification_tokens** *(added Mar 18, 2026 via Alembic migration `c3d4e5f6g7h8`)*
+**email_verification_tokens** _(added Mar 18, 2026 via Alembic migration `c3d4e5f6g7h8`)_
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | UUID PK | |
@@ -411,7 +416,7 @@ backend/
 | `expires_at` | TIMESTAMPTZ | |
 | `used_at` | TIMESTAMPTZ, nullable | |
 
-**user_sessions** *(added Mar 19, 2026 via Alembic migration `d4e5f6g7h8i9`)*
+**user_sessions** _(added Mar 19, 2026 via Alembic migration `d4e5f6g7h8i9`)_
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | UUID PK | |
@@ -424,6 +429,7 @@ backend/
 | `revoked_at` | TIMESTAMPTZ, nullable | Soft revoke |
 
 #### Enums
+
 - `segment_type_enum`: GREETING, BODY, CLOSING
 - `subscription_status_enum`: ACTIVE, TRIALING, PAST_DUE, CANCELED, UNPAID, INCOMPLETE, INCOMPLETE_EXPIRED
 - `message_status_enum`: pending, processing, sent, delivered, failed
@@ -512,7 +518,7 @@ backend/
 | `days_in_advance` | INTEGER | default 0 |
 | `gender` | gender_enum | default ALL |
 
-**send_rate_limits** *(added via Alembic migration `f6g7h8i9j0k1`)*
+**send_rate_limits** _(added via Alembic migration `f6g7h8i9j0k1`)_
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | UUID PK | |
@@ -521,6 +527,7 @@ backend/
 | `friend_profile_url` | TEXT | Target profile |
 
 #### Extensions
+
 - `pgcrypto`: UUID generation
 - `citext`: Case-insensitive email
 
@@ -528,174 +535,191 @@ backend/
 
 **15 routers registered in `main.py`** plus a `/health` GET and a stub `POST /send-birthday-message` (2 inline app routes):
 
-| Router | Prefix | Description |
-|--------|--------|-------------|
-| `auth` | `/auth` | Authentication, password reset, email verification, sessions, profile, account, data export (17 endpoints; 2 are HTML pages excluded from OpenAPI schema) |
-| `smtp` | `/smtp` | SMTP configuration (2 endpoints) |
-| `templates` | `/templates` | Template segment CRUD + preview (5 endpoints) |
-| `subscription` | `/subscription` | Subscription management, cancel, reactivate, change plan, billing portal (6 endpoints) |
-| `webhook` | `/stripe` | Stripe webhooks (1 endpoint) |
-| `schedules` | `/api` | Birthday schedules (4 endpoints) |
-| `messages` | `/api` | Message queue + history + CSV export (8 endpoints) |
-| `dashboard` | `/api` | Dashboard analytics (1 endpoint) |
-| `websocket` | *(none)* | WebSocket at `/ws` (1 endpoint) |
-| `contacts` | `/api` | Contact CRUD + bulk import (6 endpoints) |
-| ~~`message_groups`~~ | ~~`/api`~~ | ~~Message group CRUD (5 endpoints)~~ **INACTIVE — commented out** |
-| `message_templates` | `/api` | Complete template CRUD (5 endpoints) |
-| `posts` | `/api` | Post template CRUD (5 endpoints) |
-| `images` | `/api` | User image library (5 endpoints) |
-| `birthday_configs` | `/api` | Birthday automation configs (6 endpoints) |
-| `rate_limits` | `/api` | Send rate limit tracking (2 endpoints) |
+| Router               | Prefix          | Description                                                                                                                                               |
+| -------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth`               | `/auth`         | Authentication, password reset, email verification, sessions, profile, account, data export (17 endpoints; 2 are HTML pages excluded from OpenAPI schema) |
+| `smtp`               | `/smtp`         | SMTP configuration (2 endpoints)                                                                                                                          |
+| `templates`          | `/templates`    | Template segment CRUD + preview (5 endpoints)                                                                                                             |
+| `subscription`       | `/subscription` | Subscription management, cancel, reactivate, change plan, billing portal (6 endpoints)                                                                    |
+| `webhook`            | `/stripe`       | Stripe webhooks (1 endpoint)                                                                                                                              |
+| `schedules`          | `/api`          | Birthday schedules (4 endpoints)                                                                                                                          |
+| `messages`           | `/api`          | Message queue + history + CSV export (8 endpoints)                                                                                                        |
+| `dashboard`          | `/api`          | Dashboard analytics (1 endpoint)                                                                                                                          |
+| `websocket`          | _(none)_        | WebSocket at `/ws` (1 endpoint)                                                                                                                           |
+| `contacts`           | `/api`          | Contact CRUD + bulk import (6 endpoints)                                                                                                                  |
+| ~~`message_groups`~~ | ~~`/api`~~      | ~~Message group CRUD (5 endpoints)~~ **INACTIVE — commented out**                                                                                         |
+| `message_templates`  | `/api`          | Complete template CRUD (5 endpoints)                                                                                                                      |
+| `posts`              | `/api`          | Post template CRUD (5 endpoints)                                                                                                                          |
+| `images`             | `/api`          | User image library (5 endpoints)                                                                                                                          |
+| `birthday_configs`   | `/api`          | Birthday automation configs (6 endpoints)                                                                                                                 |
+| `rate_limits`        | `/api`          | Send rate limit tracking (2 endpoints)                                                                                                                    |
 
 **Total: 75 active HTTP endpoints (73 router + 2 inline app routes) + 1 WebSocket endpoint**
-*(message_groups router — 5 additional endpoints — exists in codebase but is deactivated)*
+_(message_groups router — 5 additional endpoints — exists in codebase but is deactivated)_
 
 #### Authentication (`/auth`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/auth/register` | POST | No | Create user, return tokens |
-| `/auth/login` | POST | No | Validate credentials, return tokens |
-| `/auth/refresh` | POST | No | Rotate both tokens |
-| `/auth/revoke` | POST | Bearer | Revoke current refresh token |
-| `/auth/sessions` | GET | Bearer | List active user sessions |
-| `/auth/sessions/{id}` | DELETE | Bearer | Revoke a specific session |
-| `/auth/me` | GET | Bearer | Get current user profile |
-| `/auth/request-password-reset` | POST | No | Request reset email (rate-limited) |
-| `/auth/request-email-verification` | POST | Bearer | Request email verification link |
-| `/auth/verify-email` | POST | No | Verify email with token |
-| `/auth/reset-password` | POST | No | Reset password with token |
-| `/auth/change-password` | POST | Bearer | Change password (authenticated) |
-| `/auth/profile` | PUT | Bearer | Update name/timezone (stored in metadata) |
-| `/auth/account` | DELETE | Bearer | Permanently delete account and all data |
-| `/auth/data-export` | GET | Bearer | Export all user data as JSON |
+
+| Endpoint                           | Method | Auth   | Description                               |
+| ---------------------------------- | ------ | ------ | ----------------------------------------- |
+| `/auth/register`                   | POST   | No     | Create user, return tokens                |
+| `/auth/login`                      | POST   | No     | Validate credentials, return tokens       |
+| `/auth/refresh`                    | POST   | No     | Rotate both tokens                        |
+| `/auth/revoke`                     | POST   | Bearer | Revoke current refresh token              |
+| `/auth/sessions`                   | GET    | Bearer | List active user sessions                 |
+| `/auth/sessions/{id}`              | DELETE | Bearer | Revoke a specific session                 |
+| `/auth/me`                         | GET    | Bearer | Get current user profile                  |
+| `/auth/request-password-reset`     | POST   | No     | Request reset email (rate-limited)        |
+| `/auth/request-email-verification` | POST   | Bearer | Request email verification link           |
+| `/auth/verify-email`               | POST   | No     | Verify email with token                   |
+| `/auth/reset-password`             | POST   | No     | Reset password with token                 |
+| `/auth/change-password`            | POST   | Bearer | Change password (authenticated)           |
+| `/auth/profile`                    | PUT    | Bearer | Update name/timezone (stored in metadata) |
+| `/auth/account`                    | DELETE | Bearer | Permanently delete account and all data   |
+| `/auth/data-export`                | GET    | Bearer | Export all user data as JSON              |
 
 #### SMTP (`/smtp`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/smtp/config` | GET | Bearer | Retrieve SMTP configuration |
-| `/smtp/config` | PUT | Bearer | Create or update SMTP configuration |
+
+| Endpoint       | Method | Auth   | Description                         |
+| -------------- | ------ | ------ | ----------------------------------- |
+| `/smtp/config` | GET    | Bearer | Retrieve SMTP configuration         |
+| `/smtp/config` | PUT    | Bearer | Create or update SMTP configuration |
 
 #### Templates (`/templates`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/templates/` | POST | Bearer | Create template segment |
-| `/templates/` | GET | Bearer | List templates (optional type filter) |
-| `/templates/{id}` | PUT | Bearer | Update template |
-| `/templates/{id}` | DELETE | Bearer | Soft-delete template |
-| `/templates/preview` | POST | Bearer | Compose sample message from segments |
+
+| Endpoint             | Method | Auth   | Description                           |
+| -------------------- | ------ | ------ | ------------------------------------- |
+| `/templates/`        | POST   | Bearer | Create template segment               |
+| `/templates/`        | GET    | Bearer | List templates (optional type filter) |
+| `/templates/{id}`    | PUT    | Bearer | Update template                       |
+| `/templates/{id}`    | DELETE | Bearer | Soft-delete template                  |
+| `/templates/preview` | POST   | Bearer | Compose sample message from segments  |
 
 #### Subscription (`/subscription`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/subscription/status` | GET | Bearer | Get subscription status |
-| `/subscription/create-checkout-session` | POST | Bearer | Create Stripe checkout |
-| `/subscription/cancel` | POST | Bearer | Cancel subscription at period end |
-| `/subscription/reactivate` | POST | Bearer | Reactivate canceled subscription |
-| `/subscription/change-plan` | POST | Bearer | Switch between monthly/yearly |
-| `/subscription/billing-portal` | POST | Bearer | Get Stripe billing portal URL |
+
+| Endpoint                                | Method | Auth   | Description                       |
+| --------------------------------------- | ------ | ------ | --------------------------------- |
+| `/subscription/status`                  | GET    | Bearer | Get subscription status           |
+| `/subscription/create-checkout-session` | POST   | Bearer | Create Stripe checkout            |
+| `/subscription/cancel`                  | POST   | Bearer | Cancel subscription at period end |
+| `/subscription/reactivate`              | POST   | Bearer | Reactivate canceled subscription  |
+| `/subscription/change-plan`             | POST   | Bearer | Switch between monthly/yearly     |
+| `/subscription/billing-portal`          | POST   | Bearer | Get Stripe billing portal URL     |
 
 #### Webhook (`/stripe`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/stripe/webhook` | POST | Stripe Signature | Handle subscription events |
+
+| Endpoint          | Method | Auth             | Description                |
+| ----------------- | ------ | ---------------- | -------------------------- |
+| `/stripe/webhook` | POST   | Stripe Signature | Handle subscription events |
 
 #### Schedules (`/api/schedules`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/schedules` | GET | Bearer | List schedules |
-| `/api/schedules` | POST | Bearer | Create schedule |
-| `/api/schedules/{id}` | PUT | Bearer | Update schedule (enabled toggle) |
-| `/api/schedules/{id}` | DELETE | Bearer | Delete schedule |
+
+| Endpoint              | Method | Auth   | Description                      |
+| --------------------- | ------ | ------ | -------------------------------- |
+| `/api/schedules`      | GET    | Bearer | List schedules                   |
+| `/api/schedules`      | POST   | Bearer | Create schedule                  |
+| `/api/schedules/{id}` | PUT    | Bearer | Update schedule (enabled toggle) |
+| `/api/schedules/{id}` | DELETE | Bearer | Delete schedule                  |
 
 #### Messages (`/api/messages`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/messages/queue` | GET | Bearer | List queued messages |
-| `/api/messages/queue` | POST | Bearer | Create queued message |
-| `/api/messages/queue/{id}` | PUT | Bearer | Update message content/time |
-| `/api/messages/queue/{id}` | DELETE | Bearer | Cancel message |
-| `/api/messages/queue/{id}/retry` | POST | Bearer | Retry failed message |
-| `/api/messages/history` | GET | Bearer | List history (search/filter) |
-| `/api/messages/history/{id}` | DELETE | Bearer | Delete history entry |
-| `/api/messages/history/export` | GET | Bearer | Export full history as CSV |
+
+| Endpoint                         | Method | Auth   | Description                  |
+| -------------------------------- | ------ | ------ | ---------------------------- |
+| `/api/messages/queue`            | GET    | Bearer | List queued messages         |
+| `/api/messages/queue`            | POST   | Bearer | Create queued message        |
+| `/api/messages/queue/{id}`       | PUT    | Bearer | Update message content/time  |
+| `/api/messages/queue/{id}`       | DELETE | Bearer | Cancel message               |
+| `/api/messages/queue/{id}/retry` | POST   | Bearer | Retry failed message         |
+| `/api/messages/history`          | GET    | Bearer | List history (search/filter) |
+| `/api/messages/history/{id}`     | DELETE | Bearer | Delete history entry         |
+| `/api/messages/history/export`   | GET    | Bearer | Export full history as CSV   |
 
 #### Dashboard (`/api/dashboard`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/dashboard/stats` | GET | Bearer | Get analytics |
+
+| Endpoint               | Method | Auth   | Description   |
+| ---------------------- | ------ | ------ | ------------- |
+| `/api/dashboard/stats` | GET    | Bearer | Get analytics |
 
 #### Contacts (`/api/contacts`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/contacts/` | POST | Bearer | Create contact |
-| `/api/contacts/bulk` | POST | Bearer | Bulk create contacts |
-| `/api/contacts/` | GET | Bearer | List contacts |
-| `/api/contacts/{id}` | GET | Bearer | Get single contact |
-| `/api/contacts/{id}` | PUT | Bearer | Update contact |
-| `/api/contacts/{id}` | DELETE | Bearer | Delete contact |
+
+| Endpoint             | Method | Auth   | Description          |
+| -------------------- | ------ | ------ | -------------------- |
+| `/api/contacts/`     | POST   | Bearer | Create contact       |
+| `/api/contacts/bulk` | POST   | Bearer | Bulk create contacts |
+| `/api/contacts/`     | GET    | Bearer | List contacts        |
+| `/api/contacts/{id}` | GET    | Bearer | Get single contact   |
+| `/api/contacts/{id}` | PUT    | Bearer | Update contact       |
+| `/api/contacts/{id}` | DELETE | Bearer | Delete contact       |
 
 #### Message Groups (`/api/message-groups`) — **INACTIVE (router commented out)**
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/message-groups/` | POST | Bearer | Create group |
-| `/api/message-groups/` | GET | Bearer | List groups (optional gender filter) |
-| `/api/message-groups/{id}` | GET | Bearer | Get group |
-| `/api/message-groups/{id}` | PUT | Bearer | Update group |
-| `/api/message-groups/{id}` | DELETE | Bearer | Delete group |
 
-*Router file exists but is commented out in `main.py` — "feature not currently needed".*
+| Endpoint                   | Method | Auth   | Description                          |
+| -------------------------- | ------ | ------ | ------------------------------------ |
+| `/api/message-groups/`     | POST   | Bearer | Create group                         |
+| `/api/message-groups/`     | GET    | Bearer | List groups (optional gender filter) |
+| `/api/message-groups/{id}` | GET    | Bearer | Get group                            |
+| `/api/message-groups/{id}` | PUT    | Bearer | Update group                         |
+| `/api/message-groups/{id}` | DELETE | Bearer | Delete group                         |
+
+_Router file exists but is commented out in `main.py` — "feature not currently needed"._
 
 #### Posts (`/api/posts`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/posts/` | POST | Bearer | Create post (with optional font fields) |
-| `/api/posts/` | GET | Bearer | List posts (optional gender filter) |
-| `/api/posts/{id}` | GET | Bearer | Get post |
-| `/api/posts/{id}` | PUT | Bearer | Update post |
-| `/api/posts/{id}` | DELETE | Bearer | Delete post |
+
+| Endpoint          | Method | Auth   | Description                             |
+| ----------------- | ------ | ------ | --------------------------------------- |
+| `/api/posts/`     | POST   | Bearer | Create post (with optional font fields) |
+| `/api/posts/`     | GET    | Bearer | List posts (optional gender filter)     |
+| `/api/posts/{id}` | GET    | Bearer | Get post                                |
+| `/api/posts/{id}` | PUT    | Bearer | Update post                             |
+| `/api/posts/{id}` | DELETE | Bearer | Delete post                             |
 
 #### Images (`/api/images`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/images/upload` | POST | Bearer | Store image by URL |
-| `/api/images/upload-file` | POST | Bearer | Store base64 image (max 10 MB) |
-| `/api/images/` | GET | Bearer | List images |
-| `/api/images/{id}` | GET | Bearer | Get image |
-| `/api/images/{id}` | DELETE | Bearer | Delete image |
+
+| Endpoint                  | Method | Auth   | Description                    |
+| ------------------------- | ------ | ------ | ------------------------------ |
+| `/api/images/upload`      | POST   | Bearer | Store image by URL             |
+| `/api/images/upload-file` | POST   | Bearer | Store base64 image (max 10 MB) |
+| `/api/images/`            | GET    | Bearer | List images                    |
+| `/api/images/{id}`        | GET    | Bearer | Get image                      |
+| `/api/images/{id}`        | DELETE | Bearer | Delete image                   |
 
 #### Birthday Configs (`/api/birthday-configs`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/birthday-configs` | POST | Bearer | Create config |
-| `/api/birthday-configs` | GET | Bearer | List configs (optional mode/enabled filter) |
-| `/api/birthday-configs/{id}` | GET | Bearer | Get config |
-| `/api/birthday-configs/{id}` | PUT | Bearer | Update config |
-| `/api/birthday-configs/{id}/toggle` | PATCH | Bearer | Toggle enabled flag |
-| `/api/birthday-configs/{id}` | DELETE | Bearer | Delete config |
+
+| Endpoint                            | Method | Auth   | Description                                 |
+| ----------------------------------- | ------ | ------ | ------------------------------------------- |
+| `/api/birthday-configs`             | POST   | Bearer | Create config                               |
+| `/api/birthday-configs`             | GET    | Bearer | List configs (optional mode/enabled filter) |
+| `/api/birthday-configs/{id}`        | GET    | Bearer | Get config                                  |
+| `/api/birthday-configs/{id}`        | PUT    | Bearer | Update config                               |
+| `/api/birthday-configs/{id}/toggle` | PATCH  | Bearer | Toggle enabled flag                         |
+| `/api/birthday-configs/{id}`        | DELETE | Bearer | Delete config                               |
 
 #### Message Templates (`/api/message-templates`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/message-templates` | POST | Bearer | Create complete template |
-| `/api/message-templates` | GET | Bearer | List templates (optional gender filter) |
-| `/api/message-templates/{id}` | GET | Bearer | Get template |
-| `/api/message-templates/{id}` | PUT | Bearer | Update template |
-| `/api/message-templates/{id}` | DELETE | Bearer | Delete template |
+
+| Endpoint                      | Method | Auth   | Description                             |
+| ----------------------------- | ------ | ------ | --------------------------------------- |
+| `/api/message-templates`      | POST   | Bearer | Create complete template                |
+| `/api/message-templates`      | GET    | Bearer | List templates (optional gender filter) |
+| `/api/message-templates/{id}` | GET    | Bearer | Get template                            |
+| `/api/message-templates/{id}` | PUT    | Bearer | Update template                         |
+| `/api/message-templates/{id}` | DELETE | Bearer | Delete template                         |
 
 #### Rate Limits (`/api/rate-limits`)
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/rate-limits/status` | GET | Bearer | Get current send rate limit status |
-| `/api/rate-limits/record` | POST | Bearer | Record a send event for rate tracking |
+
+| Endpoint                  | Method | Auth   | Description                           |
+| ------------------------- | ------ | ------ | ------------------------------------- |
+| `/api/rate-limits/status` | GET    | Bearer | Get current send rate limit status    |
+| `/api/rate-limits/record` | POST   | Bearer | Record a send event for rate tracking |
 
 #### WebSocket (`/ws`)
-| Endpoint | Protocol | Auth | Description |
-|----------|----------|------|-------------|
-| `/ws` | WebSocket | JWT query param | Real-time event stream |
+
+| Endpoint | Protocol  | Auth            | Description            |
+| -------- | --------- | --------------- | ---------------------- |
+| `/ws`    | WebSocket | JWT query param | Real-time event stream |
 
 ### 2.4 Configuration
 
 **Environment Variables (.env):**
+
 ```
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/birthdaymessaging
 JWT_SECRET_KEY=<secret>
@@ -774,48 +798,48 @@ extension/
 
 ### 3.2 Component Inventory (40 files)
 
-| Component | Purpose | Imported in App.tsx |
-|-----------|---------|:-------------------:|
-| `AccountManagement.tsx` | Profile update, timezone, logout, delete account | ✅ |
-| `AuthForm.tsx` | Login/register with validation | ✅ |
-| `AutomationSettings.tsx` | Chrome alarms configuration, max messages, clear sent-today | sub-component |
-| `BirthdayCalendar.tsx` | Calendar grid + list view of contacts' birthdays | commented out |
-| `ChangePassword.tsx` | Authenticated password change | ✅ |
-| `ContactForm.tsx` | Add/edit contact form with gender selector | commented out |
-| `ContactList.tsx` | Contact management with search | commented out |
-| `Dashboard.tsx` | Statistics, metrics, WebSocket live updates, per-user TTL cache | ✅ |
-| `DashboardCharts.tsx` | SVG sparkline charts (volume + success-rate) | sub-component |
-| `DashboardStatsCard.tsx` | Gradient stat card with 7 color variants | sub-component |
-| `ErrorBoundary.tsx` | React error boundary with reset | ✅ |
-| `FacebookPostPreview.tsx` | Canvas-rendered 1080×1350 image+text preview | sub-component |
-| `FeatureTip.tsx` | Contextual feature tips/hints | ✅ |
-| `ForgotPassword.tsx` | Password reset request | ✅ |
-| `GenderFilter.tsx` | Inline pill or dropdown gender selector | sub-component |
-| `HelpPanel.tsx` | Slide-out help/documentation panel | ✅ |
-| `HelpTooltip.tsx` | Hover/focus tooltip for help text | sub-component |
-| `HomeControls.tsx` | Master power toggle, feature switches, quick stats | ✅ |
-| `ImageLibraryPicker.tsx` | Grid picker for selecting library images | sub-component |
-| `ImageManager.tsx` | Image URL/base64 upload, resize, management (forwardRef) | ✅ |
-| `ImportContactsModal.tsx` | Bulk import contacts (Facebook scrape, CSV/JSON/VCF) | commented out |
-| `KeywordInserter.tsx` | Template placeholder buttons ({First_Name}, [Image], etc.) | sub-component |
-| `MessageGroups.tsx` | Message group CRUD with gender targeting (forwardRef) | commented out |
-| `MessageHistory.tsx` | Searchable sent message log with status badges | ✅ |
-| `MessageQueue.tsx` | Pending message management with retry/cancel | ✅ |
-| `MessagesHub.tsx` | Messages tab hub — SVG icon grid to sub-views | ✅ |
-| `OnboardingWizard.tsx` | First-time user onboarding flow | ✅ |
-| `PostEditor.tsx` | Post creation/edit with font customisation, image library | ✅ |
-| `PostList.tsx` | Post management with gender filter/group (forwardRef) | ✅ |
-| `ScheduleSettings.tsx` | Birthday schedule configuration with UTC clock | sub-component |
-| `SchedulingSettings.tsx` | Composite: ScheduleSettings + AutomationSettings | ✅ |
-| `ScrollToTop.tsx` | Scroll-to-top button utility | ✅ |
-| `SegmentEditor.tsx` | Textarea with char counter + inline KeywordInserter | sub-component |
-| `SMTPSettings.tsx` | SMTP server configuration form | commented out |
-| `Spinner.tsx` | Custom GIF loader with 3 sizes + optional message | ✅ |
-| `SubscriptionPanel.tsx` | Stripe subscription status and checkout | ✅ |
-| `TemplateCreator.tsx` | Create/update complete message templates | ✅ |
-| `TemplateGallery.tsx` | Card grid of saved templates with badges, edit/delete | sub-component |
-| `Toast.tsx` | Fixed-position notification with 4 types, auto-dismiss | ✅ |
-| `UpcomingBirthdays.tsx` | Upcoming birthdays list view | ✅ |
+| Component                 | Purpose                                                         | Imported in App.tsx |
+| ------------------------- | --------------------------------------------------------------- | :-----------------: |
+| `AccountManagement.tsx`   | Profile update, timezone, logout, delete account                |         ✅          |
+| `AuthForm.tsx`            | Login/register with validation                                  |         ✅          |
+| `AutomationSettings.tsx`  | Chrome alarms configuration, max messages, clear sent-today     |    sub-component    |
+| `BirthdayCalendar.tsx`    | Calendar grid + list view of contacts' birthdays                |    commented out    |
+| `ChangePassword.tsx`      | Authenticated password change                                   |         ✅          |
+| `ContactForm.tsx`         | Add/edit contact form with gender selector                      |    commented out    |
+| `ContactList.tsx`         | Contact management with search                                  |    commented out    |
+| `Dashboard.tsx`           | Statistics, metrics, WebSocket live updates, per-user TTL cache |         ✅          |
+| `DashboardCharts.tsx`     | SVG sparkline charts (volume + success-rate)                    |    sub-component    |
+| `DashboardStatsCard.tsx`  | Gradient stat card with 7 color variants                        |    sub-component    |
+| `ErrorBoundary.tsx`       | React error boundary with reset                                 |         ✅          |
+| `FacebookPostPreview.tsx` | Canvas-rendered 1080×1350 image+text preview                    |    sub-component    |
+| `FeatureTip.tsx`          | Contextual feature tips/hints                                   |         ✅          |
+| `ForgotPassword.tsx`      | Password reset request                                          |         ✅          |
+| `GenderFilter.tsx`        | Inline pill or dropdown gender selector                         |    sub-component    |
+| `HelpPanel.tsx`           | Slide-out help/documentation panel                              |         ✅          |
+| `HelpTooltip.tsx`         | Hover/focus tooltip for help text                               |    sub-component    |
+| `HomeControls.tsx`        | Master power toggle, feature switches, quick stats              |         ✅          |
+| `ImageLibraryPicker.tsx`  | Grid picker for selecting library images                        |    sub-component    |
+| `ImageManager.tsx`        | Image URL/base64 upload, resize, management (forwardRef)        |         ✅          |
+| `ImportContactsModal.tsx` | Bulk import contacts (Facebook scrape, CSV/JSON/VCF)            |    commented out    |
+| `KeywordInserter.tsx`     | Template placeholder buttons ({First_Name}, [Image], etc.)      |    sub-component    |
+| `MessageGroups.tsx`       | Message group CRUD with gender targeting (forwardRef)           |    commented out    |
+| `MessageHistory.tsx`      | Searchable sent message log with status badges                  |         ✅          |
+| `MessageQueue.tsx`        | Pending message management with retry/cancel                    |         ✅          |
+| `MessagesHub.tsx`         | Messages tab hub — SVG icon grid to sub-views                   |         ✅          |
+| `OnboardingWizard.tsx`    | First-time user onboarding flow                                 |         ✅          |
+| `PostEditor.tsx`          | Post creation/edit with font customisation, image library       |         ✅          |
+| `PostList.tsx`            | Post management with gender filter/group (forwardRef)           |         ✅          |
+| `ScheduleSettings.tsx`    | Birthday schedule configuration with UTC clock                  |    sub-component    |
+| `SchedulingSettings.tsx`  | Composite: ScheduleSettings + AutomationSettings                |         ✅          |
+| `ScrollToTop.tsx`         | Scroll-to-top button utility                                    |         ✅          |
+| `SegmentEditor.tsx`       | Textarea with char counter + inline KeywordInserter             |    sub-component    |
+| `SMTPSettings.tsx`        | SMTP server configuration form                                  |    commented out    |
+| `Spinner.tsx`             | Custom GIF loader with 3 sizes + optional message               |         ✅          |
+| `SubscriptionPanel.tsx`   | Stripe subscription status and checkout                         |         ✅          |
+| `TemplateCreator.tsx`     | Create/update complete message templates                        |         ✅          |
+| `TemplateGallery.tsx`     | Card grid of saved templates with badges, edit/delete           |    sub-component    |
+| `Toast.tsx`               | Fixed-position notification with 4 types, auto-dismiss          |         ✅          |
+| `UpcomingBirthdays.tsx`   | Upcoming birthdays list view                                    |         ✅          |
 
 **23 components** are directly imported in `App.tsx` (6 others are commented out); the remaining 11 are used as sub-components within others.
 
@@ -828,25 +852,37 @@ extension/
   "version": "0.1.0",
   "description": "Helps you remember and send personalized birthday wishes to your Facebook friends.",
   "homepage_url": "https://birthdaymessaging.app/privacy",
-  "permissions": ["storage", "scripting", "activeTab", "tabs", "notifications", "alarms"],
-  "action": { "default_popup": "popup.html", "default_title": "BirthdayMessaging" },
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab",
+    "tabs",
+    "notifications",
+    "alarms"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "BirthdayMessaging"
+  },
   "background": { "service_worker": "background.js", "type": "module" },
-  "content_scripts": [{
-    "matches": [
-      "https://www.facebook.com/*"
-    ],
-    "js": ["content.js"],
-    "run_at": "document_idle"
-  }],
+  "content_scripts": [
+    {
+      "matches": ["https://www.facebook.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "host_permissions": [
     "https://www.facebook.com/*",
     "http://localhost/*",
     "https://localhost/*"
   ],
-  "web_accessible_resources": [{
-    "resources": ["assets/*"],
-    "matches": ["https://www.facebook.com/*"]
-  }],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["https://www.facebook.com/*"]
+    }
+  ],
   "icons": { "128": "images/Birthday_messaging-logo.png" },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
@@ -860,6 +896,7 @@ extension/
 `main`, `change-password`, `schedules`, `scheduling`, `automation`, `message-templates`, `queue`, `history`, `analytics`, `upcoming-birthdays`, `posts`, `postLibrary`, `post-list`, `groups`, `images`, `contacts`, `add-contact`, `edit-contact`, `import-contacts`, `birthday-calendar`, `smtp-settings`, `account-management`, `subscription`, `template-gallery`
 
 **5-Tab Navigation with Dropdowns:**
+
 - **Home**: Dashboard quick-stats (contacts count, upcoming birthdays, analytics shortcut)
 - **Messages** (5 dropdown items): Message Templates, Timeline Posts, Scheduling, Analytics, Image Library
 - **Scheduling**: Schedule settings + automation settings composite view
@@ -870,25 +907,26 @@ extension/
 
 **73 message types** handled via switch/case dispatch:
 
-| Category | Message Types |
-|----------|--------------|
-| Auth (11) | `auth.register`, `auth.login`, `auth.refresh`, `auth.logout`, `auth.requestPasswordReset`, `auth.requestEmailVerification`, `auth.resetPassword`, `auth.changePassword`, `auth.me`, `auth.updateProfile`, `auth.deleteAccount` |
-| Templates (4) | `templates.list`, `templates.create`, `templates.update`, `templates.delete` |
-| Subscription (6) | `subscription.status`, `subscription.checkout`, `subscription.cancel`, `subscription.reactivate`, `subscription.changePlan`, `subscription.billingPortal` |
-| Config (3) | `config.getBackendUrl`, `config.setBackendUrl`, `config.getWSConfig` |
-| Schedules (4) | `schedules.list`, `schedules.create`, `schedules.update`, `schedules.delete` |
-| Automation (9) | `automation.getConfig`, `automation.setEnabled`, `automation.setInterval`, `automation.setMaxMessages`, `automation.getPreferredHours`, `automation.setPreferredHours`, `automation.clearSentToday`, `automation.recordSent`, `automation.scanFacebook` |
-| Messages (6) | `messages.listQueue`, `messages.updateQueued`, `messages.cancelQueued`, `messages.retryQueued`, `messages.listHistory`, `messages.deleteHistory` |
-| Dashboard (3) | `dashboard.getStats`, `dashboard.getConfigs`, `dashboard.toggleConfig` |
-| Contacts (2) | `contacts.list`, `contacts.bulkCreate` |
-| Posts (4) | `posts.list`, `posts.create`, `posts.update`, `posts.delete` |
-| Images (4) | `images.list`, `images.create`, `images.uploadFile`, `images.delete` |
-| SMTP (2) | `smtp.getConfig`, `smtp.updateConfig` |
-| Rate Limits (2) | `rateLimit.status`, `rateLimit.record` |
-| Message Templates (5) | `messageTemplates.list`, `messageTemplates.create`, `messageTemplates.get`, `messageTemplates.update`, `messageTemplates.delete` |
-| Failsafe (8) | `failsafe.getEmergencyStop`, `failsafe.triggerEmergencyStop`, `failsafe.clearEmergencyStop`, `failsafe.getActivityLog`, `failsafe.clearActivityLog`, `failsafe.getRateLimits`, `failsafe.getConfirmationMode`, `failsafe.setConfirmationMode` |
+| Category              | Message Types                                                                                                                                                                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth (11)             | `auth.register`, `auth.login`, `auth.refresh`, `auth.logout`, `auth.requestPasswordReset`, `auth.requestEmailVerification`, `auth.resetPassword`, `auth.changePassword`, `auth.me`, `auth.updateProfile`, `auth.deleteAccount`                          |
+| Templates (4)         | `templates.list`, `templates.create`, `templates.update`, `templates.delete`                                                                                                                                                                            |
+| Subscription (6)      | `subscription.status`, `subscription.checkout`, `subscription.cancel`, `subscription.reactivate`, `subscription.changePlan`, `subscription.billingPortal`                                                                                               |
+| Config (3)            | `config.getBackendUrl`, `config.setBackendUrl`, `config.getWSConfig`                                                                                                                                                                                    |
+| Schedules (4)         | `schedules.list`, `schedules.create`, `schedules.update`, `schedules.delete`                                                                                                                                                                            |
+| Automation (9)        | `automation.getConfig`, `automation.setEnabled`, `automation.setInterval`, `automation.setMaxMessages`, `automation.getPreferredHours`, `automation.setPreferredHours`, `automation.clearSentToday`, `automation.recordSent`, `automation.scanFacebook` |
+| Messages (6)          | `messages.listQueue`, `messages.updateQueued`, `messages.cancelQueued`, `messages.retryQueued`, `messages.listHistory`, `messages.deleteHistory`                                                                                                        |
+| Dashboard (3)         | `dashboard.getStats`, `dashboard.getConfigs`, `dashboard.toggleConfig`                                                                                                                                                                                  |
+| Contacts (2)          | `contacts.list`, `contacts.bulkCreate`                                                                                                                                                                                                                  |
+| Posts (4)             | `posts.list`, `posts.create`, `posts.update`, `posts.delete`                                                                                                                                                                                            |
+| Images (4)            | `images.list`, `images.create`, `images.uploadFile`, `images.delete`                                                                                                                                                                                    |
+| SMTP (2)              | `smtp.getConfig`, `smtp.updateConfig`                                                                                                                                                                                                                   |
+| Rate Limits (2)       | `rateLimit.status`, `rateLimit.record`                                                                                                                                                                                                                  |
+| Message Templates (5) | `messageTemplates.list`, `messageTemplates.create`, `messageTemplates.get`, `messageTemplates.update`, `messageTemplates.delete`                                                                                                                        |
+| Failsafe (8)          | `failsafe.getEmergencyStop`, `failsafe.triggerEmergencyStop`, `failsafe.clearEmergencyStop`, `failsafe.getActivityLog`, `failsafe.clearActivityLog`, `failsafe.getRateLimits`, `failsafe.getConfirmationMode`, `failsafe.setConfirmationMode`           |
 
 **Token Management:**
+
 - Stores access/refresh tokens in `chrome.storage.local`
 - Auto-refresh on 401 errors (transparent to callers)
 - `config.getWSConfig` converts HTTP URL to WebSocket URL for popup connection
@@ -897,28 +935,29 @@ extension/
 
 **60 exported functions:**
 
-| Category | Functions |
-|----------|-----------|
-| Auth (10) | `register`, `login`, `refreshToken`, `me`, `requestPasswordReset`, `requestEmailVerification`, `resetPassword`, `changePassword`, `updateUserProfile`, `deleteUserAccount` |
-| Templates (4) | `listTemplates`, `createTemplate`, `updateTemplate`, `deleteTemplate` |
-| Subscription (6) | `subscriptionStatus`, `createCheckoutSession`, `cancelSubscription`, `reactivateSubscription`, `changeSubscriptionPlan`, `getBillingPortal` |
-| Schedules (4) | `listSchedules`, `createSchedule`, `updateSchedule`, `deleteSchedule` |
-| Messages (7) | `listQueuedMessages`, `updateQueuedMessage`, `cancelQueuedMessage`, `retryQueuedMessage`, `listMessageHistory`, `deleteMessageHistory`, `exportHistoryCsv` |
-| Dashboard (1) | `getDashboardStats` |
-| Contacts (5) | `listContacts`, `createContact`, `updateContact`, `deleteContact`, `bulkCreateContacts` |
-| Message Groups (4) | `listMessageGroups`, `createMessageGroup`, `updateMessageGroup`, `deleteMessageGroup` |
-| Posts (4) | `listPosts`, `createPost`, `updatePost`, `deletePost` |
-| Images (4) | `listImages`, `createImage`, `uploadImageFile`, `deleteImage` |
-| SMTP (2) | `getSMTPConfig`, `updateSMTPConfig` |
-| Message Templates (5) | `listMessageTemplates`, `createMessageTemplate`, `getMessageTemplate`, `updateMessageTemplate`, `deleteMessageTemplate` |
-| Birthday Configs (2) | `listBirthdayConfigs`, `toggleBirthdayConfig` |
-| Rate Limits (2) | `getServerRateLimitStatus`, `recordServerSend` |
+| Category              | Functions                                                                                                                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth (10)             | `register`, `login`, `refreshToken`, `me`, `requestPasswordReset`, `requestEmailVerification`, `resetPassword`, `changePassword`, `updateUserProfile`, `deleteUserAccount` |
+| Templates (4)         | `listTemplates`, `createTemplate`, `updateTemplate`, `deleteTemplate`                                                                                                      |
+| Subscription (6)      | `subscriptionStatus`, `createCheckoutSession`, `cancelSubscription`, `reactivateSubscription`, `changeSubscriptionPlan`, `getBillingPortal`                                |
+| Schedules (4)         | `listSchedules`, `createSchedule`, `updateSchedule`, `deleteSchedule`                                                                                                      |
+| Messages (7)          | `listQueuedMessages`, `updateQueuedMessage`, `cancelQueuedMessage`, `retryQueuedMessage`, `listMessageHistory`, `deleteMessageHistory`, `exportHistoryCsv`                 |
+| Dashboard (1)         | `getDashboardStats`                                                                                                                                                        |
+| Contacts (5)          | `listContacts`, `createContact`, `updateContact`, `deleteContact`, `bulkCreateContacts`                                                                                    |
+| Message Groups (4)    | `listMessageGroups`, `createMessageGroup`, `updateMessageGroup`, `deleteMessageGroup`                                                                                      |
+| Posts (4)             | `listPosts`, `createPost`, `updatePost`, `deletePost`                                                                                                                      |
+| Images (4)            | `listImages`, `createImage`, `uploadImageFile`, `deleteImage`                                                                                                              |
+| SMTP (2)              | `getSMTPConfig`, `updateSMTPConfig`                                                                                                                                        |
+| Message Templates (5) | `listMessageTemplates`, `createMessageTemplate`, `getMessageTemplate`, `updateMessageTemplate`, `deleteMessageTemplate`                                                    |
+| Birthday Configs (2)  | `listBirthdayConfigs`, `toggleBirthdayConfig`                                                                                                                              |
+| Rate Limits (2)       | `getServerRateLimitStatus`, `recordServerSend`                                                                                                                             |
 
 Plus `ApiError` class and 20+ exported interfaces/types.
 
 ### 3.7 Content Scripts
 
 **index.ts (2,292 lines)** — Main coordinator + full automation loop:
+
 - Overlay UI on Facebook pages (friend list, send-all button, status p)
 - Birthday friend detection via DOM scraping (`div[data-pagelet*="Birthday"]`)
 - `runFullAutomation(AutomationRunPayload)` — 2-phase loop:
@@ -932,11 +971,13 @@ Plus `ApiError` class and 20+ exported interfaces/types.
 - Responds to messages: `automation.scan`, `automation.runFull`, `contacts.scrapeFromPage`
 
 **messenger.ts (519 lines)** — Messenger automation:
+
 - Archive/unarchive conversations
 - MutationObserver for reply monitoring
 - Programmatic message sending
 
 **timeline.ts (512 lines)** — Timeline posting:
+
 - Facebook composer interaction
 - Nifty Images merge tag support
 - Clipboard image paste
@@ -975,6 +1016,7 @@ Load in Chrome: `chrome://extensions` → Developer mode → Load unpacked → s
 ## 4. Data Flow & Interactions
 
 ### 4.1 User Registration
+
 ```
 Popup → Background (auth.register) → POST /auth/register
 → Backend: hash password (Argon2), insert user, generate JWTs
@@ -983,6 +1025,7 @@ Popup → Background (auth.register) → POST /auth/register
 ```
 
 ### 4.2 Template Creation
+
 ```
 Popup → Background (templates.create) → POST /templates/ (Bearer)
 → Backend: validate JWT, validate content, insert into template_segments
@@ -990,6 +1033,7 @@ Popup → Background (templates.create) → POST /templates/ (Bearer)
 ```
 
 ### 4.3 Automated Message Send
+
 ```
 Content Script: scan Facebook DOM for birthday friends
 → Display overlay with friend list
@@ -1005,6 +1049,7 @@ Content Script: scan Facebook DOM for birthday friends
 ```
 
 ### 4.4 Subscription Checkout
+
 ```
 Popup → Background → POST /subscription/create-checkout-session
 → Backend: create Stripe customer, create Checkout Session
@@ -1014,6 +1059,7 @@ Popup → Background → POST /subscription/create-checkout-session
 ```
 
 ### 4.5 Token Refresh
+
 ```
 Background: API returns 401 → retrieve refresh token
 → POST /auth/refresh → generate new token pair
@@ -1037,12 +1083,13 @@ Backend auto-reloads on Python file saves. Frontend requires `npm run reload` + 
 
 ### 5.2 Docker Compose Services
 
-| Service | Image | Port | Notes |
-|---------|-------|------|-------|
-| `db` | `postgres:15` | 5432 | Volume `postgres_data` |
+| Service   | Image                 | Port | Notes                                                    |
+| --------- | --------------------- | ---- | -------------------------------------------------------- |
+| `db`      | `postgres:15`         | 5432 | Volume `postgres_data`                                   |
 | `backend` | Built from Dockerfile | 8000 | Depends on db, reads `.env`, runs `alembic upgrade head` |
 
 ### 5.3 Production Checklist
+
 - [ ] Managed PostgreSQL (RDS, Cloud SQL)
 - [ ] Strong `JWT_SECRET_KEY`
 - [ ] Live Stripe keys + webhook endpoint
@@ -1056,12 +1103,14 @@ Backend auto-reloads on Python file saves. Frontend requires `npm run reload` + 
 ## 6. Security Architecture
 
 ### 6.1 Authentication
+
 - **Password Hashing**: **Argon2** via `passlib[argon2]` (`CryptContext(schemes=["argon2"])`)
 - **JWT Tokens**: HS256, access (15 min) + refresh (30 days), both rotated on refresh
 - **Token Storage**: `chrome.storage.local` (Chrome-encrypted), background script only
 - **Revocation**: `RevokedToken` model with per-token blacklist (tokens stored on logout/revoke); also rotate `JWT_SECRET_KEY` to invalidate all
 
 ### 6.2 API Security
+
 - **CORS**: `chrome-extension://*`, `http://localhost:3000`
 - **Input Validation**: Pydantic schemas for all requests/responses
 - **SQL Injection**: SQLAlchemy parameterized queries
@@ -1069,11 +1118,13 @@ Backend auto-reloads on Python file saves. Frontend requires `npm run reload` + 
 - **Rate Limiting**: `slowapi` middleware is initialized in `main.py`. Auth endpoints carry stacked `@limiter.limit()` decorators: `/register` 5/min; `/login` 5/min + 20/hr; `/request-password-reset` 1/minute, 5/hour, and 20/hour (global); `/auth/refresh` 30/min. The `/send-birthday-message` stub also has a `1/45seconds` per-user limit. Key function uses remote IP address.
 
 ### 6.3 Stripe
+
 - Webhook signature verification before processing
 - One active subscription per user (database constraint)
 - No payment data stored locally (Stripe handles cards)
 
 ### 6.4 Extension
+
 - Content scripts in isolated world (no token access)
 - Manifest V3 service worker (no persistent background)
 - Explicit host permissions (Facebook only)
@@ -1085,32 +1136,35 @@ Backend auto-reloads on Python file saves. Frontend requires `npm run reload` + 
 ### 7.1 Compliance Target: WCAG 2.1 Level AA
 
 **Keyboard Navigation:**
+
 - `Alt+H` (home), `Alt+D` (dashboard), `Alt+L` (logout), `Esc` (close)
 - Skip-to-main-content link
 - Visible focus indicators (orange `#f08500`, 3px outline)
 - Logical tab order
 
 **Screen Reader Support:**
+
 - ARIA attributes: `aria-label`, `aria-invalid`, `aria-busy`, `aria-pressed`, `aria-describedby`, `aria-live`
 - Live regions for toast notifications and dynamic updates
 - `announceToScreenReader()` utility for navigation and status changes
 
 **Semantic HTML:**
+
 - Landmarks: `<header>`, `<main>`, `<nav>`, `<footer>`
 - Proper heading hierarchy, form labels, required field indicators
 
 ### 7.2 Accessibility Utilities (`utils/accessibility.ts`, 211 lines)
 
-| Function | Purpose |
-|----------|---------|
-| `announceToScreenReader(message, priority)` | Live region announcements |
-| `getFocusableElements(container)` | Query focusable DOM elements |
-| `trapFocus(container)` | Modal focus trapping |
-| `moveFocusTo(element)` | Focus + scroll into view |
-| `generateId(prefix)` | Unique ARIA IDs |
-| `prefersReducedMotion()` | Reduced motion detection |
-| `handleEscapeKey(callback)` | Escape key handler factory |
-| `handleKeyboardNavigation(options)` | Full keyboard nav (arrows, Enter, Space, Home, End) |
+| Function                                    | Purpose                                             |
+| ------------------------------------------- | --------------------------------------------------- |
+| `announceToScreenReader(message, priority)` | Live region announcements                           |
+| `getFocusableElements(container)`           | Query focusable DOM elements                        |
+| `trapFocus(container)`                      | Modal focus trapping                                |
+| `moveFocusTo(element)`                      | Focus + scroll into view                            |
+| `generateId(prefix)`                        | Unique ARIA IDs                                     |
+| `prefersReducedMotion()`                    | Reduced motion detection                            |
+| `handleEscapeKey(callback)`                 | Escape key handler factory                          |
+| `handleKeyboardNavigation(options)`         | Full keyboard nav (arrows, Enter, Space, Home, End) |
 
 > See [ACCESSIBILITY.md](ACCESSIBILITY.md) for complete documentation.
 
@@ -1150,6 +1204,7 @@ Backend auto-reloads on Python file saves. Frontend requires `npm run reload` + 
 | `notification` | `{ message, level }` |
 
 ### 8.3 Integration Flow
+
 1. App.tsx authenticates user
 2. Background provides WebSocket config via `config.getWSConfig` (converts `http://` → `ws://`, appends `/ws`)
 3. App.tsx calls `wsClient.connect(wsUrl, token)`
@@ -1163,39 +1218,40 @@ Backend auto-reloads on Python file saves. Frontend requires `npm run reload` + 
 
 ### 9.1 Current State
 
-| Layer | Coverage | Files |
-|-------|----------|-------|
-| Backend auth | ✅ Comprehensive | `test_auth.py` (11 tests) |
-| Backend templates | ✅ Basic | `test_templates.py` (2 tests) |
-| Backend contacts | ✅ Comprehensive | `test_contacts.py` (10 tests) |
-| Backend schedules | ✅ Comprehensive | `test_schedules.py` (9 tests) |
-| Backend messages | ✅ Comprehensive | `test_messages.py` (17 tests) |
-| Backend dashboard | ✅ Good | `test_dashboard.py` (5 tests) |
-| Backend subscription | ✅ Comprehensive | `test_subscription.py` (13 tests) |
-| Backend webhook | ✅ Comprehensive | `test_webhook.py` (10 tests) |
-| Backend email verification | ✅ Good | `test_email_verification.py` (9 tests) |
-| Backend password reset | ✅ Good | `test_password_reset.py` (7 tests) |
-| Backend birthday configs | ✅ Comprehensive | `test_birthday_configs.py` (13 tests) |
-| Backend message templates | ✅ Comprehensive | `test_message_templates.py` (11 tests) |
-| Backend posts | ✅ Comprehensive | `test_posts.py` (11 tests) |
-| Backend images | ✅ Good | `test_images.py` (9 tests) |
-| Backend SMTP | ✅ Basic | `test_smtp.py` (6 tests) |
-| Backend integration | ✅ Basic | `test_integration.py` (4 tests) |
-| Backend API contracts | ✅ Comprehensive | `test_api_contracts.py` (64 tests) |
-| Backend DB constraints | ✅ Basic | `test_db_constraints.py` (6 tests) |
-| Extension utilities | ✅ Good | `message.test.ts`, `errors.test.ts`, `storage.test.ts`, `automation.test.ts`, `failsafe.test.ts` |
-| Extension API client | ✅ Basic | `client.test.ts` (7 tests) |
-| Extension components | ✅ Good | 10 component test files |
-| Extension content scripts | ✅ Basic | `dom-helpers.test.ts` (16 tests), `messenger.test.ts` (15 tests) |
-| Extension background worker | ✅ Basic | `index.test.ts` (442 lines) |
-| Extension hooks | ✅ Basic | `useImageLibrary.test.ts`, `useMessages.test.ts` |
-| E2E tests | ❌ None | No Playwright/Puppeteer |
+| Layer                       | Coverage         | Files                                                                                            |
+| --------------------------- | ---------------- | ------------------------------------------------------------------------------------------------ |
+| Backend auth                | ✅ Comprehensive | `test_auth.py` (11 tests)                                                                        |
+| Backend templates           | ✅ Basic         | `test_templates.py` (2 tests)                                                                    |
+| Backend contacts            | ✅ Comprehensive | `test_contacts.py` (10 tests)                                                                    |
+| Backend schedules           | ✅ Comprehensive | `test_schedules.py` (9 tests)                                                                    |
+| Backend messages            | ✅ Comprehensive | `test_messages.py` (17 tests)                                                                    |
+| Backend dashboard           | ✅ Good          | `test_dashboard.py` (5 tests)                                                                    |
+| Backend subscription        | ✅ Comprehensive | `test_subscription.py` (13 tests)                                                                |
+| Backend webhook             | ✅ Comprehensive | `test_webhook.py` (10 tests)                                                                     |
+| Backend email verification  | ✅ Good          | `test_email_verification.py` (9 tests)                                                           |
+| Backend password reset      | ✅ Good          | `test_password_reset.py` (7 tests)                                                               |
+| Backend birthday configs    | ✅ Comprehensive | `test_birthday_configs.py` (13 tests)                                                            |
+| Backend message templates   | ✅ Comprehensive | `test_message_templates.py` (11 tests)                                                           |
+| Backend posts               | ✅ Comprehensive | `test_posts.py` (11 tests)                                                                       |
+| Backend images              | ✅ Good          | `test_images.py` (9 tests)                                                                       |
+| Backend SMTP                | ✅ Basic         | `test_smtp.py` (6 tests)                                                                         |
+| Backend integration         | ✅ Basic         | `test_integration.py` (4 tests)                                                                  |
+| Backend API contracts       | ✅ Comprehensive | `test_api_contracts.py` (64 tests)                                                               |
+| Backend DB constraints      | ✅ Basic         | `test_db_constraints.py` (6 tests)                                                               |
+| Extension utilities         | ✅ Good          | `message.test.ts`, `errors.test.ts`, `storage.test.ts`, `automation.test.ts`, `failsafe.test.ts` |
+| Extension API client        | ✅ Basic         | `client.test.ts` (7 tests)                                                                       |
+| Extension components        | ✅ Good          | 10 component test files                                                                          |
+| Extension content scripts   | ✅ Basic         | `dom-helpers.test.ts` (16 tests), `messenger.test.ts` (15 tests)                                 |
+| Extension background worker | ✅ Basic         | `index.test.ts` (442 lines)                                                                      |
+| Extension hooks             | ✅ Basic         | `useImageLibrary.test.ts`, `useMessages.test.ts`                                                 |
+| E2E tests                   | ❌ None          | No Playwright/Puppeteer                                                                          |
 
 All backend and frontend tests pass with **zero failures and zero skipped tests**.
 
 ### 9.2 Running Tests
 
 **Backend:**
+
 ```bash
 cd backend
 docker-compose exec backend pytest
@@ -1203,6 +1259,7 @@ docker-compose exec backend pytest --cov=app --cov-report=html
 ```
 
 **Extension:**
+
 ```bash
 cd extension
 npm test              # Run all 393 tests
@@ -1226,24 +1283,25 @@ npm run test:coverage # Coverage report (70% thresholds)
 All features are registered and implemented. The following are gaps within the existing codebase:
 
 | Gap | Location | Impact |
-|-----|----------|--------|
+| --- | -------- | ------ |
 
 ### 10.2 Testing Gaps
 
-| Layer | Coverage | Files |
-|-------|----------|-------|
-| Backend | ✅ Comprehensive | 24 test files, 269 test functions |
-| Extension utilities | ✅ Good | 5 test files |
-| Extension API client | ✅ Basic | 1 test file (7 tests) |
-| Extension components | ✅ Good | 10 test files |
-| Extension content scripts | ✅ Basic | 2 test files (31 tests) |
-| Extension background worker | ✅ Basic | 1 test file |
-| Extension hooks | ✅ Basic | 2 test files |
-| E2E tests | ❌ None | No Playwright/Puppeteer |
+| Layer                       | Coverage         | Files                             |
+| --------------------------- | ---------------- | --------------------------------- |
+| Backend                     | ✅ Comprehensive | 24 test files, 269 test functions |
+| Extension utilities         | ✅ Good          | 5 test files                      |
+| Extension API client        | ✅ Basic         | 1 test file (7 tests)             |
+| Extension components        | ✅ Good          | 10 test files                     |
+| Extension content scripts   | ✅ Basic         | 2 test files (31 tests)           |
+| Extension background worker | ✅ Basic         | 1 test file                       |
+| Extension hooks             | ✅ Basic         | 2 test files                      |
+| E2E tests                   | ❌ None          | No Playwright/Puppeteer           |
 
 **Known test failures:** None — all 269 backend tests and 393 frontend tests pass (zero failures, zero skipped).
 
 ### 10.3 Production Infrastructure Gaps
+
 - No monitoring or alerting
 - No HTTPS configuration or reverse proxy
 - No Chrome Web Store listing (New extension to replace existing extension in chrome store as new version- Speak to Alex)
@@ -1256,24 +1314,24 @@ All features are registered and implemented. The following are gaps within the e
 
 ### 11.1 Backend (`pyproject.toml`, requires-python ≥3.11)
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `fastapi` | ≥0.110 | Web framework |
-| `uvicorn[standard]` | ≥0.22 | ASGI server |
-| `sqlalchemy` | ≥2.0 | ORM (async) |
-| `asyncpg` | ≥0.28 | PostgreSQL async driver |
-| `psycopg[binary]` | ≥3.1 | PostgreSQL sync driver |
-| `pyjwt[crypto]` | ≥2.8 | JWT |
-| `passlib[argon2]` | ≥1.7 | Argon2 password hashing |
-| `pydantic` | ≥2 | Data validation |
-| `pydantic-settings` | ≥2 | Settings management |
-| `email-validator` | ≥2 | Email validation |
-| `stripe` | ≥5.0 | Stripe SDK |
-| `python-dotenv` | ≥1.0 | Env loading |
-| `slowapi` | ≥0.1.8 | Rate limiting |
-| `sendgrid` | ≥6.11 | Email delivery (SendGrid SDK) |
-| `alembic` | ≥1.13 | Database migrations (7 migrations, 18 tables) |
-| `gunicorn` | ≥21.2 | Production WSGI/ASGI process manager |
+| Package             | Version | Purpose                                       |
+| ------------------- | ------- | --------------------------------------------- |
+| `fastapi`           | ≥0.110  | Web framework                                 |
+| `uvicorn[standard]` | ≥0.22   | ASGI server                                   |
+| `sqlalchemy`        | ≥2.0    | ORM (async)                                   |
+| `asyncpg`           | ≥0.28   | PostgreSQL async driver                       |
+| `psycopg[binary]`   | ≥3.1    | PostgreSQL sync driver                        |
+| `pyjwt[crypto]`     | ≥2.8    | JWT                                           |
+| `passlib[argon2]`   | ≥1.7    | Argon2 password hashing                       |
+| `pydantic`          | ≥2      | Data validation                               |
+| `pydantic-settings` | ≥2      | Settings management                           |
+| `email-validator`   | ≥2      | Email validation                              |
+| `stripe`            | ≥5.0    | Stripe SDK                                    |
+| `python-dotenv`     | ≥1.0    | Env loading                                   |
+| `slowapi`           | ≥0.1.8  | Rate limiting                                 |
+| `sendgrid`          | ≥6.11   | Email delivery (SendGrid SDK)                 |
+| `alembic`           | ≥1.13   | Database migrations (7 migrations, 18 tables) |
+| `gunicorn`          | ≥21.2   | Production WSGI/ASGI process manager          |
 
 **Test:** `pytest ≥8`, `pytest-asyncio ≥0.21`, `httpx ≥0.27`, `pytest-cov ≥4`, `aiosqlite ≥0.20` (SQLite async driver for in-memory test DB)
 
@@ -1284,6 +1342,7 @@ All features are registered and implemented. The following are gaps within the e
 **Dev (28):** typescript, vite, @vitejs/plugin-react, tailwindcss, @tailwindcss/postcss, postcss, autoprefixer, lightningcss, vite-plugin-lightningcss, @types/chrome, @types/react, @types/react-dom, eslint, @typescript-eslint/parser, @typescript-eslint/eslint-plugin, eslint-plugin-react, eslint-plugin-react-hooks, eslint-config-prettier, eslint-plugin-prettier, prettier, vitest, @vitest/coverage-v8, @testing-library/react, @testing-library/jest-dom, @testing-library/user-event, jsdom, axe-core, vitest-axe
 
 ### 11.3 Infrastructure
+
 - PostgreSQL 15+ (pgcrypto, citext)
 - Docker 20.10+, docker-compose 2.0+
 
@@ -1294,6 +1353,7 @@ All features are registered and implemented. The following are gaps within the e
 [API_CONTRACT.md](API_CONTRACT.md) documents the frozen interface spec for core endpoints. The full mapping of every HTTP route to its `client.ts` function and background message type is in [BACKEND_INTEGRATION_SUMMARY.md](BACKEND_INTEGRATION_SUMMARY.md). WebSocket events are documented in [REALTIME_FEATURES.md](REALTIME_FEATURES.md).
 
 **Contract compliance verified:**
+
 - ✅ Register/Login return identical `TokenResponse` structure
 - ✅ Access token 15 min, refresh 30 days
 - ✅ Refresh rotates both tokens
@@ -1305,20 +1365,20 @@ All features are registered and implemented. The following are gaps within the e
 
 ## 13. Legacy vs bm-ts Comparison
 
-| Aspect | Legacy (Flask) | bm-ts (FastAPI) |
-|--------|---------------|-----------------|
-| **Backend** | Flask (sync, WSGI) | FastAPI (async, ASGI) |
-| **Auth** | Single hex token in DB | JWT access/refresh with rotation |
-| **Password Hashing** | Werkzeug | Argon2 (passlib) |
-| **Database** | 4 tables, integer PKs | 18 tables, UUID PKs, soft-delete |
-| **Payments** | None | Full Stripe integration + webhooks |
-| **Frontend** | 12 HTML pages, minified jQuery (~3.5MB) | 1-page React SPA, 40 components (~210KB) |
-| **Types** | None | Full TypeScript + Pydantic |
-| **Build** | Committed minified bundles | Vite source build (reproducible) |
-| **Real-Time** | None | WebSocket live updates |
-| **Accessibility** | ~22% WCAG | WCAG 2.1 AA with utilities |
-| **Content Scripts** | Basic Facebook automation | Facebook + Messenger + Timeline + Full automation pipeline (gender-aware DMs, timeline posts, advance/follow-up, deduplication) |
-| **Bundle Size** | ~3.5MB | ~210KB (94% smaller) |
+| Aspect               | Legacy (Flask)                          | bm-ts (FastAPI)                                                                                                                 |
+| -------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Backend**          | Flask (sync, WSGI)                      | FastAPI (async, ASGI)                                                                                                           |
+| **Auth**             | Single hex token in DB                  | JWT access/refresh with rotation                                                                                                |
+| **Password Hashing** | Werkzeug                                | Argon2 (passlib)                                                                                                                |
+| **Database**         | 4 tables, integer PKs                   | 18 tables, UUID PKs, soft-delete                                                                                                |
+| **Payments**         | None                                    | Full Stripe integration + webhooks                                                                                              |
+| **Frontend**         | 12 HTML pages, minified jQuery (~3.5MB) | 1-page React SPA, 40 components (~210KB)                                                                                        |
+| **Types**            | None                                    | Full TypeScript + Pydantic                                                                                                      |
+| **Build**            | Committed minified bundles              | Vite source build (reproducible)                                                                                                |
+| **Real-Time**        | None                                    | WebSocket live updates                                                                                                          |
+| **Accessibility**    | ~22% WCAG                               | WCAG 2.1 AA with utilities                                                                                                      |
+| **Content Scripts**  | Basic Facebook automation               | Facebook + Messenger + Timeline + Full automation pipeline (gender-aware DMs, timeline posts, advance/follow-up, deduplication) |
+| **Bundle Size**      | ~3.5MB                                  | ~210KB (94% smaller)                                                                                                            |
 
 ---
 
@@ -1326,24 +1386,25 @@ All features are registered and implemented. The following are gaps within the e
 
 ### System Statistics
 
-| Metric | Value |
-|--------|-------|
-| Backend LOC | ~5,401 Python |
-| Extension LOC | ~17,680 TypeScript + 1,132 CSS |
-| Database | 18 tables, 5 enums, 32 indexes |
-| API Endpoints | 75 HTTP + 1 WebSocket (15 routers + 2 inline routes) |
-| Component Files | 40 (23 directly in App.tsx) |
-| Background Message Types | 73 |
-| API Client Functions | 60 |
-| Custom Hooks | 7 (1,105 lines) |
-| Content Script Files | 5 (~3,646 lines) |
-| Utility Files | 13 (~1,800 lines) |
-| Accessibility Utilities | 9 functions (211 lines) |
-| Extension Tests | 393 (21 files) |
-| Backend Tests | 269 (24 files) |
-| Runtime Dependencies | 16 Python + 3 npm |
+| Metric                   | Value                                                |
+| ------------------------ | ---------------------------------------------------- |
+| Backend LOC              | ~5,401 Python                                        |
+| Extension LOC            | ~17,680 TypeScript + 1,132 CSS                       |
+| Database                 | 18 tables, 5 enums, 32 indexes                       |
+| API Endpoints            | 75 HTTP + 1 WebSocket (15 routers + 2 inline routes) |
+| Component Files          | 40 (23 directly in App.tsx)                          |
+| Background Message Types | 73                                                   |
+| API Client Functions     | 60                                                   |
+| Custom Hooks             | 7 (1,105 lines)                                      |
+| Content Script Files     | 5 (~3,646 lines)                                     |
+| Utility Files            | 13 (~1,800 lines)                                    |
+| Accessibility Utilities  | 9 functions (211 lines)                              |
+| Extension Tests          | 393 (21 files)                                       |
+| Backend Tests            | 269 (24 files)                                       |
+| Runtime Dependencies     | 16 Python + 3 npm                                    |
 
 ### Strengths
+
 1. **Type Safety**: TypeScript + Pydantic catches errors at compile time
 2. **Async Architecture**: FastAPI + SQLAlchemy async for high concurrency
 3. **Security**: JWT rotation, Argon2 hashing, Stripe webhook verification, **SecurityHeadersMiddleware** (8 headers), **SMTP Fernet encryption**, **input sanitization** (6 schema files), **account lockout**, **email verification**
@@ -1352,19 +1413,21 @@ All features are registered and implemented. The following are gaps within the e
 6. **Developer Experience**: Docker Compose, Vite HMR, Swagger UI
 
 ### Remaining Work for Production
+
 1. Expand background worker and hook test coverage; add E2E tests (Playwright/Puppeteer)
 2. Deploy to production infrastructure (managed DB, HTTPS, monitoring)
 3. Chrome Web Store listing
 
 ### Documentation Index
-| Document | Purpose |
-|----------|---------|
-| [SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md](SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md) | This document |
-| [API_CONTRACT.md](API_CONTRACT.md) | Frozen API interface spec (core endpoints) |
-| [BACKEND_INTEGRATION_SUMMARY.md](BACKEND_INTEGRATION_SUMMARY.md) | Full HTTP→client.ts→background message type mapping; error handling conventions; integration totals |
-| [BACKEND_TESTING_GUIDE.md](BACKEND_TESTING_GUIDE.md) | Testing setup |
-| [REALTIME_FEATURES.md](REALTIME_FEATURES.md) | WebSocket event documentation |
-| [ACCESSIBILITY.md](ACCESSIBILITY.md) | Accessibility features |
-| [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) | Development setup and workflow |
-| [MVP_CHECKLIST.md](MVP_CHECKLIST.md) | Production launch task tracking |
-| [README.md](README.md) | Quick start guide |
+
+| Document                                                                       | Purpose                                                                                             |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| [SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md](SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md) | This document                                                                                       |
+| [API_CONTRACT.md](API_CONTRACT.md)                                             | Frozen API interface spec (core endpoints)                                                          |
+| [BACKEND_INTEGRATION_SUMMARY.md](BACKEND_INTEGRATION_SUMMARY.md)               | Full HTTP→client.ts→background message type mapping; error handling conventions; integration totals |
+| [BACKEND_TESTING_GUIDE.md](BACKEND_TESTING_GUIDE.md)                           | Testing setup                                                                                       |
+| [REALTIME_FEATURES.md](REALTIME_FEATURES.md)                                   | WebSocket event documentation                                                                       |
+| [ACCESSIBILITY.md](ACCESSIBILITY.md)                                           | Accessibility features                                                                              |
+| [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)                                   | Development setup and workflow                                                                      |
+| [MVP_CHECKLIST.md](MVP_CHECKLIST.md)                                           | Production launch task tracking                                                                     |
+| [README.md](README.md)                                                         | Quick start guide                                                                                   |

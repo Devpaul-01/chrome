@@ -43,42 +43,42 @@ The BirthdayMessaging frontend is a Chrome Manifest V3 extension built with **Re
 
 ## Build & Toolchain
 
-| Tool | Version | Purpose |
-|---|---|---|
-| Vite | ^7.3.1 | Build tool with multi-entry config (popup, background, content) |
-| React | ^18.2.0 | Popup UI framework |
-| TypeScript | ^5.5.6 | Full strict typing across all contexts |
-| Tailwind CSS | ^4.1.18 | Utility-first CSS via PostCSS plugin |
-| LightningCSS | ^1.9.0 | CSS minification / transforms via Vite plugin |
-| Vitest | ^4.0.18 | Unit & component testing with `@testing-library/react` |
-| ESLint | ^8.44.0 | Linting with `@typescript-eslint` + Prettier integration |
+| Tool         | Version | Purpose                                                         |
+| ------------ | ------- | --------------------------------------------------------------- |
+| Vite         | ^7.3.1  | Build tool with multi-entry config (popup, background, content) |
+| React        | ^18.2.0 | Popup UI framework                                              |
+| TypeScript   | ^5.5.6  | Full strict typing across all contexts                          |
+| Tailwind CSS | ^4.1.18 | Utility-first CSS via PostCSS plugin                            |
+| LightningCSS | ^1.9.0  | CSS minification / transforms via Vite plugin                   |
+| Vitest       | ^4.0.18 | Unit & component testing with `@testing-library/react`          |
+| ESLint       | ^8.44.0 | Linting with `@typescript-eslint` + Prettier integration        |
 
 ### Build Outputs
 
 Vite produces three entry bundles into `dist/`:
 
-| Entry | Source | Output | Purpose |
-|---|---|---|---|
-| `popup` | `popup.html` | `popup.js` + `popup.html` | React popup SPA |
-| `background` | `src/background/index.ts` | `background.js` | MV3 service worker |
-| `content` | `src/content/index.ts` | `content.js` | Facebook content script |
+| Entry        | Source                    | Output                    | Purpose                 |
+| ------------ | ------------------------- | ------------------------- | ----------------------- |
+| `popup`      | `popup.html`              | `popup.js` + `popup.html` | React popup SPA         |
+| `background` | `src/background/index.ts` | `background.js`           | MV3 service worker      |
+| `content`    | `src/content/index.ts`    | `content.js`              | Facebook content script |
 
 Additional outputs: `chunks/*.js` (shared code), `assets/*` (CSS, images).
 
 ### npm Scripts
 
-| Script | Command | Description |
-|---|---|---|
-| `dev` | `vite` | Dev server (HMR for popup only) |
-| `build` | `vite build` | Production build |
-| `build:watch` | `vite build --watch` | Rebuild on file changes |
-| `reload` | `npm run build && echo ...` | Build + reminder to reload in `chrome://extensions/` |
-| `test` | `vitest run` | Run tests once |
-| `test:watch` | `vitest` | Watch mode testing |
-| `test:coverage` | `vitest run --coverage` | Coverage report (v8 provider) |
-| `lint` | `eslint ...` | Lint all TS/TSX/JS/JSX files |
-| `lint:fix` | `eslint ... --fix` | Auto-fix lint issues |
-| `format` | `prettier --write ...` | Format all source files |
+| Script          | Command                     | Description                                          |
+| --------------- | --------------------------- | ---------------------------------------------------- |
+| `dev`           | `vite`                      | Dev server (HMR for popup only)                      |
+| `build`         | `vite build`                | Production build                                     |
+| `build:watch`   | `vite build --watch`        | Rebuild on file changes                              |
+| `reload`        | `npm run build && echo ...` | Build + reminder to reload in `chrome://extensions/` |
+| `test`          | `vitest run`                | Run tests once                                       |
+| `test:watch`    | `vitest`                    | Watch mode testing                                   |
+| `test:coverage` | `vitest run --coverage`     | Coverage report (v8 provider)                        |
+| `lint`          | `eslint ...`                | Lint all TS/TSX/JS/JSX files                         |
+| `lint:fix`      | `eslint ... --fix`          | Auto-fix lint issues                                 |
+| `format`        | `prettier --write ...`      | Format all source files                              |
 
 ---
 
@@ -87,15 +87,22 @@ Additional outputs: `chunks/*.js` (shared code), `assets/*` (CSS, images).
 ```json
 {
   "manifest_version": 3,
-  "permissions": ["storage", "scripting", "activeTab", "tabs", "notifications", "alarms"],
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab",
+    "tabs",
+    "notifications",
+    "alarms"
+  ],
   "background": { "service_worker": "background.js", "type": "module" },
-  "content_scripts": [{
-    "matches": [
-      "https://www.facebook.com/*"
-    ],
-    "js": ["content.js"],
-    "run_at": "document_idle"
-  }],
+  "content_scripts": [
+    {
+      "matches": ["https://www.facebook.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "host_permissions": [
     "https://www.facebook.com/*",
     "http://localhost/*",
@@ -107,14 +114,14 @@ Additional outputs: `chunks/*.js` (shared code), `assets/*` (CSS, images).
 }
 ```
 
-| Permission | Used By | Purpose |
-|---|---|---|
-| `storage` | All contexts | `chrome.storage.local` for tokens, config, automation state |
-| `notifications` | Background | Chrome notification API for birthday alerts |
-| `alarms` | Background | Periodic birthday-check automation alarm |
-| `tabs` | Background | Open/query Facebook birthday tabs for automation |
-| `activeTab` | Background | Inject content script on current tab |
-| `scripting` | Background | Programmatic script injection |
+| Permission      | Used By      | Purpose                                                     |
+| --------------- | ------------ | ----------------------------------------------------------- |
+| `storage`       | All contexts | `chrome.storage.local` for tokens, config, automation state |
+| `notifications` | Background   | Chrome notification API for birthday alerts                 |
+| `alarms`        | Background   | Periodic birthday-check automation alarm                    |
+| `tabs`          | Background   | Open/query Facebook birthday tabs for automation            |
+| `activeTab`     | Background   | Inject content script on current tab                        |
+| `scripting`     | Background   | Programmatic script injection                               |
 
 ---
 
@@ -177,13 +184,13 @@ All inter-context communication uses a discriminated union (`BackgroundMessage`)
 
 ```typescript
 // From popup (popup/api.ts):
-sendBackgroundMessage<UserProfile>({ type: 'auth.me' })
+sendBackgroundMessage<UserProfile>({ type: "auth.me" });
 
 // From content script (content/api.ts):
-sendContentMessage<TemplateSegment[]>({ type: 'templates.list' })
+sendContentMessage<TemplateSegment[]>({ type: "templates.list" });
 
 // Both delegate to:
-sendExtensionMessage(message)  // utils/bridge.ts
+sendExtensionMessage(message); // utils/bridge.ts
 ```
 
 ### Bridge Layer (`utils/bridge.ts`)
@@ -203,11 +210,11 @@ The background service worker enforces a 15s hard guard timer on every `handleMe
 
 The background can send messages **to** the content script via `chrome.tabs.sendMessage`:
 
-| Content Script Message | Purpose |
-|---|---|
-| `automation.scan` | Trigger overlay friend-list refresh |
-| `automation.runFull` | Dispatch full automation payload to content script |
-| `contacts.scrapeFromPage` | Request birthday contact scraping from DOM |
+| Content Script Message    | Purpose                                            |
+| ------------------------- | -------------------------------------------------- |
+| `automation.scan`         | Trigger overlay friend-list refresh                |
+| `automation.runFull`      | Dispatch full automation payload to content script |
+| `contacts.scrapeFromPage` | Request birthday contact scraping from DOM         |
 
 ---
 
@@ -229,15 +236,15 @@ App
 
 The `AppProvider` in `context/AppContext.tsx` provides global state via React Context:
 
-| State | Type | Description |
-|---|---|---|
-| `user` | `UserProfile \| null` | Authenticated user profile; `null` = logged out |
-| `isInitializing` | `boolean` | `true` while the initial `auth.me` call is in flight |
-| `viewMode` | `ViewMode` (24 values) | Current sub-view within the active tab |
-| `activeTab` | `TabType` | Bottom nav: `home`, `contacts`, `messages`, `scheduling`, `account` |
-| `showToast()` | function | Imperatively show a toast notification |
-| `handleLogout()` | function | Clears tokens, disconnects WebSocket, resets state |
-| `refreshUser()` | function | Re-fetch user profile & reconnect WebSocket |
+| State            | Type                   | Description                                                         |
+| ---------------- | ---------------------- | ------------------------------------------------------------------- |
+| `user`           | `UserProfile \| null`  | Authenticated user profile; `null` = logged out                     |
+| `isInitializing` | `boolean`              | `true` while the initial `auth.me` call is in flight                |
+| `viewMode`       | `ViewMode` (24 values) | Current sub-view within the active tab                              |
+| `activeTab`      | `TabType`              | Bottom nav: `home`, `contacts`, `messages`, `scheduling`, `account` |
+| `showToast()`    | function               | Imperatively show a toast notification                              |
+| `handleLogout()` | function               | Clears tokens, disconnects WebSocket, resets state                  |
+| `refreshUser()`  | function               | Re-fetch user profile & reconnect WebSocket                         |
 
 **View modes** (22 total): `main`, `change-password`, `schedules`, `scheduling`, `automation`, `message-templates`, `queue`, `history`, `analytics`, `upcoming-birthdays`, `posts`, `postLibrary`, `images`, `contacts`, `add-contact`, `edit-contact`, `import-contacts`, `birthday-calendar`, `smtp-settings`, `account-management`, `subscription`, `template-gallery`.
 
@@ -247,17 +254,18 @@ Navigation is entirely state-driven — there are no browser routes. All view tr
 
 Each data domain has its own custom hook that encapsulates loading, CRUD, and error handling:
 
-| Hook | Domain | Key Responsibilities |
-|---|---|---|
-| `useContacts` | Contacts | Load, add, update, delete, import, bulk create contacts |
-| `useMessageTemplates` | Message Templates | Load, create, update, delete full message templates |
-| `useTemplateSegments` | Legacy Segments | Load, create, update, delete individual greeting/body/closing segments |
-| `usePostComposer` | Timeline Posts | Form state, image composition, post creation |
-| `useSMTPConfig` | SMTP Settings | Load and save SMTP configuration |
-| `useImageLibrary` | Image Library | Load, upload (base64), delete images; 20-image cap |
-| `useMessages` | Queue & History | Real-time queue/history via WebSocket subscriptions |
+| Hook                  | Domain            | Key Responsibilities                                                   |
+| --------------------- | ----------------- | ---------------------------------------------------------------------- |
+| `useContacts`         | Contacts          | Load, add, update, delete, import, bulk create contacts                |
+| `useMessageTemplates` | Message Templates | Load, create, update, delete full message templates                    |
+| `useTemplateSegments` | Legacy Segments   | Load, create, update, delete individual greeting/body/closing segments |
+| `usePostComposer`     | Timeline Posts    | Form state, image composition, post creation                           |
+| `useSMTPConfig`       | SMTP Settings     | Load and save SMTP configuration                                       |
+| `useImageLibrary`     | Image Library     | Load, upload (base64), delete images; 20-image cap                     |
+| `useMessages`         | Queue & History   | Real-time queue/history via WebSocket subscriptions                    |
 
 All hooks follow the same patterns:
+
 - Load data on mount when `user` is set (via `useEffect([user])`)
 - Clear data when `user` becomes `null` (logout/delete)
 - Use `sendBackgroundMessage()` for all API calls
@@ -266,46 +274,46 @@ All hooks follow the same patterns:
 
 ### Popup Components (40 total)
 
-| Component | File | Description |
-|---|---|---|
-| `AccountManagement` | `AccountManagement.tsx` | Profile editing, timezone, account deletion |
-| `AuthForm` | `AuthForm.tsx` | Login / register form |
-| `AutomationSettings` | `AutomationSettings.tsx` | Enable/disable automation, interval, max messages |
-| `BirthdayCalendar` | `BirthdayCalendar.tsx` | Calendar view of contacts' birthdays (`react-calendar`) |
-| `ChangePassword` | `ChangePassword.tsx` | Current + new password form |
-| `ContactForm` | `ContactForm.tsx` | Add / edit contact form |
-| `ContactList` | `ContactList.tsx` | Searchable contact list with edit/delete |
-| `Dashboard` | `Dashboard.tsx` | Analytics overview with stat cards |
-| `DashboardCharts` | `DashboardCharts.tsx` | Chart components for dashboard |
-| `DashboardStatsCard` | `DashboardStatsCard.tsx` | Individual stat card widget |
-| `ErrorBoundary` | `ErrorBoundary.tsx` | React error boundary with fallback UI |
-| `FacebookPostPreview` | `FacebookPostPreview.tsx` | Preview of composed Facebook post |
-| `ForgotPassword` | `ForgotPassword.tsx` | Password reset request form |
-| `GenderFilter` | `GenderFilter.tsx` | Gender selection dropdown/filter |
-| `HelpTooltip` | `HelpTooltip.tsx` | Contextual help tooltip |
-| `HomeControls` | `HomeControls.tsx` | Home tab: quick actions, contact count, calendar link |
-| `ImageLibraryPicker` | `ImageLibraryPicker.tsx` | Image selection from library for templates/posts |
-| `ImageManager` | `ImageManager.tsx` | Full image library CRUD with upload |
-| `ImportContactsModal` | `ImportContactsModal.tsx` | Facebook scraper trigger + CSV import modal |
-| `KeywordInserter` | `KeywordInserter.tsx` | Insert `[Tag Person]`, `[Today]`, `[Image]` merge tags |
-| `MessageGroups` | `MessageGroups.tsx` | Message group CRUD (gender + segment combo) — **DEACTIVATED** |
-| `MessageHistory` | `MessageHistory.tsx` | Sent message history with search/filter |
-| `MessageQueue` | `MessageQueue.tsx` | Pending messages with edit/cancel/retry |
-| `MessagesHub` | `MessagesHub.tsx` | Messages tab landing page with navigation cards |
-| `OnboardingWizard` | `OnboardingWizard.tsx` | First-time user setup wizard |
-| `PostEditor` | `PostEditor.tsx` | Timeline post composer with font controls + image |
-| `PostList` | `PostList.tsx` | List of saved timeline posts |
-| `ScheduleSettings` | `ScheduleSettings.tsx` | Birthday schedule configuration |
-| `SchedulingSettings` | `SchedulingSettings.tsx` | Advanced scheduling + automation controls |
-| `ScrollToTop` | `ScrollToTop.tsx` | Scroll-to-top button for long views |
-| `SegmentEditor` | `SegmentEditor.tsx` | Inline edit for legacy template segments |
-| `SMTPSettings` | `SMTPSettings.tsx` | SMTP host/port/credentials form |
-| `Spinner` | `Spinner.tsx` | Loading spinner with size variants |
-| `SubscriptionPanel` | `SubscriptionPanel.tsx` | Stripe subscription status + checkout |
-| `TemplateCreator` | `TemplateCreator.tsx` | Full message template form (greeting/sentiment/closing/image/gender/days) |
-| `TemplateGallery` | `TemplateGallery.tsx` | Browse/edit/delete saved message templates |
-| `Toast` | `Toast.tsx` | Toast notification component (success/error/warning/info) |
-| `UpcomingBirthdays` | `UpcomingBirthdays.tsx` | Upcoming birthdays list view |
+| Component             | File                      | Description                                                               |
+| --------------------- | ------------------------- | ------------------------------------------------------------------------- |
+| `AccountManagement`   | `AccountManagement.tsx`   | Profile editing, timezone, account deletion                               |
+| `AuthForm`            | `AuthForm.tsx`            | Login / register form                                                     |
+| `AutomationSettings`  | `AutomationSettings.tsx`  | Enable/disable automation, interval, max messages                         |
+| `BirthdayCalendar`    | `BirthdayCalendar.tsx`    | Calendar view of contacts' birthdays (`react-calendar`)                   |
+| `ChangePassword`      | `ChangePassword.tsx`      | Current + new password form                                               |
+| `ContactForm`         | `ContactForm.tsx`         | Add / edit contact form                                                   |
+| `ContactList`         | `ContactList.tsx`         | Searchable contact list with edit/delete                                  |
+| `Dashboard`           | `Dashboard.tsx`           | Analytics overview with stat cards                                        |
+| `DashboardCharts`     | `DashboardCharts.tsx`     | Chart components for dashboard                                            |
+| `DashboardStatsCard`  | `DashboardStatsCard.tsx`  | Individual stat card widget                                               |
+| `ErrorBoundary`       | `ErrorBoundary.tsx`       | React error boundary with fallback UI                                     |
+| `FacebookPostPreview` | `FacebookPostPreview.tsx` | Preview of composed Facebook post                                         |
+| `ForgotPassword`      | `ForgotPassword.tsx`      | Password reset request form                                               |
+| `GenderFilter`        | `GenderFilter.tsx`        | Gender selection dropdown/filter                                          |
+| `HelpTooltip`         | `HelpTooltip.tsx`         | Contextual help tooltip                                                   |
+| `HomeControls`        | `HomeControls.tsx`        | Home tab: quick actions, contact count, calendar link                     |
+| `ImageLibraryPicker`  | `ImageLibraryPicker.tsx`  | Image selection from library for templates/posts                          |
+| `ImageManager`        | `ImageManager.tsx`        | Full image library CRUD with upload                                       |
+| `ImportContactsModal` | `ImportContactsModal.tsx` | Facebook scraper trigger + CSV import modal                               |
+| `KeywordInserter`     | `KeywordInserter.tsx`     | Insert `[Tag Person]`, `[Today]`, `[Image]` merge tags                    |
+| `MessageGroups`       | `MessageGroups.tsx`       | Message group CRUD (gender + segment combo) — **DEACTIVATED**             |
+| `MessageHistory`      | `MessageHistory.tsx`      | Sent message history with search/filter                                   |
+| `MessageQueue`        | `MessageQueue.tsx`        | Pending messages with edit/cancel/retry                                   |
+| `MessagesHub`         | `MessagesHub.tsx`         | Messages tab landing page with navigation cards                           |
+| `OnboardingWizard`    | `OnboardingWizard.tsx`    | First-time user setup wizard                                              |
+| `PostEditor`          | `PostEditor.tsx`          | Timeline post composer with font controls + image                         |
+| `PostList`            | `PostList.tsx`            | List of saved timeline posts                                              |
+| `ScheduleSettings`    | `ScheduleSettings.tsx`    | Birthday schedule configuration                                           |
+| `SchedulingSettings`  | `SchedulingSettings.tsx`  | Advanced scheduling + automation controls                                 |
+| `ScrollToTop`         | `ScrollToTop.tsx`         | Scroll-to-top button for long views                                       |
+| `SegmentEditor`       | `SegmentEditor.tsx`       | Inline edit for legacy template segments                                  |
+| `SMTPSettings`        | `SMTPSettings.tsx`        | SMTP host/port/credentials form                                           |
+| `Spinner`             | `Spinner.tsx`             | Loading spinner with size variants                                        |
+| `SubscriptionPanel`   | `SubscriptionPanel.tsx`   | Stripe subscription status + checkout                                     |
+| `TemplateCreator`     | `TemplateCreator.tsx`     | Full message template form (greeting/sentiment/closing/image/gender/days) |
+| `TemplateGallery`     | `TemplateGallery.tsx`     | Browse/edit/delete saved message templates                                |
+| `Toast`               | `Toast.tsx`               | Toast notification component (success/error/warning/info)                 |
+| `UpcomingBirthdays`   | `UpcomingBirthdays.tsx`   | Upcoming birthdays list view                                              |
 
 ---
 
@@ -331,14 +339,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 ### Auth Token Management
 
-| Function | Purpose |
-|---|---|
-| `ensureTokens(baseUrl)` | Returns valid `TokenBundle`, auto-refreshing if access token is missing |
-| `refreshTokensFlow(refresh, baseUrl)` | Calls `POST /auth/refresh`, persists new pair to `chrome.storage.local` |
-| `withAuth(fn)` | Executes `fn(accessToken, baseUrl)`, retries once on 401 with fresh token |
-| `runAuthAware(call)` | Convenience alias for `withAuth()` used throughout `handleMessage` |
+| Function                              | Purpose                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------- |
+| `ensureTokens(baseUrl)`               | Returns valid `TokenBundle`, auto-refreshing if access token is missing   |
+| `refreshTokensFlow(refresh, baseUrl)` | Calls `POST /auth/refresh`, persists new pair to `chrome.storage.local`   |
+| `withAuth(fn)`                        | Executes `fn(accessToken, baseUrl)`, retries once on 401 with fresh token |
+| `runAuthAware(call)`                  | Convenience alias for `withAuth()` used throughout `handleMessage`        |
 
 Token storage keys in `chrome.storage.local`:
+
 - `bm_access_token` — JWT access token
 - `bm_refresh_token` — JWT refresh token
 - `bm_backend_url` — configurable backend URL (default: `http://localhost:8000`)
@@ -359,15 +368,16 @@ The background worker orchestrates the automation scan:
 
 Automation config is stored in `chrome.storage.local` under `automation_config`:
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | `boolean` | `false` | Master on/off toggle |
-| `checkInterval` | `number` | `60` | Minutes between checks |
-| `lastCheck` | `string \| null` | `null` | ISO timestamp of last check |
-| `nextCheck` | `string \| null` | `null` | ISO timestamp of next scheduled check |
-| `maxMessages` | `number` | `0` | Max messages per run (0 = unlimited) |
+| Field           | Type             | Default | Description                           |
+| --------------- | ---------------- | ------- | ------------------------------------- |
+| `enabled`       | `boolean`        | `false` | Master on/off toggle                  |
+| `checkInterval` | `number`         | `60`    | Minutes between checks                |
+| `lastCheck`     | `string \| null` | `null`  | ISO timestamp of last check           |
+| `nextCheck`     | `string \| null` | `null`  | ISO timestamp of next scheduled check |
+| `maxMessages`   | `number`         | `0`     | Max messages per run (0 = unlimited)  |
 
 Additional storage keys:
+
 - `bm_sent_today` — `{ date: "YYYY-MM-DD", ids: string[] }` deduplication record
 - `bm_action_delay_minutes` — per-action delay (1–5 minutes, default 1)
 
@@ -378,6 +388,7 @@ Additional storage keys:
 ### Injection & Lifecycle
 
 Injected into all `https://*.facebook.com/*` pages at `document_idle`. On load:
+
 1. Creates the sidebar overlay UI (friend list, status, Send/Refresh buttons)
 2. Scrapes birthday friend entries from the DOM (`gatherBirthdayFriends()`)
 3. Loads template segments from the backend via `sendContentMessage`
@@ -386,8 +397,9 @@ Injected into all `https://*.facebook.com/*` pages at `document_idle`. On load:
 ### Overlay UI
 
 A fixed-position sidebar (`#bm-overlay`) that:
+
 - Lists detected birthday friends with profile links
-- Shows a status line for operation feedback  
+- Shows a status line for operation feedback
 - Provides "Send to all" (manual) and "Refresh" buttons
 - Z-index `2147483647` to stay above Facebook's UI
 
@@ -396,6 +408,7 @@ A fixed-position sidebar (`#bm-overlay`) that:
 Receives an `AutomationRunPayload` from the background and executes three phases:
 
 **Phase 1 — Current-Day Friends:**
+
 - Scrapes birthday friends from the live Facebook birthday feed
 - For each friend: selects a gender-matched template, composes the DM, sends via Messenger dialog
 - Optionally posts to their timeline (if `makePost` feature flag is on)
@@ -404,14 +417,17 @@ Receives an `AutomationRunPayload` from the background and executes three phases
 - Syncs newly discovered friends into the backend contacts list
 
 **Phase 2 — Advance Contacts (days_in_advance > 0):**
+
 - Iterates pre-matched contacts from the `advanceEntries` payload
 - Navigates to each contact's Facebook profile, clicks Message, sends DM
 - Same post/archive/record flow as Phase 1
 
 **Phase 3 — Follow-Up Contacts (days_in_advance < 0):**
+
 - Same as Phase 2 but for follow-up templates
 
 **Anti-Ban Measures:**
+
 - Configurable per-action delay (1–5 min, ±20% jitter)
 - Random delay between manual sends (5–15 seconds)
 - Manual send capped at 5 messages per session (`MAX_MESSAGES_PER_SESSION`)
@@ -419,12 +435,12 @@ Receives an `AutomationRunPayload` from the background and executes three phases
 
 ### Facebook DOM Interaction
 
-| Module | Lines | Functions |
-|---|---|---|
-| `content/index.ts` | 2,474 | `gatherBirthdayFriends()`, `fillMessageAndSend()`, `openMessageDialog()`, `scrapeBirthdayContactsFromPage()` |
-| `content/messenger.ts` | 609 | `archiveConversation()`, conversation lookup, MutationObserver for replies |
-| `content/timeline.ts` | 605 | `postToTimeline()`, `navigateToProfile()`, `openPostComposer()`, Nifty Images merge tags |
-| `content/dom-helpers.ts` | 335 | `waitForElement(selector, timeout)`, `delay(ms)`, DOM utilities |
+| Module                   | Lines | Functions                                                                                                    |
+| ------------------------ | ----- | ------------------------------------------------------------------------------------------------------------ |
+| `content/index.ts`       | 2,474 | `gatherBirthdayFriends()`, `fillMessageAndSend()`, `openMessageDialog()`, `scrapeBirthdayContactsFromPage()` |
+| `content/messenger.ts`   | 609   | `archiveConversation()`, conversation lookup, MutationObserver for replies                                   |
+| `content/timeline.ts`    | 605   | `postToTimeline()`, `navigateToProfile()`, `openPostComposer()`, Nifty Images merge tags                     |
+| `content/dom-helpers.ts` | 335   | `waitForElement(selector, timeout)`, `delay(ms)`, DOM utilities                                              |
 
 ### Contact Scraper
 
@@ -445,13 +461,19 @@ Returns `ScrapedContact[]` with `{ name, facebook_profile_url, birthday? }`.
 1,090 lines exporting 60 functions and all TypeScript interfaces. Every function follows the signature:
 
 ```typescript
-(baseUrl: string, accessToken?: string, ...args) => Promise<T>
+(baseUrl: string, accessToken?: string, ...args) => Promise<T>;
 ```
 
 ### Central HTTP Dispatcher
 
 ```typescript
-async function request<T>(baseUrl, path, method, body?, accessToken?): Promise<T>
+async function request<T>(
+  baseUrl,
+  path,
+  method,
+  body?,
+  accessToken?,
+): Promise<T>;
 ```
 
 - Injects `Authorization: Bearer <token>` header when token is provided
@@ -462,25 +484,25 @@ async function request<T>(baseUrl, path, method, body?, accessToken?): Promise<T
 
 ### Exported Interfaces
 
-| Interface | Used By |
-|---|---|
-| `RegisterPayload` | Auth registration |
-| `TokenResponse` | Auth token pair responses |
-| `UserProfile` | User account data |
-| `TemplateSegment` | Legacy greeting/body/closing segments |
-| `SubscriptionStatus` | Stripe subscription state |
-| `CheckoutSessionRequest/Response` | Stripe checkout |
-| `BirthdaySchedule` | Schedule timing config |
-| `QueuedMessage` | Pending message in queue |
-| `MessageHistoryItem/Page` | Sent message history with pagination |
-| `DashboardStats` | Analytics dashboard data |
-| `Contact` | Facebook friend contact record |
-| `MessageGroup` | Group of template segments by gender |
-| `Post` | Timeline post with optional image/font styling |
-| `UserImage` | Uploaded image metadata |
-| `SMTPConfig` | SMTP email configuration |
-| `MessageTemplate` | Full message template (greeting/sentiment/closing/image/days/gender) |
-| `BirthdayConfig` | Birthday automation config entry |
+| Interface                         | Used By                                                              |
+| --------------------------------- | -------------------------------------------------------------------- |
+| `RegisterPayload`                 | Auth registration                                                    |
+| `TokenResponse`                   | Auth token pair responses                                            |
+| `UserProfile`                     | User account data                                                    |
+| `TemplateSegment`                 | Legacy greeting/body/closing segments                                |
+| `SubscriptionStatus`              | Stripe subscription state                                            |
+| `CheckoutSessionRequest/Response` | Stripe checkout                                                      |
+| `BirthdaySchedule`                | Schedule timing config                                               |
+| `QueuedMessage`                   | Pending message in queue                                             |
+| `MessageHistoryItem/Page`         | Sent message history with pagination                                 |
+| `DashboardStats`                  | Analytics dashboard data                                             |
+| `Contact`                         | Facebook friend contact record                                       |
+| `MessageGroup`                    | Group of template segments by gender                                 |
+| `Post`                            | Timeline post with optional image/font styling                       |
+| `UserImage`                       | Uploaded image metadata                                              |
+| `SMTPConfig`                      | SMTP email configuration                                             |
+| `MessageTemplate`                 | Full message template (greeting/sentiment/closing/image/days/gender) |
+| `BirthdayConfig`                  | Birthday automation config entry                                     |
 
 ---
 
@@ -504,13 +526,13 @@ Singleton `WebSocketClient` class providing real-time updates:
 
 ### Event Subscriptions
 
-| Event Type | Consumed By | Trigger |
-|---|---|---|
-| `message_queue_update` | `useMessageQueue` hook | Queue mutations (create/update/delete) |
-| `message_history_update` | `useMessageHistory` hook | History mutations |
-| `dashboard_update` | Dashboard component | Stat changes |
-| `notification` | — | Server-pushed alerts |
-| `connected` | — | Connection established |
+| Event Type               | Consumed By              | Trigger                                |
+| ------------------------ | ------------------------ | -------------------------------------- |
+| `message_queue_update`   | `useMessageQueue` hook   | Queue mutations (create/update/delete) |
+| `message_history_update` | `useMessageHistory` hook | History mutations                      |
+| `dashboard_update`       | Dashboard component      | Stat changes                           |
+| `notification`           | —                        | Server-pushed alerts                   |
+| `connected`              | —                        | Connection established                 |
 
 Hooks subscribe with `wsClient.on(event, callback)` which returns an unsubscribe function used in `useEffect` cleanup.
 
@@ -521,6 +543,7 @@ Hooks subscribe with `wsClient.on(event, callback)` which returns an unsubscribe
 ### `utils/errors.ts` — Error Handling
 
 Class hierarchy:
+
 ```
 AppError (base)
 ├── NetworkError       (NETWORK_ERROR, retryable)
@@ -535,18 +558,19 @@ AppError (base)
 
 ### `utils/message.ts` — Message Composition
 
-| Function | Purpose |
-|---|---|
-| `composeMessage(greetings, bodies, closings)` | Random-pick one segment from each type, join with spaces |
-| `selectTemplate(templates, gender)` | Gender-aware template selection: exact match → `'all'` → any |
-| `selectPost(posts, gender)` | Gender-aware post selection: exact match → `NEUTRAL` → any |
-| `resolveKeywords(text, friend)` | Replace `[Tag Person]` → name, `[Today]` → date, strip `[Image]` |
-| `assembleMessageFromTemplate(template, friend)` | Compose greeting + sentiment + closing with keyword resolution |
-| `randomDelay(min?, max?)` | Promise-based random wait (default 5–15s) |
+| Function                                        | Purpose                                                          |
+| ----------------------------------------------- | ---------------------------------------------------------------- |
+| `composeMessage(greetings, bodies, closings)`   | Random-pick one segment from each type, join with spaces         |
+| `selectTemplate(templates, gender)`             | Gender-aware template selection: exact match → `'all'` → any     |
+| `selectPost(posts, gender)`                     | Gender-aware post selection: exact match → `NEUTRAL` → any       |
+| `resolveKeywords(text, friend)`                 | Replace `[Tag Person]` → name, `[Today]` → date, strip `[Image]` |
+| `assembleMessageFromTemplate(template, friend)` | Compose greeting + sentiment + closing with keyword resolution   |
+| `randomDelay(min?, max?)`                       | Promise-based random wait (default 5–15s)                        |
 
 ### `utils/image.ts` — Canvas Image Composition
 
 `composeImageFromUrl(src, text, font, size, color)` creates a Facebook-sized (1080×1350) image with:
+
 - Source image scaled to cover with aspect-ratio preservation
 - Gradient overlay at the bottom for text legibility
 - Word-wrapped centred text with configurable font/size/colour
@@ -554,23 +578,23 @@ AppError (base)
 
 ### `utils/accessibility.ts` — A11y Utilities
 
-| Function | Purpose |
-|---|---|
+| Function                                | Purpose                                                                        |
+| --------------------------------------- | ------------------------------------------------------------------------------ |
 | `announceToScreenReader(msg, priority)` | ARIA live region announcements (debounced for polite, immediate for assertive) |
-| `getFocusableElements(container)` | Query all tabbable elements within a container |
-| `trapFocus(container)` | Keyboard focus trap for modals/dialogs (Tab/Shift+Tab cycling) |
+| `getFocusableElements(container)`       | Query all tabbable elements within a container                                 |
+| `trapFocus(container)`                  | Keyboard focus trap for modals/dialogs (Tab/Shift+Tab cycling)                 |
 
 ### `utils/storage.ts` — Chrome Storage Abstraction
 
-| Function | Storage Key | Description |
-|---|---|---|
-| `getTokens()` | `bm_access_token`, `bm_refresh_token` | Read JWT token pair |
-| `saveTokens(bundle)` | Same | Persist token pair |
-| `clearTokens()` | Same | Remove tokens (logout) |
-| `getBackendUrl()` | `bm_backend_url` | Backend URL (default: `http://localhost:8000`) |
-| `setBackendUrl(url)` | Same | Validates scheme (HTTPS or `http://localhost` only) |
-| `getOnboardingComplete()` | `bm_onboarding_complete` | Onboarding wizard completion flag |
-| `setOnboardingComplete(v)` | Same | Mark onboarding done |
+| Function                   | Storage Key                           | Description                                         |
+| -------------------------- | ------------------------------------- | --------------------------------------------------- |
+| `getTokens()`              | `bm_access_token`, `bm_refresh_token` | Read JWT token pair                                 |
+| `saveTokens(bundle)`       | Same                                  | Persist token pair                                  |
+| `clearTokens()`            | Same                                  | Remove tokens (logout)                              |
+| `getBackendUrl()`          | `bm_backend_url`                      | Backend URL (default: `http://localhost:8000`)      |
+| `setBackendUrl(url)`       | Same                                  | Validates scheme (HTTPS or `http://localhost` only) |
+| `getOnboardingComplete()`  | `bm_onboarding_complete`              | Onboarding wizard completion flag                   |
+| `setOnboardingComplete(v)` | Same                                  | Mark onboarding done                                |
 
 ### `utils/logger.ts` — Development Logger
 
@@ -582,12 +606,12 @@ Structured console logger with `[BM Background]` prefix. Suppresses `info`, `deb
 
 Global shortcuts registered in `AppProvider` via `keydown` listener:
 
-| Shortcut | Action | Condition |
-|---|---|---|
-| `Alt+L` | Logout | Authenticated |
-| `Alt+H` | Navigate to Home | Authenticated, not already on main |
-| `Alt+D` | Navigate to Dashboard | Authenticated |
-| `Esc` | Return to main view | Authenticated, in a sub-view |
+| Shortcut | Action                | Condition                          |
+| -------- | --------------------- | ---------------------------------- |
+| `Alt+L`  | Logout                | Authenticated                      |
+| `Alt+H`  | Navigate to Home      | Authenticated, not already on main |
+| `Alt+D`  | Navigate to Dashboard | Authenticated                      |
+| `Esc`    | Return to main view   | Authenticated, in a sub-view       |
 
 ---
 
@@ -651,16 +675,16 @@ Global shortcuts registered in `AppProvider` via `keydown` listener:
 
 ## chrome.storage.local Keys Summary
 
-| Key | Type | Written By | Read By |
-|---|---|---|---|
-| `bm_access_token` | `string` | Background (auth flows) | Background (API calls) |
-| `bm_refresh_token` | `string` | Background (auth flows) | Background (token refresh) |
-| `bm_backend_url` | `string` | Popup (config UI) | Background, Popup |
-| `bm_onboarding_complete` | `boolean` | Popup (wizard dismiss) | Popup (wizard gate) |
-| `automation_config` | `AutomationConfig` | Background (automation) | Background, Popup |
-| `bm_sent_today` | `SentTodayRecord` | Content script (via bg) | Background (automation) |
-| `bm_action_delay_minutes` | `number` (1–5) | Popup (settings) | Content script |
-| `bm_feature_flags` | `{ makePost, sendMessage }` | Popup (settings) | Content script |
+| Key                       | Type                        | Written By              | Read By                    |
+| ------------------------- | --------------------------- | ----------------------- | -------------------------- |
+| `bm_access_token`         | `string`                    | Background (auth flows) | Background (API calls)     |
+| `bm_refresh_token`        | `string`                    | Background (auth flows) | Background (token refresh) |
+| `bm_backend_url`          | `string`                    | Popup (config UI)       | Background, Popup          |
+| `bm_onboarding_complete`  | `boolean`                   | Popup (wizard dismiss)  | Popup (wizard gate)        |
+| `automation_config`       | `AutomationConfig`          | Background (automation) | Background, Popup          |
+| `bm_sent_today`           | `SentTodayRecord`           | Content script (via bg) | Background (automation)    |
+| `bm_action_delay_minutes` | `number` (1–5)              | Popup (settings)        | Content script             |
+| `bm_feature_flags`        | `{ makePost, sendMessage }` | Popup (settings)        | Content script             |
 
 ---
 
@@ -676,22 +700,22 @@ Global shortcuts registered in `AppProvider` via `keydown` listener:
 
 ## Integration Totals
 
-| Layer | Count |
-|---|---|
-| Popup React components | 40 |
-| Custom hooks | 7 |
-| View modes (popup navigation states) | 24 |
-| Background message types (backend-calling) | 53 |
-| Background message types (local-only) | 20 |
-| **Total `BackgroundMessage` types** | **73** |
-| Content script message types | 3 |
-| `api/client.ts` exported functions | 60 |
-| `api/client.ts` exported interfaces | 30+ |
-| WebSocket event types | 5 |
-| `chrome.storage.local` keys | 8 |
-| Chrome permissions | 6 |
-| npm dependencies (runtime) | 3 |
-| npm dependencies (dev) | 28 |
+| Layer                                      | Count  |
+| ------------------------------------------ | ------ |
+| Popup React components                     | 40     |
+| Custom hooks                               | 7      |
+| View modes (popup navigation states)       | 24     |
+| Background message types (backend-calling) | 53     |
+| Background message types (local-only)      | 20     |
+| **Total `BackgroundMessage` types**        | **73** |
+| Content script message types               | 3      |
+| `api/client.ts` exported functions         | 60     |
+| `api/client.ts` exported interfaces        | 30+    |
+| WebSocket event types                      | 5      |
+| `chrome.storage.local` keys                | 8      |
+| Chrome permissions                         | 6      |
+| npm dependencies (runtime)                 | 3      |
+| npm dependencies (dev)                     | 28     |
 
 ---
 

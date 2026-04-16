@@ -9,12 +9,14 @@ The BirthdayMessaging extension now includes WebSocket-based real-time updates t
 ## Architecture
 
 ### Backend (FastAPI)
+
 - **WebSocket Endpoint**: `/ws`
 - **Authentication**: JWT token passed via query parameter
 - **Connection Manager**: Manages multiple connections per user
 - **Event Broadcasting**: Sends real-time updates when data changes
 
 ### Frontend (React + TypeScript)
+
 - **WebSocket Client**: Singleton instance (`wsClient`) in `src/api/websocket.ts`
 - **Auto-reconnect**: Automatic reconnection with exponential backoff (max 5 attempts)
 - **Keep-alive**: Ping/pong mechanism every 30 seconds
@@ -23,12 +25,15 @@ The BirthdayMessaging extension now includes WebSocket-based real-time updates t
 ## Event Types
 
 ### 1. `message_queue_update`
+
 Fired when message queue changes:
+
 - **Action: `created`** - New message added to queue
 - **Action: `updated`** - Message content or status changed
 - **Action: `deleted`** - Message cancelled/removed from queue
 
 **Payload Example:**
+
 ```json
 {
   "type": "message_queue_update",
@@ -46,11 +51,14 @@ Fired when message queue changes:
 ```
 
 ### 2. `message_history_update`
+
 Fired when message history changes:
+
 - **Action: `created`** - New message sent (added to history)
 - **Action: `deleted`** - History item removed
 
 **Payload Example:**
+
 ```json
 {
   "type": "message_history_update",
@@ -68,9 +76,11 @@ Fired when message history changes:
 ```
 
 ### 3. `dashboard_update`
+
 Fired when dashboard statistics change:
 
 **Payload Example:**
+
 ```json
 {
   "type": "dashboard_update",
@@ -88,9 +98,11 @@ Fired when dashboard statistics change:
 ```
 
 ### 4. `notification`
+
 General notification for user feedback:
 
 **Payload Example:**
+
 ```json
 {
   "type": "notification",
@@ -102,9 +114,11 @@ General notification for user feedback:
 ```
 
 ### 5. `connected`
+
 Sent immediately after WebSocket connection established:
 
 **Payload Example:**
+
 ```json
 {
   "type": "connected",
@@ -132,6 +146,7 @@ Sent immediately after WebSocket connection established:
 ### Reconnection Logic
 
 If connection drops unexpectedly:
+
 - **Attempt 1**: Reconnect after 3 seconds
 - **Attempt 2**: Reconnect after 6 seconds
 - **Attempt 3**: Reconnect after 9 seconds
@@ -142,59 +157,64 @@ If connection drops unexpectedly:
 ## Component Integration
 
 ### MessageQueue Component
+
 ```typescript
-import wsClient from '../../api/websocket';
+import wsClient from "../../api/websocket";
 
 useEffect(() => {
   // Subscribe to real-time updates
-  const unsubscribe = wsClient.on('message_queue_update', (data) => {
-    if (data.action === 'created') {
+  const unsubscribe = wsClient.on("message_queue_update", (data) => {
+    if (data.action === "created") {
       loadQueue(); // Reload entire queue
-    } else if (data.action === 'updated') {
+    } else if (data.action === "updated") {
       // Update specific message
-      setMessages(prev => prev.map(m => 
-        m.id === data.message.id ? { ...m, ...data.message } : m
-      ));
-    } else if (data.action === 'deleted') {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === data.message.id ? { ...m, ...data.message } : m,
+        ),
+      );
+    } else if (data.action === "deleted") {
       // Remove message
-      setMessages(prev => prev.filter(m => m.id !== data.message.id));
+      setMessages((prev) => prev.filter((m) => m.id !== data.message.id));
     }
   });
-  
+
   return () => unsubscribe(); // Cleanup on unmount
 }, []);
 ```
 
 ### MessageHistory Component
+
 ```typescript
 useEffect(() => {
-  const unsubscribe = wsClient.on('message_history_update', (data) => {
-    if (data.action === 'deleted') {
-      setMessages(prev => prev.filter(m => m.id !== data.message.id));
-    } else if (data.action === 'created') {
+  const unsubscribe = wsClient.on("message_history_update", (data) => {
+    if (data.action === "deleted") {
+      setMessages((prev) => prev.filter((m) => m.id !== data.message.id));
+    } else if (data.action === "created") {
       loadHistory(); // Reload to get new message
     }
   });
-  
+
   return () => unsubscribe();
 }, []);
 ```
 
 ### Dashboard Component
+
 ```typescript
 useEffect(() => {
-  const unsubDashboard = wsClient.on('dashboard_update', (data) => {
+  const unsubDashboard = wsClient.on("dashboard_update", (data) => {
     setStats(data); // Update stats directly
   });
-  
-  const unsubQueue = wsClient.on('message_queue_update', () => {
+
+  const unsubQueue = wsClient.on("message_queue_update", () => {
     loadStats(); // Refresh when queue changes
   });
-  
-  const unsubHistory = wsClient.on('message_history_update', () => {
+
+  const unsubHistory = wsClient.on("message_history_update", () => {
     loadStats(); // Refresh when history changes
   });
-  
+
   return () => {
     unsubDashboard();
     unsubQueue();
@@ -228,12 +248,14 @@ await broadcast_message_queue_update(user.id, {
 ### Local Testing
 
 1. **Start Backend**:
+
    ```bash
    cd bm-ts/backend
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 2. **Build Extension**:
+
    ```bash
    cd bm-ts/extension
    npm run build
@@ -261,33 +283,39 @@ await broadcast_message_queue_update(user.id, {
 ## Performance Considerations
 
 ### Bandwidth
+
 - **Ping/Pong**: 100 bytes every 30 seconds ≈ 200 KB/day
 - **Event Messages**: Typically 200-500 bytes per event
 - **Estimated Usage**: < 1 MB per day for active user
 
 ### Memory
+
 - WebSocket client: ~50 KB
 - Event listeners: Minimal (cleanup on unmount)
 
 ### Battery Impact
+
 - Minimal: WebSocket maintains single persistent connection
 - More efficient than polling every few seconds
 
 ## Troubleshooting
 
 ### WebSocket Not Connecting
+
 1. Check backend is running
 2. Verify JWT token is valid (check browser console)
 3. Check CORS settings allow WebSocket connections
 4. Inspect Network tab for WebSocket connection status
 
 ### Events Not Received
+
 1. Check component is mounted and subscribed
 2. Verify user_id matches in backend broadcast
 3. Check browser console for WebSocket messages
 4. Ensure backend is calling broadcast functions
 
 ### Connection Drops Frequently
+
 1. Check network stability
 2. Increase ping interval if needed
 3. Check backend logs for errors
@@ -296,6 +324,7 @@ await broadcast_message_queue_update(user.id, {
 ## Future Enhancements
 
 ### Potential Features
+
 - **Typing Indicators**: Show when another instance is editing
 - **Presence**: Show online/offline status
 - **Conflict Resolution**: Handle concurrent edits
@@ -304,6 +333,7 @@ await broadcast_message_queue_update(user.id, {
 - **Binary Messages**: Use binary for performance-critical data
 
 ### Scalability
+
 - **Redis PubSub**: Use Redis for multi-server broadcasting
 - **Load Balancing**: Sticky sessions for WebSocket connections
 - **Horizontal Scaling**: Shared connection manager across instances
@@ -311,12 +341,14 @@ await broadcast_message_queue_update(user.id, {
 ## Security
 
 ### Current Implementation
+
 - ✅ JWT authentication on connection
 - ✅ User-specific broadcasting (no data leakage)
 - ✅ HTTPS/WSS in production
 - ✅ Token validation on each message
 
 ### Recommendations
+
 - [ ] Rate limiting on WebSocket messages
 - [ ] Connection limits per user
 - [ ] Message size limits
@@ -325,11 +357,13 @@ await broadcast_message_queue_update(user.id, {
 ## Files Modified
 
 ### Backend
+
 - `app/api/routers/websocket.py` - New WebSocket router
 - `app/api/routers/messages.py` - Added broadcasts
 - `app/main.py` - Registered WebSocket router
 
 ### Frontend
+
 - `src/api/websocket.ts` - New WebSocket client
 - `src/utils/messages.ts` - Added `config.getWSConfig` message type
 - `src/background/index.ts` - Added WebSocket config handler

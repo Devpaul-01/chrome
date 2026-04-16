@@ -18,7 +18,7 @@ Then follow the instructions to load the extension in Chrome.
 ```
 bm-ts/
 ├── startup.ps1              # 🚀 Start all services
-├── shutdown.ps1             # 🛑 Stop all services  
+├── shutdown.ps1             # 🛑 Stop all services
 ├── DEVELOPMENT_GUIDE.md     # 📖 Complete development guide
 ├── backend/                 # FastAPI backend + PostgreSQL
 │   ├── app/                 # Python application code
@@ -101,6 +101,7 @@ Ensure you're loading the `extension/dist` folder, not `extension`.
 ## 🛠️ Technology Stack
 
 ### Backend
+
 - **Framework:** FastAPI (Python)
 - **Database:** PostgreSQL 15
 - **Auth:** JWT (access + refresh tokens)
@@ -108,6 +109,7 @@ Ensure you're loading the `extension/dist` folder, not `extension`.
 - **Container:** Docker + Docker Compose
 
 ### Frontend (Extension)
+
 - **UI:** React 18 + TypeScript
 - **Styling:** Tailwind CSS v4
 - **Build:** Vite 7

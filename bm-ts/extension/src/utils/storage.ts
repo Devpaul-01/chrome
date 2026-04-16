@@ -92,11 +92,7 @@ function isAllowedSslipIoHostname(hostname: string): boolean {
 }
 
 function isAllowedDevHostname(hostname: string): boolean {
-  return (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    isAllowedSslipIoHostname(hostname)
-  );
+  return hostname === 'localhost' || hostname === '127.0.0.1' || isAllowedSslipIoHostname(hostname);
 }
 
 function isValidBackendUrl(url: string): boolean {

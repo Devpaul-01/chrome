@@ -11,7 +11,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest   # just spins up a linux machine
+    runs-on: ubuntu-latest # just spins up a linux machine
 
     steps:
       # grab my repo code
@@ -22,7 +22,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install backend dependencies
         working-directory: bm-ts/backend
@@ -41,13 +41,13 @@ jobs:
 
       # build the docker image and push it
       - name: Build + Push image
-        working-directory: bm-ts/backend   # my backend folder (has Dockerfile)
+        working-directory: bm-ts/backend # my backend folder (has Dockerfile)
         run: |
           IMAGE_NAME=gitea.birthdaymessaging.com/ctmmediagroup/bm-legacy-backend
-          
-          
+
+
           SAFE_BRANCH_NAME=$(echo "${GITHUB_REF_NAME}" | tr '/' '-')
-          
+
           # version = branch + commit (so every build is unique)
           VERSION="${SAFE_BRANCH_NAME}-$(git rev-parse --short HEAD)"
 
@@ -73,4 +73,3 @@ jobs:
       - name: Logout
         if: always()
         run: docker logout gitea.birthdaymessaging.com
-

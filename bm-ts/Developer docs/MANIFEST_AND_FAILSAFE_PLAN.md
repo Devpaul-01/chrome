@@ -14,16 +14,17 @@ The extension has been hardened with Meta-compliant fail-safe mechanisms that tr
 
 All changes in `extension/public/manifest.json`:
 
-| Change | Before | After |
-|--------|--------|-------|
-| `host_permissions` | `"https://*.facebook.com/*"` (all Facebook) | `birthdays*`, `messages/*`, `profile.php*` (3 narrow paths) |
-| `content_scripts.matches` | `"https://*.facebook.com/*"` (all pages) | `birthdays*`, `messages/*`, `profile.php*` (3 specific pages) |
-| `web_accessible_resources.matches` | `"https://*.facebook.com/*"` | `"https://www.facebook.com/*"` (unchanged — broad scope needed for assets on any FB page) |
-| `description` | "Chrome extension that automates birthday messages…" | "Helps you remember and send personalized birthday wishes to your Facebook friends." |
-| `homepage_url` | Not present | `"https://birthdaymessaging.app/privacy"` |
-| `alarms` | In `permissions` (always granted) | Moved to `optional_permissions` (requested on demand) |
+| Change                             | Before                                               | After                                                                                     |
+| ---------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `host_permissions`                 | `"https://*.facebook.com/*"` (all Facebook)          | `birthdays*`, `messages/*`, `profile.php*` (3 narrow paths)                               |
+| `content_scripts.matches`          | `"https://*.facebook.com/*"` (all pages)             | `birthdays*`, `messages/*`, `profile.php*` (3 specific pages)                             |
+| `web_accessible_resources.matches` | `"https://*.facebook.com/*"`                         | `"https://www.facebook.com/*"` (unchanged — broad scope needed for assets on any FB page) |
+| `description`                      | "Chrome extension that automates birthday messages…" | "Helps you remember and send personalized birthday wishes to your Facebook friends."      |
+| `homepage_url`                     | Not present                                          | `"https://birthdaymessaging.app/privacy"`                                                 |
+| `alarms`                           | In `permissions` (always granted)                    | Moved to `optional_permissions` (requested on demand)                                     |
 
 **Remaining permissions** (all justified):
+
 - `storage` — local config, tokens, sent-today tracking, fail-safe state
 - `scripting` — programmatic content script injection for profile pages
 - `activeTab` — interact with the active Facebook tab
@@ -53,11 +54,11 @@ Implemented in `extension/src/content/index.ts` and `extension/src/utils/failsaf
 
 Implemented in `extension/src/utils/failsafe.ts`:
 
-| Limit | Window | Cap | Enforcement |
-|-------|--------|-----|-------------|
-| Hourly | Rolling 60 minutes | 1 message | `checkRateLimit()` before each send |
-| Daily | Rolling 24 hours | 3 messages | Same — blocks with reason string |
-| Weekly | Rolling 7 days | 5 messages | Same — timestamps auto-pruned |
+| Limit  | Window             | Cap        | Enforcement                         |
+| ------ | ------------------ | ---------- | ----------------------------------- |
+| Hourly | Rolling 60 minutes | 1 message  | `checkRateLimit()` before each send |
+| Daily  | Rolling 24 hours   | 3 messages | Same — blocks with reason string    |
+| Weekly | Rolling 7 days     | 5 messages | Same — timestamps auto-pruned       |
 
 - `recordMessageSent()` appends ISO timestamp on every successful send
 - `checkRateLimit()` returns `{ allowed, reason, hourly, daily, weekly }` with usage counts
@@ -69,22 +70,26 @@ Implemented in `extension/src/utils/failsafe.ts`:
 Implemented in `extension/src/utils/failsafe.ts` and integrated in `extension/src/content/index.ts`:
 
 **URL-based detection** — checks current URL against:
+
 - `facebook.com/checkpoint/`
 - `facebook.com/help/contact/`
 - `facebook.com/login/identify`
 
 **DOM-based detection** — scans `[role="alert"]`, `[role="dialog"]`, error test IDs, and headings for:
+
 - "temporarily blocked", "unusual activity", "confirm your identity"
 - "action blocked", "try again later", "we limit how often"
 - "you can't use this feature", "your account has been locked", "you're temporarily restricted"
 
 **Restriction check runs:**
+
 1. Before the automation loop starts
 2. Before each individual message send (via `preSendChecks()`)
 
 If detected → immediate `triggerEmergencyStop(24)` + activity log entry.
 
 **Escalating backoff** on send failures (`recordSendFailure()` / `recordSendSuccess()`):
+
 - 1st consecutive failure → 10 minute pause
 - 2nd consecutive failure → 30 minute pause
 - 3rd consecutive failure → 24 hour auto-emergency-stop
@@ -93,11 +98,13 @@ If detected → immediate `triggerEmergencyStop(24)` + activity log entry.
 ### Phase 5: Anti-Detection Improvements — ✅ PARTIALLY COMPLETE
 
 **Implemented:**
+
 - User-activity gating (visibility + interaction check) — see Phase 2
 - Facebook restriction detection runs before each send — see Phase 4
 - Content scripts only inject on `/birthdays` and `/messages/*` pages (no broad injection)
 
 **Not yet implemented (future work):**
+
 - User-triggered scrape button (currently scrapes on `refreshFriendList()` call)
 - Scrape result caching (4-hour TTL)
 - Message variation enforcement (minimum 3 templates warning)
@@ -107,22 +114,26 @@ If detected → immediate `triggerEmergencyStop(24)` + activity log entry.
 ### Phase 6: Emergency Kill-Switch & User Controls — ✅ COMPLETE
 
 **Emergency stop** implemented in `extension/src/utils/failsafe.ts`:
+
 - `triggerEmergencyStop(cooldownHours)` — sets active flag, clears alarms, logs event
 - `clearEmergencyStop()` — resets state, logs event
 - `isEmergencyStopActive()` — checks active flag + auto-expires after cooldown
 - Cooldown auto-expires (default 24 hours)
 
 **Abort-in-progress** mechanism:
+
 - `setShouldAbort(true)` flag stored in `chrome.storage.local`
 - Content script checks `shouldAbort()` before each message in `preSendChecks()`
 - Emergency stop sets abort flag AND disables automation via background handler
 
 **Activity log** (`getActivityLog()` / `addActivityLogEntry()`):
+
 - Last 50 events stored with timestamp + level + message
 - Levels: `info`, `send`, `post`, `warning`, `error`, `emergency`
 - Logged events include: DM sends, timeline posts, rate limit hits, failures, restriction detections, emergency stops, user pauses
 
 **Popup UI** in `extension/src/popup/components/AutomationSettings.tsx`:
+
 - 🛑 **"Pause All Activity"** red button — triggers emergency stop + disables automation
 - Emergency stop banner with cooldown timer + "Clear" option
 - **Confirmation mode selector** — 3 buttons with ban-risk warning for "Full auto"
@@ -133,29 +144,29 @@ If detected → immediate `triggerEmergencyStop(24)` + activity log entry.
 
 ## Relevant Files
 
-| File | Purpose | Changes Made |
-|------|---------|--------------|
-| `extension/public/manifest.json` | Permissions, content script matches, description | Narrowed permissions, rewritten description, added homepage_url, alarms → optional |
-| `extension/src/utils/failsafe.ts` | **NEW** — all fail-safe mechanisms | Rate limiting, emergency stop, activity log, restriction detection, user activity, confirmation mode, backoff, alarms permission helper |
-| `extension/src/utils/messages.ts` | Chrome message bus types | Added 8 fail-safe message types |
-| `extension/src/content/index.ts` | Main automation loop | Added `preSendChecks()`, `showSendConfirmation()`, user-activity tracking, rate limit/restriction/abort checks before each send, activity logging on all events |
-| `extension/src/background/index.ts` | Service worker | Added fail-safe message handlers, pre-scan checks (emergency stop, backoff, rate limits), alarms permission request on enable |
-| `extension/src/popup/components/AutomationSettings.tsx` | Automation UI | Added emergency stop button/banner, confirmation mode selector, rate limit display, activity log viewer |
+| File                                                    | Purpose                                          | Changes Made                                                                                                                                                    |
+| ------------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `extension/public/manifest.json`                        | Permissions, content script matches, description | Narrowed permissions, rewritten description, added homepage_url, alarms → optional                                                                              |
+| `extension/src/utils/failsafe.ts`                       | **NEW** — all fail-safe mechanisms               | Rate limiting, emergency stop, activity log, restriction detection, user activity, confirmation mode, backoff, alarms permission helper                         |
+| `extension/src/utils/messages.ts`                       | Chrome message bus types                         | Added 8 fail-safe message types                                                                                                                                 |
+| `extension/src/content/index.ts`                        | Main automation loop                             | Added `preSendChecks()`, `showSendConfirmation()`, user-activity tracking, rate limit/restriction/abort checks before each send, activity logging on all events |
+| `extension/src/background/index.ts`                     | Service worker                                   | Added fail-safe message handlers, pre-scan checks (emergency stop, backoff, rate limits), alarms permission request on enable                                   |
+| `extension/src/popup/components/AutomationSettings.tsx` | Automation UI                                    | Added emergency stop button/banner, confirmation mode selector, rate limit display, activity log viewer                                                         |
 
 ---
 
 ## New Message Types
 
-| Type | Direction | Purpose |
-|------|-----------|---------|
-| `failsafe.getEmergencyStop` | popup → background | Get emergency stop state |
+| Type                            | Direction          | Purpose                                      |
+| ------------------------------- | ------------------ | -------------------------------------------- |
+| `failsafe.getEmergencyStop`     | popup → background | Get emergency stop state                     |
 | `failsafe.triggerEmergencyStop` | popup → background | Activate emergency stop + disable automation |
-| `failsafe.clearEmergencyStop` | popup → background | Deactivate emergency stop |
-| `failsafe.getActivityLog` | popup → background | Get activity log entries |
-| `failsafe.clearActivityLog` | popup → background | Clear activity log |
-| `failsafe.getRateLimits` | popup → background | Get rate limit usage/caps |
-| `failsafe.getConfirmationMode` | popup → background | Get current confirmation mode |
-| `failsafe.setConfirmationMode` | popup → background | Set confirmation mode (each/session/auto) |
+| `failsafe.clearEmergencyStop`   | popup → background | Deactivate emergency stop                    |
+| `failsafe.getActivityLog`       | popup → background | Get activity log entries                     |
+| `failsafe.clearActivityLog`     | popup → background | Clear activity log                           |
+| `failsafe.getRateLimits`        | popup → background | Get rate limit usage/caps                    |
+| `failsafe.getConfirmationMode`  | popup → background | Get current confirmation mode                |
+| `failsafe.setConfirmationMode`  | popup → background | Set confirmation mode (each/session/auto)    |
 
 ---
 
@@ -205,16 +216,16 @@ ALARM FIRES
 
 ## Verification Checklist
 
-| # | Test | Status |
-|---|------|--------|
-| 1 | Load unpacked extension → content script only injects on `/birthdays`, `/messages/*`, and `/profile.php*` | Ready to test |
-| 2 | Navigate to `facebook.com/marketplace` → confirm NO content script injection | Ready to test |
-| 3 | Enable automation → trigger alarm → confirmation modal appears before any send | Ready to test |
-| 4 | Send 3 messages → 4th blocked with "Daily limit reached" | Ready to test |
-| 5 | Simulate 3 consecutive failures → 24-hour auto-pause activates | Ready to test |
-| 6 | Click "Pause All Activity" mid-run → loop aborts within 1 action | Ready to test |
-| 7 | Switch Facebook tab to background → automation defers until tab visible + user active | Ready to test |
-| 8 | Production build succeeds | ✅ Verified (content.js 32.55 KB, background.js 20.01 KB) |
+| #   | Test                                                                                                      | Status                                                    |
+| --- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 1   | Load unpacked extension → content script only injects on `/birthdays`, `/messages/*`, and `/profile.php*` | Ready to test                                             |
+| 2   | Navigate to `facebook.com/marketplace` → confirm NO content script injection                              | Ready to test                                             |
+| 3   | Enable automation → trigger alarm → confirmation modal appears before any send                            | Ready to test                                             |
+| 4   | Send 3 messages → 4th blocked with "Daily limit reached"                                                  | Ready to test                                             |
+| 5   | Simulate 3 consecutive failures → 24-hour auto-pause activates                                            | Ready to test                                             |
+| 6   | Click "Pause All Activity" mid-run → loop aborts within 1 action                                          | Ready to test                                             |
+| 7   | Switch Facebook tab to background → automation defers until tab visible + user active                     | Ready to test                                             |
+| 8   | Production build succeeds                                                                                 | ✅ Verified (content.js 32.55 KB, background.js 20.01 KB) |
 
 ---
 
@@ -230,11 +241,13 @@ ALARM FIRES
 ## Remaining Work (Future Phases)
 
 ### P1 — Should implement before Chrome Web Store submission:
+
 - Host privacy policy at `https://birthdaymessaging.app/privacy` (the URL declared in manifest)
 - ~~Add programmatic injection via `chrome.scripting.executeScript()` for timeline posting on profile pages (required since profiles are no longer in `content_scripts.matches`)~~ ✅ **RESOLVED** — `profile.php*` is now in `content_scripts.matches`, so content scripts inject automatically on profile pages
 - Add message variation enforcement (warn if < 3 templates configured)
 
 ### P2 — Nice to have for anti-detection:
+
 - Scrape result caching (4-hour TTL to avoid repeated DOM queries)
 - User-triggered scrape button (replace auto-scrape on page load)
 - Alarm timing jitter (random 5–45 min delay after alarm fires)

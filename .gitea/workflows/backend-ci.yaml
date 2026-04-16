@@ -4,10 +4,10 @@ run-name: ${{ gitea.actor }} — backend CI (${{ gitea.ref_name }})
 on:
   push:
     branches:
-      - '**'
+      - "**"
   pull_request:
     branches:
-      - '**'
+      - "**"
 
 jobs:
   backend-ci:
@@ -27,7 +27,7 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       # ── Install dependencies ─────────────────────────────────────────────────
       - name: Install dependencies
