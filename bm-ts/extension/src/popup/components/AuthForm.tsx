@@ -110,8 +110,8 @@ export default function AuthForm({
             authMode === 'register' && passwordTouched
               ? `${passwordErrorId} password-requirements`
               : passwordTooShort && authMode === 'login'
-                ? passwordErrorId
-                : undefined
+              ? passwordErrorId
+              : undefined
           }
           placeholder="Enter your password (min 8 characters)"
           minLength={8}

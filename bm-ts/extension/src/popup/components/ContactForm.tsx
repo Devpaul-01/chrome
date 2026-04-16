@@ -61,8 +61,8 @@ export default function ContactForm({
       facebookProfileUrl && facebookProfileUrl.trim()
         ? facebookProfileUrl.trim()
         : name
-          ? `https://facebook.com/${name.replace(/\s+/g, '.').toLowerCase()}`
-          : '';
+        ? `https://facebook.com/${name.replace(/\s+/g, '.').toLowerCase()}`
+        : '';
 
     const payload: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> & { notes?: string } = {
       name,
