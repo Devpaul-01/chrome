@@ -17,6 +17,6 @@ ENV PYTHONPATH=/app
 RUN adduser --system appuser
 USER appuser
 
-EXPOSE 8000
+EXPOSE 80
 
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--workers", "4", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--workers", "4", "--bind", "0.0.0.0:80"]
