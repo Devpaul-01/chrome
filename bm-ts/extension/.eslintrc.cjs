@@ -1,7 +1,7 @@
 module.exports = {
-    globals: {
-      chrome: 'readonly',
-    },
+  globals: {
+    chrome: 'readonly',
+  },
   root: true,
   env: {
     browser: true,

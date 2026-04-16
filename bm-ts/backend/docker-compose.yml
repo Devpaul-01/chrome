@@ -21,7 +21,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"  # Local dev only; Coolify manages port mapping in production
+      - "8000:8000" # Local dev only; Coolify manages port mapping in production
     volumes:
       - .:/app
     env_file:
