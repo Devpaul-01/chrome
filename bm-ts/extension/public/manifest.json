@@ -30,7 +30,8 @@
     "https://www.facebook.com/messages/*",
     "https://www.facebook.com/profile.php*",
     "http://localhost/*",
-    "https://localhost/*"
+    "https://localhost/*",
+    "http://*.sslip.io/*"
   ],
   "web_accessible_resources": [
     {
