@@ -3,7 +3,7 @@ run-name: ${{ gitea.actor }} is deploying the backend
 on:
   push:
     branches:
-      - develop
+      - main
       - backend-ci-deploy
 
 jobs:

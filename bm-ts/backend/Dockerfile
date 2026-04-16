@@ -5,7 +5,7 @@ WORKDIR /app
 COPY pyproject.toml .
 COPY README.md .
 
-RUN apt-get update && apt-get install -y postgresql-client
+RUN apt-get update && apt-get install -y postgresql-client -y curl
 
 COPY . .
 
