@@ -6,7 +6,8 @@ Not used in dev (docker-compose overrides CMD with single-worker uvicorn).
 """
 
 # ── Server socket ─────────────────────────────────────────
-bind = "0.0.0.0:8000"
+# Port 80 for production (Coolify); docker-compose overrides to 8000 for local dev
+bind = "0.0.0.0:80"
 
 # ── Worker processes ──────────────────────────────────────
 workers = 4

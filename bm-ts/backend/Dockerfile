@@ -19,8 +19,8 @@ ENV PYTHONPATH=/app
 RUN adduser --system appuser
 USER appuser
 
-EXPOSE 8000
+EXPOSE 80
 
-# Production: gunicorn with config (4 workers, timeouts, logging)
-# Dev override: docker-compose command uses single-worker uvicorn + reload
+# Production (Coolify): gunicorn on port 80 via gunicorn.conf.py
+# Dev override: docker-compose command uses single-worker uvicorn on port 8000 + reload
 CMD ["gunicorn", "-c", "gunicorn.conf.py", "app.main:app"]
