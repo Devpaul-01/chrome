@@ -5,7 +5,6 @@ All Stripe SDK calls are mocked so no real API key is needed.
 
 from __future__ import annotations
 
-import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 

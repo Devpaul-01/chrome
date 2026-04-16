@@ -7,7 +7,6 @@ Covers: list, create, duplicate rejection, update, delete, 404 handling.
 from __future__ import annotations
 
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient
 
 

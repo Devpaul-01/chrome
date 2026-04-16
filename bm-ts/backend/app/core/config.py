@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Iterable
+from typing import Any
 
 from pydantic import ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
@@ -69,8 +69,8 @@ class Settings(BaseSettings):
         # Raise error if using a known default placeholder
         if v in _INSECURE_DEFAULTS:
             raise ValueError(
-                f"JWT_SECRET_KEY cannot be a default placeholder. "
-                f"Generate a secure random value (>= 32 chars) with: python -c \"import secrets; print(secrets.token_hex(16))\""
+                "JWT_SECRET_KEY cannot be a default placeholder. "
+                "Generate a secure random value (>= 32 chars) with: python -c \"import secrets; print(secrets.token_hex(16))\""
             )
         
         # Reject if too short — a short key is exploitable

@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, constr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, constr, field_validator
 
 from app.core.validators import sanitize_text
 from app.schemas.enums import GenderEnum

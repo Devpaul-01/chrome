@@ -128,7 +128,7 @@ async def test_status_past_due_expired(
 async def test_cancel_success(
     async_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
-    record = await _create_subscription(db_session, test_user)
+    record = await _create_subscription(db_session, test_user)  # noqa: F841
     with patch(
         "app.api.routers.subscription.cancel_subscription",
         new_callable=AsyncMock,

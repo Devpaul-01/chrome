@@ -128,7 +128,7 @@ async def get_dashboard_stats(
         select(func.count(Contact.id)).where(
             and_(
                 Contact.user_id == current_user.id,
-                Contact.birthday_month_only == False,
+                Contact.birthday_month_only.is_(False),
                 upcoming_filter,
             )
         )

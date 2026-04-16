@@ -31,7 +31,6 @@ from app.schemas.birthday_config import (
     BirthdayConfigToggle,
     BirthdayConfigUpdate,
     BirthdayModeEnum,
-    GenderEnum,
 )
 from app.schemas.common import DeleteResponse
 

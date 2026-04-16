@@ -7,14 +7,13 @@ Covers: unique constraints, cascade deletes, enum enforcement via schemas.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
-from app.db.models import User, Contact, BirthdaySchedule
+from app.db.models import User, Contact
 
 
 @pytest.mark.asyncio

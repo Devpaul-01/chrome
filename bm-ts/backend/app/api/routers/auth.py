@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
@@ -80,6 +81,8 @@ from app.services.email_verification import (
 
 from app.core.rate_limiter import limiter
 from slowapi.util import get_remote_address
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 

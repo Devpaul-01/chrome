@@ -15,7 +15,3 @@ class ErrorResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
-
-
-class MessageResponse(BaseModel):
-    message: str

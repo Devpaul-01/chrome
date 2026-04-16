@@ -9,7 +9,6 @@ from __future__ import annotations
 from datetime import datetime, timezone, timedelta
 
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 

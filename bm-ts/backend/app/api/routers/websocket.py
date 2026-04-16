@@ -182,7 +182,7 @@ async def websocket_endpoint(
             manager.disconnect(websocket, user.id)
         try:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        except:
+        except Exception:
             pass
 
 

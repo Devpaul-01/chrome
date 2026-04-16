@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select, and_, desc, func, or_
+from sqlalchemy import select, and_, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -15,10 +15,8 @@ from app.schemas.messages import (
     MessageQueue as MessageQueueSchema,
     MessageQueueCreate,
     MessageQueueUpdate,
-    MessageHistoryItem,
     MessageHistoryPage,
 )
-from app.schemas.common import MessageResponse
 from app.schemas.common import DeleteResponse
 from app.api.routers.websocket import broadcast_message_queue_update, broadcast_message_history_update
 

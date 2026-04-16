@@ -13,10 +13,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import AsyncGenerator
 
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import StaticPool, event, text
+from sqlalchemy import StaticPool, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -51,7 +50,7 @@ def _set_reset_created_at(mapper, connection, target):
         target.created_at = datetime.now(timezone.utc)
 
 
-from app.db.models import SubscriptionRecord
+from app.db.models import SubscriptionRecord  # noqa: E402
 
 
 @sa_event.listens_for(SubscriptionRecord, "before_insert")
@@ -66,7 +65,7 @@ def _set_subscription_created_at(mapper, connection, target):
 
 
 # Phase 2 models — set created_at/updated_at defaults for SQLite tests
-from app.db.models import (
+from app.db.models import (  # noqa: E402
     BirthdayConfig, Contact, MessageGroup, MessageTemplate,
     Post, UserImage, SMTPConfig, MessageQueue, MessageHistory,
     BirthdaySchedule, TemplateSegment, UserSession, RevokedToken,
