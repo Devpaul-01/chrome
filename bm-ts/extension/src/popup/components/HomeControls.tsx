@@ -9,12 +9,14 @@ interface HomeControlsProps {
   // onViewCalendar: () => void; // Uncomment to re-enable Birthday Calendar
   onViewAnalytics: () => void;
   onViewUpcomingBirthdays: () => void;
+  onViewContacts: () => void;
   userName: string;
 }
 
 export default function HomeControls({
   onViewAnalytics,
   onViewUpcomingBirthdays,
+  onViewContacts,
   userName,
 }: HomeControlsProps) {
   const [automationEnabled, setAutomationEnabled] = useState(false);
@@ -217,6 +219,11 @@ export default function HomeControls({
       >
         Open Facebook Birthdays
       </a>
+
+      {/* View Contacts */}
+      <button onClick={onViewContacts} className="btn w-full text-center">
+        📇 View Contacts
+      </button>
 
       {/* Analytics & Upcoming Birthdays */}
       <div className="messages-hub-grid">

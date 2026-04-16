@@ -13,6 +13,7 @@ deployed environment.
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, Iterable
 
 from pydantic import ConfigDict, Field, field_validator
@@ -113,3 +114,15 @@ class Settings(BaseSettings):
         return list(value)  # type: ignore[arg-type]
 
 settings = Settings()
+
+# Warn if a Stripe test key is used in a production-like environment
+if settings.stripe_api_key.startswith("sk_test_") and settings.log_level.upper() in {
+    "WARNING",
+    "ERROR",
+    "CRITICAL",
+}:
+    logging.getLogger(__name__).warning(
+        "STRIPE_API_KEY is a test key (sk_test_*) but LOG_LEVEL=%s suggests a "
+        "production environment. Set a live Stripe key before accepting real payments.",
+        settings.log_level,
+    )

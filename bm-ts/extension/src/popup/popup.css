@@ -1185,6 +1185,10 @@ kbd {
   background-color: var(--color-blue-strong);
 }
 
+.messages-hub-card--green {
+  background-color: #16a34a;
+}
+
 .messages-hub-icon {
   display: flex;
   align-items: center;

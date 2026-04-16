@@ -3,6 +3,7 @@ import { sendBackgroundMessage } from '../api';
 import Spinner from './Spinner';
 import HelpTooltip from './HelpTooltip';
 import FeatureTip from './FeatureTip';
+import type { MessageGroup } from './MessageGroups';
 
 export interface Post {
   id: string;
@@ -13,6 +14,7 @@ export interface Post {
   font_family?: string;
   font_size?: number;
   font_color?: string;
+  group_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -40,6 +42,8 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
     const [sortBy, setSortBy] = useState<'labelAsc' | 'labelDesc' | 'createdAsc' | 'createdDesc'>(
       'createdDesc',
     );
+    const [groups, setGroups] = useState<MessageGroup[]>([]);
+    const [filterGroupId, setFilterGroupId] = useState<string>('');
 
     useImperativeHandle(ref, () => ({
       focus: () => {
@@ -50,6 +54,9 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
     useEffect(() => {
       loadPosts();
       headingRef.current?.focus();
+      sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' })
+        .then(setGroups)
+        .catch(() => {});
     }, []);
 
     async function loadPosts() {
@@ -81,7 +88,11 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
       }
     }
 
-    const filteredPosts = posts;
+    const filteredPosts = filterGroupId
+      ? posts.filter((p) =>
+          filterGroupId === '__none__' ? !p.group_id : p.group_id === filterGroupId,
+        )
+      : posts;
 
     // Sort filtered posts according to sortBy selection
     const sortedPosts = [...filteredPosts];
@@ -141,6 +152,28 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
               </select>
             </label> */}
 
+            {groups.length > 0 && (
+              <label className="block">
+                <span className="text-xs font-semibold text-textPrimary mb-2 block">
+                  Filter by Group
+                </span>
+                <select
+                  value={filterGroupId}
+                  onChange={(e) => setFilterGroupId(e.target.value)}
+                  className="text-field w-full"
+                  aria-label="Filter posts by group"
+                >
+                  <option value="">All Groups</option>
+                  <option value="__none__">Ungrouped</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
             <label className="block">
               <span className="text-xs font-semibold text-textPrimary mb-2 block">Sort by</span>
               <select
@@ -194,6 +227,22 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
                         {/* <span className="badge badge-primary text-xs ml-2">
                                 {post.gender}
                               </span> */}
+                        {post.group_id &&
+                          (() => {
+                            const group = groups.find((g) => g.id === post.group_id);
+                            return group ? (
+                              <span
+                                className="text-xs ml-2 px-2 py-0.5 rounded-full font-medium flex items-center gap-1"
+                                style={{ backgroundColor: group.color + '22', color: group.color }}
+                              >
+                                <span
+                                  className="w-2 h-2 rounded-full inline-block"
+                                  style={{ backgroundColor: group.color }}
+                                />
+                                {group.name}
+                              </span>
+                            ) : null;
+                          })()}
                       </div>
                     </div>
 

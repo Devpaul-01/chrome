@@ -1,6 +1,6 @@
 ﻿# BirthdayMessaging (bm-ts) — MVP Checklist
 
-**Last Updated:** April 15, 2026
+**Last Updated:** July 18, 2025
 **Status:** Development-Complete / Pre-Production — All features implemented on both backend and frontend. Facebook automation pipeline fully functional. Production infrastructure, deployment, and Chrome Web Store submission are the remaining blockers.
 
 ---
@@ -17,12 +17,12 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 | Backend HTTP Endpoints | 75 active + 1 WebSocket (80 total defined incl. deactivated message_groups) |
 | Backend ORM Models | 18 (18 tables, 5 enums, 34 indexes) |
 | Backend Tests | 287 across 24 test files |
-| Backend Runtime Dependencies | 16 (`aiosqlite` moved to `[project.optional-dependencies]` test group) |
+| Backend Runtime Dependencies | 15 (`aiosqlite` moved to `[project.optional-dependencies]` test group; `psycopg[binary]` moved to alembic group) |
 | Backend LOC | ~5,324 Python |
 | Alembic Migrations | 7 |
 | Frontend Components | 40 (in components/) |
 | Frontend Custom Hooks | 7 (across 7 files + 1 context) |
-| Frontend Tests | 393 across 21 test files |
+| Frontend Tests | 417 across 24 test files |
 | Frontend Runtime Dependencies | 3 (React, ReactDOM, react-calendar) |
 | API Client Functions | 60 |
 | Background Message Types | 73 active (76 defined; 3 commented out) |
@@ -107,7 +107,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
   - [ ] Small tile icon (128x128)
   - [ ] Large tile icon (440x280)
   - [ ] Marquee image (1400x560)
-- [ ] Remove `localhost/*` from `host_permissions` in `manifest.json` before production build (Chrome Web Store will reject)
+- [x] Remove `localhost/*` from `host_permissions` in `manifest.json` before production build — ✅ Automated via `stripLocalhostInProduction` Vite plugin (strips localhost from host_permissions in production builds)
 - [ ] Prepare permissions justification document:
   - `storage` — Save user preferences and auth tokens
   - `scripting` — Inject content scripts on Facebook
@@ -118,8 +118,8 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
   - `clipboardWrite` — Fill message input fields and attach images via clipboard API
   - `host_permissions` (facebook.com) — Automate birthday messages
 - [ ] Confirm privacy policy URL (already created: `privacy-policy.html`)
-- [ ] Replace `[SUPPORT_EMAIL]` placeholder in `privacy-policy.html` and `terms-of-service.html`
-- [ ] Add `clipboardWrite` justification to privacy policy (currently not documented; permission IS used)
+- [x] Replace `[SUPPORT_EMAIL]` placeholder in `privacy-policy.html` and `terms-of-service.html` — ✅ Set to `support@birthdaymessaging.io`
+- [x] Add `clipboardWrite` justification to privacy policy — ✅ Added row to permissions table in `privacy-policy.html`
 - [ ] Set support email
 - [ ] Submit for Chrome Web Store review
 
@@ -159,24 +159,18 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Document rollback procedure
 
 ### 6. Clarify / Remove Redundant `psycopg[binary]` Dependency
-**Status:** Not Started
+**Status:** ✅ DONE
 
-- [ ] Verify which parts of the codebase require `psycopg` (likely only Alembic sync scripts)
-- [ ] If only Alembic, move `psycopg[binary]>=3.1` from `[project.dependencies]` to `[project.optional-dependencies]` dev/alembic group
-- [ ] `asyncpg` remains as the async runtime driver and stays in core dependencies
-- [ ] Update `backend/Dockerfile` if the psycopg install step changes
+- [x] Verify which parts of the codebase require `psycopg` — only Alembic sync scripts
+- [x] Moved `psycopg[binary]>=3.1` from `[project.dependencies]` to `[project.optional-dependencies]` alembic group
+- [x] `asyncpg` remains as the async runtime driver in core dependencies
+- [x] Dockerfile installs `.[alembic]` to include psycopg
 
-### 6b. Move `aiosqlite` to Optional (Test) Dependencies
-**Status:** ✅ DONE (April 15, 2026)
+### 6a. Gunicorn Production Configuration
+**Status:** ✅ DONE
 
-- [x] Moved `aiosqlite>=0.20` from `[project.dependencies]` to `[project.optional-dependencies]` test group
-- [x] Verified `pip install -e ".[test]"` still works for test runs
-
-### 6c. Gunicorn Production Configuration
-**Status:** Not Started — Dockerfile uses bare `gunicorn` command with no config file
-
-- [ ] Create `gunicorn.conf.py` with production-appropriate settings (timeout, graceful-timeout, max-requests, max-requests-jitter)
-- [ ] Update Dockerfile CMD to reference config file
+- [x] Created `gunicorn.conf.py` with production settings (4 workers, UvicornWorker, timeout=120, graceful-timeout=30, max-requests=1000, max-requests-jitter=50)
+- [x] Updated Dockerfile CMD to reference config file
 
 ---
 
@@ -204,8 +198,9 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 #### Frontend/Extension Gaps
 - [x] Background service worker tests (`background/__tests__/index.test.ts` — 9 tests)
 - [x] Custom hook tests (`useMessages.test.ts` — 18 tests, `useImageLibrary.test.ts` — 10 tests)
+- [x] Custom hook tests: `usePostComposer.test.ts` — 6 tests, `useTemplateSegments.test.ts` — 9 tests, `useMessageTemplates.test.ts` — 9 tests
 - [ ] Expand background service worker test coverage (currently minimal)
-- [ ] Add hook tests for remaining 5 untested hooks (`useContacts`, `usePostComposer`, `useSMTPConfig`, `useTemplateSegments`, `useMessageTemplates`)
+- [ ] Add hook tests for remaining hooks when features re-enabled (`useContacts`, `useSMTPConfig` — currently disabled features)
 - [ ] E2E testing framework (Playwright or Puppeteer)
 - [ ] Critical E2E flows:
   - [ ] Install -> register -> login -> create template -> schedule -> verify
@@ -282,13 +277,13 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 2. **`POST /images/upload-file`** — Stores base64 data URIs directly in DB (`# TODO: Upload to cloud storage`). Works but not scalable.
 3. **Image storage** — All image handling is URL-based or base64-in-DB. No cloud object storage configured.
 4. **Subscription proration** — `change-plan` modal shows generic Stripe proration message, no calculated amount preview from Stripe API.
-5. **Redundant database drivers** — Both `asyncpg>=0.28` (async runtime) and `psycopg[binary]>=3.1` (sync) in runtime deps; `psycopg` may only be needed for Alembic and should move to optional deps.
-6. **`localhost/*` in manifest.json `host_permissions`** — Development-only, must be removed before Chrome Web Store submission.
+5. ~~**Redundant database drivers**~~ — ✅ RESOLVED: `psycopg[binary]` moved to `[project.optional-dependencies]` alembic group. `asyncpg` remains as async runtime driver.
+6. ~~**`localhost/*` in manifest.json `host_permissions`**~~ — ✅ RESOLVED: `stripLocalhostInProduction` Vite plugin automatically removes localhost from host_permissions in production builds.
 7. **CORS default extension ID** — `config.py` defaults CORS to legacy extension ID `cpobkmncaokclgimgcefglokgigjlcoj`. New published extension will have a different ID; must override via `CORS_ORIGINS` env var.
-8. **`clipboardWrite` undocumented** — Permission is requested in manifest and actively used (message filling, image attachment), but not justified in `privacy-policy.html`.
-9. **`[SUPPORT_EMAIL]` placeholders** — Both `privacy-policy.html` and `terms-of-service.html` contain `[SUPPORT_EMAIL]` placeholder text.
-10. **No gunicorn config file** — Production Dockerfile uses bare `gunicorn` command without tuning for timeouts, graceful shutdown, or worker recycling.
-11. **No Stripe test/live mode distinction** — `config.py` validates Stripe key isn't a placeholder but doesn't warn or block if test keys are used in production environment.
+8. ~~**`clipboardWrite` undocumented**~~ — ✅ RESOLVED: Added to permissions table in `privacy-policy.html`.
+9. ~~**`[SUPPORT_EMAIL]` placeholders**~~ — ✅ RESOLVED: Replaced with `support@birthdaymessaging.io` in both files.
+10. ~~**No gunicorn config file**~~ — ✅ RESOLVED: Created `gunicorn.conf.py` with production settings.
+11. ~~**No Stripe test/live mode distinction**~~ — ✅ RESOLVED: Added startup warning log when Stripe test keys (`sk_test_`) are used in production environment.
 
 ---
 

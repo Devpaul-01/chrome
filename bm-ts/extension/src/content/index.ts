@@ -100,14 +100,71 @@ const overlay = createOverlay();
 let friends: BirthdayFriend[] = [];
 let segments: SegmentGroups = { GREETING: [], BODY: [], CLOSING: [] };
 
+/** Available groups loaded from the backend. */
+type OverlayGroup = { id: string; name: string; color: string };
+let overlayGroups: OverlayGroup[] = [];
+/** Map of friend profileUrl → group_id for per-contact group assignment. */
+const friendGroupMap = new Map<string, string | null>();
+/** Map of friend profileUrl → contact UUID for updates. */
+const friendContactIdMap = new Map<string, string>();
+
+/** Load available groups and existing contacts from the backend. */
+async function loadOverlayGroups(): Promise<void> {
+  try {
+    const [groups, contacts] = await Promise.all([
+      sendContentMessage<OverlayGroup[]>({ type: 'messageGroups.list' }),
+      sendContentMessage<
+        Array<{ id: string; facebook_profile_url: string; group_id?: string | null }>
+      >({
+        type: 'contacts.list',
+      }),
+    ]);
+    overlayGroups = Array.isArray(groups) ? groups : [];
+    if (Array.isArray(contacts)) {
+      for (const c of contacts) {
+        if (c.facebook_profile_url) {
+          friendGroupMap.set(c.facebook_profile_url, c.group_id ?? null);
+          friendContactIdMap.set(c.facebook_profile_url, c.id);
+        }
+      }
+    }
+  } catch {
+    overlayGroups = [];
+  }
+}
+
 /** Re-scrape the birthday feed, repopulate the overlay friend list, and reload segments. */
 async function refreshFriendList() {
   friends = gatherBirthdayFriends();
   selectedFriends.clear();
+  await loadOverlayGroups();
   renderFriendList();
   await loadSegments();
   renderTemplatePreview();
   void renderOverlayStatus();
+
+  // Silently scrape and persist all visible birthday contacts (including future dates)
+  // so the Upcoming Birthdays page in the popup has data to display.
+  try {
+    const scraped = scrapeBirthdayContactsFromPage();
+    const payloads = scraped
+      .filter((s) => s.birthday && s.name && s.facebook_profile_url)
+      .map((s) => ({
+        name: s.name,
+        facebook_profile_url: s.facebook_profile_url,
+        birthday: s.birthday!,
+        birthday_month_only: s.monthOnly ?? false,
+      }));
+    if (payloads.length > 0) {
+      await sendContentMessage({
+        type: 'contacts.bulkCreate',
+        payload: { contacts: payloads },
+      });
+      logger.log(`[BM] Auto-synced ${payloads.length} birthday contacts from page`);
+    }
+  } catch (err) {
+    logger.warn('[BM] Failed to auto-sync birthday contacts:', err);
+  }
 }
 
 /**
@@ -232,7 +289,7 @@ function renderFriendList() {
     empty.innerHTML = `
       <div style="font-size:24px;margin-bottom:6px;">🎂</div>
       <p class="bm-empty-title">No birthdays detected</p>
-      <p class="bm-empty-subtitle">Navigate to <strong>facebook.com/birthdays</strong> and click <strong>Refresh</strong></p>
+      <p class="bm-empty-subtitle">Navigate to <strong>facebook.com/friends/birthdays</strong> and click <strong>Refresh</strong></p>
     `;
     list.appendChild(empty);
     updateSendButton();
@@ -321,6 +378,7 @@ function renderFriendList() {
     // Clicking the row toggles checkbox
     row.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).tagName === 'INPUT') return;
+      if ((e.target as HTMLElement).tagName === 'SELECT') return;
       checkbox.checked = !checkbox.checked;
       checkbox.dispatchEvent(new Event('change'));
     });
@@ -328,6 +386,45 @@ function renderFriendList() {
     row.appendChild(checkbox);
     row.appendChild(avatar);
     row.appendChild(info);
+
+    // Per-friend group dropdown (only if groups exist)
+    if (overlayGroups.length > 0 && friend.profileUrl) {
+      const groupSelect = document.createElement('select');
+      groupSelect.className = 'bm-group-select';
+      groupSelect.title = 'Assign group';
+      groupSelect.addEventListener('click', (e) => e.stopPropagation());
+
+      const noneOpt = document.createElement('option');
+      noneOpt.value = '';
+      noneOpt.textContent = '—';
+      groupSelect.appendChild(noneOpt);
+
+      for (const g of overlayGroups) {
+        const opt = document.createElement('option');
+        opt.value = g.id;
+        opt.textContent = g.name;
+        opt.style.color = g.color;
+        groupSelect.appendChild(opt);
+      }
+
+      const currentGroupId = friendGroupMap.get(friend.profileUrl);
+      groupSelect.value = currentGroupId ?? '';
+
+      groupSelect.addEventListener('change', () => {
+        const newGroupId = groupSelect.value || null;
+        friendGroupMap.set(friend.profileUrl!, newGroupId);
+        const contactId = friendContactIdMap.get(friend.profileUrl!);
+        if (contactId) {
+          void sendContentMessage({
+            type: 'contacts.update',
+            payload: { id: contactId, group_id: newGroupId },
+          });
+        }
+      });
+
+      row.appendChild(groupSelect);
+    }
+
     row.appendChild(sendOneBtn);
     list.appendChild(row);
   });
@@ -1007,6 +1104,21 @@ function injectOverlayStyles(): void {
     .bm-send-one-btn:hover {
       background: rgba(202,79,2,0.1);
     }
+    .bm-group-select {
+      font-size: 0.6875rem;
+      padding: 2px 4px;
+      border: 1px solid rgba(202,79,2,0.25);
+      border-radius: 0.25rem;
+      background: #fff;
+      color: #574232;
+      cursor: pointer;
+      flex-shrink: 0;
+      max-width: 80px;
+    }
+    .bm-group-select:focus {
+      outline: 2px solid rgba(202,79,2,0.4);
+      outline-offset: 1px;
+    }
 
     /* ── Empty state ──────────────────────────────── */
     .bm-empty-state {
@@ -1284,7 +1396,7 @@ async function renderOverlayStatus() {
     renderSessionStats(),
     renderQueueStatus(),
     renderFeatureToggles(),
-    // renderGroupSelector(),  // Commented out — feature not currently needed
+    renderGroupSelector(),
     renderTemplatePreview(),
     renderStatusDot(),
   ]);
@@ -1396,7 +1508,80 @@ async function renderQueueStatus() {
   }
 }
 
-// Message group selector — commented out, feature not currently needed
+/** Renders a bulk group assignment dropdown in the overlay. */
+async function renderGroupSelector() {
+  const container = overlay.querySelector<HTMLDivElement>('#bm-group-selector');
+  if (!container) return;
+
+  if (overlayGroups.length === 0 || friends.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = '';
+  container.innerHTML = '';
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'bm-inner-section';
+  wrapper.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+  const label = document.createElement('span');
+  label.className = 'bm-muted-text';
+  label.textContent = 'Set group for selected:';
+  wrapper.appendChild(label);
+
+  const select = document.createElement('select');
+  select.className = 'bm-group-select';
+
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = '— Choose —';
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  select.appendChild(placeholder);
+
+  const noneOpt = document.createElement('option');
+  noneOpt.value = '__none__';
+  noneOpt.textContent = 'No Group';
+  select.appendChild(noneOpt);
+
+  for (const g of overlayGroups) {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.name;
+    opt.style.color = g.color;
+    select.appendChild(opt);
+  }
+
+  select.addEventListener('change', () => {
+    const val = select.value;
+    if (!val || val === '') return;
+    const groupId = val === '__none__' ? null : val;
+
+    const selectedUrls = friends
+      .filter((f) => selectedFriends.has(f.id) && f.profileUrl)
+      .map((f) => f.profileUrl!);
+
+    for (const url of selectedUrls) {
+      friendGroupMap.set(url, groupId);
+      const contactId = friendContactIdMap.get(url);
+      if (contactId) {
+        void sendContentMessage({
+          type: 'contacts.update',
+          payload: { id: contactId, group_id: groupId },
+        });
+      }
+    }
+
+    // Reset dropdown and re-render friend list to show updated group values
+    select.value = '';
+    renderFriendList();
+  });
+
+  wrapper.appendChild(select);
+  container.appendChild(wrapper);
+}
+
 /** Renders feature flag quick-toggles in the overlay. */
 async function renderFeatureToggles() {
   const container = overlay.querySelector<HTMLDivElement>('#bm-toggles');
@@ -1528,7 +1713,7 @@ function renderHelpContent(container: HTMLElement) {
     {
       icon: '🎂',
       title: 'Getting started',
-      text: "Navigate to <b>facebook.com/birthdays</b> and click <b>Refresh</b> to detect today's birthday friends.",
+      text: "Navigate to <b>facebook.com/friends/birthdays</b> and click <b>Refresh</b> to detect today's birthday friends.",
     },
     {
       icon: '✅',
@@ -2013,6 +2198,8 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
     friends = gatherBirthdayFriends();
 
     // Persist today's birthday friends to the contacts database
+    // and build a group lookup from persisted contacts
+    const contactGroupMap = new Map<string, string | null>();
     if (friends.length > 0) {
       try {
         const today = new Date();
@@ -2028,10 +2215,17 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
             birthday: todayISO,
           }));
         if (contactPayloads.length > 0) {
-          await sendContentMessage({
+          const persisted = await sendContentMessage({
             type: 'contacts.bulkCreate',
             payload: { contacts: contactPayloads },
           });
+          if (Array.isArray(persisted)) {
+            for (const c of persisted) {
+              if (c.facebook_profile_url) {
+                contactGroupMap.set(c.facebook_profile_url, c.group_id ?? null);
+              }
+            }
+          }
           logger.log(`[BM] Persisted ${contactPayloads.length} birthday contacts to DB`);
         }
       } catch (err) {
@@ -2044,7 +2238,8 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
       const dedupKey = friend.profileUrl ?? friend.id;
       if (sentToday.includes(dedupKey)) continue;
 
-      const template = selectTemplate(currentDayTemplates, 'NEUTRAL');
+      const friendGroupId = friend.profileUrl ? contactGroupMap.get(friend.profileUrl) : undefined;
+      const template = selectTemplate(currentDayTemplates, 'NEUTRAL', friendGroupId);
       if (!template) continue;
 
       const dmText = assembleMessageFromTemplate(template, { name: friend.name });
@@ -2061,7 +2256,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
         }
 
         if (flags.makePost && posts.length > 0) {
-          const post = selectPost(posts, 'NEUTRAL');
+          const post = selectPost(posts, 'NEUTRAL', friendGroupId);
           if (post) {
             await postToTimeline({
               friendName: friend.name,
@@ -2117,6 +2312,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
 
     // Persist scraped contacts to the database for future use.
     // This builds the contacts DB over time as birthdays are encountered.
+    const scrapedGroupMap = new Map<string, string | null>();
     if (scraped.length > 0) {
       try {
         const contactPayloads = scraped
@@ -2128,10 +2324,17 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
             birthday_month_only: s.monthOnly ?? false,
           }));
         if (contactPayloads.length > 0) {
-          await sendContentMessage({
+          const persisted = await sendContentMessage({
             type: 'contacts.bulkCreate',
             payload: { contacts: contactPayloads },
           });
+          if (Array.isArray(persisted)) {
+            for (const c of persisted) {
+              if (c.facebook_profile_url) {
+                scrapedGroupMap.set(c.facebook_profile_url, c.group_id ?? null);
+              }
+            }
+          }
           logger.log(`[BM] Persisted ${contactPayloads.length} scraped contacts to DB`);
         }
       } catch (err) {
@@ -2155,6 +2358,8 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
         const dedupKey = friend.facebook_profile_url;
         if (sentToday.includes(dedupKey)) continue;
 
+        const scrapedFriendGroupId = scrapedGroupMap.get(friend.facebook_profile_url);
+
         const dmText = assembleMessageFromTemplate(template, { name: friend.name });
 
         // --- Fail-safe pre-send checks ---
@@ -2169,7 +2374,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
           }
 
           if (flags.makePost && posts.length > 0) {
-            const post = selectPost(posts, 'NEUTRAL');
+            const post = selectPost(posts, 'NEUTRAL', scrapedFriendGroupId);
             if (post) {
               await postToTimeline({
                 friendName: friend.name,
@@ -2460,7 +2665,7 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
 }
 
 // ── Scrape result caching (4-hour TTL) ──────────────────────────────────────
-chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Security: reject messages not from our own extension
   if (sender.id !== chrome.runtime.id) return false;
 
@@ -2469,6 +2674,28 @@ chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
   }
   if (message?.type === 'automation.runFull') {
     void runFullAutomation(message.payload as AutomationRunPayload);
+  }
+  if (message?.type === 'contacts.scrapeFromPage') {
+    const scraped = scrapeBirthdayContactsFromPage();
+    const payloads = scraped
+      .filter((s) => s.birthday && s.name && s.facebook_profile_url)
+      .map((s) => ({
+        name: s.name,
+        facebook_profile_url: s.facebook_profile_url,
+        birthday: s.birthday!,
+        birthday_month_only: s.monthOnly ?? false,
+      }));
+    if (payloads.length > 0) {
+      sendContentMessage({
+        type: 'contacts.bulkCreate',
+        payload: { contacts: payloads },
+      })
+        .then((result) => sendResponse({ success: true, count: payloads.length, contacts: result }))
+        .catch((err) => sendResponse({ success: false, error: (err as Error).message }));
+    } else {
+      sendResponse({ success: true, count: 0, contacts: [] });
+    }
+    return true; // keep channel open for async response
   }
   return true; // keep channel open for async responders
 });

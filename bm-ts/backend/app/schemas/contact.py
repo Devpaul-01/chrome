@@ -25,6 +25,7 @@ class ContactCreate(BaseModel):
     birthday_month_only: bool = False
     gender: Optional[GenderEnum] = None
     notes: Optional[str] = None
+    group_id: Optional[UUID] = None
 
     _sanitize = field_validator("name", "facebook_profile_url", mode="after")(sanitize_text)
 
@@ -41,6 +42,7 @@ class ContactUpdate(BaseModel):
     birthday_month_only: Optional[bool] = None
     gender: Optional[GenderEnum] = None
     notes: Optional[str] = None
+    group_id: Optional[UUID] = None
 
     @field_validator("name", "facebook_profile_url", "notes", mode="after")
     @classmethod
@@ -56,6 +58,7 @@ class ContactOut(BaseModel):
     birthday_month_only: bool
     gender: Optional[GenderEnum]
     notes: Optional[str]
+    group_id: Optional[UUID]
     createdAt: datetime = Field(alias="created_at")
     updatedAt: datetime = Field(alias="updated_at")
 

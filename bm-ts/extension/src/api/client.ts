@@ -173,12 +173,7 @@ export async function register(
   baseUrl: string,
   payload: RegisterPayload,
 ): Promise<{ message: string }> {
-  return request<{ message: string }>(
-    baseUrl,
-    '/auth/register',
-    'POST',
-    payload,
-  );
+  return request<{ message: string }>(baseUrl, '/auth/register', 'POST', payload);
 }
 
 /** Authenticate with email + password and return a token pair. */
@@ -251,13 +246,7 @@ export async function createCheckoutSession(
   accessToken: string,
   payload: CheckoutSessionRequest,
 ): Promise<CheckoutSessionResponse> {
-  return request(
-    baseUrl,
-    '/subscription/create-checkout-session',
-    'POST',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, '/subscription/create-checkout-session', 'POST', payload, accessToken);
 }
 
 export async function cancelSubscription(
@@ -279,13 +268,7 @@ export async function changeSubscriptionPlan(
   accessToken: string,
   payload: ChangePlanRequest,
 ): Promise<ChangePlanResponse> {
-  return request(
-    baseUrl,
-    '/subscription/change-plan',
-    'POST',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, '/subscription/change-plan', 'POST', payload, accessToken);
 }
 
 export async function getBillingPortal(
@@ -321,12 +304,7 @@ export async function requestEmailVerification(
   baseUrl: string,
   payload: { email: string },
 ): Promise<{ message: string }> {
-  return request(
-    baseUrl,
-    '/auth/request-email-verification',
-    'POST',
-    payload,
-  );
+  return request(baseUrl, '/auth/request-email-verification', 'POST', payload);
 }
 
 export async function resetPassword(
@@ -341,13 +319,7 @@ export async function changePassword(
   accessToken: string,
   payload: ChangePasswordPayload,
 ): Promise<{ message: string }> {
-  return request(
-    baseUrl,
-    '/auth/change-password',
-    'POST',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, '/auth/change-password', 'POST', payload, accessToken);
 }
 
 export interface BirthdaySchedule {
@@ -388,13 +360,7 @@ export async function updateSchedule(
   id: string,
   payload: UpdateSchedulePayload,
 ): Promise<BirthdaySchedule> {
-  return request(
-    baseUrl,
-    `/api/schedules/${id}`,
-    'PUT',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, `/api/schedules/${id}`, 'PUT', payload, accessToken);
 }
 
 export async function deleteSchedule(
@@ -435,13 +401,7 @@ export async function updateQueuedMessage(
   id: string,
   payload: UpdateQueuedMessagePayload,
 ): Promise<QueuedMessage> {
-  return request(
-    baseUrl,
-    `/api/messages/queue/${id}`,
-    'PUT',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, `/api/messages/queue/${id}`, 'PUT', payload, accessToken);
 }
 
 export async function cancelQueuedMessage(
@@ -545,6 +505,7 @@ export interface Contact {
   birthday_month_only?: boolean;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   notes?: string;
+  group_id?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -556,6 +517,7 @@ export interface CreateContactPayload {
   birthday_month_only?: boolean;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   notes?: string;
+  group_id?: string | null;
 }
 
 export interface UpdateContactPayload {
@@ -565,6 +527,7 @@ export interface UpdateContactPayload {
   birthday_month_only?: boolean;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   notes?: string;
+  group_id?: string | null;
 }
 
 export async function listContacts(
@@ -590,13 +553,7 @@ export async function updateContact(
   id: string,
   payload: UpdateContactPayload,
 ): Promise<Contact> {
-  return request(
-    baseUrl,
-    `/api/contacts/${id}`,
-    'PUT',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, `/api/contacts/${id}`, 'PUT', payload, accessToken);
 }
 
 export async function deleteContact(
@@ -612,35 +569,26 @@ export async function bulkCreateContacts(
   accessToken: string,
   contacts: CreateContactPayload[],
 ): Promise<Contact[]> {
-  return request(
-    baseUrl,
-    '/api/contacts/bulk',
-    'POST',
-    contacts,
-    accessToken,
-  );
+  return request(baseUrl, '/api/contacts/bulk', 'POST', contacts, accessToken);
 }
 
 // ========== Message Groups ==========
 export interface MessageGroup {
   id: string;
   name: string;
-  gender: 'MALE' | 'FEMALE' | 'NEUTRAL';
-  segment_ids: string[];
+  color: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateMessageGroupPayload {
   name: string;
-  gender: 'MALE' | 'FEMALE' | 'NEUTRAL';
-  segment_ids: string[];
+  color?: string;
 }
 
 export interface UpdateMessageGroupPayload {
   name?: string;
-  gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
-  segment_ids?: string[];
+  color?: string;
 }
 
 export async function listMessageGroups(
@@ -655,13 +603,7 @@ export async function createMessageGroup(
   accessToken: string,
   payload: CreateMessageGroupPayload,
 ): Promise<MessageGroup> {
-  return request(
-    baseUrl,
-    '/api/message-groups/',
-    'POST',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, '/api/message-groups/', 'POST', payload, accessToken);
 }
 
 export async function updateMessageGroup(
@@ -670,13 +612,7 @@ export async function updateMessageGroup(
   id: string,
   payload: UpdateMessageGroupPayload,
 ): Promise<MessageGroup> {
-  return request(
-    baseUrl,
-    `/api/message-groups/${id}`,
-    'PUT',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, `/api/message-groups/${id}`, 'PUT', payload, accessToken);
 }
 
 export async function deleteMessageGroup(
@@ -703,6 +639,7 @@ export interface Post {
   font_family?: string;
   font_size?: number;
   font_color?: string;
+  group_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -716,6 +653,7 @@ export interface CreatePostPayload {
   font_family?: string;
   font_size?: number;
   font_color?: string;
+  group_id?: string | null;
 }
 
 export interface UpdatePostPayload {
@@ -727,6 +665,7 @@ export interface UpdatePostPayload {
   font_family?: string;
   font_size?: number;
   font_color?: string;
+  group_id?: string | null;
 }
 
 export async function listPosts(baseUrl: string, accessToken: string): Promise<Post[]> {
@@ -782,13 +721,7 @@ export async function createImage(
   accessToken: string,
   payload: CreateImagePayload,
 ): Promise<UserImage> {
-  return request(
-    baseUrl,
-    '/api/images/upload',
-    'POST',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, '/api/images/upload', 'POST', payload, accessToken);
 }
 
 export interface UploadImageFilePayload {
@@ -802,13 +735,7 @@ export async function uploadImageFile(
   accessToken: string,
   payload: UploadImageFilePayload,
 ): Promise<UserImage> {
-  return request(
-    baseUrl,
-    '/api/images/upload-file',
-    'POST',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, '/api/images/upload-file', 'POST', payload, accessToken);
 }
 
 export async function deleteImage(
@@ -907,6 +834,7 @@ export interface MessageTemplate {
   image_url: string | null;
   days_in_advance: number;
   gender: 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL';
+  group_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -919,6 +847,7 @@ export interface CreateMessageTemplatePayload {
   image_url?: string | null;
   days_in_advance?: number;
   gender?: 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL';
+  group_id?: string | null;
 }
 
 export interface UpdateMessageTemplatePayload {
@@ -929,6 +858,7 @@ export interface UpdateMessageTemplatePayload {
   image_url?: string | null;
   days_in_advance?: number;
   gender?: 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL';
+  group_id?: string | null;
 }
 
 export async function createMessageTemplate(
@@ -936,13 +866,7 @@ export async function createMessageTemplate(
   accessToken: string,
   payload: CreateMessageTemplatePayload,
 ): Promise<MessageTemplate> {
-  return request(
-    baseUrl,
-    '/api/message-templates',
-    'POST',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, '/api/message-templates', 'POST', payload, accessToken);
 }
 
 export async function listMessageTemplates(
@@ -968,13 +892,7 @@ export async function updateMessageTemplate(
   templateId: string,
   payload: UpdateMessageTemplatePayload,
 ): Promise<MessageTemplate> {
-  return request(
-    baseUrl,
-    `/api/message-templates/${templateId}`,
-    'PUT',
-    payload,
-    accessToken,
-  );
+  return request(baseUrl, `/api/message-templates/${templateId}`, 'PUT', payload, accessToken);
 }
 
 export async function deleteMessageTemplate(

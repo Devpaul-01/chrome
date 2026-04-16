@@ -162,7 +162,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
         setMessage('Scan triggered successfully');
       } else {
         setError(
-          'No Facebook tab found. Please open facebook.com/birthdays in a tab and try again.',
+          'No Facebook tab found. Please open facebook.com/friends/birthdays in a tab and try again.',
         );
       }
       await loadConfig(); // Refresh to get updated lastCheck

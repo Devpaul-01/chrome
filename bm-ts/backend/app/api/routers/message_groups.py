@@ -1,14 +1,11 @@
 """
-routers/message_groups.py — CRUD endpoints for message groups.
+routers/message_groups.py — CRUD endpoints for message groups (tags/labels).
 
   POST   /message-groups          create a message group
-  GET    /message-groups          list groups (optional gender filter)
+  GET    /message-groups          list groups for the current user
   GET    /message-groups/{id}     retrieve a single group
-  PUT    /message-groups/{id}     update name, gender, or segment list
+  PUT    /message-groups/{id}     update name or color
   DELETE /message-groups/{id}     delete a group
-
-Message groups collect template-segment UUIDs and a gender filter so the
-scheduler can pick the right group when composing birthday messages.
 """
 
 from __future__ import annotations
@@ -25,7 +22,6 @@ from app.api.deps import get_current_user
 from app.db.models import MessageGroup, User
 from app.db.session import get_db
 from app.schemas.message_group import (
-    GenderEnum,
     MessageGroupCreate,
     MessageGroupOut,
     MessageGroupUpdate,
@@ -45,8 +41,7 @@ async def create_message_group(
     message_group = MessageGroup(
         user_id=current_user.id,
         name=data.name,
-        gender=data.gender.value,
-        segment_ids=[str(sid) for sid in data.segment_ids],
+        color=data.color,
     )
     db.add(message_group)
     await db.commit()
@@ -56,17 +51,15 @@ async def create_message_group(
 
 @router.get("/message-groups", response_model=List[MessageGroupOut])
 async def list_message_groups(
-    gender: GenderEnum | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[MessageGroupOut]:
     """List all message groups for the current user."""
-    stmt = select(MessageGroup).where(MessageGroup.user_id == current_user.id)
-    
-    if gender:
-        stmt = stmt.where(MessageGroup.gender == gender.value)
-    
-    stmt = stmt.order_by(MessageGroup.created_at.desc())
+    stmt = (
+        select(MessageGroup)
+        .where(MessageGroup.user_id == current_user.id)
+        .order_by(MessageGroup.name)
+    )
     result = await db.execute(stmt)
     return result.scalars().all()
 
@@ -117,10 +110,8 @@ async def update_message_group(
     
     if data.name is not None:
         message_group.name = data.name
-    if data.gender is not None:
-        message_group.gender = data.gender.value
-    if data.segment_ids is not None:
-        message_group.segment_ids = [str(sid) for sid in data.segment_ids]
+    if data.color is not None:
+        message_group.color = data.color
     
     message_group.updated_at = datetime.now(timezone.utc)
     await db.commit()

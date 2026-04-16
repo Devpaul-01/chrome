@@ -16,7 +16,7 @@ from app.api.routers import (
     dashboard,
     websocket,
     contacts,
-    # message_groups,  # Commented out — feature not currently needed
+    message_groups,
     message_templates,
     posts,
     images,
@@ -109,7 +109,7 @@ app.include_router(websocket.router)
 app.include_router(contacts.router, prefix="/api", tags=["contacts"])
 
 # Phase 2 - Message management
-# app.include_router(message_groups.router, prefix="/api", tags=["message-groups"])  # Commented out — feature not currently needed
+app.include_router(message_groups.router, prefix="/api", tags=["message-groups"])
 app.include_router(message_templates.router, prefix="/api", tags=["message-templates"])
 
 # Phase 2 - Posts and images

@@ -46,6 +46,7 @@ export type ViewMode =
   | 'account-management'
   | 'subscription'
   | 'template-gallery'
+  | 'message-groups'
   // Contact view modes — kept for type-safety of restored UI files.
   // Contact UI is currently disabled; contacts are populated via scraping.
   | 'contacts'

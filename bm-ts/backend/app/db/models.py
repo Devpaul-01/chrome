@@ -399,15 +399,18 @@ class Contact(Base):
     birthday_month_only = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     gender = Column(gender_enum)
     notes = Column(Text())
+    group_id = Column(PG_UUID(as_uuid=True), ForeignKey("message_groups.id", ondelete="SET NULL"))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
     user = relationship("User")
+    group = relationship("MessageGroup")
 
     __table_args__ = (
         Index("idx_contact_user_birthday", "user_id", "birthday"),
         Index("idx_contact_user_gender", "user_id", "gender"),
         Index("uq_contact_user_profile_url", "user_id", "facebook_profile_url", unique=True),
+        Index("idx_contact_group", "group_id"),
     )
 
 
@@ -441,10 +444,8 @@ class SendRateLimit(Base):
 
 class MessageGroup(Base):
     """
-    Named collection of template segment IDs used to compose a birthday message.
-
-    ``segment_ids`` is a JSON array of ``TemplateSegment.id`` UUIDs (stored as
-    strings) that the extension assembles into a full message at send-time.
+    Named tag/label that can be assigned to templates, posts, and contacts
+    to organise birthday messages by group (e.g. "Family", "Close Friends").
     """
 
     __tablename__ = "message_groups"
@@ -452,15 +453,14 @@ class MessageGroup(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(Text(), nullable=False)
-    gender = Column(gender_enum, nullable=False)
-    segment_ids = Column(JSON(), nullable=False)  # Array of template segment IDs
+    color = Column(Text(), nullable=False, server_default=text("'#6b7280'"))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
     user = relationship("User")
 
     __table_args__ = (
-        Index("idx_message_group_user_gender", "user_id", "gender"),
+        Index("idx_message_group_user", "user_id"),
     )
 
 
@@ -483,6 +483,7 @@ class Post(Base):
     gender = Column(gender_enum, nullable=False)
     is_default = Column(Boolean(), nullable=False, server_default=text("false"))
     label = Column(Text())
+    group_id = Column(PG_UUID(as_uuid=True), ForeignKey("message_groups.id", ondelete="SET NULL"))
     font_family = Column(Text(), server_default=text("'Arial'"))
     font_size = Column(Integer, server_default=text("48"))
     font_color = Column(Text(), server_default=text("'#ffffff'"))
@@ -490,10 +491,13 @@ class Post(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
     user = relationship("User")
+    group = relationship("MessageGroup")
 
     __table_args__ = (
         Index("idx_post_user_gender", "user_id", "gender"),
         Index("idx_post_user_default", "user_id", "is_default"),
+        Index("idx_post_group", "group_id"),
+        Index("uq_post_user_label", "user_id", "label", unique=True, postgresql_where=text("label IS NOT NULL")),
     )
 
 
@@ -595,13 +599,17 @@ class MessageTemplate(Base):
     image_url = Column(Text())  # Optional image URL
     days_in_advance = Column(Integer, nullable=False, server_default=text("0"))
     gender = Column(gender_enum, nullable=False, server_default=text("'ALL'"))
+    group_id = Column(PG_UUID(as_uuid=True), ForeignKey("message_groups.id", ondelete="SET NULL"))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
     user = relationship("User")
+    group = relationship("MessageGroup")
 
     __table_args__ = (
         Index("idx_message_template_user", "user_id"),
         Index("idx_message_template_user_gender", "user_id", "gender"),
+        Index("idx_message_template_group", "group_id"),
+        Index("uq_message_template_user_title", "user_id", "title", unique=True),
     )
 

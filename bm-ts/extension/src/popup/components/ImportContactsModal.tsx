@@ -186,8 +186,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
         });
         if (fn || ln) c.name = `${fn} ${ln}`.trim();
       }
-      if (c.name && c.facebook_profile_url && c.birthday)
-        contacts.push(c as ImportContact);
+      if (c.name && c.facebook_profile_url && c.birthday) contacts.push(c as ImportContact);
     }
     return contacts;
   };

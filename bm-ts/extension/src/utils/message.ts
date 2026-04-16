@@ -34,34 +34,67 @@ function pickRandom<T>(arr: T[]): T {
 }
 
 /**
- * Select the best matching MessageTemplate for a given contact gender.
- * Priority: exact gender match → 'all' → any template.
+ * Select the best matching MessageTemplate for a given contact gender and group.
+ * Priority: group+gender match → group only → gender match → 'all' → any template.
  */
 export function selectTemplate(
   templates: MessageTemplate[],
   gender: Gender,
+  groupId?: string | null,
 ): MessageTemplate | null {
   if (!templates.length) return null;
   const gKey = contactGenderToTemplateGender(gender);
-  const exact = templates.filter((t) => t.gender === gKey);
+
+  // If a groupId is provided, prefer templates in that group
+  if (groupId) {
+    const inGroup = templates.filter((t) => t.group_id === groupId);
+    if (inGroup.length) {
+      const exactGroup = inGroup.filter((t) => t.gender === gKey);
+      if (exactGroup.length) return pickRandom(exactGroup);
+      const allGroup = inGroup.filter((t) => t.gender === 'ALL');
+      if (allGroup.length) return pickRandom(allGroup);
+      return pickRandom(inGroup);
+    }
+  }
+
+  // Fall back to ungrouped templates first, then any
+  const ungrouped = templates.filter((t) => !t.group_id);
+  const pool = ungrouped.length ? ungrouped : templates;
+  const exact = pool.filter((t) => t.gender === gKey);
   if (exact.length) return pickRandom(exact);
-  const allGender = templates.filter((t) => t.gender === 'ALL');
+  const allGender = pool.filter((t) => t.gender === 'ALL');
   if (allGender.length) return pickRandom(allGender);
-  return pickRandom(templates);
+  return pickRandom(pool);
 }
 
 /**
- * Select the best matching timeline Post for a given contact gender.
- * Priority: exact gender match → NEUTRAL → any post.
+ * Select the best matching timeline Post for a given contact gender and group.
+ * Priority: group+gender match → group only → gender match → NEUTRAL → any post.
  */
-export function selectPost(posts: Post[], gender: Gender): Post | null {
+export function selectPost(posts: Post[], gender: Gender, groupId?: string | null): Post | null {
   if (!posts.length) return null;
   const gKey = (gender ?? 'NEUTRAL') as Post['gender'];
-  const exact = posts.filter((p) => p.gender === gKey);
+
+  // If a groupId is provided, prefer posts in that group
+  if (groupId) {
+    const inGroup = posts.filter((p) => p.group_id === groupId);
+    if (inGroup.length) {
+      const exactGroup = inGroup.filter((p) => p.gender === gKey);
+      if (exactGroup.length) return pickRandom(exactGroup);
+      const neutralGroup = inGroup.filter((p) => p.gender === 'NEUTRAL');
+      if (neutralGroup.length) return pickRandom(neutralGroup);
+      return pickRandom(inGroup);
+    }
+  }
+
+  // Fall back to ungrouped posts first, then any
+  const ungrouped = posts.filter((p) => !p.group_id);
+  const pool = ungrouped.length ? ungrouped : posts;
+  const exact = pool.filter((p) => p.gender === gKey);
   if (exact.length) return pickRandom(exact);
-  const neutral = posts.filter((p) => p.gender === 'NEUTRAL');
+  const neutral = pool.filter((p) => p.gender === 'NEUTRAL');
   if (neutral.length) return pickRandom(neutral);
-  return pickRandom(posts);
+  return pickRandom(pool);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import { resolve, dirname } from "path";
+import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
@@ -33,6 +34,32 @@ function buildContentScriptIIFE(outDir: string): Plugin {
           },
         },
       });
+    },
+  };
+}
+
+/**
+ * In production builds, strip localhost entries from host_permissions in
+ * the output manifest.json.  Dev builds keep them for local API testing.
+ * Chrome Web Store will reject extensions that request localhost access.
+ */
+function stripLocalhostInProduction(outDir: string, mode: string): Plugin {
+  return {
+    name: "strip-localhost-manifest",
+    apply: "build",
+    closeBundle() {
+      if (mode !== "production") return;
+
+      const manifestPath = resolve(outDir, "manifest.json");
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+
+      if (Array.isArray(manifest.host_permissions)) {
+        manifest.host_permissions = manifest.host_permissions.filter(
+          (p: string) => !p.includes("localhost")
+        );
+      }
+
+      writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
     },
   };
 }
@@ -82,6 +109,7 @@ export default defineConfig(async ({ mode }) => {
   plugins: [
     react(),
     buildContentScriptIIFE(outDir),
+    stripLocalhostInProduction(outDir, mode),
     ...(lightning ? [lightning({ /* default options */ })] : []),
   ],
   };

@@ -32,6 +32,7 @@ async def create_contact(
         birthday_month_only=data.birthday_month_only,
         gender=data.gender.value if data.gender else None,
         notes=data.notes,
+        group_id=data.group_id,
     )
     db.add(contact)
     await db.commit()
@@ -163,6 +164,8 @@ async def update_contact(
         contact.gender = data.gender.value
     if data.notes is not None:
         contact.notes = data.notes
+    if data.group_id is not None:
+        contact.group_id = data.group_id
     
     await db.commit()
     await db.refresh(contact)

@@ -2,21 +2,25 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY pyproject.toml .
-COPY README.md .
+# System deps first (changes rarely, cached well)
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
+# Copy dependency manifest first for pip layer caching
+COPY pyproject.toml README.md ./
 
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir "."
-RUN apt-get update && apt-get install -y postgresql-client
-
+# Copy source, then install (setuptools needs app/ to discover packages)
 COPY . .
+
+RUN pip install --upgrade pip && pip install --no-cache-dir "."
 
 ENV PYTHONPATH=/app
 
 RUN adduser --system appuser
 USER appuser
 
-EXPOSE 80
+EXPOSE 8000
 
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--workers", "4", "--bind", "0.0.0.0:80"]
+# Production: gunicorn with config (4 workers, timeouts, logging)
+# Dev override: docker-compose command uses single-worker uvicorn + reload
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "app.main:app"]

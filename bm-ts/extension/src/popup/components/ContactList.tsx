@@ -6,10 +6,11 @@ export type { Contact };
 
 type ContactListProps = {
   contacts: Contact[];
-  onAddContact: () => void;
-  onImportContacts: () => void;
-  onEditContact: (contact: Contact) => void;
-  onDeleteContact: (id: string) => void;
+  onAddContact?: () => void;
+  onImportContacts?: () => void;
+  onEditContact?: (contact: Contact) => void;
+  onDeleteContact?: (id: string) => void;
+  onClose?: () => void;
 };
 
 export default function ContactList({
@@ -18,6 +19,7 @@ export default function ContactList({
   onImportContacts,
   onEditContact,
   onDeleteContact,
+  onClose,
 }: ContactListProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -38,32 +40,43 @@ export default function ContactList({
 
   return (
     <div className="space-y-4">
-      {/* Action buttons */}
-      <div className="flex gap-3">
-        <button
-          onClick={onImportContacts}
-          className="btn-orange flex-1 flex items-center justify-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
-          </svg>
-          Import Contacts
-        </button>
-        <button
-          onClick={onAddContact}
-          className="btn flex-1 flex items-center justify-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add New Contact
-        </button>
-      </div>
+      {/* Action buttons — only shown when handlers are provided */}
+      {(onImportContacts || onAddContact) && (
+        <div className="flex gap-3">
+          {onImportContacts && (
+            <button
+              onClick={onImportContacts}
+              className="btn-orange flex-1 flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+              Import Contacts
+            </button>
+          )}
+          {onAddContact && (
+            <button
+              onClick={onAddContact}
+              className="btn flex-1 flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Add New Contact
+            </button>
+          )}
+        </div>
+      )}
 
       <h2 className="text-xl font-bold text-blueStrong">My Contacts</h2>
 
@@ -118,24 +131,34 @@ export default function ContactList({
                 </div>
               </div>
               <div className="flex flex-col gap-1.5 flex-shrink-0">
-                <button
-                  onClick={() => onEditContact(contact)}
-                  className="btn-sm-blue"
-                  aria-label={`Edit ${contact.name}`}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => onDeleteContact(contact.id)}
-                  className="btn-sm-danger"
-                  aria-label={`Delete ${contact.name}`}
-                >
-                  Delete
-                </button>
+                {onEditContact && (
+                  <button
+                    onClick={() => onEditContact(contact)}
+                    className="btn-sm-blue"
+                    aria-label={`Edit ${contact.name}`}
+                  >
+                    Edit
+                  </button>
+                )}
+                {onDeleteContact && (
+                  <button
+                    onClick={() => onDeleteContact(contact.id)}
+                    className="btn-sm-danger"
+                    aria-label={`Delete ${contact.name}`}
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {onClose && (
+        <button className="btn mt-4" onClick={onClose}>
+          ← Back to Home
+        </button>
       )}
     </div>
   );

@@ -29,6 +29,7 @@ class MessageTemplateCreate(BaseModel):
     image_url: Optional[str] = None
     days_in_advance: int = Field(default=0, ge=-30, le=30)
     gender: GenderEnum = Field(default=GenderEnum.ALL)
+    group_id: Optional[UUID] = None
 
 
 class MessageTemplateUpdate(BaseModel):
@@ -44,6 +45,7 @@ class MessageTemplateUpdate(BaseModel):
     image_url: Optional[str] = None
     days_in_advance: Optional[int] = Field(None, ge=-30, le=30)
     gender: Optional[GenderEnum] = None
+    group_id: Optional[UUID] = None
 
 
 class MessageTemplateOut(BaseModel):
@@ -56,6 +58,7 @@ class MessageTemplateOut(BaseModel):
     image_url: Optional[str]
     days_in_advance: int
     gender: GenderEnum
+    group_id: Optional[UUID]
     created_at: datetime
     updated_at: datetime
 
