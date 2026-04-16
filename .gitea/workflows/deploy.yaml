@@ -7,7 +7,7 @@ on:
   push:
     branches:
       - develop
-      - backend-ci-deploy   # i use this to test my pipeline
+      - backend-ci-deploy
 
 jobs:
   build-and-deploy:

@@ -25,7 +25,8 @@
   "host_permissions": [
     "https://www.facebook.com/*",
     "http://localhost/*",
-    "https://localhost/*"
+    "https://localhost/*",
+    "http://*.sslip.io/*"
   ],
   "web_accessible_resources": [
     {

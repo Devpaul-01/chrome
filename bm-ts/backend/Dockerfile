@@ -6,21 +6,21 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency manifest first for pip layer caching
-COPY pyproject.toml README.md ./
 
-# Copy source, then install (setuptools needs app/ to discover packages)
+RUN pip install --upgrade pip
+
 COPY . .
 
-RUN pip install --upgrade pip && pip install --no-cache-dir "."
-
+RUN pip install --no-cache-dir .
 ENV PYTHONPATH=/app
 
 RUN adduser --system appuser
+
 USER appuser
 
 EXPOSE 80
 
-# Production (Coolify): gunicorn on port 80 via gunicorn.conf.py
-# Dev override: docker-compose command uses single-worker uvicorn on port 8000 + reload
-CMD ["gunicorn", "-c", "gunicorn.conf.py", "app.main:app"]
+# Keep Gunicorn settings inline so the container startup command remains self-contained.
+# `--workers 4` uses a fixed worker count for this image, and `--bind 0.0.0.0:80`
+# listens on all interfaces on port 80 so the app is reachable via container networking.
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--workers", "4", "--bind", "0.0.0.0:80"]
