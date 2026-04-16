@@ -21,23 +21,31 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    model_config = ConfigDict(
-    env_file=".env", 
-    case_sensitive=False,
-    extra="ignore"
-    )
+    model_config = ConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/birthdaymessaging",
         alias="DATABASE_URL",
     )
-    jwt_secret_key: str = Field(default="change-me-super-secret", alias="JWT_SECRET_KEY")
+    jwt_secret_key: str = Field(
+        default="change-me-super-secret", alias="JWT_SECRET_KEY"
+    )
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
-    access_token_expire_minutes: int = Field(default=15, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
-    refresh_token_expire_days: int = Field(default=30, alias="REFRESH_TOKEN_EXPIRE_DAYS")
+    access_token_expire_minutes: int = Field(
+        default=15, alias="ACCESS_TOKEN_EXPIRE_MINUTES"
+    )
+    refresh_token_expire_days: int = Field(
+        default=30, alias="REFRESH_TOKEN_EXPIRE_DAYS"
+    )
     stripe_api_key: str = Field(default="sk_test_placeholder", alias="STRIPE_API_KEY")
-    stripe_webhook_secret: str = Field(default="whsec_placeholder", alias="STRIPE_WEBHOOK_SECRET")
-    stripe_price_monthly: str = Field(default="price_monthly_placeholder", alias="STRIPE_PRICE_MONTHLY")
-    stripe_price_yearly: str = Field(default="price_yearly_placeholder", alias="STRIPE_PRICE_YEARLY")
+    stripe_webhook_secret: str = Field(
+        default="whsec_placeholder", alias="STRIPE_WEBHOOK_SECRET"
+    )
+    stripe_price_monthly: str = Field(
+        default="price_monthly_placeholder", alias="STRIPE_PRICE_MONTHLY"
+    )
+    stripe_price_yearly: str = Field(
+        default="price_yearly_placeholder", alias="STRIPE_PRICE_YEARLY"
+    )
 
     @field_validator("stripe_api_key", mode="after")
     @classmethod
@@ -53,33 +61,39 @@ class Settings(BaseSettings):
         default_factory=lambda: ["localhost"],
         alias="STRIPE_REDIRECT_ALLOWED_DOMAINS",
     )
-    cors_origins: list[str] = Field(default_factory=lambda: ["chrome-extension://cpobkmncaokclgimgcefglokgigjlcoj"])
+    cors_origins: list[str] = Field(
+        default_factory=lambda: ["chrome-extension://cpobkmncaokclgimgcefglokgigjlcoj"]
+    )
     log_level: str = Field(default="INFO")
-    smtp_encryption_key: str = Field(default="generate-with-fernet", alias="SMTP_ENCRYPTION_KEY")
+    smtp_encryption_key: str = Field(
+        default="generate-with-fernet", alias="SMTP_ENCRYPTION_KEY"
+    )
     sendgrid_api_key: str = Field(default="", alias="SENDGRID_API_KEY")
     email_from_address: str = Field(default="", alias="EMAIL_FROM_ADDRESS")
     password_reset_url_base: str = Field(default="", alias="PASSWORD_RESET_URL_BASE")
-    email_verification_url_base: str = Field(default="", alias="EMAIL_VERIFICATION_URL_BASE")
+    email_verification_url_base: str = Field(
+        default="", alias="EMAIL_VERIFICATION_URL_BASE"
+    )
 
     @field_validator("jwt_secret_key", mode="after")
     @classmethod
     def validate_jwt_secret(cls, v: str) -> str:
         _INSECURE_DEFAULTS = {"change-me-super-secret", "secret", "changeme", ""}
-        
+
         # Raise error if using a known default placeholder
         if v in _INSECURE_DEFAULTS:
             raise ValueError(
                 "JWT_SECRET_KEY cannot be a default placeholder. "
-                "Generate a secure random value (>= 32 chars) with: python -c \"import secrets; print(secrets.token_hex(16))\""
+                'Generate a secure random value (>= 32 chars) with: python -c "import secrets; print(secrets.token_hex(16))"'
             )
-        
+
         # Reject if too short — a short key is exploitable
         if len(v) < 32:
             raise ValueError(
                 "JWT_SECRET_KEY is too short (< 32 chars). "
-                "Generate a secure random value with: python -c \"import secrets; print(secrets.token_hex(16))\""
+                'Generate a secure random value with: python -c "import secrets; print(secrets.token_hex(16))"'
             )
-        
+
         return v
 
     @field_validator("smtp_encryption_key", mode="after")
@@ -112,6 +126,7 @@ class Settings(BaseSettings):
             # Comma-separated fallback
             return [item.strip() for item in stripped.split(",") if item.strip()]
         return list(value)  # type: ignore[arg-type]
+
 
 settings = Settings()
 

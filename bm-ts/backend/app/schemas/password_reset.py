@@ -24,6 +24,3 @@ class ResetPasswordRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: constr(min_length=8, max_length=128) = ...  # Enforce length bounds
-
-
-

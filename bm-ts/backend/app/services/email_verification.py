@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 essential_expiry_hours = 24
 
+
 async def create_verification_token(user: User, db: AsyncSession) -> str:
     raw_token = secrets.token_urlsafe(32)
     hash_token = hashlib.sha256(raw_token.encode()).hexdigest()
@@ -35,8 +36,8 @@ async def create_verification_token(user: User, db: AsyncSession) -> str:
         user_id=user.id,
         token=hash_token,
         expires_at=expires_at,
-      used_at=None,
-      created_at=datetime.now(timezone.utc),
+        used_at=None,
+        created_at=datetime.now(timezone.utc),
     )
 
     db.add(token_row)
@@ -47,7 +48,7 @@ async def create_verification_token(user: User, db: AsyncSession) -> str:
 
 async def verify_verification_token(raw_token: str, db: AsyncSession) -> User | None:
     """Verify an email verification token.
-    
+
     Uses SELECT FOR UPDATE to prevent race conditions.
     """
     hash_token = hashlib.sha256(raw_token.encode()).hexdigest()
@@ -87,7 +88,9 @@ async def mark_token_used(raw_token: str, db: AsyncSession) -> None:
 
 async def send_verification_email(email: str, token: str) -> None:
     if not settings.email_verification_url_base:
-        raise ValueError("EMAIL_VERIFICATION_URL_BASE is not configured. Set it in .env.")
+        raise ValueError(
+            "EMAIL_VERIFICATION_URL_BASE is not configured. Set it in .env."
+        )
 
     verify_url = f"{settings.email_verification_url_base}?token={token}"
 
@@ -146,11 +149,17 @@ async def send_verification_email(email: str, token: str) -> None:
             except Exception as exc:
                 last_exc = exc
                 if attempt < 2:
-                    await asyncio.sleep(2 ** attempt)  # 1 s, 2 s
+                    await asyncio.sleep(2**attempt)  # 1 s, 2 s
                     logger.warning(
                         "Retry %d/2 sending verification email to %s: %s",
-                        attempt + 1, email, exc,
+                        attempt + 1,
+                        email,
+                        exc,
                     )
-        logger.error("Failed to send verification email to %s after 3 attempts: %s", email, last_exc)
+        logger.error(
+            "Failed to send verification email to %s after 3 attempts: %s",
+            email,
+            last_exc,
+        )
     except Exception as e:
         logger.error("Failed to send verification email to %s: %s", email, e)

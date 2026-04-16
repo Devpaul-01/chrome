@@ -18,7 +18,10 @@ from app.schemas.messages import (
     MessageHistoryPage,
 )
 from app.schemas.common import DeleteResponse
-from app.api.routers.websocket import broadcast_message_queue_update, broadcast_message_history_update
+from app.api.routers.websocket import (
+    broadcast_message_queue_update,
+    broadcast_message_history_update,
+)
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 
@@ -38,7 +41,9 @@ async def list_queued_messages(
     return messages
 
 
-@router.post("/queue", response_model=MessageQueueSchema, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/queue", response_model=MessageQueueSchema, status_code=status.HTTP_201_CREATED
+)
 async def create_queued_message(
     message_data: MessageQueueCreate,
     current_user: User = Depends(get_current_user),
@@ -57,19 +62,22 @@ async def create_queued_message(
     db.add(message)
     await db.commit()
     await db.refresh(message)
-    
+
     # Broadcast real-time update
-    await broadcast_message_queue_update(current_user.id, {
-        "action": "created",
-        "message": {
-            "id": str(message.id),
-            "friend_name": message.friend_name,
-            "status": message.status,
-            "scheduled_send_time": message.scheduled_send_time.isoformat(),
+    await broadcast_message_queue_update(
+        current_user.id,
+        {
+            "action": "created",
+            "message": {
+                "id": str(message.id),
+                "friend_name": message.friend_name,
+                "status": message.status,
+                "scheduled_send_time": message.scheduled_send_time.isoformat(),
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         },
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    })
-    
+    )
+
     return message
 
 
@@ -109,23 +117,28 @@ async def update_queued_message(
 
     await db.commit()
     await db.refresh(message)
-    
+
     # Broadcast real-time update
-    await broadcast_message_queue_update(current_user.id, {
-        "action": "updated",
-        "message": {
-            "id": str(message.id),
-            "friend_name": message.friend_name,
-            "status": message.status,
-            "scheduled_send_time": message.scheduled_send_time.isoformat(),
+    await broadcast_message_queue_update(
+        current_user.id,
+        {
+            "action": "updated",
+            "message": {
+                "id": str(message.id),
+                "friend_name": message.friend_name,
+                "status": message.status,
+                "scheduled_send_time": message.scheduled_send_time.isoformat(),
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         },
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    })
-    
+    )
+
     return message
 
 
-@router.delete("/queue/{message_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete(
+    "/queue/{message_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK
+)
 async def cancel_queued_message(
     message_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -156,13 +169,16 @@ async def cancel_queued_message(
     message_id_str = str(message.id)
     await db.delete(message)
     await db.commit()
-    
+
     # Broadcast real-time update
-    await broadcast_message_queue_update(current_user.id, {
-        "action": "deleted",
-        "message": {"id": message_id_str},
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    })
+    await broadcast_message_queue_update(
+        current_user.id,
+        {
+            "action": "deleted",
+            "message": {"id": message_id_str},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+    )
     return DeleteResponse()
 
 
@@ -198,19 +214,22 @@ async def retry_failed_message(
     message.error_message = None
     await db.commit()
     await db.refresh(message)
-    
+
     # Broadcast real-time update
-    await broadcast_message_queue_update(current_user.id, {
-        "action": "updated",
-        "message": {
-            "id": str(message.id),
-            "friend_name": message.friend_name,
-            "status": message.status,
-            "scheduled_send_time": message.scheduled_send_time.isoformat(),
+    await broadcast_message_queue_update(
+        current_user.id,
+        {
+            "action": "updated",
+            "message": {
+                "id": str(message.id),
+                "friend_name": message.friend_name,
+                "status": message.status,
+                "scheduled_send_time": message.scheduled_send_time.isoformat(),
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         },
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    })
-    
+    )
+
     return message
 
 
@@ -230,7 +249,9 @@ async def list_message_history(
 
     if search:
         safe_search = search.replace("%", r"\%").replace("_", r"\_")
-        base_query = base_query.where(MessageHistory.friend_name.ilike(f"%{safe_search}%", escape="\\"))
+        base_query = base_query.where(
+            MessageHistory.friend_name.ilike(f"%{safe_search}%", escape="\\")
+        )
 
     if status_filter:
         base_query = base_query.where(MessageHistory.status == status_filter)
@@ -242,7 +263,9 @@ async def list_message_history(
         base_query = base_query.where(MessageHistory.sent_at <= end_date)
 
     # Count total matching rows
-    count_result = await db.execute(select(func.count()).select_from(base_query.subquery()))
+    count_result = await db.execute(
+        select(func.count()).select_from(base_query.subquery())
+    )
     total = count_result.scalar_one()
 
     # Apply ordering + pagination
@@ -255,7 +278,11 @@ async def list_message_history(
     return MessageHistoryPage(items=items, total=total, page=page, page_size=page_size)
 
 
-@router.delete("/history/{message_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete(
+    "/history/{message_id}",
+    response_model=DeleteResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def delete_message_history(
     message_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -280,13 +307,16 @@ async def delete_message_history(
     message_id_str = str(message.id)
     await db.delete(message)
     await db.commit()
-    
+
     # Broadcast real-time update
-    await broadcast_message_history_update(current_user.id, {
-        "action": "deleted",
-        "message": {"id": message_id_str},
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    })
+    await broadcast_message_history_update(
+        current_user.id,
+        {
+            "action": "deleted",
+            "message": {"id": message_id_str},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+    )
     return DeleteResponse()
 
 
@@ -305,16 +335,27 @@ async def export_message_history(
 
     buf = StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["friend_name", "friend_profile_url", "status", "message_content", "sent_at", "error_message"])
+    writer.writerow(
+        [
+            "friend_name",
+            "friend_profile_url",
+            "status",
+            "message_content",
+            "sent_at",
+            "error_message",
+        ]
+    )
     for r in rows:
-        writer.writerow([
-            r.friend_name,
-            r.friend_profile_url,
-            r.status,
-            r.message_content,
-            r.sent_at.isoformat() if r.sent_at else "",
-            r.error_message or "",
-        ])
+        writer.writerow(
+            [
+                r.friend_name,
+                r.friend_profile_url,
+                r.status,
+                r.message_content,
+                r.sent_at.isoformat() if r.sent_at else "",
+                r.error_message or "",
+            ]
+        )
 
     buf.seek(0)
     return StreamingResponse(

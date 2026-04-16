@@ -17,7 +17,9 @@ from app.db.models import User, Contact
 
 
 @pytest.mark.asyncio
-async def test_duplicate_email_rejected(async_client: AsyncClient, db_session: AsyncSession) -> None:
+async def test_duplicate_email_rejected(
+    async_client: AsyncClient, db_session: AsyncSession
+) -> None:
     """Users table has a unique constraint on email."""
     user2 = User(
         email="testuser@example.com",  # Same as test_user fixture
@@ -39,13 +41,17 @@ async def test_duplicate_email_rejected(async_client: AsyncClient, db_session: A
 async def test_schedule_unique_days_before(async_client: AsyncClient) -> None:
     """Each user can only have one schedule per days_before value."""
     await async_client.post("/api/schedules", json={"days_before": 1, "enabled": True})
-    resp2 = await async_client.post("/api/schedules", json={"days_before": 1, "enabled": True})
+    resp2 = await async_client.post(
+        "/api/schedules", json={"days_before": 1, "enabled": True}
+    )
     # Should fail with 400 or 409 (unique constraint)
     assert resp2.status_code in (400, 409, 422, 500)
 
 
 @pytest.mark.asyncio
-async def test_cascade_delete_user_contacts(db_session: AsyncSession, test_user: User) -> None:
+async def test_cascade_delete_user_contacts(
+    db_session: AsyncSession, test_user: User
+) -> None:
     """Deleting a user should cascade-delete their contacts."""
     contact = Contact(
         user_id=test_user.id,
@@ -62,6 +68,7 @@ async def test_cascade_delete_user_contacts(db_session: AsyncSession, test_user:
 
     # Contact should be gone
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(Contact).where(Contact.user_id == test_user.id)
     )
@@ -84,10 +91,13 @@ async def test_invalid_gender_enum_rejected(async_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_invalid_segment_type_rejected(async_client: AsyncClient) -> None:
     """Schema validation should reject invalid segment types."""
-    resp = await async_client.post("/templates/", json={
-        "segment_type": "INVALID",
-        "content": "test",
-    })
+    resp = await async_client.post(
+        "/templates/",
+        json={
+            "segment_type": "INVALID",
+            "content": "test",
+        },
+    )
     assert resp.status_code == 422
 
 
@@ -95,15 +105,21 @@ async def test_invalid_segment_type_rejected(async_client: AsyncClient) -> None:
 async def test_birthday_config_mode_validation(async_client: AsyncClient) -> None:
     """Advance mode requires negative days, followup requires positive."""
     # Advance with positive offset
-    resp = await async_client.post("/api/birthday-configs", json={
-        "mode": "advance",
-        "days_offset": 3,
-    })
+    resp = await async_client.post(
+        "/api/birthday-configs",
+        json={
+            "mode": "advance",
+            "days_offset": 3,
+        },
+    )
     assert resp.status_code == 422
 
     # Followup with negative offset
-    resp2 = await async_client.post("/api/birthday-configs", json={
-        "mode": "followup",
-        "days_offset": -2,
-    })
+    resp2 = await async_client.post(
+        "/api/birthday-configs",
+        json={
+            "mode": "followup",
+            "days_offset": -2,
+        },
+    )
     assert resp2.status_code == 422

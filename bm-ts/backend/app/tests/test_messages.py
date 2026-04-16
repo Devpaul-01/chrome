@@ -23,7 +23,9 @@ def _queue_payload(**overrides) -> dict:
         "friend_name": "Jane Doe",
         "friend_profile_url": "https://facebook.com/janedoe",
         "birthday_date": datetime.now(timezone.utc).isoformat(),
-        "scheduled_send_time": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+        "scheduled_send_time": (
+            datetime.now(timezone.utc) + timedelta(hours=1)
+        ).isoformat(),
         "message_content": "Happy Birthday Jane!",
     }
     base.update(overrides)
@@ -31,6 +33,7 @@ def _queue_payload(**overrides) -> dict:
 
 
 # ─── Queue CRUD ──────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_list_queue_empty(async_client: AsyncClient) -> None:
@@ -101,6 +104,7 @@ async def test_cancel_message_not_found(async_client: AsyncClient) -> None:
 
 # ─── Retry flow ──────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_retry_failed_message(
     async_client: AsyncClient,
@@ -148,6 +152,7 @@ async def test_retry_message_not_found(async_client: AsyncClient) -> None:
 
 # ─── Message History ─────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_history_empty(async_client: AsyncClient) -> None:
     resp = await async_client.get("/api/messages/history")
@@ -180,7 +185,9 @@ async def test_history_pagination(
     await db_session.commit()
 
     # Page 1 with size 2
-    resp = await async_client.get("/api/messages/history", params={"page": 1, "page_size": 2})
+    resp = await async_client.get(
+        "/api/messages/history", params={"page": 1, "page_size": 2}
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["items"]) == 2
@@ -189,7 +196,9 @@ async def test_history_pagination(
     assert data["page_size"] == 2
 
     # Page 3 with size 2 → 1 item
-    resp = await async_client.get("/api/messages/history", params={"page": 3, "page_size": 2})
+    resp = await async_client.get(
+        "/api/messages/history", params={"page": 3, "page_size": 2}
+    )
     data = resp.json()
     assert len(data["items"]) == 1
 
@@ -241,7 +250,9 @@ async def test_history_status_filter(
         db_session.add(item)
     await db_session.commit()
 
-    resp = await async_client.get("/api/messages/history", params={"status_filter": "failed"})
+    resp = await async_client.get(
+        "/api/messages/history", params={"status_filter": "failed"}
+    )
     data = resp.json()
     assert data["total"] == 1
     assert data["items"][0]["status"] == "failed"

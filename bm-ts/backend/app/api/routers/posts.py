@@ -64,12 +64,12 @@ async def list_posts(
 ) -> List[PostOut]:
     """List all posts for the current user."""
     stmt = select(Post).where(Post.user_id == current_user.id)
-    
+
     if gender:
         stmt = stmt.where(Post.gender == gender.value)
     if group_id is not None:
         stmt = stmt.where(Post.group_id == group_id)
-    
+
     stmt = stmt.order_by(Post.created_at.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
@@ -88,13 +88,12 @@ async def get_post(
     )
     result = await db.execute(stmt)
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Post not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
         )
-    
+
     return post
 
 
@@ -112,13 +111,12 @@ async def update_post(
     )
     result = await db.execute(stmt)
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Post not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
         )
-    
+
     if data.content is not None:
         post.content = data.content
     if data.gender is not None:
@@ -156,7 +154,9 @@ async def update_post(
     return post
 
 
-@router.delete("/posts/{post_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete(
+    "/posts/{post_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK
+)
 async def delete_post(
     post_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -169,13 +169,12 @@ async def delete_post(
     )
     result = await db.execute(stmt)
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Post not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
         )
-    
+
     await db.delete(post)
     await db.commit()
     return DeleteResponse()

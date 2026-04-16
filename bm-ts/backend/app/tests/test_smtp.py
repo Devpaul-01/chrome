@@ -40,14 +40,17 @@ async def test_create_smtp_config(async_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_get_smtp_config_after_create(async_client: AsyncClient) -> None:
-    await async_client.put("/smtp/config", json={
-        "host": "smtp.test.com",
-        "port": 465,
-        "username": "test@test.com",
-        "password": "pass",
-        "use_tls": False,
-        "from_email": "test@test.com",
-    })
+    await async_client.put(
+        "/smtp/config",
+        json={
+            "host": "smtp.test.com",
+            "port": 465,
+            "username": "test@test.com",
+            "password": "pass",
+            "use_tls": False,
+            "from_email": "test@test.com",
+        },
+    )
 
     resp = await async_client.get("/smtp/config")
     assert resp.status_code == 200
@@ -59,25 +62,31 @@ async def test_get_smtp_config_after_create(async_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_update_smtp_config(async_client: AsyncClient) -> None:
     # Create first
-    await async_client.put("/smtp/config", json={
-        "host": "old.smtp.com",
-        "port": 587,
-        "username": "old@old.com",
-        "password": "oldpass",
-        "use_tls": True,
-        "from_email": "old@old.com",
-    })
+    await async_client.put(
+        "/smtp/config",
+        json={
+            "host": "old.smtp.com",
+            "port": 587,
+            "username": "old@old.com",
+            "password": "oldpass",
+            "use_tls": True,
+            "from_email": "old@old.com",
+        },
+    )
 
     # Update
-    resp = await async_client.put("/smtp/config", json={
-        "host": "new.smtp.com",
-        "port": 465,
-        "username": "new@new.com",
-        "password": "newpass",
-        "use_tls": False,
-        "from_email": "new@new.com",
-        "from_name": "New Bot",
-    })
+    resp = await async_client.put(
+        "/smtp/config",
+        json={
+            "host": "new.smtp.com",
+            "port": 465,
+            "username": "new@new.com",
+            "password": "newpass",
+            "use_tls": False,
+            "from_email": "new@new.com",
+            "from_name": "New Bot",
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["host"] == "new.smtp.com"

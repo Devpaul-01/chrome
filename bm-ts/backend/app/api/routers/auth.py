@@ -36,7 +36,11 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_token_payload, get_current_user, get_current_user_allow_unverified
+from app.api.deps import (
+    get_current_token_payload,
+    get_current_user,
+    get_current_user_allow_unverified,
+)
 from app.core.jwt import (
     TokenType,
     create_access_token,
@@ -45,7 +49,17 @@ from app.core.jwt import (
     ensure_token_type,
 )
 from app.core.security import hash_password, verify_password
-from app.db.models import User, RevokedToken, UserSession, TemplateSegment, MessageTemplate, BirthdaySchedule, Contact, MessageQueue, MessageHistory
+from app.db.models import (
+    User,
+    RevokedToken,
+    UserSession,
+    TemplateSegment,
+    MessageTemplate,
+    BirthdaySchedule,
+    Contact,
+    MessageQueue,
+    MessageHistory,
+)
 from app.db.session import get_db
 from app.schemas.auth import (
     ActiveSession,
@@ -90,7 +104,11 @@ router = APIRouter()
 def _coerce_expiry(expiry_value: Any) -> datetime:
     """Normalise a JWT ``exp`` claim into a timezone-aware UTC datetime."""
     if isinstance(expiry_value, datetime):
-        return expiry_value if expiry_value.tzinfo else expiry_value.replace(tzinfo=timezone.utc)
+        return (
+            expiry_value
+            if expiry_value.tzinfo
+            else expiry_value.replace(tzinfo=timezone.utc)
+        )
     return datetime.fromtimestamp(int(expiry_value), timezone.utc)
 
 
@@ -114,7 +132,9 @@ async def _ensure_revoked_token(
 ) -> None:
     if not jti:
         return
-    result = await db.execute(select(RevokedToken).where(RevokedToken.refresh_token_jti == jti))
+    result = await db.execute(
+        select(RevokedToken).where(RevokedToken.refresh_token_jti == jti)
+    )
     if result.scalar_one_or_none() is None:
         db.add(
             RevokedToken(
@@ -182,7 +202,9 @@ async def _revoke_session_record(
     )
 
 
-@router.post("/register", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=MessageResponse, status_code=status.HTTP_201_CREATED
+)
 @limiter.limit("5/minute")
 async def register(
     request: Request, data: RegisterRequest, db: AsyncSession = Depends(get_db)
@@ -191,7 +213,9 @@ async def register(
     stmt = select(User).where(User.email == data.email)
     result = await db.execute(stmt)
     if result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
+        )
 
     user = User(
         email=data.email,
@@ -210,7 +234,9 @@ async def register(
         await send_verification_email(user.email, token)
     except Exception as e:
         logger.warning("Failed to send verification email to %s: %s", user.email, e)
-    return MessageResponse(message="Account created. Please check your email to verify your account before logging in.")
+    return MessageResponse(
+        message="Account created. Please check your email to verify your account before logging in."
+    )
 
 
 # Account lockout constants
@@ -221,7 +247,9 @@ _LOCKOUT_MINUTES = 15
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("5/minute")
 @limiter.limit("20/hour", key_func=get_remote_address)
-async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def login(
+    request: Request, data: LoginRequest, db: AsyncSession = Depends(get_db)
+) -> TokenResponse:
     """Authenticate with email + password.  Returns a token pair; 401 on invalid credentials.
 
     Accounts are temporarily locked after 5 consecutive failed login attempts.
@@ -237,17 +265,26 @@ async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends
             detail="Account temporarily locked due to too many failed login attempts. Try again later.",
         )
 
-    if not user or not verify_password(data.password, user.password_hash if user else ""):
+    if not user or not verify_password(
+        data.password, user.password_hash if user else ""
+    ):
         # When user is None, run a dummy verify to prevent timing oracle (user enumeration)
         if not user:
-            verify_password(data.password, "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$dummyhashdummyhashdummyhashdummy")
+            verify_password(
+                data.password,
+                "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$dummyhashdummyhashdummyhashdummy",
+            )
         # Increment failed login counter (only if user exists)
         if user:
             user.failed_login_count = (user.failed_login_count or 0) + 1
             if user.failed_login_count >= _MAX_FAILED_ATTEMPTS:
-                user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=_LOCKOUT_MINUTES)
+                user.locked_until = datetime.now(timezone.utc) + timedelta(
+                    minutes=_LOCKOUT_MINUTES
+                )
             await db.commit()
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        )
 
     if not user.email_verified:
         raise HTTPException(
@@ -280,36 +317,50 @@ async def refresh(
         session_id = payload.get("sid")
         exp = payload.get("exp")
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+        ) from exc
 
     # Verify the user still exists (prevents deleted users from refreshing)
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists"
+        )
 
     session: UserSession | None = None
     if session_id is not None:
         try:
             session_uuid = UUID(str(session_id))
         except ValueError as exc:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            ) from exc
 
         session_result = await db.execute(
-            select(UserSession).where(UserSession.id == session_uuid, UserSession.user_id == user_id)
+            select(UserSession).where(
+                UserSession.id == session_uuid, UserSession.user_id == user_id
+            )
         )
         session = session_result.scalar_one_or_none()
         if session is None or session.revoked_at is not None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            )
         if session.current_refresh_token_jti != jti:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            )
 
     # If jti present, ensure it hasn't been revoked already
     if jti:
         stmt = select(RevokedToken).where(RevokedToken.refresh_token_jti == jti)
         result = await db.execute(stmt)
         if result.scalar_one_or_none():
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            )
 
     expires_at = _coerce_expiry(exp)
     await _ensure_revoked_token(db, jti=jti, user_id=user_id, expires_at=expires_at)
@@ -318,13 +369,17 @@ async def refresh(
         await db.commit()
     except Exception as exc:
         await db.rollback()
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+        ) from exc
 
     return response
 
 
 @router.post("/revoke", response_model=MessageResponse)
-async def revoke(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> MessageResponse:
+async def revoke(
+    data: RefreshRequest, db: AsyncSession = Depends(get_db)
+) -> MessageResponse:
     """Revoke (logout) a refresh token by recording its JTI in the revoked_tokens table."""
     try:
         payload = decode_token(data.refresh_token)
@@ -334,7 +389,9 @@ async def revoke(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> Me
         session_id = payload.get("sid")
         exp = payload.get("exp")
     except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+        )
 
     expires_at = _coerce_expiry(exp)
 
@@ -346,7 +403,9 @@ async def revoke(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> Me
 
         if session_uuid is not None:
             session_result = await db.execute(
-                select(UserSession).where(UserSession.id == session_uuid, UserSession.user_id == user_id)
+                select(UserSession).where(
+                    UserSession.id == session_uuid, UserSession.user_id == user_id
+                )
             )
             session = session_result.scalar_one_or_none()
             if session is not None:
@@ -398,11 +457,15 @@ async def revoke_session(
 ) -> MessageResponse:
     """Revoke one of the user's active sessions immediately."""
     result = await db.execute(
-        select(UserSession).where(UserSession.id == session_id, UserSession.user_id == current_user.id)
+        select(UserSession).where(
+            UserSession.id == session_id, UserSession.user_id == current_user.id
+        )
     )
     session = result.scalar_one_or_none()
     if session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     await _revoke_session_record(session, db, reason="user_revoke")
     await db.commit()
@@ -410,7 +473,9 @@ async def revoke_session(
 
 
 @router.get("/me", response_model=UserProfile)
-async def me(current_user: User = Depends(get_current_user_allow_unverified)) -> UserProfile:
+async def me(
+    current_user: User = Depends(get_current_user_allow_unverified),
+) -> UserProfile:
     """Return the profile of the currently authenticated user."""
     metadata = current_user.metadata_payload or {}
     return UserProfile(
@@ -424,25 +489,27 @@ async def me(current_user: User = Depends(get_current_user_allow_unverified)) ->
 
 
 @router.post("/request-password-reset", response_model=MessageResponse)
-@limiter.limit("1/minute")                             #
-@limiter.limit("5/hour")                               # per IP address
-@limiter.limit("20/hour", key_func=get_remote_address) #
+@limiter.limit("1/minute")  #
+@limiter.limit("5/hour")  # per IP address
+@limiter.limit("20/hour", key_func=get_remote_address)  #
 async def request_password_reset(
     request: Request,
     data: RequestPasswordResetRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
     """Request a password reset link"""
     # Always return success to prevent email enumeration
     stmt = select(User).where(User.email == data.email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
-    
+
     if user:
         token = await create_reset_token(user, db)
         await send_reset_email(user.email, token)
-    
-    return MessageResponse(message="If an account exists with that email, a password reset link has been sent.")
+
+    return MessageResponse(
+        message="If an account exists with that email, a password reset link has been sent."
+    )
 
 
 @router.post("/request-email-verification", response_model=MessageResponse)
@@ -464,15 +531,22 @@ async def request_email_verification(
         token = await create_verification_token(user, db)
         await send_verification_email(user.email, token)
 
-    return MessageResponse(message="If an account exists with that email, a verification link has been sent.")
+    return MessageResponse(
+        message="If an account exists with that email, a verification link has been sent."
+    )
 
 
 @router.post("/verify-email", response_model=MessageResponse)
-async def verify_email(data: VerifyEmailRequest, db: AsyncSession = Depends(get_db)) -> MessageResponse:
+async def verify_email(
+    data: VerifyEmailRequest, db: AsyncSession = Depends(get_db)
+) -> MessageResponse:
     """Consume an email verification token and mark the user's email as verified."""
     user = await verify_verification_token(data.token, db)
     if not user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token",
+        )
 
     user.email_verified = True
     await mark_verification_token_used(data.token, db)
@@ -619,9 +693,9 @@ async def reset_password(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset token"
+            detail="Invalid or expired reset token",
         )
-    
+
     # Update password
     user.password_hash = hash_password(data.new_password)
     await mark_token_used(data.token, db)
@@ -637,11 +711,13 @@ async def reset_password(
         await _revoke_session_record(s, db, reason="password_reset")
 
     await db.commit()
-    
+
     return MessageResponse(message="Password has been reset successfully")
 
 
-@router.get("/reset-password-page", response_class=HTMLResponse, include_in_schema=False)
+@router.get(
+    "/reset-password-page", response_class=HTMLResponse, include_in_schema=False
+)
 async def reset_password_page(token: str = "") -> HTMLResponse:
     """Serve a self-contained HTML page where the user can set a new password.
 
@@ -818,9 +894,9 @@ async def change_password(
     if not verify_password(data.current_password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect"
+            detail="Current password is incorrect",
         )
-    
+
     # Update password
     current_user.password_hash = hash_password(data.new_password)
 
@@ -838,8 +914,9 @@ async def change_password(
         await _revoke_session_record(s, db, reason="password_changed")
 
     await db.commit()
-    
+
     return MessageResponse(message="Password changed successfully")
+
 
 @router.put("/profile", response_model=UserProfile)
 async def update_profile(
@@ -849,20 +926,20 @@ async def update_profile(
 ) -> UserProfile:
     """Update user profile information"""
     metadata = current_user.metadata_payload or {}
-    
+
     if data.name is not None:
         # Store in metadata for now since User model doesn't have name field
         metadata["name"] = data.name
-    
+
     if data.timezone is not None:
         metadata["timezone"] = data.timezone
-    
+
     if data.name is not None or data.timezone is not None:
         current_user.metadata_payload = metadata
-    
+
     await db.commit()
     await db.refresh(current_user)
-    
+
     # Extract metadata for response
     metadata = current_user.metadata_payload or {}
     return UserProfile(
@@ -905,7 +982,9 @@ async def export_user_data(
         "email": current_user.email,
         "name": metadata.get("name"),
         "timezone": metadata.get("timezone"),
-        "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+        "created_at": current_user.created_at.isoformat()
+        if current_user.created_at
+        else None,
     }
 
     # ── Template segments ────────────────────────────────────────────────────
@@ -963,9 +1042,7 @@ async def export_user_data(
 
     # ── Contacts ─────────────────────────────────────────────────────────────
     contact_result = await db.execute(
-        select(Contact)
-        .where(Contact.user_id == current_user.id)
-        .order_by(Contact.name)
+        select(Contact).where(Contact.user_id == current_user.id).order_by(Contact.name)
     )
     contacts = [
         {
@@ -990,7 +1067,9 @@ async def export_user_data(
             "friend_name": r.friend_name,
             "friend_profile_url": r.friend_profile_url,
             "birthday_date": r.birthday_date.isoformat() if r.birthday_date else None,
-            "scheduled_send_time": r.scheduled_send_time.isoformat() if r.scheduled_send_time else None,
+            "scheduled_send_time": r.scheduled_send_time.isoformat()
+            if r.scheduled_send_time
+            else None,
             "message_content": r.message_content,
             "status": str(r.status),
             "error_message": r.error_message,

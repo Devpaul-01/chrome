@@ -41,7 +41,9 @@ async def list_schedules(
     return schedules
 
 
-@router.post("", response_model=BirthdayScheduleSchema, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=BirthdayScheduleSchema, status_code=status.HTTP_201_CREATED
+)
 async def create_schedule(
     schedule_data: BirthdayScheduleCreate,
     current_user: User = Depends(get_current_user),
@@ -106,7 +108,9 @@ async def update_schedule(
     return schedule
 
 
-@router.delete("/{schedule_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete(
+    "/{schedule_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK
+)
 async def delete_schedule(
     schedule_id: UUID,
     current_user: User = Depends(get_current_user),

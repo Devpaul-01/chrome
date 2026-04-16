@@ -45,7 +45,8 @@ _SUBSCRIPTION_EVENTS = {
 
 
 async def _handle_payment_failed(
-    db: AsyncSession, event_data: dict,
+    db: AsyncSession,
+    event_data: dict,
 ) -> None:
     """
     Handle ``invoice.payment_failed`` by transitioning the related
@@ -78,14 +79,20 @@ async def stripe_webhook(
     payload = await request.body()
     signature = request.headers.get("stripe-signature")
     if not signature:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing Stripe signature")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Missing Stripe signature"
+        )
 
     try:
         event = construct_event(payload, signature)
     except ValueError:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Invalid payload")
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail="Invalid payload"
+        )
     except Exception:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Invalid signature")
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail="Invalid signature"
+        )
 
     object_data = event.data.object
 
@@ -102,7 +109,9 @@ async def stripe_webhook(
     if not customer_id:
         return {"received": True}
 
-    result = await db.execute(select(User).where(User.stripe_customer_id == customer_id))
+    result = await db.execute(
+        select(User).where(User.stripe_customer_id == customer_id)
+    )
     user = result.scalar_one_or_none()
     if not user:
         return {"received": True}

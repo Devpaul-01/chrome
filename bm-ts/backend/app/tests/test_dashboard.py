@@ -119,27 +119,31 @@ async def test_dashboard_weekly_monthly_stats(
     now = datetime.now(timezone.utc)
 
     # Message from today
-    db_session.add(MessageHistory(
-        user_id=test_user.id,
-        friend_name="Today",
-        friend_profile_url="https://facebook.com/today",
-        birthday_date=now,
-        message_content="HBD!",
-        sent_at=now,
-        status="sent",
-    ))
+    db_session.add(
+        MessageHistory(
+            user_id=test_user.id,
+            friend_name="Today",
+            friend_profile_url="https://facebook.com/today",
+            birthday_date=now,
+            message_content="HBD!",
+            sent_at=now,
+            status="sent",
+        )
+    )
 
     # Message from 15 days ago (this month if month is long enough, otherwise just test total)
     old = now - timedelta(days=15)
-    db_session.add(MessageHistory(
-        user_id=test_user.id,
-        friend_name="Old",
-        friend_profile_url="https://facebook.com/old",
-        birthday_date=old,
-        message_content="HBD!",
-        sent_at=old,
-        status="sent",
-    ))
+    db_session.add(
+        MessageHistory(
+            user_id=test_user.id,
+            friend_name="Old",
+            friend_profile_url="https://facebook.com/old",
+            birthday_date=old,
+            message_content="HBD!",
+            sent_at=old,
+            status="sent",
+        )
+    )
     await db_session.commit()
 
     resp = await async_client.get("/api/dashboard/stats")

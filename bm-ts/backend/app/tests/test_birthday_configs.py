@@ -139,8 +139,12 @@ async def test_delete_birthday_config_not_found(async_client: AsyncClient) -> No
 
 @pytest.mark.asyncio
 async def test_list_birthday_configs_filter_by_mode(async_client: AsyncClient) -> None:
-    await async_client.post("/api/birthday-configs", json={"mode": "ON_DAY", "days_offset": 0})
-    await async_client.post("/api/birthday-configs", json={"mode": "EARLY", "days_offset": -1})
+    await async_client.post(
+        "/api/birthday-configs", json={"mode": "ON_DAY", "days_offset": 0}
+    )
+    await async_client.post(
+        "/api/birthday-configs", json={"mode": "EARLY", "days_offset": -1}
+    )
 
     resp = await async_client.get("/api/birthday-configs", params={"mode": "ON_DAY"})
     assert resp.status_code == 200
@@ -149,9 +153,17 @@ async def test_list_birthday_configs_filter_by_mode(async_client: AsyncClient) -
 
 
 @pytest.mark.asyncio
-async def test_list_birthday_configs_filter_by_enabled(async_client: AsyncClient) -> None:
-    await async_client.post("/api/birthday-configs", json={"mode": "ON_DAY", "days_offset": 0, "enabled": True})
-    await async_client.post("/api/birthday-configs", json={"mode": "BELATED", "days_offset": 1, "enabled": False})
+async def test_list_birthday_configs_filter_by_enabled(
+    async_client: AsyncClient,
+) -> None:
+    await async_client.post(
+        "/api/birthday-configs",
+        json={"mode": "ON_DAY", "days_offset": 0, "enabled": True},
+    )
+    await async_client.post(
+        "/api/birthday-configs",
+        json={"mode": "BELATED", "days_offset": 1, "enabled": False},
+    )
 
     resp = await async_client.get("/api/birthday-configs", params={"enabled": "true"})
     assert resp.status_code == 200

@@ -27,6 +27,7 @@ from app.core.config import settings
 # helpers
 # ---------------------------------------------------------------------------
 
+
 async def _create_subscription(
     db: AsyncSession,
     user: User,
@@ -63,6 +64,7 @@ async def _create_subscription(
 # GET /subscription/status
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_status_no_subscription(async_client: AsyncClient):
     resp = await async_client.get("/subscription/status")
@@ -96,7 +98,10 @@ async def test_status_grace_period(
     """PAST_DUE with current_period_end in the future → grace period."""
     future = datetime.now(timezone.utc) + timedelta(days=5)
     await _create_subscription(
-        db_session, test_user, status="PAST_DUE", current_period_end=future,
+        db_session,
+        test_user,
+        status="PAST_DUE",
+        current_period_end=future,
     )
     resp = await async_client.get("/subscription/status")
     body = resp.json()
@@ -112,7 +117,10 @@ async def test_status_past_due_expired(
     """PAST_DUE with current_period_end in the past → no longer active."""
     past = datetime.now(timezone.utc) - timedelta(days=5)
     await _create_subscription(
-        db_session, test_user, status="PAST_DUE", current_period_end=past,
+        db_session,
+        test_user,
+        status="PAST_DUE",
+        current_period_end=past,
     )
     resp = await async_client.get("/subscription/status")
     body = resp.json()
@@ -123,6 +131,7 @@ async def test_status_past_due_expired(
 # ---------------------------------------------------------------------------
 # POST /subscription/cancel
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_cancel_success(
@@ -150,6 +159,7 @@ async def test_cancel_no_active_sub(async_client: AsyncClient):
 # ---------------------------------------------------------------------------
 # POST /subscription/reactivate
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_reactivate_success(
@@ -182,12 +192,15 @@ async def test_reactivate_not_pending(
 # POST /subscription/change-plan
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_change_plan_upgrade(
     async_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
     await _create_subscription(
-        db_session, test_user, price_id=settings.stripe_price_monthly,
+        db_session,
+        test_user,
+        price_id=settings.stripe_price_monthly,
     )
     with patch(
         "app.api.routers.subscription.change_subscription_plan",
@@ -208,7 +221,9 @@ async def test_change_plan_same_plan(
     async_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
     await _create_subscription(
-        db_session, test_user, price_id=settings.stripe_price_monthly,
+        db_session,
+        test_user,
+        price_id=settings.stripe_price_monthly,
     )
     resp = await async_client.post(
         "/subscription/change-plan", json={"new_plan": "monthly"}
@@ -228,6 +243,7 @@ async def test_change_plan_no_active_sub(async_client: AsyncClient):
 # ---------------------------------------------------------------------------
 # POST /subscription/billing-portal
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_billing_portal_success(

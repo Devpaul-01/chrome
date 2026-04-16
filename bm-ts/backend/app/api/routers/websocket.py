@@ -1,6 +1,7 @@
 """
 WebSocket router for real-time updates
 """
+
 import asyncio
 import json
 import logging
@@ -23,19 +24,21 @@ router = APIRouter(tags=["websocket"])
 
 class ConnectionManager:
     """Manages WebSocket connections for users"""
-    
+
     def __init__(self):
         # Maps user_id to list of WebSocket connections
         self.active_connections: Dict[UUID, list[WebSocket]] = {}
-    
+
     async def connect(self, websocket: WebSocket, user_id: UUID):
         """Add a WebSocket connection for a user"""
         await websocket.accept()
         if user_id not in self.active_connections:
             self.active_connections[user_id] = []
         self.active_connections[user_id].append(websocket)
-        logger.info(f"WebSocket connected for user {user_id}. Total connections: {len(self.active_connections[user_id])}")
-    
+        logger.info(
+            f"WebSocket connected for user {user_id}. Total connections: {len(self.active_connections[user_id])}"
+        )
+
     def disconnect(self, websocket: WebSocket, user_id: UUID):
         """Remove a WebSocket connection for a user"""
         if user_id in self.active_connections:
@@ -44,7 +47,7 @@ class ConnectionManager:
             if not self.active_connections[user_id]:
                 del self.active_connections[user_id]
         logger.info(f"WebSocket disconnected for user {user_id}")
-    
+
     async def send_personal_message(self, message: dict, user_id: UUID):
         """Send a message to all connections for a specific user"""
         if user_id in self.active_connections:
@@ -55,17 +58,17 @@ class ConnectionManager:
                 except Exception as e:
                     logger.error(f"Error sending message to user {user_id}: {e}")
                     disconnected.append(connection)
-            
+
             # Clean up disconnected websockets
             for connection in disconnected:
                 self.disconnect(connection, user_id)
-    
+
     async def broadcast_to_user(self, event_type: str, data: dict, user_id: UUID):
         """Broadcast an event to a specific user"""
         message = {
             "type": event_type,
             "data": data,
-            "timestamp": str(data.get("timestamp", ""))
+            "timestamp": str(data.get("timestamp", "")),
         }
         await self.send_personal_message(message, user_id)
 
@@ -98,7 +101,9 @@ async def get_current_user_from_token(token: str, db: AsyncSession) -> User:
         session = result.scalar_one_or_none()
         if session is None or session.revoked_at is not None:
             raise credentials_exception
-        if session.expires_at.replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
+        if session.expires_at.replace(tzinfo=timezone.utc) <= datetime.now(
+            timezone.utc
+        ):
             raise credentials_exception
 
     result = await db.execute(select(User).where(User.id == UUID(user_id)))
@@ -150,14 +155,18 @@ async def websocket_endpoint(
         if user.id not in manager.active_connections:
             manager.active_connections[user.id] = []
         manager.active_connections[user.id].append(websocket)
-        logger.info(f"WebSocket connected for user {user.id}. Total connections: {len(manager.active_connections[user.id])}")
+        logger.info(
+            f"WebSocket connected for user {user.id}. Total connections: {len(manager.active_connections[user.id])}"
+        )
 
         # Send welcome message
-        await websocket.send_json({
-            "type": "connected",
-            "data": {"message": "WebSocket connected successfully"},
-            "timestamp": str(user.id)
-        })
+        await websocket.send_json(
+            {
+                "type": "connected",
+                "data": {"message": "WebSocket connected successfully"},
+                "timestamp": str(user.id),
+            }
+        )
 
         # Keep connection alive and handle incoming messages
         try:

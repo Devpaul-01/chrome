@@ -34,6 +34,7 @@ class PostCreate(BaseModel):
     @classmethod
     def sanitize_label(cls, v: Optional[str]) -> Optional[str]:
         return sanitize_text(v) if v is not None else v
+
     font_family: Optional[str] = Field("Arial", max_length=100)
     font_size: Optional[int] = Field(48, ge=24, le=96)
     font_color: Optional[str] = Field("#ffffff", max_length=20)
@@ -50,6 +51,7 @@ class PostUpdate(BaseModel):
     @classmethod
     def sanitize_optional(cls, v: Optional[str]) -> Optional[str]:
         return sanitize_text(v) if v is not None else v
+
     font_family: Optional[str] = Field(None, max_length=100)
     font_size: Optional[int] = Field(None, ge=24, le=96)
     font_color: Optional[str] = Field(None, max_length=20)

@@ -21,9 +21,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     # Paths that serve self-contained HTML pages with inline scripts/styles.
     _INLINE_ALLOWED_PATHS = ("/auth/reset-password-page", "/auth/verify-email-page")
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         response = await call_next(request)
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
 
@@ -33,10 +37,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "style-src 'unsafe-inline'; connect-src 'self'"
             )
         else:
-            response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self'"
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; style-src 'self'"
+            )
 
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=()"
+        )
 
         # Prevent caching of auth responses
         if request.url.path.startswith("/auth"):

@@ -8,10 +8,7 @@ algorithm: memory-hard, configurable, and resistant to GPU cracking.
 from passlib.context import CryptContext
 
 # Use argon2 for password hashing (more secure and modern than bcrypt)
-pwd_context = CryptContext(
-    schemes=["argon2"],
-    deprecated="auto"
-)
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def hash_password(raw_password: str) -> str:

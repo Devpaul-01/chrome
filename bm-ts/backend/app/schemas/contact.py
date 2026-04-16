@@ -27,7 +27,9 @@ class ContactCreate(BaseModel):
     notes: Optional[str] = None
     group_id: Optional[UUID] = None
 
-    _sanitize = field_validator("name", "facebook_profile_url", mode="after")(sanitize_text)
+    _sanitize = field_validator("name", "facebook_profile_url", mode="after")(
+        sanitize_text
+    )
 
     @field_validator("notes", mode="after")
     @classmethod

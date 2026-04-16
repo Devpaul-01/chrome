@@ -17,7 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import User, PasswordResetToken
 from app.core.security import hash_password
-from app.services.password_reset import create_reset_token, verify_reset_token, mark_token_used
+from app.services.password_reset import (
+    create_reset_token,
+    verify_reset_token,
+    mark_token_used,
+)
 
 
 @pytest_asyncio.fixture
@@ -42,7 +46,9 @@ async def reset_user(db_session: AsyncSession) -> User:
 
 
 @pytest.mark.asyncio
-async def test_create_reset_token_returns_raw(db_session: AsyncSession, reset_user: User) -> None:
+async def test_create_reset_token_returns_raw(
+    db_session: AsyncSession, reset_user: User
+) -> None:
     """create_reset_token returns a raw token string (not the hash)."""
     raw_token = await create_reset_token(reset_user, db_session)
     assert isinstance(raw_token, str)
@@ -50,12 +56,15 @@ async def test_create_reset_token_returns_raw(db_session: AsyncSession, reset_us
 
 
 @pytest.mark.asyncio
-async def test_create_reset_token_stores_hash(db_session: AsyncSession, reset_user: User) -> None:
+async def test_create_reset_token_stores_hash(
+    db_session: AsyncSession, reset_user: User
+) -> None:
     """The stored token is the SHA-256 hash of the raw token."""
     raw_token = await create_reset_token(reset_user, db_session)
     expected_hash = hashlib.sha256(raw_token.encode()).hexdigest()
 
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(PasswordResetToken).where(PasswordResetToken.user_id == reset_user.id)
     )
@@ -104,6 +113,7 @@ async def test_mark_token_used(db_session: AsyncSession, reset_user: User) -> No
     await mark_token_used(raw_token, db_session)
 
     from sqlalchemy import select
+
     result = await db_session.execute(
         select(PasswordResetToken).where(PasswordResetToken.user_id == reset_user.id)
     )
@@ -112,7 +122,9 @@ async def test_mark_token_used(db_session: AsyncSession, reset_user: User) -> No
 
 
 @pytest.mark.asyncio
-async def test_used_token_cannot_be_verified(db_session: AsyncSession, reset_user: User) -> None:
+async def test_used_token_cannot_be_verified(
+    db_session: AsyncSession, reset_user: User
+) -> None:
     """A used token is rejected by verify_reset_token."""
     raw_token = await create_reset_token(reset_user, db_session)
     await mark_token_used(raw_token, db_session)

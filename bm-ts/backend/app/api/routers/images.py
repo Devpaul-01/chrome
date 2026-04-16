@@ -21,7 +21,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/images/upload", response_model=UserImageOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/images/upload", response_model=UserImageOut, status_code=status.HTTP_201_CREATED
+)
 async def upload_image_from_url(
     data: UserImageUploadUrl,
     current_user: User = Depends(get_current_user),
@@ -32,7 +34,7 @@ async def upload_image_from_url(
     filename = data.url.split("/")[-1].split("?")[0]
     if not filename:
         filename = f"image_{hashlib.md5(data.url.encode()).hexdigest()[:8]}.jpg"
-    
+
     # For now, we just store the URL directly
     # In production, you might want to download and re-host the image
     user_image = UserImage(
@@ -47,7 +49,11 @@ async def upload_image_from_url(
     return user_image
 
 
-@router.post("/images/upload-file", response_model=UserImageOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/images/upload-file",
+    response_model=UserImageOut,
+    status_code=status.HTTP_201_CREATED,
+)
 async def upload_image_file(
     data: UserImageUploadFile,
     current_user: User = Depends(get_current_user),
@@ -62,21 +68,25 @@ async def upload_image_file(
             base64_data = data_uri_parts[1]
         else:
             base64_data = data.data
-        
+
         # Decode to verify it's valid base64
         image_bytes = base64.b64decode(base64_data)
-        
+
         # Verify size matches
         if len(image_bytes) != data.size:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Size mismatch: declared {data.size} bytes, actual {len(image_bytes)} bytes"
+                detail=f"Size mismatch: declared {data.size} bytes, actual {len(image_bytes)} bytes",
             )
-        
+
         # TODO: Upload to cloud storage (S3, GCS) instead of storing base64 in DB
         # Currently stores the data URI directly (not recommended for production)
-        url = data.data if data.data.startswith("data:") else f"data:image/jpeg;base64,{base64_data}"
-        
+        url = (
+            data.data
+            if data.data.startswith("data:")
+            else f"data:image/jpeg;base64,{base64_data}"
+        )
+
         user_image = UserImage(
             user_id=current_user.id,
             url=url,
@@ -87,19 +97,18 @@ async def upload_image_file(
         await db.commit()
         await db.refresh(user_image)
         return user_image
-        
+
     except HTTPException:
         raise
     except base64.binascii.Error:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid base64 data"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid base64 data"
         )
     except Exception as e:
         logger.error("Failed to process image upload: %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to process image. Please ensure the file is a valid image and try again."
+            detail="Failed to process image. Please ensure the file is a valid image and try again.",
         )
 
 
@@ -109,10 +118,12 @@ async def list_images(
     db: AsyncSession = Depends(get_db),
 ) -> List[UserImageOut]:
     """List all images for the current user."""
-    stmt = select(UserImage).where(
-        UserImage.user_id == current_user.id
-    ).order_by(UserImage.created_at.desc())
-    
+    stmt = (
+        select(UserImage)
+        .where(UserImage.user_id == current_user.id)
+        .order_by(UserImage.created_at.desc())
+    )
+
     result = await db.execute(stmt)
     return result.scalars().all()
 
@@ -130,17 +141,18 @@ async def get_image(
     )
     result = await db.execute(stmt)
     image = result.scalar_one_or_none()
-    
+
     if not image:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Image not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Image not found"
         )
-    
+
     return image
 
 
-@router.delete("/images/{image_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete(
+    "/images/{image_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK
+)
 async def delete_image(
     image_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -153,13 +165,12 @@ async def delete_image(
     )
     result = await db.execute(stmt)
     image = result.scalar_one_or_none()
-    
+
     if not image:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Image not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Image not found"
         )
-    
+
     # In production, you would also delete from cloud storage here
     await db.delete(image)
     await db.commit()

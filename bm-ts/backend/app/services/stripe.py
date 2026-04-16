@@ -180,7 +180,10 @@ def construct_event(payload: bytes, signature: str) -> stripe.Event:
 
 
 async def sync_subscription_record(
-    db: AsyncSession, user_id: UUID, data: Mapping[str, Any], metadata: Mapping[str, Any]
+    db: AsyncSession,
+    user_id: UUID,
+    data: Mapping[str, Any],
+    metadata: Mapping[str, Any],
 ) -> SubscriptionRecord:
     """
     Upsert a ``SubscriptionRecord`` from a Stripe subscription object.
@@ -221,7 +224,9 @@ async def sync_subscription_record(
         "cancel_at_period_end": data.get("cancel_at_period_end", False),
         "canceled_at": _timestamp(data.get("canceled_at")),
         "trial_end": _timestamp(data.get("trial_end")),
-        "started_at": _timestamp(data.get("start_date")) if data.get("start_date") else None,
+        "started_at": _timestamp(data.get("start_date"))
+        if data.get("start_date")
+        else None,
         "ended_at": _timestamp(data.get("ended_at")),
         "metadata_payload": metadata,
     }

@@ -35,7 +35,9 @@ from app.services.templates import compose_message
 router = APIRouter()
 
 
-@router.post("/", response_model=TemplateSegmentOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=TemplateSegmentOut, status_code=status.HTTP_201_CREATED
+)
 async def create_template(
     data: TemplateSegmentCreate,
     current_user: User = Depends(get_current_user),
@@ -86,7 +88,9 @@ async def update_template(
     result = await db.execute(stmt)
     segment = result.scalar_one_or_none()
     if not segment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
     if data.content is not None:
         segment.content = data.content
     if data.label is not None:
@@ -97,7 +101,9 @@ async def update_template(
     return segment
 
 
-@router.delete("/{segment_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete(
+    "/{segment_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK
+)
 async def delete_template(
     segment_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -112,7 +118,9 @@ async def delete_template(
     result = await db.execute(stmt)
     segment = result.scalar_one_or_none()
     if not segment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
     segment.deleted_at = datetime.now(timezone.utc)
     await db.commit()
     return DeleteResponse()
@@ -135,9 +143,15 @@ async def preview_message(
     result = await db.execute(stmt)
     segments = result.scalars().all()
 
-    greetings = [s.content for s in segments if s.segment_type == SegmentTypeEnum.GREETING.value]
-    bodies = [s.content for s in segments if s.segment_type == SegmentTypeEnum.BODY.value]
-    closings = [s.content for s in segments if s.segment_type == SegmentTypeEnum.CLOSING.value]
+    greetings = [
+        s.content for s in segments if s.segment_type == SegmentTypeEnum.GREETING.value
+    ]
+    bodies = [
+        s.content for s in segments if s.segment_type == SegmentTypeEnum.BODY.value
+    ]
+    closings = [
+        s.content for s in segments if s.segment_type == SegmentTypeEnum.CLOSING.value
+    ]
 
     try:
         message = compose_message(greetings, bodies, closings)

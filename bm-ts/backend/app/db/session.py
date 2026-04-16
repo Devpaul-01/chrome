@@ -29,14 +29,14 @@ engine = create_async_engine(
     pool_size=10,  # Temporary value. PostgreSQL wiki recommends "((core_count * 2) + effective_spindle_count)" as a formula for the number of active connections.
     pool_recycle=3600,  # Temporary value, change once we know our hardware requirements. Add more permanent comment later.
     pool_timeout=30,  # Temporary value, change once we know our hardware requirements. Add more permanent comment later.
-    pool_pre_ping=True  # Recycle stale connections transparently.
+    pool_pre_ping=True,  # Recycle stale connections transparently.
 )
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False,  # Keep ORM objects usable after commit without re-fetching.
-    autoflush=False
+    autoflush=False,
 )
 
 

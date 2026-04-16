@@ -37,19 +37,40 @@ from app.db.session import get_db
 setup_logging()
 
 openapi_tags = [
-    {"name": "auth", "description": "Authentication, registration, password management, and session control"},
-    {"name": "templates", "description": "CRUD for template segments (greeting / body / closing)"},
-    {"name": "schedules", "description": "Birthday schedule management (days-before triggers)"},
+    {
+        "name": "auth",
+        "description": "Authentication, registration, password management, and session control",
+    },
+    {
+        "name": "templates",
+        "description": "CRUD for template segments (greeting / body / closing)",
+    },
+    {
+        "name": "schedules",
+        "description": "Birthday schedule management (days-before triggers)",
+    },
     {"name": "messages", "description": "Message queue and delivery history"},
     {"name": "dashboard", "description": "Dashboard statistics and analytics"},
-    {"name": "contacts", "description": "Contact (friend) management — auto-populated via scraping"},
+    {
+        "name": "contacts",
+        "description": "Contact (friend) management — auto-populated via scraping",
+    },
     {"name": "message-groups", "description": "Named groups of message templates"},
-    {"name": "message-templates", "description": "Individual message templates within groups"},
+    {
+        "name": "message-templates",
+        "description": "Individual message templates within groups",
+    },
     {"name": "posts", "description": "Timeline post templates with image overlays"},
     {"name": "images", "description": "User image library (upload and manage)"},
-    {"name": "birthday-configs", "description": "Birthday mode configurations (advance / normal / followup)"},
+    {
+        "name": "birthday-configs",
+        "description": "Birthday mode configurations (advance / normal / followup)",
+    },
     {"name": "smtp", "description": "User SMTP configuration for email delivery"},
-    {"name": "subscription", "description": "Stripe subscription management and billing"},
+    {
+        "name": "subscription",
+        "description": "Stripe subscription management and billing",
+    },
     {"name": "stripe", "description": "Stripe webhook handling"},
 ]
 
@@ -92,6 +113,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         headers=headers,
     )
 
+
 # Auth and core endpoints
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(smtp.router)  # /smtp prefix defined in router
@@ -132,6 +154,7 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
         db_status = "unavailable"
     return {"status": "ok", "database": db_status}
 
+
 @app.post("/send-birthday-message", status_code=501)
 @limiter.limit("1/45seconds")
 async def send_message(request: Request, _user: User = Depends(get_current_user)):
@@ -142,5 +165,7 @@ async def send_message(request: Request, _user: User = Depends(get_current_user)
     """
     return JSONResponse(
         status_code=501,
-        content={"detail": "Not implemented. Birthday messages are sent by the content script."},
+        content={
+            "detail": "Not implemented. Birthday messages are sent by the content script."
+        },
     )

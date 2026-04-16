@@ -54,6 +54,7 @@ async def get_smtp_config(
         updated_at=config.updated_at,
     )
 
+
 @router.put("/config", response_model=SMTPConfigOut)
 async def update_smtp_config(
     data: SMTPConfigUpdate,
@@ -89,7 +90,7 @@ async def update_smtp_config(
             from_name=data.from_name,
         )
         db.add(config)
-    
+
     await db.commit()
     await db.refresh(config)
 
