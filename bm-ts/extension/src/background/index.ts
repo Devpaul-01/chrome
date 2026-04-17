@@ -548,9 +548,7 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
     }
     case 'images.uploadFile': {
       const payload = message.payload as import('../api/client').UploadImageFilePayload;
-      return runAuthAware((accessToken, url) =>
-        uploadImageFile(url, accessToken, payload),
-      );
+      return runAuthAware((accessToken, url) => uploadImageFile(url, accessToken, payload));
     }
     case 'subscription.status': {
       return runAuthAware((accessToken, url) => subscriptionStatus(url, accessToken));

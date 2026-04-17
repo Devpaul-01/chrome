@@ -662,7 +662,7 @@ html {
     background-color var(--duration-normal) var(--ease-out);
 }
 .input-styled:hover {
-  background-color: rgba(229, 103, 23, 0.10) !important;
+  background-color: rgba(229, 103, 23, 0.1) !important;
   border-color: var(--color-orange-strong) !important;
   box-shadow: 0 2px 6px rgba(229, 103, 23, 0.12);
 }
@@ -683,7 +683,8 @@ html {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   font-size: 0.9375rem;
   margin-bottom: 0.875rem;
-  transition: box-shadow var(--duration-normal) var(--ease-out), border-color var(--duration-normal) var(--ease-out);
+  transition: box-shadow var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
 }
 
 .input-field:focus {
@@ -721,14 +722,16 @@ html {
   max-width: 100%;
   margin-top: 0.875rem;
   margin-bottom: 0.875rem;
-  transition: box-shadow var(--duration-normal) var(--ease-out), border-color var(--duration-normal) var(--ease-out);
+  transition: box-shadow var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
 }
 
 .card textarea {
   border: 1px solid var(--color-orange-brand);
   border-radius: var(--radius-md);
   background-color: rgba(229, 103, 23, 0.06);
-  transition: box-shadow var(--duration-normal) var(--ease-out), border-color var(--duration-normal) var(--ease-out);
+  transition: box-shadow var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
   margin-top: 0.875rem;
   margin-bottom: 0.875rem;
 }
@@ -1317,10 +1320,24 @@ kbd {
 
 /* ── Global text-blue: remap Tailwind gray utility classes to blue ── */
 /* Gray text shades → equivalent blue shades matching --color-blue-strong */
-.text-gray-900 { color: #1a6080 !important; }
-.text-gray-800 { color: #1e6e8f !important; }
-.text-gray-700 { color: #2a7fa0 !important; }
-.text-gray-600 { color: #3a91b3 !important; }
-.text-gray-500 { color: #4fa5c6 !important; }
-.text-gray-400 { color: #6cbbd8 !important; }
-.text-gray-300 { color: #8dd0e8 !important; }
+.text-gray-900 {
+  color: #1a6080 !important;
+}
+.text-gray-800 {
+  color: #1e6e8f !important;
+}
+.text-gray-700 {
+  color: #2a7fa0 !important;
+}
+.text-gray-600 {
+  color: #3a91b3 !important;
+}
+.text-gray-500 {
+  color: #4fa5c6 !important;
+}
+.text-gray-400 {
+  color: #6cbbd8 !important;
+}
+.text-gray-300 {
+  color: #8dd0e8 !important;
+}
