@@ -552,8 +552,8 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
           filename: message.payload.filename,
           data: message.payload.data,
           size: message.payload.size,
-          source: message.payload.source,
-        }),
+          ...(message.payload.source ? { source: message.payload.source } : {}),
+        } as import('../api/client').UploadImageFilePayload),
       );
     }
     case 'subscription.status': {

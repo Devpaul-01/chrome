@@ -130,7 +130,7 @@ export function usePostComposer() {
                 composedDataUrl.includes(',') ? composedDataUrl.split(',')[1] : composedDataUrl,
               ).length,
               source: 'post',
-            },
+            } as import('../../api/client').UploadImageFilePayload,
           });
           imageUrlToUse = uploaded.url;
         }
