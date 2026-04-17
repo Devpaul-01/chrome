@@ -122,7 +122,7 @@ async def list_images(
     """List all images for the current user."""
     stmt = (
         select(UserImage)
-        .where(UserImage.user_id == current_user.id, UserImage.source == 'library')
+        .where(UserImage.user_id == current_user.id, UserImage.source == "library")
         .order_by(UserImage.created_at.desc())
     )
 

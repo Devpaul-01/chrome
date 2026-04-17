@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class UserImageUploadUrl(BaseModel):
     url: str = Field(..., min_length=1)
-    source: Literal['library', 'post'] = 'library'
+    source: Literal["library", "post"] = "library"
 
 
 class UserImageUploadFile(BaseModel):
@@ -26,7 +26,7 @@ class UserImageUploadFile(BaseModel):
     size: int = Field(
         ..., gt=0, le=10 * 1024 * 1024, description="File size in bytes, max 10MB"
     )
-    source: Literal['library', 'post'] = 'library'
+    source: Literal["library", "post"] = "library"
 
 
 class UserImageOut(BaseModel):

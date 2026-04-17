@@ -171,7 +171,7 @@ async def update_contact(
         contact.gender = data.gender.value
     if data.notes is not None:
         contact.notes = data.notes
-    if 'group_id' in data.model_fields_set:
+    if "group_id" in data.model_fields_set:
         contact.group_id = data.group_id
 
     await db.commit()
