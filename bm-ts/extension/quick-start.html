@@ -1,295 +1,503 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quick Start Guide — BirthdayMessaging</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
-      font-size: 16px;
-      line-height: 1.7;
-      color: #1a1a2e;
-      background: #f9f9f9;
-      padding: 2rem 1rem;
-    }
-    .container {
-      max-width: 820px;
-      margin: 0 auto;
-      background: #fff;
-      border-radius: 12px;
-      padding: 3rem 3.5rem;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
-    }
-    header { margin-bottom: 2.5rem; border-bottom: 2px solid #f0ece8; padding-bottom: 1.5rem; }
-    .logo { font-size: 1.6rem; font-weight: 800; color: #ca4f02; letter-spacing: -0.5px; }
-    .logo span { color: #1a1a2e; }
-    h1 { font-size: 2rem; font-weight: 700; color: #1a1a2e; margin-top: 0.5rem; }
-    .meta { color: #666; font-size: 0.9rem; margin-top: 0.4rem; }
-    h2 {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: #ca4f02;
-      margin-top: 2.5rem;
-      margin-bottom: 0.75rem;
-      padding-bottom: 0.4rem;
-      border-bottom: 1px solid #f0ece8;
-    }
-    h3 { font-size: 1rem; font-weight: 600; color: #1a1a2e; margin-top: 1.25rem; margin-bottom: 0.4rem; }
-    p { margin-bottom: 0.9rem; color: #333; }
-    ul, ol { margin: 0.5rem 0 0.9rem 1.5rem; }
-    li { margin-bottom: 0.35rem; color: #333; }
-    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
-    th { background: #fdf4ef; color: #ca4f02; font-weight: 700; text-align: left; padding: 0.65rem 1rem; border: 1px solid #f0ece8; }
-    td { padding: 0.6rem 1rem; border: 1px solid #f0ece8; vertical-align: top; }
-    tr:nth-child(even) td { background: #fafafa; }
-    .highlight-box {
-      background: #fdf4ef;
-      border-left: 4px solid #ca4f02;
-      border-radius: 0 8px 8px 0;
-      padding: 1rem 1.25rem;
-      margin: 1rem 0;
-      font-size: 0.95rem;
-    }
-    .step-number {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 2rem;
-      height: 2rem;
-      background: #ca4f02;
-      color: #fff;
-      font-weight: 700;
-      border-radius: 50%;
-      font-size: 0.95rem;
-      margin-right: 0.6rem;
-      flex-shrink: 0;
-    }
-    .step-header {
-      display: flex;
-      align-items: center;
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: #ca4f02;
-      margin-top: 2.5rem;
-      margin-bottom: 0.75rem;
-      padding-bottom: 0.4rem;
-      border-bottom: 1px solid #f0ece8;
-    }
-    code { font-family: monospace; background: #f5f0ec; padding: 0.1em 0.4em; border-radius: 3px; font-size: 0.9em; }
-    a { color: #ca4f02; }
-    a:focus-visible, button:focus-visible { outline: 2px solid #ca4f02; outline-offset: 2px; }
-    .skip-link { position: absolute; left: -9999px; top: auto; } .skip-link:focus { left: 1rem; top: 0.5rem; z-index: 100; background: #fff; padding: 0.5rem 1rem; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-    footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid #f0ece8; font-size: 0.85rem; color: #888; }
-    @media (max-width: 640px) {
-      .container { padding: 2rem 1.25rem; }
-      h1 { font-size: 1.5rem; }
-    }
-  </style>
-</head>
-<body>
-<div class="container">
-  <a href="#main" class="skip-link">Skip to main content</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quick Start Guide — BirthdayMessaging</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+        font-size: 16px;
+        line-height: 1.7;
+        color: #1a1a2e;
+        background: #f9f9f9;
+        padding: 2rem 1rem;
+      }
+      .container {
+        max-width: 820px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 12px;
+        padding: 3rem 3.5rem;
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+      }
+      header {
+        margin-bottom: 2.5rem;
+        border-bottom: 2px solid #f0ece8;
+        padding-bottom: 1.5rem;
+      }
+      .logo {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #ca4f02;
+        letter-spacing: -0.5px;
+      }
+      .logo span {
+        color: #1a1a2e;
+      }
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-top: 0.5rem;
+      }
+      .meta {
+        color: #666;
+        font-size: 0.9rem;
+        margin-top: 0.4rem;
+      }
+      h2 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #ca4f02;
+        margin-top: 2.5rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid #f0ece8;
+      }
+      h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        margin-top: 1.25rem;
+        margin-bottom: 0.4rem;
+      }
+      p {
+        margin-bottom: 0.9rem;
+        color: #333;
+      }
+      ul,
+      ol {
+        margin: 0.5rem 0 0.9rem 1.5rem;
+      }
+      li {
+        margin-bottom: 0.35rem;
+        color: #333;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        font-size: 0.9rem;
+      }
+      th {
+        background: #fdf4ef;
+        color: #ca4f02;
+        font-weight: 700;
+        text-align: left;
+        padding: 0.65rem 1rem;
+        border: 1px solid #f0ece8;
+      }
+      td {
+        padding: 0.6rem 1rem;
+        border: 1px solid #f0ece8;
+        vertical-align: top;
+      }
+      tr:nth-child(even) td {
+        background: #fafafa;
+      }
+      .highlight-box {
+        background: #fdf4ef;
+        border-left: 4px solid #ca4f02;
+        border-radius: 0 8px 8px 0;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+        font-size: 0.95rem;
+      }
+      .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        background: #ca4f02;
+        color: #fff;
+        font-weight: 700;
+        border-radius: 50%;
+        font-size: 0.95rem;
+        margin-right: 0.6rem;
+        flex-shrink: 0;
+      }
+      .step-header {
+        display: flex;
+        align-items: center;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #ca4f02;
+        margin-top: 2.5rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid #f0ece8;
+      }
+      code {
+        font-family: monospace;
+        background: #f5f0ec;
+        padding: 0.1em 0.4em;
+        border-radius: 3px;
+        font-size: 0.9em;
+      }
+      a {
+        color: #ca4f02;
+      }
+      a:focus-visible,
+      button:focus-visible {
+        outline: 2px solid #ca4f02;
+        outline-offset: 2px;
+      }
+      .skip-link {
+        position: absolute;
+        left: -9999px;
+        top: auto;
+      }
+      .skip-link:focus {
+        left: 1rem;
+        top: 0.5rem;
+        z-index: 100;
+        background: #fff;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+      footer {
+        margin-top: 3rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid #f0ece8;
+        font-size: 0.85rem;
+        color: #888;
+      }
+      @media (max-width: 640px) {
+        .container {
+          padding: 2rem 1.25rem;
+        }
+        h1 {
+          font-size: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <a href="#main" class="skip-link">Skip to main content</a>
 
-  <header>
-    <div class="logo">Birthday<span>Messaging</span></div>
-    <h1>Quick Start Guide</h1>
-    <p class="meta">Get up and running in about 5 minutes</p>
-  </header>
+      <header>
+        <div class="logo">Birthday<span>Messaging</span></div>
+        <h1>Quick Start Guide</h1>
+        <p class="meta">Get up and running in about 5 minutes</p>
+      </header>
 
-  <main id="main">
+      <main id="main">
+        <div class="highlight-box" role="note">
+          <strong>What you'll accomplish:</strong> By the end of this guide, BirthdayMessaging will
+          be installed, your account will be set up, and the extension will be ready to
+          automatically send personalized birthday messages to your Facebook friends.
+        </div>
 
-  <div class="highlight-box" role="note">
-    <strong>What you'll accomplish:</strong> By the end of this guide, BirthdayMessaging will be
-    installed, your account will be set up, and the extension will be ready to automatically send
-    personalized birthday messages to your Facebook friends.
-  </div>
+        <!-- Step 1 -->
+        <div class="step-header"><span class="step-number">1</span> Install the Extension</div>
+        <ol>
+          <li>Open Chrome and go to the <strong>Chrome Web Store</strong>.</li>
+          <li>
+            Search for <strong>BirthdayMessaging</strong> and click <strong>Add to Chrome</strong>.
+          </li>
+          <li>Confirm by clicking <strong>Add extension</strong> in the dialog.</li>
+          <li>
+            The 🎂 birthday cake icon will appear in your Chrome toolbar. If you don't see it, click
+            the puzzle-piece icon and pin BirthdayMessaging.
+          </li>
+        </ol>
 
-  <!-- Step 1 -->
-  <div class="step-header"><span class="step-number">1</span> Install the Extension</div>
-  <ol>
-    <li>Open Chrome and go to the <strong>Chrome Web Store</strong>.</li>
-    <li>Search for <strong>BirthdayMessaging</strong> and click <strong>Add to Chrome</strong>.</li>
-    <li>Confirm by clicking <strong>Add extension</strong> in the dialog.</li>
-    <li>The 🎂 birthday cake icon will appear in your Chrome toolbar. If you don't see it, click the
-        puzzle-piece icon and pin BirthdayMessaging.</li>
-  </ol>
+        <!-- Step 2 -->
+        <div class="step-header"><span class="step-number">2</span> Create Your Account</div>
+        <ol>
+          <li>Click the 🎂 icon in your toolbar to open the extension.</li>
+          <li>Click <strong>Create an account</strong>.</li>
+          <li>Enter your email address and a password (minimum 8 characters).</li>
+          <li>Click <strong>Register</strong>. You'll be logged in automatically.</li>
+        </ol>
+        <div class="highlight-box">
+          <strong>Already have an account?</strong> Click <strong>Sign in</strong> instead and enter
+          your credentials.
+        </div>
 
-  <!-- Step 2 -->
-  <div class="step-header"><span class="step-number">2</span> Create Your Account</div>
-  <ol>
-    <li>Click the 🎂 icon in your toolbar to open the extension.</li>
-    <li>Click <strong>Create an account</strong>.</li>
-    <li>Enter your email address and a password (minimum 8 characters).</li>
-    <li>Click <strong>Register</strong>. You'll be logged in automatically.</li>
-  </ol>
-  <div class="highlight-box">
-    <strong>Already have an account?</strong> Click <strong>Sign in</strong> instead and enter your credentials.
-  </div>
+        <!-- Step 3 -->
+        <div class="step-header"><span class="step-number">3</span> Create a Message Template</div>
+        <p>
+          Templates are the birthday messages sent automatically. You can create multiple —
+          BirthdayMessaging picks one at random each day for variety.
+        </p>
+        <ol>
+          <li>Go to the <strong>Templates</strong> tab → <strong>Message Templates</strong>.</li>
+          <li>Click <strong>Create Template</strong>.</li>
+          <li>Fill in the three fields:</li>
+        </ol>
+        <table aria-label="Template fields reference">
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Example</th>
+              <th>Max length</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Greeting</strong></td>
+              <td>Happy Birthday, [Tag Person]! 🎉</td>
+              <td>300 chars</td>
+            </tr>
+            <tr>
+              <td><strong>Body (Sentiment)</strong></td>
+              <td>Wishing you an amazing day filled with joy!</td>
+              <td>1000 chars</td>
+            </tr>
+            <tr>
+              <td><strong>Closing</strong></td>
+              <td>— Your friend</td>
+              <td>300 chars</td>
+            </tr>
+          </tbody>
+        </table>
+        <ol start="4">
+          <li>
+            (Optional) Set <strong>Days in Advance</strong> to send the message early or as a
+            follow-up after the birthday.
+          </li>
+          <li>
+            (Optional) Attach an image or use <code>[Image]</code> in your text to insert a random
+            image from your Image Library.
+          </li>
+          <li>Click <strong>Save Template</strong>.</li>
+        </ol>
 
-  <!-- Step 3 -->
-  <div class="step-header"><span class="step-number">3</span> Create a Message Template</div>
-  <p>
-    Templates are the birthday messages sent automatically. You can create multiple — BirthdayMessaging
-    picks one at random each day for variety.
-  </p>
-  <ol>
-    <li>Go to the <strong>Templates</strong> tab → <strong>Message Templates</strong>.</li>
-    <li>Click <strong>Create Template</strong>.</li>
-    <li>Fill in the three fields:</li>
-  </ol>
-  <table aria-label="Template fields reference">
-    <thead>
-      <tr><th>Field</th><th>Example</th><th>Max length</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><strong>Greeting</strong></td><td>Happy Birthday, [Tag Person]! 🎉</td><td>300 chars</td></tr>
-      <tr><td><strong>Body (Sentiment)</strong></td><td>Wishing you an amazing day filled with joy!</td><td>1000 chars</td></tr>
-      <tr><td><strong>Closing</strong></td><td>— Your friend</td><td>300 chars</td></tr>
-    </tbody>
-  </table>
-  <ol start="4">
-    <li>(Optional) Set <strong>Days in Advance</strong> to send the message early or as a follow-up after the birthday.</li>
-    <li>(Optional) Attach an image or use <code>[Image]</code> in your text to insert a random image from your Image Library.</li>
-    <li>Click <strong>Save Template</strong>.</li>
-  </ol>
+        <h3>Personalization tags you can use</h3>
+        <table aria-label="Personalization tags reference">
+          <thead>
+            <tr>
+              <th>Tag</th>
+              <th>Replaced with</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>[Tag Person]</code></td>
+              <td>The friend's name (Facebook @mention) — for message templates</td>
+            </tr>
+            <tr>
+              <td><code>{First_Name}</code></td>
+              <td>The friend's first name — for timeline posts</td>
+            </tr>
+            <tr>
+              <td><code>{Last_Name}</code></td>
+              <td>The friend's last name — for timeline posts</td>
+            </tr>
+            <tr>
+              <td><code>[Today]</code> / <code>{Today}</code></td>
+              <td>Today's date (e.g. March 18, 2026)</td>
+            </tr>
+            <tr>
+              <td><code>[Image]</code></td>
+              <td>A random image from your Image Library</td>
+            </tr>
+          </tbody>
+        </table>
 
-  <h3>Personalization tags you can use</h3>
-  <table aria-label="Personalization tags reference">
-    <thead>
-      <tr><th>Tag</th><th>Replaced with</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><code>[Tag Person]</code></td><td>The friend's name (Facebook @mention) — for message templates</td></tr>
-      <tr><td><code>{First_Name}</code></td><td>The friend's first name — for timeline posts</td></tr>
-      <tr><td><code>{Last_Name}</code></td><td>The friend's last name — for timeline posts</td></tr>
-      <tr><td><code>[Today]</code> / <code>{Today}</code></td><td>Today's date (e.g. March 18, 2026)</td></tr>
-      <tr><td><code>[Image]</code></td><td>A random image from your Image Library</td></tr>
-    </tbody>
-  </table>
+        <!-- Step 4 -->
+        <div class="step-header"><span class="step-number">4</span> Set a Schedule</div>
+        <p>
+          Schedules tell the extension <em>when</em> to send messages relative to a friend's
+          birthday.
+        </p>
+        <ol>
+          <li>Go to the <strong>Scheduling</strong> tab.</li>
+          <li>Under <strong>Birthday Message Schedule</strong>, choose a timing mode:</li>
+          <li>
+            Set the timing:
+            <ul>
+              <li><strong>On the birthday</strong> — send on the actual day</li>
+              <li><strong>Days before</strong> — send a message early (e.g. 1 day before)</li>
+              <li>
+                <strong>Days after</strong> — send a follow-up (e.g. "Hope you had a great
+                birthday!")
+              </li>
+            </ul>
+          </li>
+          <li>Click <strong>Add Schedule</strong>.</li>
+        </ol>
 
-  <!-- Step 4 -->
-  <div class="step-header"><span class="step-number">4</span> Set a Schedule</div>
-  <p>Schedules tell the extension <em>when</em> to send messages relative to a friend's birthday.</p>
-  <ol>
-    <li>Go to the <strong>Scheduling</strong> tab.</li>
-    <li>Under <strong>Birthday Message Schedule</strong>, choose a timing mode:</li>
-    <li>Set the timing:
-      <ul>
-        <li><strong>On the birthday</strong> — send on the actual day</li>
-        <li><strong>Days before</strong> — send a message early (e.g. 1 day before)</li>
-        <li><strong>Days after</strong> — send a follow-up (e.g. "Hope you had a great birthday!")</li>
-      </ul>
-    </li>
-    <li>Click <strong>Add Schedule</strong>.</li>
-  </ol>
+        <!-- Step 5 -->
+        <div class="step-header">
+          <span class="step-number">5</span> Configure Automation &amp; Go
+        </div>
+        <ol>
+          <li>
+            In the <strong>Scheduling</strong> tab, scroll to <strong>Automation Settings</strong>.
+          </li>
+          <li>
+            Choose a <strong>Check Interval</strong> (how often to scan for birthdays — default is 1
+            hour).
+          </li>
+          <li>
+            Set your preferred <strong>Send Confirmation</strong> mode:
+            <ul>
+              <li><strong>Each message</strong> — asks every time (safest)</li>
+              <li><strong>Per session</strong> — asks once per run</li>
+              <li><strong>Auto</strong> — sends without asking (higher ban risk)</li>
+            </ul>
+          </li>
+          <li>
+            Go to the <strong>Home</strong> tab and turn the
+            <strong>Automation Engine</strong> toggle to <strong>ON</strong>.
+          </li>
+          <li>Make sure you are logged in to Facebook in your browser and Chrome stays open.</li>
+        </ol>
+        <div class="highlight-box">
+          <strong>Manual trigger:</strong> Click <strong>Run Check Now</strong> in Automation
+          Settings to immediately scan for today's birthdays without waiting for the next scheduled
+          run.
+        </div>
 
-  <!-- Step 5 -->
-  <div class="step-header"><span class="step-number">5</span> Configure Automation &amp; Go</div>
-  <ol>
-    <li>In the <strong>Scheduling</strong> tab, scroll to <strong>Automation Settings</strong>.</li>
-    <li>Choose a <strong>Check Interval</strong> (how often to scan for birthdays — default is 1 hour).</li>
-    <li>Set your preferred <strong>Send Confirmation</strong> mode:
-      <ul>
-        <li><strong>Each message</strong> — asks every time (safest)</li>
-        <li><strong>Per session</strong> — asks once per run</li>
-        <li><strong>Auto</strong> — sends without asking (higher ban risk)</li>
-      </ul>
-    </li>
-    <li>Go to the <strong>Home</strong> tab and turn the <strong>Automation Engine</strong> toggle to <strong>ON</strong>.</li>
-    <li>Make sure you are logged in to Facebook in your browser and Chrome stays open.</li>
-  </ol>
-  <div class="highlight-box">
-    <strong>Manual trigger:</strong> Click <strong>Run Check Now</strong> in Automation Settings to immediately scan for
-    today's birthdays without waiting for the next scheduled run.
-  </div>
+        <!-- Done -->
+        <h2>You're Done! 🎉</h2>
+        <p>BirthdayMessaging will now automatically:</p>
+        <ul>
+          <li>Detect friends with birthdays on Facebook</li>
+          <li>Compose a personalized message using your templates</li>
+          <li>Send messages via Facebook Messenger</li>
+          <li>Log all activity in <strong>Message History</strong></li>
+        </ul>
 
-  <!-- Done -->
-  <h2>You're Done! 🎉</h2>
-  <p>BirthdayMessaging will now automatically:</p>
-  <ul>
-    <li>Detect friends with birthdays on Facebook</li>
-    <li>Compose a personalized message using your templates</li>
-    <li>Send messages via Facebook Messenger</li>
-    <li>Log all activity in <strong>Message History</strong></li>
-  </ul>
+        <!-- The Facebook Overlay -->
+        <h2>The Facebook Overlay</h2>
+        <p>
+          When you visit <code>facebook.com/friends/birthdays</code> (or any Facebook page),
+          BirthdayMessaging adds a <strong>floating sidebar overlay</strong> directly on the page.
+          This gives you manual control alongside the automated system.
+        </p>
+        <h3>What's in the overlay</h3>
+        <table aria-label="Overlay sections reference">
+          <thead>
+            <tr>
+              <th>Section</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Status dot</strong></td>
+              <td>
+                Green = automation active. Yellow = rate-limited or outside preferred hours. Red =
+                emergency stop. Grey = disabled.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Friend list</strong></td>
+              <td>Checkboxes for each friend whose birthday is today. Select who to message.</td>
+            </tr>
+            <tr>
+              <td><strong>Feature toggles</strong></td>
+              <td>
+                <strong>DM</strong> = send a direct message, <strong>Post</strong> = post on their
+                timeline, <strong>Archive</strong> = archive the chat after sending.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Template preview</strong></td>
+              <td>
+                Shows the message that will be sent. Click 🔀 to shuffle to a different template.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Send to all</strong></td>
+              <td>Sends messages to all checked friends with a random delay between each.</td>
+            </tr>
+            <tr>
+              <td><strong>Stats pills</strong></td>
+              <td>
+                Messages sent vs. your safety caps. Sending pauses automatically when a cap is
+                reached.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <h3>Overlay controls</h3>
+        <ul>
+          <li>
+            <strong>Refresh</strong> — re-scan the page for birthday friends and reload templates.
+          </li>
+          <li><strong>▶ (per-friend)</strong> — send a message to just that one person.</li>
+          <li>
+            <strong>Stop</strong> — appears while sending; halts after the current message finishes.
+          </li>
+          <li><strong>? (help)</strong> — toggles built-in tips inside the overlay.</li>
+          <li><strong>− / +</strong> — minimise or expand the panel.</li>
+        </ul>
+        <div class="highlight-box">
+          <strong>Tip:</strong> Drag the overlay's title bar to reposition it anywhere on the page.
+          Press <strong>Escape</strong> to hide it entirely.
+        </div>
 
-  <!-- The Facebook Overlay -->
-  <h2>The Facebook Overlay</h2>
-  <p>
-    When you visit <code>facebook.com/birthdays</code> (or any Facebook page), BirthdayMessaging
-    adds a <strong>floating sidebar overlay</strong> directly on the page. This gives you manual
-    control alongside the automated system.
-  </p>
-  <h3>What's in the overlay</h3>
-  <table aria-label="Overlay sections reference">
-    <thead>
-      <tr><th>Section</th><th>Description</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><strong>Status dot</strong></td><td>Green = automation active. Yellow = rate-limited or outside preferred hours. Red = emergency stop. Grey = disabled.</td></tr>
-      <tr><td><strong>Friend list</strong></td><td>Checkboxes for each friend whose birthday is today. Select who to message.</td></tr>
-      <tr><td><strong>Feature toggles</strong></td><td><strong>DM</strong> = send a direct message, <strong>Post</strong> = post on their timeline, <strong>Archive</strong> = archive the chat after sending.</td></tr>
-      <tr><td><strong>Template preview</strong></td><td>Shows the message that will be sent. Click 🔀 to shuffle to a different template.</td></tr>
-      <tr><td><strong>Send to all</strong></td><td>Sends messages to all checked friends with a random delay between each.</td></tr>
-      <tr><td><strong>Stats pills</strong></td><td>Messages sent vs. your safety caps. Sending pauses automatically when a cap is reached.</td></tr>
-    </tbody>
-  </table>
-  <h3>Overlay controls</h3>
-  <ul>
-    <li><strong>Refresh</strong> — re-scan the page for birthday friends and reload templates.</li>
-    <li><strong>▶ (per-friend)</strong> — send a message to just that one person.</li>
-    <li><strong>Stop</strong> — appears while sending; halts after the current message finishes.</li>
-    <li><strong>? (help)</strong> — toggles built-in tips inside the overlay.</li>
-    <li><strong>− / +</strong> — minimise or expand the panel.</li>
-  </ul>
-  <div class="highlight-box">
-    <strong>Tip:</strong> Drag the overlay's title bar to reposition it anywhere on the page.
-    Press <strong>Escape</strong> to hide it entirely.
-  </div>
+        <h2>What's Next?</h2>
+        <ul>
+          <li>
+            <strong>Add a timeline post</strong> (Templates → Timeline Posts) to also post on
+            friends' walls.
+          </li>
+          <li>
+            <strong>Upload images</strong> (Templates → Image Library) to use with the
+            <code>[Image]</code> keyword.
+          </li>
+          <li>
+            <strong>Review sent messages</strong> in the Message Queue and Message History views.
+          </li>
+          <li>
+            <strong>Check the Dashboard</strong> (Home → Analytics) for delivery stats and trends.
+          </li>
+          <li>
+            <strong>Upgrade your subscription</strong> in Account → Subscription to unlock more
+            messages per day.
+          </li>
+        </ul>
 
-  <h2>What's Next?</h2>
-  <ul>
-    <li><strong>Add a timeline post</strong> (Templates → Timeline Posts) to also post on friends' walls.</li>
-    <li><strong>Upload images</strong> (Templates → Image Library) to use with the <code>[Image]</code> keyword.</li>
-    <li><strong>Review sent messages</strong> in the Message Queue and Message History views.</li>
-    <li><strong>Check the Dashboard</strong> (Home → Analytics) for delivery stats and trends.</li>
-    <li><strong>Upgrade your subscription</strong> in Account → Subscription to unlock more messages per day.</li>
-  </ul>
+        <h2>Month-Only Birthdays</h2>
+        <p>
+          Facebook only shows the exact birthday date for friends whose birthday is coming up soon.
+          For other friends, BirthdayMessaging can only detect the <strong>birth month</strong> —
+          not the exact day. These contacts are marked with a <strong>"Month only"</strong> label in
+          your Contacts list.
+        </p>
+        <div class="highlight-box">
+          <strong>Important:</strong> Automated messaging is <strong>paused</strong> for month-only
+          contacts to prevent messages being sent on the wrong day. To resolve this:
+          <ul style="margin-top: 0.5rem">
+            <li>
+              Wait until the friend's birthday is approaching and
+              <strong>re-import</strong> contacts from Facebook — BirthdayMessaging will
+              automatically update the contact with the exact date.
+            </li>
+            <li>
+              Or manually edit the contact in the <strong>Contacts</strong> tab and enter the
+              correct birthday.
+            </li>
+          </ul>
+        </div>
+      </main>
 
-  <h2>Month-Only Birthdays</h2>
-  <p>
-    Facebook only shows the exact birthday date for friends whose birthday is coming up soon.
-    For other friends, BirthdayMessaging can only detect the <strong>birth month</strong> — not
-    the exact day. These contacts are marked with a <strong>"Month only"</strong> label in your
-    Contacts list.
-  </p>
-  <div class="highlight-box">
-    <strong>Important:</strong> Automated messaging is <strong>paused</strong> for month-only
-    contacts to prevent messages being sent on the wrong day. To resolve this:
-    <ul style="margin-top: 0.5rem;">
-      <li>Wait until the friend's birthday is approaching and <strong>re-import</strong> contacts
-          from Facebook — BirthdayMessaging will automatically update the contact with the exact
-          date.</li>
-      <li>Or manually edit the contact in the <strong>Contacts</strong> tab and enter the correct
-          birthday.</li>
-    </ul>
-  </div>
-
-  </main>
-
-  <footer>
-    <nav aria-label="Footer navigation">
-    &copy; 2026 CTM Media Group &nbsp;·&nbsp;
-    <a href="faq.html">FAQ</a> &nbsp;·&nbsp;
-    <a href="troubleshooting.html">Troubleshooting</a> &nbsp;·&nbsp;
-    <a href="privacy-policy.html">Privacy Policy</a> &nbsp;·&nbsp;
-    <a href="terms-of-service.html">Terms of Service</a>
-    </nav>
-    <p>BirthdayMessaging is not affiliated with Meta Platforms, Inc.</p>
-  </footer>
-
-</div>
-</body>
+      <footer>
+        <nav aria-label="Footer navigation">
+          &copy; 2026 CTM Media Group &nbsp;·&nbsp;
+          <a href="faq.html">FAQ</a> &nbsp;·&nbsp;
+          <a href="troubleshooting.html">Troubleshooting</a> &nbsp;·&nbsp;
+          <a href="privacy-policy.html">Privacy Policy</a> &nbsp;·&nbsp;
+          <a href="terms-of-service.html">Terms of Service</a>
+        </nav>
+        <p>BirthdayMessaging is not affiliated with Meta Platforms, Inc.</p>
+      </footer>
+    </div>
+  </body>
 </html>

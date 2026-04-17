@@ -4,16 +4,16 @@ This Manifest V3 extension provides the Chrome UI and Facebook automation layer 
 
 ## Architecture at a Glance
 
-| Layer | Files | Lines |
-|-------|-------|-------|
-| React popup (34 components) | `src/popup/` | ~4,000 |
-| Background service worker | `src/background/index.ts` | 780 |
-| API client | `src/api/client.ts` | 825 (52 functions) |
-| Content scripts | `src/content/` (5 files) | 1,839 |
-| Hooks | `src/popup/hooks/` (7 files) | 1,013 |
-| Utilities | `src/utils/` (9 files) | 1,086 |
-| WebSocket client | `src/api/websocket.ts` | 225 |
-| Tests | `src/popup/__tests__/` (11 files) | 214 tests |
+| Layer                       | Files                             | Lines              |
+| --------------------------- | --------------------------------- | ------------------ |
+| React popup (34 components) | `src/popup/`                      | ~4,000             |
+| Background service worker   | `src/background/index.ts`         | 780                |
+| API client                  | `src/api/client.ts`               | 825 (52 functions) |
+| Content scripts             | `src/content/` (5 files)          | 1,839              |
+| Hooks                       | `src/popup/hooks/` (7 files)      | 1,013              |
+| Utilities                   | `src/utils/` (9 files)            | 1,086              |
+| WebSocket client            | `src/api/websocket.ts`            | 225                |
+| Tests                       | `src/popup/__tests__/` (11 files) | 214 tests          |
 
 **Total:** ~75 TypeScript/TSX files, ~15,000 lines.
 

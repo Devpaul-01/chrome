@@ -27,16 +27,16 @@ import MessageHistory from './components/MessageHistory';
 import Dashboard from './components/Dashboard';
 import PostEditor from './components/PostEditor';
 import PostList from './components/PostList';
-// import MessageGroups from './components/MessageGroups'; // Commented out — feature not currently needed
 import ImageManager from './components/ImageManager';
 // import SMTPSettings from './components/SMTPSettings'; // Uncomment when SMTP/multi-platform support is added
-// Contacts UI — commented out; contacts are populated via scraping. Uncomment to re-enable manual UI.
-// import ContactList from './components/ContactList';
+// Contacts UI — read-only list re-enabled; add/import/edit remain disabled.
+import ContactList from './components/ContactList';
 // import ContactForm from './components/ContactForm';
 // import ImportContactsModal from './components/ImportContactsModal';
 // import BirthdayCalendar from './components/BirthdayCalendar';
 import UpcomingBirthdays from './components/UpcomingBirthdays';
 import MessagesHub from './components/MessagesHub';
+import MessageGroups from './components/MessageGroups';
 import HomeControls from './components/HomeControls';
 import AccountManagement from './components/AccountManagement';
 import TemplateGallery from './components/TemplateGallery';
@@ -58,6 +58,30 @@ import { AppProvider, useAppContext, type AuthMode, type TabType } from './conte
 import { useMessageTemplates } from './hooks/useMessageTemplates';
 import { usePostComposer } from './hooks/usePostComposer';
 // import { useContacts } from './hooks/useContacts'; // Uncomment to re-enable contacts UI
+
+// ---- Read-only contacts page wrapper ------------------------------------
+function ContactsPage({ onClose }: { onClose: () => void }) {
+  const [contacts, setContacts] = useState<import('../api/client').Contact[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    sendBackgroundMessage<import('../api/client').Contact[]>({ type: 'contacts.list' })
+      .then((data) => setContacts(data || []))
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Spinner size="md" message="Loading contacts..." />
+      </div>
+    );
+  }
+
+  return <ContactList contacts={contacts} onClose={onClose} />;
+}
 
 // ---- Root component: just the provider + error boundary -----------------
 export default function App() {
@@ -390,14 +414,12 @@ function AppShell() {
                         templateTitle: editingTemplate.templateTitle,
                         daysInAdvance: editingTemplate.daysInAdvance,
                         gender: editingTemplate.gender,
+                        groupId: editingTemplate.groupId,
                       }
                     : undefined
                 }
               />
             </div>
-            {/* <div className="mb-6">
-              <MessageGroups onClose={() => setViewMode('main')} showClose={false} />
-            </div> */}
             <button className="btn w-full" onClick={() => setViewMode('template-gallery')}>
               View/Edit Message Templates
             </button>
@@ -461,10 +483,6 @@ function AppShell() {
         </div>
       );
     }
-    if (viewMode === 'groups') {
-      return null; // MessageGroups commented out — feature not currently needed
-      // return <MessageGroups onClose={() => setViewMode('main')} />;
-    }
     if (viewMode === 'images') {
       return (
         <div>
@@ -479,6 +497,26 @@ function AppShell() {
             ← Back to Templates
           </button>
         </div>
+      );
+    }
+    if (viewMode === 'message-groups') {
+      return (
+        <MessageGroups
+          onClose={() => {
+            setActiveTab('messages');
+            setViewMode('main');
+          }}
+        />
+      );
+    }
+    if (viewMode === 'contacts') {
+      return (
+        <ContactsPage
+          onClose={() => {
+            setActiveTab('home');
+            setViewMode('main');
+          }}
+        />
       );
     }
     // SMTP settings view — commented out until multi-platform support is added
@@ -552,6 +590,7 @@ function AppShell() {
               userName={user?.firstName || user?.email?.split('@')[0] || 'User'}
               onViewAnalytics={() => setViewMode('analytics')}
               onViewUpcomingBirthdays={() => setViewMode('upcoming-birthdays')}
+              onViewContacts={() => setViewMode('contacts')}
               // onViewCalendar={() => setViewMode('birthday-calendar')} // Uncomment to re-enable
             />
           </>

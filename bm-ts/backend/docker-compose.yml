@@ -21,15 +21,17 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "80:80"
+      - "8000:8000" # Local dev only; Coolify manages port mapping in production
     volumes:
       - .:/app
     env_file:
       - .env
+    # Dev override: single-worker uvicorn with hot-reload (bind-mount above)
+    # Production uses Dockerfile CMD (gunicorn, 4 workers, no reload)
     command: >
       bash -c "
         alembic upgrade head &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
       "
 
   # Automated daily backup at 2:00 AM UTC

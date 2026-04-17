@@ -64,7 +64,7 @@ const STEPS: WizardStep[] = [
     icon: '🖥️',
     title: 'The Facebook Overlay',
     content: [
-      'When you visit facebook.com/birthdays, a floating sidebar appears on the page.',
+      'When you visit facebook.com/friends/birthdays, a floating sidebar appears on the page.',
       "It lists today's birthday friends with checkboxes — select who to message.",
       'Use "Send to all" to send messages in one go, or click ▶ on a single friend.',
       'Toggle features: DM (direct message), Post (timeline post), and Archive (archive chat after sending).',

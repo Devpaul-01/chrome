@@ -5,11 +5,22 @@ import HelpTooltip from './HelpTooltip';
 export interface MessageGroup {
   id: string;
   name: string;
-  gender: 'MALE' | 'FEMALE' | 'NEUTRAL';
-  segment_ids: string[];
+  color: string;
   created_at: string;
   updated_at: string;
 }
+
+/** Preset colour palette for group tags. */
+const GROUP_COLORS = [
+  { value: '#6b7280', label: 'Grey' },
+  { value: '#ef4444', label: 'Red' },
+  { value: '#f97316', label: 'Orange' },
+  { value: '#eab308', label: 'Yellow' },
+  { value: '#22c55e', label: 'Green' },
+  { value: '#3b82f6', label: 'Blue' },
+  { value: '#8b5cf6', label: 'Purple' },
+  { value: '#ec4899', label: 'Pink' },
+];
 
 interface MessageGroupsProps {
   onClose: () => void;
@@ -34,8 +45,7 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState({
       name: '',
-      gender: 'NEUTRAL' as 'MALE' | 'FEMALE' | 'NEUTRAL',
-      segment_ids: [] as string[],
+      color: '#6b7280',
     });
 
     useImperativeHandle(ref, () => ({
@@ -94,7 +104,7 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
         }
 
         // Reset form
-        setFormData({ name: '', gender: 'NEUTRAL', segment_ids: [] });
+        setFormData({ name: '', color: '#6b7280' });
         setEditingId(null);
         chrome.storage.local.remove(GROUP_DRAFT_KEY);
         await loadGroups();
@@ -104,7 +114,12 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
     }
 
     async function handleDelete(id: string) {
-      if (!confirm('Are you sure you want to delete this message group?')) return;
+      if (
+        !confirm(
+          'Are you sure you want to delete this group? Templates, posts, and contacts assigned to it will become ungrouped.',
+        )
+      )
+        return;
 
       try {
         await sendBackgroundMessage<void>({
@@ -121,22 +136,20 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
       setEditingId(group.id);
       setFormData({
         name: group.name,
-        gender: group.gender,
-        segment_ids: group.segment_ids,
+        color: group.color,
       });
     }
 
     return (
       <div className="view-container">
         <h2 ref={headingRef} tabIndex={-1} className="text-lg font-bold text-blueStrong mb-3">
-          Message Groups
+          Groups{' '}
+          <HelpTooltip label="Groups let you tag message templates, timeline posts, and contacts so that the right messages go to the right people." />
         </h2>
 
         <p className="text-xs text-gray-600 mb-5">
-          Message Groups are an <strong>advanced</strong> feature for combining individual message
-          segments into curated collections with per-gender targeting. Most users should use{' '}
-          <strong>Message Templates</strong> instead — groups are useful only when you need
-          fine-grained control over which segments are combined per send.
+          Create groups like <strong>Close Friends</strong>, <strong>Family</strong>, or{' '}
+          <strong>Coworkers</strong> and assign them to your templates, posts, and contacts.
         </p>
 
         <form onSubmit={handleSubmit} className="card mb-5">
@@ -147,60 +160,41 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
           <label className="block mb-4">
             <span className="flex items-center gap-1 text-xs font-semibold text-textPrimary mb-2">
               Group Name{' '}
-              <HelpTooltip label="A name for your own reference — e.g. 'Formal Wishes' or 'Close Friends (Male)'. Not visible to recipients." />
+              <HelpTooltip label="A label for your own reference — e.g. 'Close Friends' or 'Family'. Not visible to recipients." />
             </span>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., Formal Birthday Wishes"
+              placeholder="e.g., Close Friends"
               required
               className="text-field w-full"
             />
           </label>
 
-          <label className="block mb-4">
+          <div className="mb-5">
             <span className="flex items-center gap-1 text-xs font-semibold text-textPrimary mb-2">
-              Gender Target{' '}
-              <HelpTooltip label="When automation picks a group, it matches the group's gender target to the contact's saved gender. Set to Neutral to use this group as a fallback for any gender." />
+              Colour
             </span>
-            <select
-              value={formData.gender}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  gender: e.target.value as 'NEUTRAL' | 'MALE' | 'FEMALE',
-                })
-              }
-              className="text-field w-full"
-            >
-              <option value="NEUTRAL">Neutral (Any)</option>
-              <option value="MALE">Male Friends</option>
-              <option value="FEMALE">Female Friends</option>
-            </select>
-          </label>
-
-          <label className="block mb-5">
-            <span className="flex items-center gap-1 text-xs font-semibold text-textPrimary mb-2">
-              Segment IDs (comma-separated){' '}
-              <HelpTooltip label="UUIDs of the individual message segments to include in this group, separated by commas. Most users leave this blank — standard Message Templates don't use this field. Segment IDs can be found in your backend's template segments data." />
-            </span>
-            <input
-              type="text"
-              value={formData.segment_ids.join(', ')}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  segment_ids: e.target.value
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                })
-              }
-              placeholder="segment-1, segment-2"
-              className="text-field w-full"
-            />
-          </label>
+            <div className="flex gap-2 flex-wrap">
+              {GROUP_COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  title={c.label}
+                  onClick={() => setFormData({ ...formData, color: c.value })}
+                  className="w-7 h-7 rounded-full border-2 transition-transform"
+                  style={{
+                    backgroundColor: c.value,
+                    borderColor: formData.color === c.value ? '#111827' : 'transparent',
+                    transform: formData.color === c.value ? 'scale(1.2)' : 'scale(1)',
+                  }}
+                  aria-label={c.label}
+                  aria-pressed={formData.color === c.value}
+                />
+              ))}
+            </div>
+          </div>
 
           <div className="flex gap-2">
             <button type="submit" className="btn-primary flex-1">
@@ -212,7 +206,7 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
                 className="btn-secondary"
                 onClick={() => {
                   setEditingId(null);
-                  setFormData({ name: '', gender: 'NEUTRAL', segment_ids: [] });
+                  setFormData({ name: '', color: '#6b7280' });
                 }}
               >
                 Cancel
@@ -228,26 +222,25 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
         )}
 
         {isLoading ? (
-          <div className="text-center py-8 text-gray-500">Loading message groups...</div>
+          <div className="text-center py-8 text-gray-500">Loading groups...</div>
         ) : (
           <div>
             {groups.length === 0 ? (
               <div className="text-center py-8 text-gray-500 bg-white/80 rounded-lg mb-5">
-                No message groups yet. Create your first group above.
+                No groups yet. Create your first group above.
               </div>
             ) : (
               <div className="space-y-3 mb-5">
                 {groups.map((group) => (
                   <div key={group.id} className="card">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-sm font-bold text-textPrimary">{group.name}</h3>
-                          <span className="badge badge-primary text-xs">{group.gender}</span>
-                        </div>
-                        <p className="text-xs text-gray-600 my-1">
-                          <strong>Segments:</strong> {group.segment_ids.length} selected
-                        </p>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-3 rounded-full inline-block flex-shrink-0"
+                          style={{ backgroundColor: group.color }}
+                          aria-hidden="true"
+                        />
+                        <h3 className="text-sm font-bold text-textPrimary">{group.name}</h3>
                       </div>
                       <div className="flex gap-2 ml-2">
                         <button

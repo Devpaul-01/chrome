@@ -9,17 +9,17 @@ interface HomeControlsProps {
   // onViewCalendar: () => void; // Uncomment to re-enable Birthday Calendar
   onViewAnalytics: () => void;
   onViewUpcomingBirthdays: () => void;
+  onViewContacts: () => void;
   userName: string;
 }
 
 export default function HomeControls({
   onViewAnalytics,
   onViewUpcomingBirthdays,
+  onViewContacts,
   userName,
 }: HomeControlsProps) {
   const [automationEnabled, setAutomationEnabled] = useState(false);
-  // const [groups, setGroups] = useState<MessageGroup[]>([]); // Commented out — feature not currently needed
-  // const [activeGroupId, setActiveGroupId] = useState('');
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -35,10 +35,6 @@ export default function HomeControls({
     try {
       const [config, stats] = await Promise.all([
         sendBackgroundMessage<{ enabled: boolean }>({ type: 'automation.getConfig' }),
-        // Message groups commented out — feature not currently needed
-        // sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' }).catch(
-        //   () => [] as MessageGroup[],
-        // ),
         sendBackgroundMessage<DashboardStats>({ type: 'dashboard.getStats' }).catch(() => null),
       ]);
       setAutomationEnabled(config?.enabled ?? false);
@@ -223,6 +219,11 @@ export default function HomeControls({
       >
         Open Facebook Birthdays
       </a>
+
+      {/* View Contacts */}
+      <button onClick={onViewContacts} className="btn w-full text-center">
+        📇 View Contacts
+      </button>
 
       {/* Analytics & Upcoming Birthdays */}
       <div className="messages-hub-grid">

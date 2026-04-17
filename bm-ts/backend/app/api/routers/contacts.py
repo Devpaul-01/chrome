@@ -32,6 +32,7 @@ async def create_contact(
         birthday_month_only=data.birthday_month_only,
         gender=data.gender.value if data.gender else None,
         notes=data.notes,
+        group_id=data.group_id,
     )
     db.add(contact)
     await db.commit()
@@ -39,7 +40,9 @@ async def create_contact(
     return contact
 
 
-@router.post("/bulk", response_model=List[ContactOut], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/bulk", response_model=List[ContactOut], status_code=status.HTTP_201_CREATED
+)
 async def bulk_create_contacts(
     contacts_data: List[ContactCreate],
     current_user: User = Depends(get_current_user),
@@ -88,7 +91,9 @@ async def bulk_create_contacts(
 
 @router.get("/", response_model=List[ContactOut])
 async def list_contacts(
-    updated_since: Optional[str] = Query(None, description="ISO timestamp; return only contacts updated after this time"),
+    updated_since: Optional[str] = Query(
+        None, description="ISO timestamp; return only contacts updated after this time"
+    ),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ContactOut]:
@@ -96,6 +101,7 @@ async def list_contacts(
     stmt = select(Contact).where(Contact.user_id == current_user.id)
     if updated_since:
         from datetime import datetime as dt
+
         try:
             cutoff = dt.fromisoformat(updated_since.replace("Z", "+00:00"))
             stmt = stmt.where(Contact.updated_at > cutoff)
@@ -119,13 +125,12 @@ async def get_contact(
     )
     result = await db.execute(stmt)
     contact = result.scalar_one_or_none()
-    
+
     if not contact:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Contact not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found"
         )
-    
+
     return contact
 
 
@@ -143,13 +148,12 @@ async def update_contact(
     )
     result = await db.execute(stmt)
     contact = result.scalar_one_or_none()
-    
+
     if not contact:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Contact not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found"
         )
-    
+
     # Update fields if provided
     if data.name is not None:
         contact.name = data.name
@@ -163,13 +167,17 @@ async def update_contact(
         contact.gender = data.gender.value
     if data.notes is not None:
         contact.notes = data.notes
-    
+    if data.group_id is not None:
+        contact.group_id = data.group_id
+
     await db.commit()
     await db.refresh(contact)
     return contact
 
 
-@router.delete("/{contact_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete(
+    "/{contact_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK
+)
 async def delete_contact(
     contact_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -182,13 +190,12 @@ async def delete_contact(
     )
     result = await db.execute(stmt)
     contact = result.scalar_one_or_none()
-    
+
     if not contact:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Contact not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found"
         )
-    
+
     await db.delete(contact)
     await db.commit()
     return DeleteResponse()

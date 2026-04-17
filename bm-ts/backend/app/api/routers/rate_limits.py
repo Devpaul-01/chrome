@@ -14,9 +14,8 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.api.deps import get_current_user
 from app.db.models import SendRateLimit, User
@@ -46,12 +45,20 @@ class RateLimitStatusResponse(BaseModel):
 def _prune(timestamps: List[str]) -> List[str]:
     """Drop entries older than 7 days."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-    return [ts for ts in timestamps if datetime.fromisoformat(ts.replace("Z", "+00:00")) > cutoff]
+    return [
+        ts
+        for ts in timestamps
+        if datetime.fromisoformat(ts.replace("Z", "+00:00")) > cutoff
+    ]
 
 
 def _count_window(timestamps: List[str], window: timedelta) -> int:
     cutoff = datetime.now(timezone.utc) - window
-    return sum(1 for ts in timestamps if datetime.fromisoformat(ts.replace("Z", "+00:00")) > cutoff)
+    return sum(
+        1
+        for ts in timestamps
+        if datetime.fromisoformat(ts.replace("Z", "+00:00")) > cutoff
+    )
 
 
 async def _get_or_create(user_id, db: AsyncSession) -> SendRateLimit:
@@ -123,7 +130,9 @@ async def record_send(
             reason = f"Daily limit reached ({DAILY_CAP}/day)."
         else:
             reason = f"Weekly limit reached ({WEEKLY_CAP}/week)."
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=reason)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=reason
+        )
 
     # Append the new timestamp
     ts.append(datetime.now(timezone.utc).isoformat())

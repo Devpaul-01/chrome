@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +24,19 @@ async def create_post(
     db: AsyncSession = Depends(get_db),
 ) -> PostOut:
     """Create a new birthday post."""
+    # Check unique label per user (if label provided)
+    if data.label:
+        dup_stmt = select(Post).where(
+            Post.user_id == current_user.id,
+            Post.label == data.label,
+        )
+        dup_result = await db.execute(dup_stmt)
+        if dup_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A post with this label already exists",
+            )
+
     post = Post(
         user_id=current_user.id,
         content=data.content,
@@ -34,6 +47,7 @@ async def create_post(
         font_family=data.font_family,
         font_size=data.font_size,
         font_color=data.font_color,
+        group_id=data.group_id,
     )
     db.add(post)
     await db.commit()
@@ -44,15 +58,18 @@ async def create_post(
 @router.get("/posts", response_model=List[PostOut])
 async def list_posts(
     gender: GenderEnum | None = None,
+    group_id: Optional[UUID] = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[PostOut]:
     """List all posts for the current user."""
     stmt = select(Post).where(Post.user_id == current_user.id)
-    
+
     if gender:
         stmt = stmt.where(Post.gender == gender.value)
-    
+    if group_id is not None:
+        stmt = stmt.where(Post.group_id == group_id)
+
     stmt = stmt.order_by(Post.created_at.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
@@ -71,13 +88,12 @@ async def get_post(
     )
     result = await db.execute(stmt)
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Post not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
         )
-    
+
     return post
 
 
@@ -95,27 +111,42 @@ async def update_post(
     )
     result = await db.execute(stmt)
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Post not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
         )
-    
+
     if data.content is not None:
         post.content = data.content
     if data.gender is not None:
         post.gender = data.gender.value
     if data.image_url is not None:
         post.image_url = data.image_url
-    if data.label is not None:
-        post.label = data.label
     if data.font_family is not None:
         post.font_family = data.font_family
     if data.font_size is not None:
         post.font_size = data.font_size
     if data.font_color is not None:
         post.font_color = data.font_color
+    if data.group_id is not None:
+        post.group_id = data.group_id
+
+    # Check unique label if being changed
+    if data.label is not None and data.label != post.label and data.label:
+        dup_stmt = select(Post).where(
+            Post.user_id == current_user.id,
+            Post.label == data.label,
+            Post.id != post_id,
+        )
+        dup_result = await db.execute(dup_stmt)
+        if dup_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A post with this label already exists",
+            )
+    if data.label is not None:
+        post.label = data.label
 
     post.updated_at = datetime.now(timezone.utc)
     await db.commit()
@@ -123,7 +154,9 @@ async def update_post(
     return post
 
 
-@router.delete("/posts/{post_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete(
+    "/posts/{post_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK
+)
 async def delete_post(
     post_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -136,13 +169,12 @@ async def delete_post(
     )
     result = await db.execute(stmt)
     post = result.scalar_one_or_none()
-    
+
     if not post:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Post not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
         )
-    
+
     await db.delete(post)
     await db.commit()
     return DeleteResponse()

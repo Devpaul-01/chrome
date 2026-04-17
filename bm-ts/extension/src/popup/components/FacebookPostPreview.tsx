@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { logger } from '../../utils/logger';
 
 type FacebookPostPreviewProps = {
   imageUrl?: string | null;
@@ -148,7 +149,7 @@ export default function FacebookPostPreview({
     };
 
     img.onerror = () => {
-      console.error('Failed to load image for preview');
+      logger.error('Failed to load image for preview');
       setPreviewUrl(null);
     };
 

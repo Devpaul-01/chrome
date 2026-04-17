@@ -1,12 +1,16 @@
 module.exports = {
-  content: [
-    "./src/**/*.{js,ts,jsx,tsx}",
-    "./popup.html"
-  ],
+  content: ['./src/**/*.{js,ts,jsx,tsx}', './popup.html'],
   theme: {
     extend: {
       fontFamily: {
-        inter: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        inter: [
+          'Inter',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'sans-serif',
+        ],
       },
       colors: {
         blueBrand: '#0080A6',
@@ -23,4 +27,4 @@ module.exports = {
     },
   },
   plugins: [],
-}
+};

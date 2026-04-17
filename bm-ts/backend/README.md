@@ -28,13 +28,15 @@ STRIPE_PRICE_YEARLY=price_yearly_id
 1. Ensure Docker Desktop is running
 2. Copy `.env.example` to `.env` and configure values
 3. Start both database and backend:
+
    ```bash
    docker-compose up -d
    ```
-   
+
    The database schema (via Alembic migrations) is automatically applied on first run.
-   
+
 **Alternative - Production-like deployment:**
+
 ```bash
 ./deploy.sh
 ```
@@ -48,11 +50,13 @@ Expose `POST /stripe/webhook` to Stripe using the test webhook secret and ensure
 ## Testing
 
 **Run tests inside Docker container:**
+
 ```bash
 docker-compose exec backend pytest
 ```
 
 **Or run tests with coverage:**
+
 ```bash
 docker-compose exec backend pytest --cov=app --cov-report=term-missing
 ```
@@ -65,18 +69,21 @@ docker-compose exec backend pytest --cov=app --cov-report=term-missing
 - `ddl.sql` - Legacy reference; schema now managed by `app/db/models.py` + Alembic migrations (`alembic/versions/`)
 
 **View logs:**
+
 ```bash
 docker-compose logs backend --tail=50 --follow
 docker-compose logs db --tail=50 --follow
 ```
 
 **Restart services:**
+
 ```bash
 docker-compose restart backend
 docker-compose restart db
 ```
 
 **Stop all:**
+
 ```bash
 docker-compose down
 ```

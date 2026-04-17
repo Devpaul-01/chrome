@@ -40,6 +40,7 @@ def _make_request(user_agent: str = "pytest") -> Request:
             "scheme": "http",
             "query_string": b"",
             "root_path": "",
+            "server": ("localhost", 8000),
             "headers": [(b"user-agent", user_agent.encode("utf-8"))],
             "client": ("127.0.0.1", 12345),
         }
@@ -117,7 +118,9 @@ async def test_refresh_token_rotation(db_session) -> None:
     payload_1 = decode_token(refresh_token_1)
     jti_1 = payload_1["jti"]
 
-    response = await refresh(_make_request(), RefreshRequest(refresh_token=refresh_token_1), db_session)
+    response = await refresh(
+        _make_request(), RefreshRequest(refresh_token=refresh_token_1), db_session
+    )
     refresh_token_2 = response.refresh_token
     payload_2 = decode_token(refresh_token_2)
 
@@ -128,13 +131,17 @@ async def test_refresh_token_rotation(db_session) -> None:
     )
     assert revoked.scalar_one_or_none() is not None
 
-    sessions = await db_session.execute(select(UserSession).where(UserSession.user_id == user.id))
+    sessions = await db_session.execute(
+        select(UserSession).where(UserSession.user_id == user.id)
+    )
     session_rows = sessions.scalars().all()
     assert len(session_rows) == 1
     assert str(session_rows[0].id) == payload_2["sid"]
 
     with pytest.raises(HTTPException) as exc_info:
-        await refresh(_make_request(), RefreshRequest(refresh_token=refresh_token_1), db_session)
+        await refresh(
+            _make_request(), RefreshRequest(refresh_token=refresh_token_1), db_session
+        )
     assert exc_info.value.status_code == 401
 
 
@@ -154,7 +161,9 @@ async def test_revoke_endpoint(db_session) -> None:
     assert revoked_token.scalar_one_or_none() is not None
 
     with pytest.raises(HTTPException) as exc_info:
-        await refresh(_make_request(), RefreshRequest(refresh_token=refresh_token), db_session)
+        await refresh(
+            _make_request(), RefreshRequest(refresh_token=refresh_token), db_session
+        )
     assert exc_info.value.status_code == 401
 
 
@@ -163,17 +172,25 @@ async def test_concurrent_refresh_reuse_detection(db_session) -> None:
     user = await _create_user(db_session, "concurrent@example.com")
 
     refresh_token = create_refresh_token(user.id)
-    response_1 = await refresh(_make_request(), RefreshRequest(refresh_token=refresh_token), db_session)
+    response_1 = await refresh(
+        _make_request(), RefreshRequest(refresh_token=refresh_token), db_session
+    )
     assert response_1.refresh_token
 
     with pytest.raises(HTTPException) as exc_info:
-        await refresh(_make_request(), RefreshRequest(refresh_token=refresh_token), db_session)
+        await refresh(
+            _make_request(), RefreshRequest(refresh_token=refresh_token), db_session
+        )
     assert exc_info.value.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_login_creates_session_and_list_endpoint_marks_current(real_auth_client, db_session) -> None:
-    user = await _create_user(db_session, "login-session@example.com", password="TestPass123!")
+async def test_login_creates_session_and_list_endpoint_marks_current(
+    real_auth_client, db_session
+) -> None:
+    user = await _create_user(
+        db_session, "login-session@example.com", password="TestPass123!"
+    )
 
     login_response = await real_auth_client.post(
         "/auth/login",
@@ -198,8 +215,12 @@ async def test_login_creates_session_and_list_endpoint_marks_current(real_auth_c
 
 
 @pytest.mark.asyncio
-async def test_revoke_session_blocks_access_and_refresh(real_auth_client, db_session) -> None:
-    user = await _create_user(db_session, "multi-session@example.com", password="TestPass123!")
+async def test_revoke_session_blocks_access_and_refresh(
+    real_auth_client, db_session
+) -> None:
+    user = await _create_user(
+        db_session, "multi-session@example.com", password="TestPass123!"
+    )
 
     first_login = await real_auth_client.post(
         "/auth/login",
@@ -216,20 +237,29 @@ async def test_revoke_session_blocks_access_and_refresh(real_auth_client, db_ses
 
     sessions_response = await real_auth_client.get(
         "/auth/sessions",
-        headers={"Authorization": f"Bearer {tokens_a['access_token']}", "user-agent": "session-a"},
+        headers={
+            "Authorization": f"Bearer {tokens_a['access_token']}",
+            "user-agent": "session-a",
+        },
     )
     sessions = sessions_response.json()
     target = next(session for session in sessions if session["is_current"] is False)
 
     revoke_response = await real_auth_client.delete(
         f"/auth/sessions/{target['id']}",
-        headers={"Authorization": f"Bearer {tokens_a['access_token']}", "user-agent": "session-a"},
+        headers={
+            "Authorization": f"Bearer {tokens_a['access_token']}",
+            "user-agent": "session-a",
+        },
     )
     assert revoke_response.status_code == 200
 
     me_response = await real_auth_client.get(
         "/auth/me",
-        headers={"Authorization": f"Bearer {tokens_b['access_token']}", "user-agent": "session-b"},
+        headers={
+            "Authorization": f"Bearer {tokens_b['access_token']}",
+            "user-agent": "session-b",
+        },
     )
     assert me_response.status_code == 401
 
@@ -245,7 +275,9 @@ def test_expired_access_token_is_rejected() -> None:
     """An access token whose exp is in the past must be rejected by decode_token."""
     user_id = uuid4()
     expired_payload = _build_payload(user_id, TokenType.ACCESS, timedelta(seconds=-1))
-    token = jwt.encode(expired_payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    token = jwt.encode(
+        expired_payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+    )
     with pytest.raises(JWTError):
         decode_token(token)
 
@@ -254,6 +286,8 @@ def test_expired_refresh_token_is_rejected() -> None:
     """A refresh token whose exp is in the past must be rejected by decode_token."""
     user_id = uuid4()
     expired_payload = _build_payload(user_id, TokenType.REFRESH, timedelta(seconds=-1))
-    token = jwt.encode(expired_payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    token = jwt.encode(
+        expired_payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+    )
     with pytest.raises(JWTError):
         decode_token(token)

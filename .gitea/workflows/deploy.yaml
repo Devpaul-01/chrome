@@ -7,16 +7,32 @@ on:
   push:
     branches:
       - develop
-      - backend-ci-deploy   # i use this to test my pipeline
+      - backend-ci-deploy
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest   # just spins up a linux machine
+    runs-on: ubuntu-latest # just spins up a linux machine
 
     steps:
       # grab my repo code
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      # run backend tests before building the image
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        working-directory: bm-ts/backend
+        run: |
+          pip install -e ".[test]"
+
+      - name: Run backend tests
+        working-directory: bm-ts/backend
+        run: |
+          python -m pytest --tb=short -q
 
       # log into gitea registry so i can push images
       - name: Login to registry
@@ -25,13 +41,13 @@ jobs:
 
       # build the docker image and push it
       - name: Build + Push image
-        working-directory: bm-ts/backend   # my backend folder (has Dockerfile)
+        working-directory: bm-ts/backend # my backend folder (has Dockerfile)
         run: |
           IMAGE_NAME=gitea.birthdaymessaging.com/ctmmediagroup/bm-legacy-backend
-          
-          
+
+
           SAFE_BRANCH_NAME=$(echo "${GITHUB_REF_NAME}" | tr '/' '-')
-          
+
           # version = branch + commit (so every build is unique)
           VERSION="${SAFE_BRANCH_NAME}-$(git rev-parse --short HEAD)"
 
@@ -57,4 +73,3 @@ jobs:
       - name: Logout
         if: always()
         run: docker logout gitea.birthdaymessaging.com
-

@@ -1,4 +1,7 @@
 module.exports = {
+  globals: {
+    chrome: 'readonly',
+  },
   root: true,
   env: {
     browser: true,
@@ -18,7 +21,7 @@ module.exports = {
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
     'plugin:prettier/recommended',
-    'prettier'
+    'prettier',
   ],
   settings: {
     react: { version: 'detect' },

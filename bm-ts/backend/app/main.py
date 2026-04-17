@@ -16,7 +16,7 @@ from app.api.routers import (
     dashboard,
     websocket,
     contacts,
-    # message_groups,  # Commented out — feature not currently needed
+    message_groups,
     message_templates,
     posts,
     images,
@@ -37,19 +37,40 @@ from app.db.session import get_db
 setup_logging()
 
 openapi_tags = [
-    {"name": "auth", "description": "Authentication, registration, password management, and session control"},
-    {"name": "templates", "description": "CRUD for template segments (greeting / body / closing)"},
-    {"name": "schedules", "description": "Birthday schedule management (days-before triggers)"},
+    {
+        "name": "auth",
+        "description": "Authentication, registration, password management, and session control",
+    },
+    {
+        "name": "templates",
+        "description": "CRUD for template segments (greeting / body / closing)",
+    },
+    {
+        "name": "schedules",
+        "description": "Birthday schedule management (days-before triggers)",
+    },
     {"name": "messages", "description": "Message queue and delivery history"},
     {"name": "dashboard", "description": "Dashboard statistics and analytics"},
-    {"name": "contacts", "description": "Contact (friend) management — auto-populated via scraping"},
+    {
+        "name": "contacts",
+        "description": "Contact (friend) management — auto-populated via scraping",
+    },
     {"name": "message-groups", "description": "Named groups of message templates"},
-    {"name": "message-templates", "description": "Individual message templates within groups"},
+    {
+        "name": "message-templates",
+        "description": "Individual message templates within groups",
+    },
     {"name": "posts", "description": "Timeline post templates with image overlays"},
     {"name": "images", "description": "User image library (upload and manage)"},
-    {"name": "birthday-configs", "description": "Birthday mode configurations (advance / normal / followup)"},
+    {
+        "name": "birthday-configs",
+        "description": "Birthday mode configurations (advance / normal / followup)",
+    },
     {"name": "smtp", "description": "User SMTP configuration for email delivery"},
-    {"name": "subscription", "description": "Stripe subscription management and billing"},
+    {
+        "name": "subscription",
+        "description": "Stripe subscription management and billing",
+    },
     {"name": "stripe", "description": "Stripe webhook handling"},
 ]
 
@@ -92,6 +113,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         headers=headers,
     )
 
+
 # Auth and core endpoints
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(smtp.router)  # /smtp prefix defined in router
@@ -109,7 +131,7 @@ app.include_router(websocket.router)
 app.include_router(contacts.router, prefix="/api", tags=["contacts"])
 
 # Phase 2 - Message management
-# app.include_router(message_groups.router, prefix="/api", tags=["message-groups"])  # Commented out — feature not currently needed
+app.include_router(message_groups.router, prefix="/api", tags=["message-groups"])
 app.include_router(message_templates.router, prefix="/api", tags=["message-templates"])
 
 # Phase 2 - Posts and images
@@ -132,8 +154,18 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
         db_status = "unavailable"
     return {"status": "ok", "database": db_status}
 
-# TODO: Implement actual birthday message sending logic (currently a stub)
-@app.post("/send-birthday-message")
+
+@app.post("/send-birthday-message", status_code=501)
 @limiter.limit("1/45seconds")
 async def send_message(request: Request, _user: User = Depends(get_current_user)):
-    return {"status": "sent"}
+    """Birthday messages are sent client-side by the content script.
+
+    This endpoint exists as a placeholder for potential future server-side
+    sending.  It is not used by the extension and always returns 501.
+    """
+    return JSONResponse(
+        status_code=501,
+        content={
+            "detail": "Not implemented. Birthday messages are sent by the content script."
+        },
+    )

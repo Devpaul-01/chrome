@@ -23,6 +23,7 @@ function makeTemplate(overrides: Partial<SavedTemplate> = {}): SavedTemplate {
     templateTitle: 'Classic Wish',
     daysInAdvance: 0,
     gender: 'ALL',
+    groupId: null,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-15T00:00:00Z',
     ...overrides,
@@ -134,18 +135,6 @@ describe('TemplateGallery', () => {
     render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ gender: 'ALL' })]} />);
     expect(screen.queryByText(/^MALE$/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^FEMALE$/)).not.toBeInTheDocument();
-  });
-
-  // Gender badge is currently commented out in the component
-  it.skip('shows a "MALE" gender badge when gender is "MALE"', () => {
-    render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ gender: 'MALE' })]} />);
-    expect(screen.getByText('MALE')).toBeInTheDocument();
-  });
-
-  // Gender badge is currently commented out in the component
-  it.skip('shows a "FEMALE" gender badge when gender is "FEMALE"', () => {
-    render(<TemplateGallery {...defaultProps} templates={[makeTemplate({ gender: 'FEMALE' })]} />);
-    expect(screen.getByText('FEMALE')).toBeInTheDocument();
   });
 
   // --- Image rendering ------------------------------------------------------

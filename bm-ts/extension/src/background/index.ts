@@ -11,7 +11,6 @@ import {
   MessageHistoryItem,
   MessageHistoryPage,
   DashboardStats,
-  MessageGroup,
   Post,
   UserImage,
   SMTPConfig,
@@ -45,10 +44,6 @@ import {
   listMessageHistory,
   deleteMessageHistory,
   getDashboardStats,
-  // listMessageGroups,  // Commented out — feature not currently needed
-  // createMessageGroup,
-  // updateMessageGroup,
-  // deleteMessageGroup,
   listPosts,
   createPost,
   updatePost,
@@ -75,6 +70,12 @@ import {
   listContacts,
   bulkCreateContacts,
   Contact,
+  updateContact,
+  MessageGroup,
+  listMessageGroups,
+  createMessageGroup,
+  updateMessageGroup,
+  deleteMessageGroup,
 } from '../api/client';
 import {
   clearTokens,
@@ -194,7 +195,7 @@ async function withAuth<T>(fn: AuthCall<T>): Promise<T> {
 }
 
 /**
- * Opens https://www.facebook.com/birthdays in a background tab (or focuses an
+ * Opens https://www.facebook.com/friends/birthdays in a background tab (or focuses an
  * existing one) and resolves once the page is ready.
  *
  * If no such tab is currently open, the returned promise is rejected. This
@@ -340,11 +341,11 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
   const tab = await openOrFocusFacebookBirthdaysTab();
   if (!tab || !tab.id) {
     logger.info(
-      'handleAutomationScan: no Facebook birthdays tab open — user must navigate to facebook.com/birthdays',
+      'handleAutomationScan: no Facebook birthdays tab open — user must navigate to facebook.com/friends/birthdays',
     );
     await addActivityLogEntry('info', 'Automation skipped — no Facebook birthdays tab open');
     notifyAutomationFailed(
-      'No Facebook birthdays tab open. Please navigate to facebook.com/birthdays.',
+      'No Facebook birthdays tab open. Please navigate to facebook.com/friends/birthdays.',
     );
     await clearCheckpoint();
     return { success: false };
@@ -424,8 +425,6 @@ type BackgroundResponse =
   | MessageHistoryItem[]
   | MessageHistoryPage
   | DashboardStats
-  | MessageGroup
-  | MessageGroup[]
   | Post
   | Post[]
   | UserImage
@@ -443,6 +442,8 @@ type BackgroundResponse =
   | ServerRateLimitStatus
   | Contact
   | Contact[]
+  | MessageGroup
+  | MessageGroup[]
   | null;
 
 /**
@@ -719,10 +720,10 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
     //     createContact(url, accessToken, message.payload),
     //   );
     // }
-    // case 'contacts.update': {
-    //   const { id, ...payload } = message.payload;
-    //   return runAuthAware((accessToken, url) => updateContact(url, accessToken, id, payload));
-    // }
+    case 'contacts.update': {
+      const { id, ...payload } = message.payload;
+      return runAuthAware((accessToken, url) => updateContact(url, accessToken, id, payload));
+    }
     // case 'contacts.delete': {
     //   return runAuthAware((accessToken, url) =>
     //     deleteContact(url, accessToken, message.payload.id),
@@ -734,24 +735,33 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       );
     }
 
-    // Message Group handlers — commented out, feature not currently needed
-    // case 'messageGroups.list': {
-    //   return runAuthAware((accessToken, url) => listMessageGroups(url, accessToken));
-    // }
-    // case 'messageGroups.create': {
-    //   return runAuthAware((accessToken, url) =>
-    //     createMessageGroup(url, accessToken, message.payload),
-    //   );
-    // }
-    // case 'messageGroups.update': {
-    //   const { id, ...payload } = message.payload;
-    //   return runAuthAware((accessToken, url) => updateMessageGroup(url, accessToken, id, payload));
-    // }
-    // case 'messageGroups.delete': {
-    //   return runAuthAware((accessToken, url) =>
-    //     deleteMessageGroup(url, accessToken, message.payload.id),
-    //   );
-    // }
+    case 'contacts.scrapeFromFacebook': {
+      // Find the Facebook birthdays tab and ask the content script to scrape contacts
+      const tabs = await chrome.tabs.query({
+        url: ['*://*.facebook.com/birthdays*', '*://*.facebook.com/friends/birthdays*'],
+      });
+      const tab = tabs[0];
+      if (!tab?.id) {
+        throw new ApiError(404, {
+          detail:
+            'No Facebook birthdays tab open. Please open facebook.com/friends/birthdays first.',
+        });
+      }
+      try {
+        const result = await chrome.tabs.sendMessage(tab.id, { type: 'contacts.scrapeFromPage' });
+        return result as unknown as BackgroundResponse;
+      } catch {
+        // Content script not reachable — try re-injecting
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js'],
+        });
+        await new Promise((r) => setTimeout(r, 1500));
+        const result = await chrome.tabs.sendMessage(tab.id, { type: 'contacts.scrapeFromPage' });
+        return result as unknown as BackgroundResponse;
+      }
+    }
+
     // Post handlers
     case 'posts.list': {
       return runAuthAware((accessToken, url) => listPosts(url, accessToken));
@@ -765,6 +775,24 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
     }
     case 'posts.delete': {
       return runAuthAware((accessToken, url) => deletePost(url, accessToken, message.payload.id));
+    }
+    // Message Group handlers
+    case 'messageGroups.list': {
+      return runAuthAware((accessToken, url) => listMessageGroups(url, accessToken));
+    }
+    case 'messageGroups.create': {
+      return runAuthAware((accessToken, url) =>
+        createMessageGroup(url, accessToken, message.payload),
+      );
+    }
+    case 'messageGroups.update': {
+      const { id, ...payload } = message.payload;
+      return runAuthAware((accessToken, url) => updateMessageGroup(url, accessToken, id, payload));
+    }
+    case 'messageGroups.delete': {
+      return runAuthAware((accessToken, url) =>
+        deleteMessageGroup(url, accessToken, message.payload.id),
+      );
     }
     // Image handlers
     case 'images.list': {

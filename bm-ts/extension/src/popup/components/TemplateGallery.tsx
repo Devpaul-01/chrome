@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react';
 import HelpTooltip from './HelpTooltip';
 import FeatureTip from './FeatureTip';
+import { sendBackgroundMessage } from '../api';
+import type { MessageGroup } from './MessageGroups';
 
 export type SavedTemplate = {
   id: string;
@@ -10,6 +13,7 @@ export type SavedTemplate = {
   templateTitle: string;
   daysInAdvance: number;
   gender: 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL';
+  groupId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -29,6 +33,20 @@ export default function TemplateGallery({
   onCreate,
   showHeader = true,
 }: Props) {
+  const [groups, setGroups] = useState<MessageGroup[]>([]);
+  const [filterGroupId, setFilterGroupId] = useState<string>('');
+
+  useEffect(() => {
+    sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' })
+      .then(setGroups)
+      .catch(() => {});
+  }, []);
+
+  const filteredTemplates = filterGroupId
+    ? templates.filter((t) =>
+        filterGroupId === '__none__' ? !t.groupId : t.groupId === filterGroupId,
+      )
+    : templates;
   const getPreviewText = (template: SavedTemplate) => {
     const parts = [template.greeting, template.sentiment, template.closing].filter(Boolean);
     return parts.join(' ').substring(0, 100) + (parts.join(' ').length > 100 ? '...' : '');
@@ -58,7 +76,31 @@ export default function TemplateGallery({
         </div>
       )}
 
-      {templates.length === 0 ? (
+      {groups.length > 0 && (
+        <div className="card mb-5">
+          <label className="block">
+            <span className="text-xs font-semibold text-textPrimary mb-2 block">
+              Filter by Group
+            </span>
+            <select
+              value={filterGroupId}
+              onChange={(e) => setFilterGroupId(e.target.value)}
+              className="text-field w-full"
+              aria-label="Filter templates by group"
+            >
+              <option value="">All Groups</option>
+              <option value="__none__">Ungrouped</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      {filteredTemplates.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <p className="text-gray-500 mb-4">No templates yet.</p>
           <FeatureTip
@@ -73,7 +115,7 @@ export default function TemplateGallery({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.map((template) => (
+          {filteredTemplates.map((template) => (
             <div
               key={template.id}
               className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white"
@@ -101,6 +143,19 @@ export default function TemplateGallery({
                     {template.gender}
                   </div>
                 )} */}
+                {template.groupId &&
+                  (() => {
+                    const group = groups.find((g) => g.id === template.groupId);
+                    return group ? (
+                      <div className="absolute top-2 left-2 bg-white/90 px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
+                        <span
+                          className="w-2 h-2 rounded-full inline-block"
+                          style={{ backgroundColor: group.color }}
+                        />
+                        {group.name}
+                      </div>
+                    ) : null;
+                  })()}
               </div>
 
               {/* Template Info */}

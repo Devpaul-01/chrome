@@ -9,12 +9,13 @@
    - Verify: `docker --version`
 
 2. **Environment Setup**
+
    ```bash
    cd bm-ts/backend
-   
+
    # Create .env file from example
    cp .env.example .env
-   
+
    # Edit .env and provide:
    # - DATABASE_URL (pre-configured for Docker)
    # - SECRET_KEY
@@ -24,10 +25,11 @@
    ```
 
 3. **Start Services**
+
    ```bash
    docker-compose up -d
    ```
-   
+
    The database schema and migrations (via Alembic) are automatically applied on first run.
 
 ## Starting the Server
@@ -38,21 +40,25 @@ docker-compose up -d
 ```
 
 **Check status:**
+
 ```bash
 docker-compose ps
 ```
 
 **View logs:**
+
 ```bash
 docker-compose logs backend --tail=50 --follow
 ```
 
 Server will be available at:
+
 - API: http://localhost:8000
 - Swagger Docs: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
 **Health check:**
+
 ```bash
 curl http://localhost:8000/health
 ```
@@ -184,6 +190,7 @@ curl -X GET http://localhost:8000/api/dashboard/stats \
    - Ensure `API_BASE_URL` points to `http://localhost:8000`
 
 2. **Rebuild Extension**
+
    ```bash
    cd bm-ts/extension
    npm run build
@@ -206,23 +213,28 @@ curl -X GET http://localhost:8000/api/dashboard/stats \
 ## Common Issues
 
 ### 1. CORS Errors
+
 - Add your extension ID to `CORS_ORIGINS` in `.env`
 - Format: `chrome-extension://YOUR_EXTENSION_ID`
 
 ### 2. Database Connection
+
 - Verify PostgreSQL is running: `psql -U postgres -l`
 - Check DATABASE_URL in `.env`
 
 ### 3. Import Errors
+
 - Ensure dependencies are installed: `pip install -e .`
 - Verify Python version: `python --version` (should be 3.11+)
 
 ### 4. Migration Errors
+
 - Check if tables already exist: `\dt` in psql
 - Drop and recreate database if needed
 - Rerun both migration scripts in order
 
 ### 5. Email Not Sending
+
 - Password reset emails are sent via **SendGrid** (configured Mar 14, 2026)
 - Ensure `SENDGRID_API_KEY`, `EMAIL_FROM_ADDRESS`, and `PASSWORD_RESET_URL_BASE` are set in `.env`
 - Check backend logs for SendGrid API errors
@@ -238,6 +250,7 @@ curl -X GET http://localhost:8000/api/dashboard/stats \
 ## Monitoring Logs
 
 Server logs will show:
+
 - Request/response details
 - SQL queries (if debug enabled)
 - Password reset tokens (console only)

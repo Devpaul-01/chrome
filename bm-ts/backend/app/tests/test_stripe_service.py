@@ -5,7 +5,6 @@ All Stripe SDK calls are mocked so no real API key is needed.
 
 from __future__ import annotations
 
-import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -20,6 +19,7 @@ from app.services.stripe import (
 
 
 # ── Helper tests ──────────────────────────────────────────────────────────────
+
 
 class TestTimestamp:
     def test_none_returns_none(self):
@@ -75,12 +75,18 @@ class TestValidateRedirectUrl:
 
 # ── Async service tests ──────────────────────────────────────────────────────
 
+
 class TestCancelSubscription:
     @pytest.mark.asyncio
     async def test_sets_cancel_at_period_end(self):
         mock_sub = {"id": "sub_123", "cancel_at_period_end": True}
-        with patch("app.services.stripe.run_in_threadpool", new_callable=AsyncMock, return_value=mock_sub):
+        with patch(
+            "app.services.stripe.run_in_threadpool",
+            new_callable=AsyncMock,
+            return_value=mock_sub,
+        ):
             from app.services.stripe import cancel_subscription
+
             result = await cancel_subscription("sub_123")
             assert result["cancel_at_period_end"] is True
 
@@ -89,8 +95,13 @@ class TestReactivateSubscription:
     @pytest.mark.asyncio
     async def test_clears_cancel_at_period_end(self):
         mock_sub = {"id": "sub_123", "cancel_at_period_end": False}
-        with patch("app.services.stripe.run_in_threadpool", new_callable=AsyncMock, return_value=mock_sub):
+        with patch(
+            "app.services.stripe.run_in_threadpool",
+            new_callable=AsyncMock,
+            return_value=mock_sub,
+        ):
             from app.services.stripe import reactivate_subscription
+
             result = await reactivate_subscription("sub_123")
             assert result["cancel_at_period_end"] is False
 
@@ -100,7 +111,10 @@ class TestChangeSubscriptionPlan:
     async def test_swaps_price(self):
         existing_sub = MagicMock()
         existing_sub.__getitem__ = lambda s, k: {"items": {"data": [{"id": "si_1"}]}}[k]
-        updated_sub = {"id": "sub_123", "items": {"data": [{"id": "si_1", "price": {"id": "price_new"}}]}}
+        updated_sub = {
+            "id": "sub_123",
+            "items": {"data": [{"id": "si_1", "price": {"id": "price_new"}}]},
+        }
 
         async def side_effect(*args, **kwargs):
             # First call = retrieve, second call = modify
@@ -108,9 +122,12 @@ class TestChangeSubscriptionPlan:
                 return existing_sub
             return updated_sub
 
-        with patch("app.services.stripe.run_in_threadpool", new_callable=AsyncMock) as mock_pool:
+        with patch(
+            "app.services.stripe.run_in_threadpool", new_callable=AsyncMock
+        ) as mock_pool:
             mock_pool.side_effect = [existing_sub, updated_sub]
             from app.services.stripe import change_subscription_plan
+
             result = await change_subscription_plan("sub_123", "price_new")
             assert result["id"] == "sub_123"
             assert mock_pool.call_count == 2
@@ -127,8 +144,13 @@ class TestCreateCheckoutSession:
         mock_session = MagicMock()
         mock_session.url = "https://checkout.stripe.com/session_xyz"
 
-        with patch("app.services.stripe.run_in_threadpool", new_callable=AsyncMock, return_value=mock_session):
+        with patch(
+            "app.services.stripe.run_in_threadpool",
+            new_callable=AsyncMock,
+            return_value=mock_session,
+        ):
             from app.services.stripe import create_checkout_session
+
             url = await create_checkout_session(
                 user=mock_user,
                 plan="monthly",
@@ -149,9 +171,12 @@ class TestCreateCheckoutSession:
         mock_session = MagicMock()
         mock_session.url = "https://checkout.stripe.com/session_abc"
 
-        with patch("app.services.stripe.run_in_threadpool", new_callable=AsyncMock) as mock_pool:
+        with patch(
+            "app.services.stripe.run_in_threadpool", new_callable=AsyncMock
+        ) as mock_pool:
             mock_pool.side_effect = [mock_customer, mock_session]
             from app.services.stripe import create_checkout_session
+
             url = await create_checkout_session(
                 user=mock_user,
                 plan="yearly",
@@ -166,9 +191,12 @@ class TestCreateCheckoutSession:
 
 class TestConstructEvent:
     def test_delegates_to_stripe_webhook(self):
-        with patch("app.services.stripe.stripe.Webhook.construct_event") as mock_construct:
+        with patch(
+            "app.services.stripe.stripe.Webhook.construct_event"
+        ) as mock_construct:
             mock_construct.return_value = MagicMock(type="checkout.session.completed")
             from app.services.stripe import construct_event
+
             event = construct_event(b"payload", "sig_header")
             assert event.type == "checkout.session.completed"
             mock_construct.assert_called_once()

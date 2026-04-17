@@ -1,15 +1,15 @@
-
 # API Endpoints Documentation - New Features
 
 > **UPDATE (March 1, 2026): ALL PHASE 2 ENDPOINTS ARE NOW ACTIVE — schema fields verified against codebase**
 
 This document describes the new features added in Phase 2. All routers, schemas, and frontend components are now implemented and registered:
+
 - ✅ **Database models are defined** in `app/db/models.py`
 - ✅ **Routers are registered** in `app/main.py`
 - ✅ **Endpoints are fully functional and return correct responses**
 
 **Backend-frontend integration is complete.**
-See [SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md Section 10](../SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md#10-production-gaps--future-work) 
+See [SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md Section 10](../SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md#10-production-gaps--future-work)
 
 **For ACTIVE endpoints, see below.**
 
@@ -18,6 +18,7 @@ See [SYSTEM_ARCHITECTURE_ANALYSIS_bm-ts.md Section 10](../SYSTEM_ARCHITECTURE_AN
 ## Message Groups (ACTIVE)
 
 ### Create Message Group
+
 ```http
 POST /api/message-groups
 Content-Type: application/json
@@ -31,6 +32,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:** `201 Created`
+
 ```json
 {
   "id": "uuid",
@@ -43,15 +45,18 @@ Authorization: Bearer <token>
 ```
 
 ### List Message Groups
+
 ```http
 GET /api/message-groups?gender=MALE
 Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
+
 - `gender` (optional): Filter by gender (MALE, FEMALE, NEUTRAL, ALL)
 
 **Response:** `200 OK`
+
 ```json
 [
   {
@@ -66,6 +71,7 @@ Authorization: Bearer <token>
 ```
 
 ### Get Message Group
+
 ```http
 GET /api/message-groups/{group_id}
 Authorization: Bearer <token>
@@ -74,6 +80,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK` or `404 Not Found`
 
 ### Update Message Group
+
 ```http
 PUT /api/message-groups/{group_id}
 Content-Type: application/json
@@ -89,6 +96,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK`
 
 ### Delete Message Group
+
 ```http
 DELETE /api/message-groups/{group_id}
 Authorization: Bearer <token>
@@ -101,6 +109,7 @@ Authorization: Bearer <token>
 ## Posts (ACTIVE)
 
 ### Create Post
+
 ```http
 POST /api/posts
 Content-Type: application/json
@@ -115,6 +124,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:** `201 Created`
+
 ```json
 {
   "id": "uuid",
@@ -128,17 +138,20 @@ Authorization: Bearer <token>
 ```
 
 ### List Posts
+
 ```http
 GET /api/posts?gender=FEMALE
 Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
+
 - `gender` (optional): Filter by gender (MALE, FEMALE, NEUTRAL, ALL)
 
 **Response:** `200 OK`
 
 ### Get Post
+
 ```http
 GET /api/posts/{post_id}
 Authorization: Bearer <token>
@@ -147,6 +160,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK` or `404 Not Found`
 
 ### Update Post
+
 ```http
 PUT /api/posts/{post_id}
 Content-Type: application/json
@@ -162,6 +176,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK`
 
 ### Delete Post
+
 ```http
 DELETE /api/posts/{post_id}
 Authorization: Bearer <token>
@@ -174,6 +189,7 @@ Authorization: Bearer <token>
 ## Images (ACTIVE)
 
 ### Upload Image from URL
+
 ```http
 POST /api/images/upload
 Content-Type: application/json
@@ -185,6 +201,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:** `201 Created`
+
 ```json
 {
   "id": "uuid",
@@ -196,6 +213,7 @@ Authorization: Bearer <token>
 ```
 
 ### Upload Image File (Base64)
+
 ```http
 POST /api/images/upload-file
 Content-Type: application/json
@@ -209,6 +227,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:** `201 Created`
+
 ```json
 {
   "id": "uuid",
@@ -220,16 +239,19 @@ Authorization: Bearer <token>
 ```
 
 **Validation:**
+
 - Max file size: 10 MB (10,485,760 bytes)
 - Data must be valid base64 encoded
 
 ### List Images
+
 ```http
 GET /api/images
 Authorization: Bearer <token>
 ```
 
 **Response:** `200 OK`
+
 ```json
 [
   {
@@ -243,6 +265,7 @@ Authorization: Bearer <token>
 ```
 
 ### Get Image
+
 ```http
 GET /api/images/{image_id}
 Authorization: Bearer <token>
@@ -251,6 +274,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK` or `404 Not Found`
 
 ### Delete Image
+
 ```http
 DELETE /api/images/{image_id}
 Authorization: Bearer <token>
@@ -263,6 +287,7 @@ Authorization: Bearer <token>
 ## Birthday Configurations (ACTIVE)
 
 ### Create Birthday Config
+
 ```http
 POST /api/birthday-configs
 Content-Type: application/json
@@ -280,11 +305,13 @@ Authorization: Bearer <token>
 ```
 
 **Validation Rules:**
+
 - `mode: "EARLY"` → `days_offset` must be -7 to -1
 - `mode: "ON_DAY"` → `days_offset` must be 0
 - `mode: "BELATED"` → `days_offset` must be 1 to 7
 
 **Response:** `201 Created`
+
 ```json
 {
   "id": "uuid",
@@ -301,18 +328,21 @@ Authorization: Bearer <token>
 ```
 
 ### List Birthday Configs
+
 ```http
 GET /api/birthday-configs?mode=EARLY&enabled=true
 Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
+
 - `mode` (optional): Filter by mode (`EARLY`, `ON_DAY`, `BELATED`)
 - `enabled` (optional): Filter by enabled status (`true`, `false`)
 
 **Response:** `200 OK`
 
 ### Get Birthday Config
+
 ```http
 GET /api/birthday-configs/{config_id}
 Authorization: Bearer <token>
@@ -321,6 +351,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK` or `404 Not Found`
 
 ### Update Birthday Config
+
 ```http
 PUT /api/birthday-configs/{config_id}
 Content-Type: application/json
@@ -337,6 +368,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK`
 
 ### Toggle Birthday Config
+
 ```http
 PATCH /api/birthday-configs/{config_id}/toggle
 Content-Type: application/json
@@ -350,6 +382,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK`
 
 ### Delete Birthday Config
+
 ```http
 DELETE /api/birthday-configs/{config_id}
 Authorization: Bearer <token>
@@ -362,6 +395,7 @@ Authorization: Bearer <token>
 ## Contacts (ACTIVE)
 
 ### Create Contact
+
 ```http
 POST /api/contacts
 Content-Type: application/json
@@ -377,6 +411,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:** `201 Created`
+
 ```json
 {
   "id": "uuid",
@@ -391,6 +426,7 @@ Authorization: Bearer <token>
 ```
 
 ### Bulk Create Contacts
+
 ```http
 POST /api/contacts/bulk
 Content-Type: application/json
@@ -405,6 +441,7 @@ Authorization: Bearer <token>
 **Response:** `201 Created` — array of created contacts
 
 ### List Contacts
+
 ```http
 GET /api/contacts
 Authorization: Bearer <token>
@@ -413,6 +450,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK` — array of contacts
 
 ### Get Contact
+
 ```http
 GET /api/contacts/{contact_id}
 Authorization: Bearer <token>
@@ -421,6 +459,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK` or `404 Not Found`
 
 ### Update Contact
+
 ```http
 PUT /api/contacts/{contact_id}
 Content-Type: application/json
@@ -435,6 +474,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK`
 
 ### Delete Contact
+
 ```http
 DELETE /api/contacts/{contact_id}
 Authorization: Bearer <token>
@@ -447,12 +487,14 @@ Authorization: Bearer <token>
 ## SMTP Configuration (ACTIVE)
 
 ### Get SMTP Config
+
 ```http
 GET /smtp/config
 Authorization: Bearer <token>
 ```
 
 **Response:** `200 OK`
+
 ```json
 {
   "id": "uuid",
@@ -469,6 +511,7 @@ Authorization: Bearer <token>
 **Note:** Password field is not returned in responses.
 
 ### Update SMTP Config
+
 ```http
 PUT /smtp/config
 Content-Type: application/json
@@ -493,6 +536,7 @@ Authorization: Bearer <token>
 ## Account Management (ACTIVE)
 
 ### Update Profile
+
 ```http
 PUT /auth/profile
 Content-Type: application/json
@@ -505,6 +549,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:** `200 OK`
+
 ```json
 {
   "id": "uuid",
@@ -517,6 +562,7 @@ Authorization: Bearer <token>
 ```
 
 ### Delete Account
+
 ```http
 DELETE /auth/account
 Authorization: Bearer <token>
@@ -533,6 +579,7 @@ Authorization: Bearer <token>
 These are complete pre-built message templates (distinct from individual `TemplateSegments`).
 
 ### Create Message Template
+
 ```http
 POST /api/message-templates
 Content-Type: application/json
@@ -548,6 +595,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:** `201 Created`
+
 ```json
 {
   "id": "uuid",
@@ -562,17 +610,20 @@ Authorization: Bearer <token>
 ```
 
 ### List Message Templates
+
 ```http
 GET /api/message-templates?gender=FEMALE
 Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
+
 - `gender` (optional): Filter by gender (`MALE`, `FEMALE`, `NEUTRAL`, `ALL`)
 
 **Response:** `200 OK` — array of message templates
 
 ### Get Message Template
+
 ```http
 GET /api/message-templates/{template_id}
 Authorization: Bearer <token>
@@ -581,6 +632,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK` or `404 Not Found`
 
 ### Update Message Template
+
 ```http
 PUT /api/message-templates/{template_id}
 Content-Type: application/json
@@ -597,6 +649,7 @@ Authorization: Bearer <token>
 **Response:** `200 OK`
 
 ### Delete Message Template
+
 ```http
 DELETE /api/message-templates/{template_id}
 Authorization: Bearer <token>
@@ -611,6 +664,7 @@ Authorization: Bearer <token>
 All endpoints may return the following error responses:
 
 ### 401 Unauthorized
+
 ```json
 {
   "detail": "Not authenticated"
@@ -618,6 +672,7 @@ All endpoints may return the following error responses:
 ```
 
 ### 404 Not Found
+
 ```json
 {
   "detail": "Resource not found"
@@ -625,6 +680,7 @@ All endpoints may return the following error responses:
 ```
 
 ### 400 Bad Request
+
 ```json
 {
   "detail": "Validation error message"
@@ -632,6 +688,7 @@ All endpoints may return the following error responses:
 ```
 
 ### 422 Unprocessable Entity
+
 ```json
 {
   "detail": [
@@ -650,15 +707,16 @@ All endpoints may return the following error responses:
 
 Posts and message templates support dynamic keywords replaced at send time by `resolveKeywords()` in `utils/message.ts`:
 
-| Keyword | Replacement | Notes |
-|---------|-------------|-------|
-| `[Tag Person]` | Friend's full name | Exact string used in DM templates |
-| `[Today]` | Localised date string (e.g. "February 21") | Uses `toLocaleDateString('en-US', {month:'long', day:'numeric'})` |
-| `[Image]` | *(stripped / empty string)* | Images are attached separately; this placeholder is removed from text |
-| `{First_Name}` | Friend's first name | Legacy-style merge tag — supported by backend docs but resolved separately |
-| `{Last_Name}` | Friend's last name | As above |
+| Keyword        | Replacement                                | Notes                                                                      |
+| -------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
+| `[Tag Person]` | Friend's full name                         | Exact string used in DM templates                                          |
+| `[Today]`      | Localised date string (e.g. "February 21") | Uses `toLocaleDateString('en-US', {month:'long', day:'numeric'})`          |
+| `[Image]`      | _(stripped / empty string)_                | Images are attached separately; this placeholder is removed from text      |
+| `{First_Name}` | Friend's first name                        | Legacy-style merge tag — supported by backend docs but resolved separately |
+| `{Last_Name}`  | Friend's last name                         | As above                                                                   |
 
 **Example (DM assembled from MessageTemplate):**
+
 ```
 greeting:  "Hey [Tag Person]!"
 sentiment: "Wishing you an amazing birthday on [Today]."
@@ -674,10 +732,13 @@ Output: "Hey John! Wishing you an amazing birthday on February 21. Hope this yea
 The extension background service worker exposes additional message types for controlling the automation pipeline. These are sent via `chrome.runtime.sendMessage()` from the popup (not HTTP endpoints).
 
 ### `automation.scanFacebook`
+
 Triggers a full automation run: fetches templates/posts/contacts, groups by `days_in_advance`, opens `facebook.com/birthdays`, dispatches `automation.runFull` to the content script.
 
 ### `automation.getConfig`
+
 Returns the current `AutomationConfig` from `chrome.storage.local`:
+
 ```json
 {
   "enabled": true,
@@ -689,22 +750,29 @@ Returns the current `AutomationConfig` from `chrome.storage.local`:
 ```
 
 ### `automation.setEnabled`
+
 Payload: `{ enabled: boolean }` — enables/disables scheduled automation.
 
 ### `automation.setInterval`
+
 Payload: `{ minutes: number }` (minimum 30) — sets how often the alarm fires.
 
 ### `automation.setMaxMessages`
+
 Payload: `{ max: number }` — caps messages per run. `0` = unlimited.
 
 ### `automation.clearSentToday`
+
 No payload. Clears the `chrome.storage.local` deduplication list so all contacts can be processed again today.
 
 ### `automation.recordSent`
+
 Payload: `{ friendId: string; friendName: string }` — sent from the content script after each successful DM. Adds `friendId` (profile URL or generated ID) to the sent-today list.
 
 ### `automation.runFull` (background → content script)
+
 Dispatched from the background to the Facebook birthdays tab containing an `AutomationRunPayload`:
+
 ```typescript
 {
   currentDayTemplates: MessageTemplate[];   // days_in_advance === 0
@@ -722,6 +790,7 @@ Dispatched from the background to the Facebook birthdays tab containing an `Auto
 ## Gender Enum Values
 
 All gender fields use the following enum:
+
 - `MALE` - Male friends only
 - `FEMALE` - Female friends only
 - `NEUTRAL` - Gender-neutral content
@@ -732,6 +801,7 @@ All gender fields use the following enum:
 ## Testing with cURL
 
 ### Example: Create a message group
+
 ```bash
 curl -X POST http://localhost:8000/api/message-groups \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -744,6 +814,7 @@ curl -X POST http://localhost:8000/api/message-groups \
 ```
 
 ### Example: Upload an image
+
 ```bash
 curl -X POST http://localhost:8000/api/images/upload \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -754,13 +825,13 @@ curl -X POST http://localhost:8000/api/images/upload \
 ```
 
 ### Example: List all posts
+
 ```bash
 curl -X GET http://localhost:8000/api/posts \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 ---
-
 
 ## Database Setup
 
@@ -769,6 +840,7 @@ curl -X GET http://localhost:8000/api/posts \
 ### Current Active Schema (15 Tables)
 
 The active schema includes:
+
 - users
 - subscription_records
 - template_segments
@@ -812,9 +884,10 @@ The schema is managed by Alembic migrations, applied automatically during contai
 ## All Active Endpoints
 
 ### Phase 1 — Auth & Core
+
 - `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`
 - `GET /auth/me`, `PUT /auth/profile`, `DELETE /auth/account`
-- `POST /auth/request-password-reset` *(rate-limited)*, `POST /auth/reset-password`, `POST /auth/change-password`
+- `POST /auth/request-password-reset` _(rate-limited)_, `POST /auth/reset-password`, `POST /auth/change-password`
 - `GET /templates/`, `POST /templates/`, `PUT /templates/{id}`, `DELETE /templates/{id}`
 - `GET /subscription/status`, `POST /subscription/create-checkout-session`
 - `POST /stripe/webhook`
@@ -825,6 +898,7 @@ The schema is managed by Alembic migrations, applied automatically during contai
 - `WS  /ws` (WebSocket)
 
 ### Phase 2 — Extended Features
+
 - `GET /api/contacts`, `POST /api/contacts`, `POST /api/contacts/bulk`, `GET /api/contacts/{id}`, `PUT /api/contacts/{id}`, `DELETE /api/contacts/{id}`
 - `GET /api/message-groups`, `POST /api/message-groups`, `GET /api/message-groups/{id}`, `PUT /api/message-groups/{id}`, `DELETE /api/message-groups/{id}`
 - `GET /api/posts`, `POST /api/posts`, `GET /api/posts/{id}`, `PUT /api/posts/{id}`, `DELETE /api/posts/{id}`
@@ -834,4 +908,3 @@ The schema is managed by Alembic migrations, applied automatically during contai
 - `GET /api/message-templates`, `POST /api/message-templates`, `GET /api/message-templates/{id}`, `PUT /api/message-templates/{id}`, `DELETE /api/message-templates/{id}`
 
 See [BACKEND_TESTING_GUIDE.md](../BACKEND_TESTING_GUIDE.md) for curl/PowerShell examples.
-

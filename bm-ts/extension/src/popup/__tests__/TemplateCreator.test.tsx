@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // ---------------------------------------------------------------------------
@@ -80,11 +80,6 @@ function getTitleInput() {
   // Title input has no aria-label — find by placeholder text
   return screen.getByPlaceholderText('SimpleBirthday');
 }
-function getGenderSelect() {
-  // There are 2 selects: Days in Advance (index 0) and Gender Filter (index 1).
-  // Neither has an aria-label so we select by position.
-  return screen.getAllByRole('combobox')[1];
-}
 
 /** Fill all required fields with the given data. */
 async function fillForm(
@@ -131,17 +126,6 @@ describe('TemplateCreator', () => {
     expect(getGreetingArea()).toBeInTheDocument();
     expect(getSentimentArea()).toBeInTheDocument();
     expect(getClosingArea()).toBeInTheDocument();
-  });
-
-  // Gender select is currently commented out in the component
-  it.skip('renders the gender select with three options', () => {
-    render(<TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
-    const select = getGenderSelect();
-    const options = within(select).getAllByRole('option');
-    const texts = options.map((o) => o.textContent?.toLowerCase().trim());
-    expect(texts).toContain('all genders');
-    expect(texts).toContain('male');
-    expect(texts).toContain('female');
   });
 
   it('renders Save, Cancel, and Preview action buttons', () => {
@@ -269,14 +253,6 @@ describe('TemplateCreator', () => {
   });
 
   // --- Gender select --------------------------------------------------------
-
-  // Gender select is currently commented out in the component
-  it.skip('allows changing the gender selection', async () => {
-    const user = userEvent.setup();
-    render(<TemplateCreator onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
-    await user.selectOptions(getGenderSelect(), 'MALE');
-    expect(getGenderSelect()).toHaveValue('MALE');
-  });
 
   // --- Preview tab ----------------------------------------------------------
 

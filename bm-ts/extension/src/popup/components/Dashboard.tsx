@@ -4,6 +4,7 @@ import { useMessageHistory, useMessageQueue } from '../hooks/useMessages';
 import DashboardStatsCard from './DashboardStatsCard';
 import DashboardCharts from './DashboardCharts';
 import { getErrorMessage, logError } from '../../utils/errors';
+import { logger } from '../../utils/logger';
 import wsClient from '../../api/websocket';
 import { sendBackgroundMessage } from '../api';
 import HelpTooltip from './HelpTooltip';
@@ -41,7 +42,7 @@ const Dashboard = memo(function Dashboard({ onClose: _onClose }: DashboardProps)
 
     // Subscribe to real-time dashboard updates
     const unsubscribeDashboard = wsClient.on('dashboard_update', (data) => {
-      console.log('[Dashboard] Real-time update:', data);
+      logger.log('[Dashboard] Real-time update:', data);
       setStats(data as DashboardStats);
     });
 

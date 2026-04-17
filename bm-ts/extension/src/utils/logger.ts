@@ -3,32 +3,39 @@
 
 const isDevelopment = import.meta.env.MODE !== 'production';
 
-const logPrefix = '[BM Background]';
-
 export const logger = {
+  log: (message: string, ...args: unknown[]) => {
+    if (isDevelopment) {
+      console.log(message, ...args);
+    }
+  },
+
   info: (message: string, ...args: unknown[]) => {
     if (isDevelopment) {
-      console.log(`${logPrefix} ℹ️`, message, ...args);
+      console.log(message, ...args);
     }
   },
 
   error: (message: string, error?: unknown, ...args: unknown[]) => {
-    console.error(`${logPrefix} ❌`, message, error, ...args);
+    // Errors are always logged regardless of mode
+    console.error(message, error, ...args);
   },
 
   warn: (message: string, ...args: unknown[]) => {
-    console.warn(`${logPrefix} ⚠️`, message, ...args);
+    if (isDevelopment) {
+      console.warn(message, ...args);
+    }
   },
 
   debug: (message: string, ...args: unknown[]) => {
     if (isDevelopment) {
-      console.debug(`${logPrefix} 🔍`, message, ...args);
+      console.debug(message, ...args);
     }
   },
 
   success: (message: string, ...args: unknown[]) => {
     if (isDevelopment) {
-      console.log(`${logPrefix} ✅`, message, ...args);
+      console.log(message, ...args);
     }
   },
 };

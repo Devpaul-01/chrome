@@ -30,6 +30,7 @@ from app.db.models import SubscriptionRecord, User
 # helpers
 # ---------------------------------------------------------------------------
 
+
 def _build_event(event_type: str, object_data: dict[str, Any]) -> MagicMock:
     """Build a mock stripe.Event."""
     event = MagicMock()
@@ -72,7 +73,8 @@ async def _post_webhook(
     """POST to the webhook endpoint with a mocked construct_event."""
     event = _build_event(event_type, object_data)
     with patch(
-        "app.api.routers.webhook.construct_event", return_value=event,
+        "app.api.routers.webhook.construct_event",
+        return_value=event,
     ):
         return await client.post(
             "/stripe/webhook",
@@ -115,6 +117,7 @@ async def _create_subscription(
 # signature validation
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_webhook_missing_signature(async_client: AsyncClient):
     resp = await async_client.post("/stripe/webhook", content=b"{}")
@@ -140,10 +143,13 @@ async def test_webhook_invalid_signature(async_client: AsyncClient):
 # unhandled event
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_webhook_unhandled_event(async_client: AsyncClient):
     resp = await _post_webhook(
-        async_client, "charge.succeeded", {"id": "ch_test"},
+        async_client,
+        "charge.succeeded",
+        {"id": "ch_test"},
     )
     assert resp.status_code == 200
     assert resp.json()["received"] is True
@@ -152,6 +158,7 @@ async def test_webhook_unhandled_event(async_client: AsyncClient):
 # ---------------------------------------------------------------------------
 # customer.subscription.created
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_webhook_subscription_created(
@@ -179,6 +186,7 @@ async def test_webhook_subscription_created(
 # customer.subscription.updated (cancel_at_period_end)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_webhook_subscription_updated_cancel(
     async_client: AsyncClient, db_session: AsyncSession, test_user: User
@@ -204,13 +212,16 @@ async def test_webhook_subscription_updated_cancel(
 # customer.subscription.updated (plan change)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_webhook_subscription_updated_plan_change(
     async_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
     test_user.stripe_customer_id = "cus_test_456"
     await db_session.commit()
-    await _create_subscription(db_session, test_user, price_id="price_monthly_placeholder")
+    await _create_subscription(
+        db_session, test_user, price_id="price_monthly_placeholder"
+    )
 
     data = _subscription_object(price_id="price_yearly_placeholder")
     resp = await _post_webhook(async_client, "customer.subscription.updated", data)
@@ -228,6 +239,7 @@ async def test_webhook_subscription_updated_plan_change(
 # ---------------------------------------------------------------------------
 # customer.subscription.deleted
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_webhook_subscription_deleted(
@@ -259,6 +271,7 @@ async def test_webhook_subscription_deleted(
 # invoice.payment_failed
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_webhook_payment_failed(
     async_client: AsyncClient, db_session: AsyncSession, test_user: User
@@ -279,9 +292,7 @@ async def test_webhook_payment_failed(
     assert resp.status_code == 200
 
     result = await db_session.execute(
-        select(SubscriptionRecord).where(
-            SubscriptionRecord.id == record.id
-        )
+        select(SubscriptionRecord).where(SubscriptionRecord.id == record.id)
     )
     updated = result.scalar_one()
     assert updated.status == "PAST_DUE"
@@ -298,6 +309,7 @@ async def test_webhook_payment_failed_no_subscription(async_client: AsyncClient)
 # ---------------------------------------------------------------------------
 # no matching user
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_webhook_unknown_customer(async_client: AsyncClient):

@@ -20,6 +20,7 @@ import {
   retryOperation,
   simulateClick,
 } from './dom-helpers';
+import { logger } from '../utils/logger';
 
 /**
  * Detects the Facebook UI language from the page's HTML lang attribute
@@ -86,7 +87,7 @@ function isOnMessengerPage(): boolean {
  */
 async function ensureOnMessengerPage(timeout: number = DEFAULT_TIMEOUT): Promise<void> {
   if (!isOnMessengerPage()) {
-    console.log('[BM Archive] Navigating to Messenger...');
+    logger.log('[BM Archive] Navigating to Messenger...');
     window.location.href = MESSENGER_BASE_URL;
 
     const navigationStart = Date.now();
@@ -96,7 +97,7 @@ async function ensureOnMessengerPage(timeout: number = DEFAULT_TIMEOUT): Promise
       const timeoutId = window.setTimeout(() => {
         window.clearInterval(checkNavigation);
         const elapsed = Date.now() - navigationStart;
-        console.error(
+        logger.error(
           `[BM Archive] Timed out after ${elapsed}ms waiting to navigate to Messenger. Current URL: ${window.location.href}`,
         );
         reject(
@@ -129,7 +130,7 @@ async function findConversationByName(friendName: string): Promise<HTMLElement |
   // Wait for the conversation list to load
   const conversationList = await waitForElement('[role="navigation"]');
   if (!conversationList) {
-    console.error('[BM Archive] Conversation list not found');
+    logger.error('[BM Archive] Conversation list not found');
     return null;
   }
 
@@ -144,7 +145,7 @@ async function findConversationByName(friendName: string): Promise<HTMLElement |
   for (const selector of conversationSelectors) {
     const conversation = document.querySelector<HTMLElement>(selector);
     if (conversation) {
-      console.log(`[BM Archive] Found conversation for ${friendName}`);
+      logger.log(`[BM Archive] Found conversation for ${friendName}`);
       return conversation;
     }
   }
@@ -156,11 +157,11 @@ async function findConversationByName(friendName: string): Promise<HTMLElement |
   );
 
   if (matchingConversation) {
-    console.log(`[BM Archive] Found conversation by text match for ${friendName}`);
+    logger.log(`[BM Archive] Found conversation by text match for ${friendName}`);
     return matchingConversation as HTMLElement;
   }
 
-  console.warn(`[BM Archive] Conversation not found for ${friendName}`);
+  logger.warn(`[BM Archive] Conversation not found for ${friendName}`);
   return null;
 }
 
@@ -207,7 +208,7 @@ async function clickArchiveOption(menu: HTMLElement): Promise<boolean> {
   if (!archiveItem) {
     const byTestId = menu.querySelector<HTMLElement>('[data-testid*="archive"]');
     if (byTestId) {
-      console.log('[BM Archive] Clicking archive option (found via data-testid)');
+      logger.log('[BM Archive] Clicking archive option (found via data-testid)');
       await simulateClick(byTestId);
       await delay(1000);
       return true;
@@ -215,13 +216,13 @@ async function clickArchiveOption(menu: HTMLElement): Promise<boolean> {
   }
 
   if (archiveItem) {
-    console.log('[BM Archive] Clicking archive option');
+    logger.log('[BM Archive] Clicking archive option');
     await simulateClick(archiveItem as HTMLElement);
     await delay(1000);
     return true;
   }
 
-  console.error('[BM Archive] Archive option not found in menu');
+  logger.error('[BM Archive] Archive option not found in menu');
   return false;
 }
 
@@ -246,7 +247,7 @@ async function saveArchivedConversation(friendName: string, profileUrl?: string)
   }
 
   await chrome.storage.local.set({ [ARCHIVE_STORAGE_KEY]: archived });
-  console.log(`[BM Archive] Saved archive record for ${friendName}`);
+  logger.log(`[BM Archive] Saved archive record for ${friendName}`);
 }
 
 /**
@@ -258,7 +259,7 @@ async function removeArchivedConversation(friendName: string): Promise<void> {
 
   const filtered = archived.filter((c) => c.friendName !== friendName);
   await chrome.storage.local.set({ [ARCHIVE_STORAGE_KEY]: filtered });
-  console.log(`[BM Archive] Removed archive record for ${friendName}`);
+  logger.log(`[BM Archive] Removed archive record for ${friendName}`);
 }
 
 /**
@@ -276,7 +277,7 @@ export async function archiveConversation(
   friendName: string,
   profileUrl?: string,
 ): Promise<boolean> {
-  console.log(`[BM Archive] Starting archive process for ${friendName}`);
+  logger.log(`[BM Archive] Starting archive process for ${friendName}`);
 
   let attempt = 0;
   while (attempt < MAX_RETRIES) {
@@ -287,14 +288,14 @@ export async function archiveConversation(
       // Find the conversation
       const conversation = await findConversationByName(friendName);
       if (!conversation) {
-        console.error(`[BM Archive] Could not find conversation for ${friendName}`);
+        logger.error(`[BM Archive] Could not find conversation for ${friendName}`);
         return false;
       }
 
       // Open context menu
       const menu = await openConversationContextMenu(conversation);
       if (!menu) {
-        console.error('[BM Archive] Could not open context menu');
+        logger.error('[BM Archive] Could not open context menu');
         attempt++;
         await delay(RETRY_DELAY);
         continue;
@@ -311,10 +312,10 @@ export async function archiveConversation(
       // Save to storage
       await saveArchivedConversation(friendName, profileUrl);
 
-      console.log(`[BM Archive] Successfully archived conversation for ${friendName}`);
+      logger.log(`[BM Archive] Successfully archived conversation for ${friendName}`);
       return true;
     } catch (error) {
-      console.error(`[BM Archive] Error archiving conversation (attempt ${attempt + 1}):`, error);
+      logger.error(`[BM Archive] Error archiving conversation (attempt ${attempt + 1}):`, error);
       attempt++;
       if (attempt < MAX_RETRIES) {
         await delay(RETRY_DELAY);
@@ -322,7 +323,7 @@ export async function archiveConversation(
     }
   }
 
-  console.error(
+  logger.error(
     `[BM Archive] Failed to archive conversation for ${friendName} after ${MAX_RETRIES} attempts`,
   );
   return false;
@@ -333,7 +334,7 @@ export async function archiveConversation(
  * Includes retry logic and multi-language support.
  */
 export async function unarchiveConversation(friendName: string): Promise<boolean> {
-  console.log(`[BM Archive] Starting unarchive process for ${friendName}`);
+  logger.log(`[BM Archive] Starting unarchive process for ${friendName}`);
 
   // Auto-detect locale for unarchive terms
   const { unarchiveTerms } = detectFacebookLocale();
@@ -349,7 +350,7 @@ export async function unarchiveConversation(friendName: string): Promise<boolean
       // Find the conversation in archived
       const conversation = await findConversationByName(friendName);
       if (!conversation) {
-        console.warn(`[BM Archive] Conversation not found in archive for ${friendName}`);
+        logger.warn(`[BM Archive] Conversation not found in archive for ${friendName}`);
         return false;
       }
 
@@ -372,14 +373,14 @@ export async function unarchiveConversation(friendName: string): Promise<boolean
       }
 
       if (unarchiveItem) {
-        console.log('[BM Archive] Clicking unarchive option');
+        logger.log('[BM Archive] Clicking unarchive option');
         await simulateClick(unarchiveItem as HTMLElement);
         await delay(1000);
 
         // Remove from storage
         await removeArchivedConversation(friendName);
 
-        console.log(`[BM Archive] Successfully unarchived conversation for ${friendName}`);
+        logger.log(`[BM Archive] Successfully unarchived conversation for ${friendName}`);
         return true;
       }
 
@@ -388,7 +389,7 @@ export async function unarchiveConversation(friendName: string): Promise<boolean
     MAX_RETRIES,
     RETRY_DELAY,
   ).catch((error) => {
-    console.error(
+    logger.error(
       `[BM Archive] Error unarchiving conversation after ${MAX_RETRIES} retries:`,
       error,
     );
@@ -452,7 +453,7 @@ const _observers: ObserverRefs = {
  * and automatic reconnection if the target is detached.
  */
 export async function monitorForReplies(friendName: string): Promise<void> {
-  console.log(`[BM Archive] Starting reply monitoring for ${friendName}`);
+  logger.log(`[BM Archive] Starting reply monitoring for ${friendName}`);
 
   // Clean up any existing reply observer
   stopMonitoringReplies();
@@ -460,7 +461,7 @@ export async function monitorForReplies(friendName: string): Promise<void> {
   // Get the messages container
   const messagesContainer = await waitForElement('[role="log"], [role="main"]');
   if (!messagesContainer) {
-    console.error('[BM Archive] Messages container not found');
+    logger.error('[BM Archive] Messages container not found');
     return;
   }
 
@@ -474,12 +475,12 @@ export async function monitorForReplies(friendName: string): Promise<void> {
 
           for (const node of addedNodes) {
             if (isRecipientMessage(node)) {
-              console.log(`[BM Archive] Detected reply from ${friendName}!`);
+              logger.log(`[BM Archive] Detected reply from ${friendName}!`);
 
               const unarchived = await unarchiveConversation(friendName);
 
               if (unarchived) {
-                console.log(`[BM Archive] Auto-unarchived conversation for ${friendName}`);
+                logger.log(`[BM Archive] Auto-unarchived conversation for ${friendName}`);
               }
 
               // Stop observing after detecting a reply
@@ -494,7 +495,7 @@ export async function monitorForReplies(friendName: string): Promise<void> {
     {
       debounceMs: 300,
       reconnectOnDetach: true,
-      onError: (err) => console.error(`[BM Archive] Reply observer error for ${friendName}:`, err),
+      onError: (err) => logger.error(`[BM Archive] Reply observer error for ${friendName}:`, err),
     },
   );
 
@@ -504,7 +505,7 @@ export async function monitorForReplies(friendName: string): Promise<void> {
   });
 
   _observers.replyObserver = observer;
-  console.log(`[BM Archive] Reply monitoring active for ${friendName}`);
+  logger.log(`[BM Archive] Reply monitoring active for ${friendName}`);
 }
 
 /**
@@ -514,7 +515,7 @@ export function stopMonitoringReplies(): void {
   if (_observers.replyObserver) {
     _observers.replyObserver.disconnect();
     _observers.replyObserver = null;
-    console.log('[BM Archive] Stopped reply monitoring');
+    logger.log('[BM Archive] Stopped reply monitoring');
   }
 }
 
@@ -526,7 +527,7 @@ export function stopAllMonitoring(): void {
   if (_observers.globalObserver) {
     _observers.globalObserver.disconnect();
     _observers.globalObserver = null;
-    console.log('[BM Archive] Stopped global archive monitoring');
+    logger.log('[BM Archive] Stopped global archive monitoring');
   }
 }
 
@@ -540,7 +541,7 @@ export async function initializeArchiveMonitoring(): Promise<void> {
     return;
   }
 
-  console.log('[BM Archive] Initializing archive monitoring...');
+  logger.log('[BM Archive] Initializing archive monitoring...');
 
   // Clean up any existing global observer
   if (_observers.globalObserver) {
@@ -551,15 +552,15 @@ export async function initializeArchiveMonitoring(): Promise<void> {
   const archived = await getArchivedConversations();
 
   if (archived.length === 0) {
-    console.log('[BM Archive] No archived conversations to monitor');
+    logger.log('[BM Archive] No archived conversations to monitor');
     return;
   }
 
-  console.log(`[BM Archive] Monitoring ${archived.length} archived conversation(s)`);
+  logger.log(`[BM Archive] Monitoring ${archived.length} archived conversation(s)`);
 
   const messagesContainer = await waitForElement('[role="log"], [role="main"]');
   if (!messagesContainer) {
-    console.warn('[BM Archive] Messages container not found for monitoring');
+    logger.warn('[BM Archive] Messages container not found for monitoring');
     return;
   }
 
@@ -579,7 +580,7 @@ export async function initializeArchiveMonitoring(): Promise<void> {
 
               for (const archivedConv of currentArchived) {
                 if (pageTitle.includes(archivedConv.friendName)) {
-                  console.log(
+                  logger.log(
                     `[BM Archive] Detected reply from archived contact: ${archivedConv.friendName}`,
                   );
                   await unarchiveConversation(archivedConv.friendName);
@@ -594,7 +595,7 @@ export async function initializeArchiveMonitoring(): Promise<void> {
     {
       debounceMs: 500,
       reconnectOnDetach: true,
-      onError: (err) => console.error('[BM Archive] Global observer error:', err),
+      onError: (err) => logger.error('[BM Archive] Global observer error:', err),
     },
   );
 
@@ -604,5 +605,5 @@ export async function initializeArchiveMonitoring(): Promise<void> {
   });
 
   _observers.globalObserver = observer;
-  console.log('[BM Archive] Global archive monitoring initialized');
+  logger.log('[BM Archive] Global archive monitoring initialized');
 }

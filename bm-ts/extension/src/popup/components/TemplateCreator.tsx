@@ -5,6 +5,8 @@ import Spinner from './Spinner';
 // [IMAGE DISABLED] import ImageLibraryPicker from './ImageLibraryPicker';
 import SegmentEditor from './SegmentEditor';
 import HelpTooltip from './HelpTooltip';
+import { sendBackgroundMessage } from '../api';
+import type { MessageGroup } from './MessageGroups';
 
 export type TemplateFormData = {
   greeting: string;
@@ -14,6 +16,7 @@ export type TemplateFormData = {
   templateTitle: string;
   daysInAdvance: number;
   gender: 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL';
+  groupId: string | null;
 };
 
 type Props = {
@@ -33,7 +36,16 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     templateTitle: initialData?.templateTitle || '',
     daysInAdvance: initialData?.daysInAdvance || 0,
     gender: initialData?.gender || 'ALL',
+    groupId: initialData?.groupId ?? null,
   });
+
+  const [groups, setGroups] = useState<MessageGroup[]>([]);
+
+  useEffect(() => {
+    sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' })
+      .then(setGroups)
+      .catch(() => {});
+  }, []);
 
   // Restore draft from storage when creating (not editing)
   useEffect(() => {
@@ -159,10 +171,6 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
     setError(null);
 
     try {
-      // TODO: Replace with actual AI API call (OpenAI, Claude, etc.)
-      // Simulating AI generation with predefined templates for now
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
       const suggestions = {
         greeting: [
           'Hey {First_Name}, hope your day is as awesome as you are!',
@@ -380,6 +388,28 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               </select>
             </div> */}
 
+            {/* Group */}
+            {groups.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Group{' '}
+                  <HelpTooltip label="Assign this template to a group so it is only used for contacts in the same group. Leave as 'None' to use for any contact." />
+                </label>
+                <select
+                  value={formData.groupId || ''}
+                  onChange={(e) => setFormData({ ...formData, groupId: e.target.value || null })}
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+                >
+                  <option value="">None</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* [IMAGE DISABLED] Attach Image section — hidden until image support is re-enabled */}
             {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -480,6 +510,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                   templateTitle: '',
                   daysInAdvance: 0,
                   gender: 'ALL',
+                  groupId: null,
                 });
                 setActiveTab('create');
                 onCancel();

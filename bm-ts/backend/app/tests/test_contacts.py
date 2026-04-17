@@ -37,7 +37,9 @@ async def test_create_contact(async_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_contact_without_optional_fields(async_client: AsyncClient) -> None:
+async def test_create_contact_without_optional_fields(
+    async_client: AsyncClient,
+) -> None:
     payload = {
         "name": "Bob",
         "facebook_profile_url": "https://facebook.com/bob",

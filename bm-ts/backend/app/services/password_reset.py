@@ -26,33 +26,34 @@ from sendgrid.helpers.mail import Mail
 
 logger = logging.getLogger(__name__)
 
+
 async def create_reset_token(user: User, db: AsyncSession) -> str:
     """Create a password reset token for a user"""
     # Generate a secure random token
     raw_token = secrets.token_urlsafe(32)
 
     hash_token = hashlib.sha256(raw_token.encode()).hexdigest()
-    
+
     # Token expires in 1 hour
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
-    
+
     reset_token = PasswordResetToken(
         user_id=user.id,
         token=hash_token,
         expires_at=expires_at,
-      used_at=None,
-      created_at=datetime.now(timezone.utc),
+        used_at=None,
+        created_at=datetime.now(timezone.utc),
     )
 
     db.add(reset_token)
     await db.commit()
-    
+
     return raw_token
 
 
 async def verify_reset_token(raw_token: str, db: AsyncSession) -> User | None:
     """Verify a password reset token and return the associated user.
-    
+
     Uses SELECT FOR UPDATE to prevent race conditions when multiple
     requests attempt to consume the same token concurrently.
     """
@@ -75,7 +76,7 @@ async def verify_reset_token(raw_token: str, db: AsyncSession) -> User | None:
     row = result.first()
     if not row:
         return None
-    
+
     return row[1]
 
 
@@ -87,7 +88,7 @@ async def mark_token_used(raw_token: str, db: AsyncSession) -> None:
     result = await db.execute(
         select(PasswordResetToken).where(PasswordResetToken.token == hash_token)
     )
-    
+
     reset_token = result.scalar_one_or_none()
     if reset_token:
         reset_token.used_at = datetime.now(timezone.utc)
@@ -161,12 +162,15 @@ async def send_reset_email(email: str, token: str) -> None:
             except Exception as exc:
                 last_exc = exc
                 if attempt < 2:
-                    await asyncio.sleep(2 ** attempt)  # 1 s, 2 s
+                    await asyncio.sleep(2**attempt)  # 1 s, 2 s
                     logger.warning(
                         "Retry %d/2 sending reset email to %s: %s",
-                        attempt + 1, email, exc,
+                        attempt + 1,
+                        email,
+                        exc,
                     )
-        logger.error("Failed to send reset email to %s after 3 attempts: %s", email, last_exc)
+        logger.error(
+            "Failed to send reset email to %s after 3 attempts: %s", email, last_exc
+        )
     except Exception as e:
         logger.error("Failed to send reset email to %s: %s", email, e)
-        

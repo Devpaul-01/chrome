@@ -24,7 +24,6 @@ OR
 docker compose up -d
 ```
 
-
 To trigger an immediate backup without waiting for the schedule, restart the backup service:
 
 ```bash
@@ -49,14 +48,14 @@ From the `backend/` directory:
 
 The backup script reads from `.env` or environment variables:
 
-| Variable                 | Default          | Description                     |
-| ------------------------ | ---------------- | ------------------------------- |
-| `POSTGRES_HOST`          | `localhost`      | Database host                   |
-| `POSTGRES_PORT`          | `5432`           | Database port                   |
-| `POSTGRES_USER`          | `postgres`       | Database user                   |
-| `POSTGRES_PASSWORD`      | *(empty)*        | Database password               |
-| `POSTGRES_DB`            | `birthdaymessaging` | Database name                |
-| `BACKUP_RETENTION_COUNT` | `7`              | Number of backups to keep       |
+| Variable                 | Default             | Description               |
+| ------------------------ | ------------------- | ------------------------- |
+| `POSTGRES_HOST`          | `localhost`         | Database host             |
+| `POSTGRES_PORT`          | `5432`              | Database port             |
+| `POSTGRES_USER`          | `postgres`          | Database user             |
+| `POSTGRES_PASSWORD`      | _(empty)_           | Database password         |
+| `POSTGRES_DB`            | `birthdaymessaging` | Database name             |
+| `BACKUP_RETENTION_COUNT` | `7`                 | Number of backups to keep |
 
 ---
 
@@ -74,6 +73,7 @@ The backup script reads from `.env` or environment variables:
    ```bash
    docker compose stop backend
    ```
+
 2. **Run the restore script:**
 
    ```bash
@@ -125,13 +125,13 @@ POSTGRES_DB=birthdaymessaging_test ./scripts/restore.sh ./backups/birthdaymessag
 
 ## Backup File Format
 
-| Property   | Value                                        |
-| ---------- | -------------------------------------------- |
-| Format     | Plain SQL, gzip-compressed                   |
-| Naming     | `birthdaymessaging_YYYYMMDD_HHMMSS.sql.gz`  |
-| Location   | `backend/backups/`                           |
-| Includes   | Schema + data (no ownership/privileges)      |
-| Excludes   | Roles, tablespaces                           |
+| Property | Value                                      |
+| -------- | ------------------------------------------ |
+| Format   | Plain SQL, gzip-compressed                 |
+| Naming   | `birthdaymessaging_YYYYMMDD_HHMMSS.sql.gz` |
+| Location | `backend/backups/`                         |
+| Includes | Schema + data (no ownership/privileges)    |
+| Excludes | Roles, tablespaces                         |
 
 ---
 
@@ -149,9 +149,9 @@ POSTGRES_DB=birthdaymessaging_test ./scripts/restore.sh ./backups/birthdaymessag
 
 ## Troubleshooting
 
-| Problem | Solution |
-| --- | --- |
-| Empty backup file | Check that the `db` container is healthy: `docker compose ps` |
-| "role does not exist" on restore | Backups use `--no-owner` so this shouldn't occur. If it does, ensure the target DB user exists. |
-| Alembic version mismatch after restore | Run `alembic upgrade head` to apply any migrations newer than the backup. |
-| Permission denied on scripts | `chmod +x scripts/backup.sh scripts/restore.sh` |
+| Problem                                | Solution                                                                                        |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Empty backup file                      | Check that the `db` container is healthy: `docker compose ps`                                   |
+| "role does not exist" on restore       | Backups use `--no-owner` so this shouldn't occur. If it does, ensure the target DB user exists. |
+| Alembic version mismatch after restore | Run `alembic upgrade head` to apply any migrations newer than the backup.                       |
+| Permission denied on scripts           | `chmod +x scripts/backup.sh scripts/restore.sh`                                                 |

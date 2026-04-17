@@ -5,6 +5,7 @@ Tests cover:
   - ``compose_message`` raises ``ValueError`` when any segment group is empty
   - ``compose_message`` correctly concatenates one segment from each group
 """
+
 from __future__ import annotations
 
 import pytest

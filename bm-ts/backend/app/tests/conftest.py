@@ -13,10 +13,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import AsyncGenerator
 
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import StaticPool, event, text
+from sqlalchemy import StaticPool, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -51,7 +50,7 @@ def _set_reset_created_at(mapper, connection, target):
         target.created_at = datetime.now(timezone.utc)
 
 
-from app.db.models import SubscriptionRecord
+from app.db.models import SubscriptionRecord  # noqa: E402
 
 
 @sa_event.listens_for(SubscriptionRecord, "before_insert")
@@ -66,25 +65,46 @@ def _set_subscription_created_at(mapper, connection, target):
 
 
 # Phase 2 models — set created_at/updated_at defaults for SQLite tests
-from app.db.models import (
-    BirthdayConfig, Contact, MessageGroup, MessageTemplate,
-    Post, UserImage, SMTPConfig, MessageQueue, MessageHistory,
-    BirthdaySchedule, TemplateSegment, UserSession, RevokedToken,
+from app.db.models import (  # noqa: E402
+    BirthdayConfig,
+    Contact,
+    MessageGroup,
+    MessageTemplate,
+    Post,
+    UserImage,
+    SMTPConfig,
+    MessageQueue,
+    MessageHistory,
+    BirthdaySchedule,
+    TemplateSegment,
+    UserSession,
+    RevokedToken,
 )
 
 _MODELS_WITH_TIMESTAMPS = [
-    BirthdayConfig, Contact, MessageGroup, MessageTemplate,
-    Post, SMTPConfig, MessageQueue, MessageHistory,
-    BirthdaySchedule, TemplateSegment,
+    BirthdayConfig,
+    Contact,
+    MessageGroup,
+    MessageTemplate,
+    Post,
+    SMTPConfig,
+    MessageQueue,
+    MessageHistory,
+    BirthdaySchedule,
+    TemplateSegment,
 ]
 
 for _Model in _MODELS_WITH_TIMESTAMPS:
+
     @sa_event.listens_for(_Model, "before_insert")
     def _set_timestamps(mapper, connection, target):
         now = datetime.now(timezone.utc)
         if getattr(target, "created_at", None) is None:
             target.created_at = now
-        if hasattr(target, "updated_at") and getattr(target, "updated_at", None) is None:
+        if (
+            hasattr(target, "updated_at")
+            and getattr(target, "updated_at", None) is None
+        ):
             target.updated_at = now
 
 
@@ -131,6 +151,7 @@ def _set_revoked_at(mapper, connection, target):
     if getattr(target, "revoked_at", None) is None:
         target.revoked_at = datetime.now(timezone.utc)
 
+
 # ---------------------------------------------------------------------------
 # In-memory async SQLite engine (no real PostgreSQL needed for unit tests)
 # ---------------------------------------------------------------------------
@@ -145,12 +166,14 @@ engine = create_async_engine(
     poolclass=StaticPool,
 )
 
+
 # Enable FK constraint enforcement for SQLite on every connection
 @event.listens_for(engine.sync_engine, "connect")
 def _set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys = ON")
     cursor.close()
+
 
 TestSessionLocal = async_sessionmaker(
     bind=engine,
@@ -207,7 +230,9 @@ async def test_user(db_session: AsyncSession) -> User:
 
 
 @pytest_asyncio.fixture
-async def async_client(db_session: AsyncSession, test_user: User) -> AsyncGenerator[AsyncClient, None]:
+async def async_client(
+    db_session: AsyncSession, test_user: User
+) -> AsyncGenerator[AsyncClient, None]:
     """
     HTTP client bound to the FastAPI app with overridden dependencies.
 

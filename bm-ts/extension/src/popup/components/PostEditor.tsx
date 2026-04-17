@@ -4,6 +4,8 @@ import { useImageLibrary } from '../hooks/useImageLibrary';
 import ImageLibraryPicker from './ImageLibraryPicker';
 import HelpTooltip from './HelpTooltip';
 import FeatureTip from './FeatureTip';
+import { sendBackgroundMessage } from '../api';
+import type { MessageGroup } from './MessageGroups';
 
 type PostForm = {
   content: string;
@@ -15,6 +17,7 @@ type PostForm = {
   fontColor?: string;
   textX?: number;
   textY?: number;
+  group_id?: string | null;
 };
 
 type Props = {
@@ -45,6 +48,13 @@ export default function PostEditor({
   const [showLibraryPicker, setShowLibraryPicker] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const { images: libraryImages, isLoading: isLoadingLibrary } = useImageLibrary();
+  const [groups, setGroups] = useState<MessageGroup[]>([]);
+
+  useEffect(() => {
+    sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' })
+      .then(setGroups)
+      .catch(() => {});
+  }, []);
 
   // Optimal post dimensions
   const FACEBOOK_WIDTH = 1080;
@@ -275,6 +285,27 @@ export default function PostEditor({
             required
           />
         </label>
+
+        {groups.length > 0 && (
+          <label className="block mb-5">
+            <span className="text-xs font-semibold text-textPrimary mb-2 block">
+              Group{' '}
+              <HelpTooltip label="Assign this post to a group so it is only used for contacts in the same group. Leave as 'None' to use for any contact." />
+            </span>
+            <select
+              value={postForm.group_id || ''}
+              onChange={(e) => setPostForm({ ...postForm, group_id: e.target.value || null })}
+              className="text-field w-full"
+            >
+              <option value="">None</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">

@@ -165,8 +165,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
     const contacts: ImportContact[] = [];
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map((v) => v.trim());
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const c: any = {};
+      const c: Partial<ImportContact> = {};
       headers.forEach((h, idx) => {
         if (h === 'name') c.name = values[idx];
         if (['facebook_profile_url', 'facebook_url', 'facebook'].includes(h))
@@ -174,7 +173,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
         if (['birthday', 'birth_date'].includes(h)) c.birthday = values[idx];
         if (h === 'gender') {
           const g = values[idx].toUpperCase();
-          if (['MALE', 'FEMALE', 'NEUTRAL'].includes(g)) c.gender = g;
+          if (g === 'MALE' || g === 'FEMALE' || g === 'NEUTRAL') c.gender = g;
         }
         if (['notes', 'note'].includes(h)) c.notes = values[idx];
       });
@@ -187,7 +186,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
         });
         if (fn || ln) c.name = `${fn} ${ln}`.trim();
       }
-      if (c.name && c.facebook_profile_url && c.birthday) contacts.push(c);
+      if (c.name && c.facebook_profile_url && c.birthday) contacts.push(c as ImportContact);
     }
     return contacts;
   };
@@ -195,8 +194,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
   const parseVCF = (text: string): ImportContact[] => {
     const contacts: ImportContact[] = [];
     for (const vCard of text.split('BEGIN:VCARD').slice(1)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const c: any = {};
+      const c: Partial<ImportContact> = {};
       for (const line of vCard.split('\n')) {
         if (line.startsWith('FN:')) c.name = line.substring(3).trim();
         if (line.startsWith('URL') && line.toLowerCase().includes('facebook'))
@@ -207,7 +205,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
       if (c.name && c.birthday) {
         if (!c.facebook_profile_url)
           c.facebook_profile_url = `https://facebook.com/${c.name.replace(/\s+/g, '.')}`;
-        contacts.push(c);
+        contacts.push(c as ImportContact);
       }
     }
     return contacts;

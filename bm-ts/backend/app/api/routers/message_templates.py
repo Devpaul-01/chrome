@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,13 +18,29 @@ from app.schemas.common import DeleteResponse
 router = APIRouter(tags=["message-templates"])
 
 
-@router.post("/message-templates", response_model=MessageTemplateOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/message-templates",
+    response_model=MessageTemplateOut,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_message_template(
     data: MessageTemplateCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> MessageTemplateOut:
     """Create a new complete message template"""
+    # Check unique title per user
+    dup_stmt = select(MessageTemplate).where(
+        MessageTemplate.user_id == current_user.id,
+        MessageTemplate.title == data.title,
+    )
+    dup_result = await db.execute(dup_stmt)
+    if dup_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A template with this title already exists",
+        )
+
     template = MessageTemplate(
         user_id=current_user.id,
         title=data.title,
@@ -34,6 +50,7 @@ async def create_message_template(
         image_url=data.image_url,
         days_in_advance=data.days_in_advance,
         gender=data.gender,
+        group_id=data.group_id,
     )
     db.add(template)
     await db.commit()
@@ -44,15 +61,18 @@ async def create_message_template(
 @router.get("/message-templates", response_model=List[MessageTemplateOut])
 async def list_message_templates(
     gender: Optional[str] = None,
+    group_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> List[MessageTemplateOut]:
     """List all message templates for the current user"""
     stmt = select(MessageTemplate).where(MessageTemplate.user_id == current_user.id)
-    
+
     if gender:
         stmt = stmt.where(MessageTemplate.gender == gender)
-    
+    if group_id is not None:
+        stmt = stmt.where(MessageTemplate.group_id == group_id)
+
     stmt = stmt.order_by(MessageTemplate.created_at.desc())
     result = await db.execute(stmt)
     return list(result.scalars().all())
@@ -71,13 +91,12 @@ async def get_message_template(
     )
     result = await db.execute(stmt)
     template = result.scalar_one_or_none()
-    
+
     if not template:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Message template not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Message template not found"
         )
-    
+
     return template
 
 
@@ -95,25 +114,53 @@ async def update_message_template(
     )
     result = await db.execute(stmt)
     template = result.scalar_one_or_none()
-    
+
     if not template:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Message template not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Message template not found"
         )
-    
+
     # Update fields — explicit allowlist to prevent mass assignment
-    _ALLOWED_FIELDS = {"title", "greeting", "sentiment", "closing", "image_url", "days_in_advance", "gender"}
-    for field, value in data.model_dump(exclude_unset=True).items():
+    _ALLOWED_FIELDS = {
+        "title",
+        "greeting",
+        "sentiment",
+        "closing",
+        "image_url",
+        "days_in_advance",
+        "gender",
+        "group_id",
+    }
+    update_data = data.model_dump(exclude_unset=True)
+
+    # Check unique title if being changed
+    if "title" in update_data and update_data["title"] != template.title:
+        dup_stmt = select(MessageTemplate).where(
+            MessageTemplate.user_id == current_user.id,
+            MessageTemplate.title == update_data["title"],
+            MessageTemplate.id != template_id,
+        )
+        dup_result = await db.execute(dup_stmt)
+        if dup_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A template with this title already exists",
+            )
+
+    for field, value in update_data.items():
         if field in _ALLOWED_FIELDS:
             setattr(template, field, value)
-    
+
     await db.commit()
     await db.refresh(template)
     return template
 
 
-@router.delete("/message-templates/{template_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete(
+    "/message-templates/{template_id}",
+    response_model=DeleteResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def delete_message_template(
     template_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -126,13 +173,12 @@ async def delete_message_template(
     )
     result = await db.execute(stmt)
     template = result.scalar_one_or_none()
-    
+
     if not template:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Message template not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Message template not found"
         )
-    
+
     await db.delete(template)
     await db.commit()
     return DeleteResponse()

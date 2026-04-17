@@ -133,13 +133,29 @@ async def test_delete_message_template_not_found(async_client: AsyncClient) -> N
 
 
 @pytest.mark.asyncio
-async def test_list_message_templates_filter_by_gender(async_client: AsyncClient) -> None:
-    await async_client.post("/api/message-templates", json={
-        "title": "Male", "greeting": "Hi", "sentiment": "B", "closing": "C", "gender": "MALE",
-    })
-    await async_client.post("/api/message-templates", json={
-        "title": "Female", "greeting": "Hi", "sentiment": "B", "closing": "C", "gender": "FEMALE",
-    })
+async def test_list_message_templates_filter_by_gender(
+    async_client: AsyncClient,
+) -> None:
+    await async_client.post(
+        "/api/message-templates",
+        json={
+            "title": "Male",
+            "greeting": "Hi",
+            "sentiment": "B",
+            "closing": "C",
+            "gender": "MALE",
+        },
+    )
+    await async_client.post(
+        "/api/message-templates",
+        json={
+            "title": "Female",
+            "greeting": "Hi",
+            "sentiment": "B",
+            "closing": "C",
+            "gender": "FEMALE",
+        },
+    )
 
     resp = await async_client.get("/api/message-templates", params={"gender": "MALE"})
     assert resp.status_code == 200
@@ -148,6 +164,10 @@ async def test_list_message_templates_filter_by_gender(async_client: AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_create_message_template_missing_required_fields(async_client: AsyncClient) -> None:
-    resp = await async_client.post("/api/message-templates", json={"title": "Incomplete"})
+async def test_create_message_template_missing_required_fields(
+    async_client: AsyncClient,
+) -> None:
+    resp = await async_client.post(
+        "/api/message-templates", json={"title": "Incomplete"}
+    )
     assert resp.status_code == 422

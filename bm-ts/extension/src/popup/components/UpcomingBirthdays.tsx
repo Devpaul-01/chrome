@@ -3,13 +3,15 @@ import { sendBackgroundMessage } from '../api';
 import Spinner from './Spinner';
 import type { Contact } from '../../api/client';
 import HelpTooltip from './HelpTooltip';
+import type { MessageGroup } from './MessageGroups';
 
 interface UpcomingBirthdaysProps {
   onClose: () => void;
 }
 
 function getDaysUntilBirthday(birthday: string): number {
-  const today = new Date();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const bday = new Date(birthday);
   const thisYear = today.getFullYear();
 
@@ -19,32 +21,80 @@ function getDaysUntilBirthday(birthday: string): number {
   }
 
   const diffMs = nextBirthday.getTime() - today.getTime();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
 export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [groups, setGroups] = useState<MessageGroup[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  async function loadContacts() {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await sendBackgroundMessage<Contact[]>({ type: 'contacts.list' });
+      const withBirthdays = (data || [])
+        .filter((c) => c.birthday && !c.birthday_month_only)
+        .sort((a, b) => getDaysUntilBirthday(a.birthday) - getDaysUntilBirthday(b.birthday));
+      setContacts(withBirthdays);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function load() {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await sendBackgroundMessage<Contact[]>({ type: 'contacts.list' });
-        const withBirthdays = (data || [])
-          .filter((c) => c.birthday && !c.birthday_month_only)
-          .sort((a, b) => getDaysUntilBirthday(a.birthday) - getDaysUntilBirthday(b.birthday));
-        setContacts(withBirthdays);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    void load();
+    void loadContacts();
+    sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' })
+      .then(setGroups)
+      .catch(() => {});
   }, []);
+
+  async function handleGroupChange(contactId: string, groupId: string | null) {
+    try {
+      await sendBackgroundMessage({
+        type: 'contacts.update',
+        payload: { id: contactId, group_id: groupId },
+      });
+      setContacts((prev) =>
+        prev.map((c) => (c.id === contactId ? { ...c, group_id: groupId } : c)),
+      );
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function handleSyncFromFacebook() {
+    setIsSyncing(true);
+    setSyncMessage(null);
+    setError(null);
+    try {
+      const result = await sendBackgroundMessage<{
+        success: boolean;
+        count: number;
+        error?: string;
+      }>({
+        type: 'contacts.scrapeFromFacebook',
+      });
+      if (result?.success) {
+        setSyncMessage(
+          `Synced ${result.count} contact${result.count !== 1 ? 's' : ''} from Facebook.`,
+        );
+        await loadContacts();
+      } else {
+        setError(result?.error || 'Failed to sync contacts.');
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsSyncing(false);
+    }
+  }
 
   const upcoming = contacts.filter((c) => getDaysUntilBirthday(c.birthday) <= 30);
 
@@ -55,6 +105,17 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
         <HelpTooltip label="Shows friends with birthdays in the next 30 days, based on contacts synced from Facebook. Contacts marked 'Month only' are excluded since their exact date isn't known." />
       </h2>
       <p className="text-xs text-gray-600 mb-4">Friends with birthdays in the next 30 days.</p>
+
+      <div className="flex items-center gap-2 mb-4">
+        <button className="btn btn-sm" onClick={handleSyncFromFacebook} disabled={isSyncing}>
+          {isSyncing ? 'Syncing...' : '🔄 Sync from Facebook'}
+        </button>
+        <span className="text-xs text-gray-500">Open facebook.com/friends/birthdays first</span>
+      </div>
+
+      {syncMessage && (
+        <div className="text-xs text-green-600 bg-green-50 rounded p-2 mb-3">{syncMessage}</div>
+      )}
 
       {error && (
         <div className="error mb-4" role="alert">
@@ -110,6 +171,22 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
                   >
                     Profile
                   </a>
+                )}
+                {groups.length > 0 && (
+                  <select
+                    value={contact.group_id || ''}
+                    onChange={(e) => handleGroupChange(contact.id, e.target.value || null)}
+                    className="text-field text-xs py-1 px-2 shrink-0"
+                    style={{ maxWidth: '100px' }}
+                    aria-label={`Group for ${contact.name}`}
+                  >
+                    <option value="">No group</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
                 )}
               </div>
             );

@@ -7,3 +7,9 @@ dist
 .eggs
 .env
 .dockerignore
+.git
+backups
+*.egg-info
+docker-compose.yml
+deploy*.sh
+scripts

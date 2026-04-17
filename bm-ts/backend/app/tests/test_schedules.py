@@ -7,7 +7,6 @@ Covers: list, create, duplicate rejection, update, delete, 404 handling.
 from __future__ import annotations
 
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient
 
 
@@ -22,7 +21,9 @@ async def test_list_schedules_empty(async_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_create_schedule(async_client: AsyncClient) -> None:
     """Creating a schedule returns 201 with the correct fields."""
-    resp = await async_client.post("/api/schedules", json={"days_before": 3, "enabled": True})
+    resp = await async_client.post(
+        "/api/schedules", json={"days_before": 3, "enabled": True}
+    )
     assert resp.status_code == 201
     data = resp.json()
     assert data["days_before"] == 3
@@ -63,10 +64,14 @@ async def test_list_schedules_after_create(async_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_update_schedule_enabled(async_client: AsyncClient) -> None:
     """Updating the enabled field toggles it correctly."""
-    create_resp = await async_client.post("/api/schedules", json={"days_before": 2, "enabled": True})
+    create_resp = await async_client.post(
+        "/api/schedules", json={"days_before": 2, "enabled": True}
+    )
     schedule_id = create_resp.json()["id"]
 
-    resp = await async_client.put(f"/api/schedules/{schedule_id}", json={"enabled": False})
+    resp = await async_client.put(
+        f"/api/schedules/{schedule_id}", json={"enabled": False}
+    )
     assert resp.status_code == 200
     assert resp.json()["enabled"] is False
 
@@ -75,6 +80,7 @@ async def test_update_schedule_enabled(async_client: AsyncClient) -> None:
 async def test_update_schedule_not_found(async_client: AsyncClient) -> None:
     """Updating a non-existent schedule returns 404."""
     import uuid
+
     fake_id = str(uuid.uuid4())
     resp = await async_client.put(f"/api/schedules/{fake_id}", json={"enabled": False})
     assert resp.status_code == 404
@@ -99,6 +105,7 @@ async def test_delete_schedule(async_client: AsyncClient) -> None:
 async def test_delete_schedule_not_found(async_client: AsyncClient) -> None:
     """Deleting a non-existent schedule returns 404."""
     import uuid
+
     fake_id = str(uuid.uuid4())
     resp = await async_client.delete(f"/api/schedules/{fake_id}")
     assert resp.status_code == 404

@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.validators import sanitize_text
 from app.schemas.enums import GenderEnum
@@ -25,8 +25,11 @@ class ContactCreate(BaseModel):
     birthday_month_only: bool = False
     gender: Optional[GenderEnum] = None
     notes: Optional[str] = None
+    group_id: Optional[UUID] = None
 
-    _sanitize = field_validator("name", "facebook_profile_url", mode="after")(sanitize_text)
+    _sanitize = field_validator("name", "facebook_profile_url", mode="after")(
+        sanitize_text
+    )
 
     @field_validator("notes", mode="after")
     @classmethod
@@ -41,6 +44,7 @@ class ContactUpdate(BaseModel):
     birthday_month_only: Optional[bool] = None
     gender: Optional[GenderEnum] = None
     notes: Optional[str] = None
+    group_id: Optional[UUID] = None
 
     @field_validator("name", "facebook_profile_url", "notes", mode="after")
     @classmethod
@@ -56,6 +60,7 @@ class ContactOut(BaseModel):
     birthday_month_only: bool
     gender: Optional[GenderEnum]
     notes: Optional[str]
+    group_id: Optional[UUID]
     createdAt: datetime = Field(alias="created_at")
     updatedAt: datetime = Field(alias="updated_at")
 

@@ -44,20 +44,27 @@ async def verify_user(db_session: AsyncSession) -> User:
 
 
 @pytest.mark.asyncio
-async def test_create_verification_token_returns_raw(db_session: AsyncSession, verify_user: User) -> None:
+async def test_create_verification_token_returns_raw(
+    db_session: AsyncSession, verify_user: User
+) -> None:
     raw_token = await create_verification_token(verify_user, db_session)
     assert isinstance(raw_token, str)
     assert len(raw_token) > 20
 
 
 @pytest.mark.asyncio
-async def test_create_verification_token_stores_hash(db_session: AsyncSession, verify_user: User) -> None:
+async def test_create_verification_token_stores_hash(
+    db_session: AsyncSession, verify_user: User
+) -> None:
     raw_token = await create_verification_token(verify_user, db_session)
     expected_hash = hashlib.sha256(raw_token.encode()).hexdigest()
 
     from sqlalchemy import select
+
     result = await db_session.execute(
-        select(EmailVerificationToken).where(EmailVerificationToken.user_id == verify_user.id)
+        select(EmailVerificationToken).where(
+            EmailVerificationToken.user_id == verify_user.id
+        )
     )
     stored = result.scalar_one()
     assert stored.token == expected_hash
@@ -78,7 +85,9 @@ async def test_verify_invalid_token(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
-async def test_verify_expired_token(db_session: AsyncSession, verify_user: User) -> None:
+async def test_verify_expired_token(
+    db_session: AsyncSession, verify_user: User
+) -> None:
     raw_token = "expired-verify-token"
     hash_token = hashlib.sha256(raw_token.encode()).hexdigest()
     expired = EmailVerificationToken(
@@ -101,15 +110,20 @@ async def test_mark_token_used(db_session: AsyncSession, verify_user: User) -> N
     await mark_token_used(raw_token, db_session)
 
     from sqlalchemy import select
+
     result = await db_session.execute(
-        select(EmailVerificationToken).where(EmailVerificationToken.user_id == verify_user.id)
+        select(EmailVerificationToken).where(
+            EmailVerificationToken.user_id == verify_user.id
+        )
     )
     stored = result.scalar_one()
     assert stored.used_at is not None
 
 
 @pytest.mark.asyncio
-async def test_used_token_cannot_be_verified(db_session: AsyncSession, verify_user: User) -> None:
+async def test_used_token_cannot_be_verified(
+    db_session: AsyncSession, verify_user: User
+) -> None:
     raw_token = await create_verification_token(verify_user, db_session)
     await mark_token_used(raw_token, db_session)
 
@@ -119,7 +133,9 @@ async def test_used_token_cannot_be_verified(db_session: AsyncSession, verify_us
 
 # Endpoint tests: ensure request-email-verification triggers send (monkeypatch)
 @pytest.mark.asyncio
-async def test_request_email_verification_endpoint_triggers_send(async_client, db_session, monkeypatch) -> None:
+async def test_request_email_verification_endpoint_triggers_send(
+    async_client, db_session, monkeypatch
+) -> None:
     sent = {"called": False}
 
     async def fake_send(email: str, token: str):
@@ -136,21 +152,28 @@ async def test_request_email_verification_endpoint_triggers_send(async_client, d
 
 
 @pytest.mark.asyncio
-async def test_verify_email_endpoint_marks_verified(db_session: AsyncSession, async_client) -> None:
+async def test_verify_email_endpoint_marks_verified(
+    db_session: AsyncSession, async_client
+) -> None:
     # create a token for the test_user (fixture user already exists)
     from app.db.models import User as UserModel
     from sqlalchemy import select
 
-    result = await db_session.execute(select(UserModel).where(UserModel.email == "testuser@example.com"))
+    result = await db_session.execute(
+        select(UserModel).where(UserModel.email == "testuser@example.com")
+    )
     test_user = result.scalar_one()
 
     from app.services.email_verification import create_verification_token
+
     raw_token = await create_verification_token(test_user, db_session)
 
     resp = await async_client.post("/auth/verify-email", json={"token": raw_token})
     assert resp.status_code == 200
 
     # confirm user is marked verified
-    result = await db_session.execute(select(UserModel).where(UserModel.id == test_user.id))
+    result = await db_session.execute(
+        select(UserModel).where(UserModel.id == test_user.id)
+    )
     refreshed = result.scalar_one()
     assert refreshed.email_verified is True

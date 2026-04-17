@@ -32,7 +32,8 @@ export class ApiError extends Error {
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null | undefined;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- accepts any JSON-serialisable payload
+type JsonBody = object | unknown[] | string | number | boolean | null | undefined;
 
 /**
  * Central HTTP dispatcher for all backend requests.
@@ -51,7 +52,7 @@ async function request<T>(
   baseUrl: string,
   path: string,
   method: HttpMethod,
-  body?: JsonValue,
+  body?: JsonBody,
   accessToken?: string,
 ): Promise<T> {
   const headers: Record<string, string> = {
@@ -172,17 +173,12 @@ export async function register(
   baseUrl: string,
   payload: RegisterPayload,
 ): Promise<{ message: string }> {
-  return request<{ message: string }>(
-    baseUrl,
-    '/auth/register',
-    'POST',
-    payload as unknown as JsonValue,
-  );
+  return request<{ message: string }>(baseUrl, '/auth/register', 'POST', payload);
 }
 
 /** Authenticate with email + password and return a token pair. */
 export async function login(baseUrl: string, payload: RegisterPayload): Promise<TokenResponse> {
-  return request<TokenResponse>(baseUrl, '/auth/login', 'POST', payload as unknown as JsonValue);
+  return request<TokenResponse>(baseUrl, '/auth/login', 'POST', payload);
 }
 
 /** Exchange a valid refresh token for a new access/refresh token pair. */
@@ -250,13 +246,7 @@ export async function createCheckoutSession(
   accessToken: string,
   payload: CheckoutSessionRequest,
 ): Promise<CheckoutSessionResponse> {
-  return request(
-    baseUrl,
-    '/subscription/create-checkout-session',
-    'POST',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, '/subscription/create-checkout-session', 'POST', payload, accessToken);
 }
 
 export async function cancelSubscription(
@@ -278,13 +268,7 @@ export async function changeSubscriptionPlan(
   accessToken: string,
   payload: ChangePlanRequest,
 ): Promise<ChangePlanResponse> {
-  return request(
-    baseUrl,
-    '/subscription/change-plan',
-    'POST',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, '/subscription/change-plan', 'POST', payload, accessToken);
 }
 
 export async function getBillingPortal(
@@ -312,7 +296,7 @@ export async function requestPasswordReset(
   baseUrl: string,
   payload: RequestPasswordResetPayload,
 ): Promise<{ message: string }> {
-  return request(baseUrl, '/auth/request-password-reset', 'POST', payload as unknown as JsonValue);
+  return request(baseUrl, '/auth/request-password-reset', 'POST', payload);
 }
 
 /** Ask the backend to send an email-verification link. */
@@ -320,19 +304,14 @@ export async function requestEmailVerification(
   baseUrl: string,
   payload: { email: string },
 ): Promise<{ message: string }> {
-  return request(
-    baseUrl,
-    '/auth/request-email-verification',
-    'POST',
-    payload as unknown as JsonValue,
-  );
+  return request(baseUrl, '/auth/request-email-verification', 'POST', payload);
 }
 
 export async function resetPassword(
   baseUrl: string,
   payload: ResetPasswordPayload,
 ): Promise<{ message: string }> {
-  return request(baseUrl, '/auth/reset-password', 'POST', payload as unknown as JsonValue);
+  return request(baseUrl, '/auth/reset-password', 'POST', payload);
 }
 
 export async function changePassword(
@@ -340,13 +319,7 @@ export async function changePassword(
   accessToken: string,
   payload: ChangePasswordPayload,
 ): Promise<{ message: string }> {
-  return request(
-    baseUrl,
-    '/auth/change-password',
-    'POST',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, '/auth/change-password', 'POST', payload, accessToken);
 }
 
 export interface BirthdaySchedule {
@@ -378,7 +351,7 @@ export async function createSchedule(
   accessToken: string,
   payload: CreateSchedulePayload,
 ): Promise<BirthdaySchedule> {
-  return request(baseUrl, '/api/schedules/', 'POST', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, '/api/schedules/', 'POST', payload, accessToken);
 }
 
 export async function updateSchedule(
@@ -387,13 +360,7 @@ export async function updateSchedule(
   id: string,
   payload: UpdateSchedulePayload,
 ): Promise<BirthdaySchedule> {
-  return request(
-    baseUrl,
-    `/api/schedules/${id}`,
-    'PUT',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, `/api/schedules/${id}`, 'PUT', payload, accessToken);
 }
 
 export async function deleteSchedule(
@@ -434,13 +401,7 @@ export async function updateQueuedMessage(
   id: string,
   payload: UpdateQueuedMessagePayload,
 ): Promise<QueuedMessage> {
-  return request(
-    baseUrl,
-    `/api/messages/queue/${id}`,
-    'PUT',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, `/api/messages/queue/${id}`, 'PUT', payload, accessToken);
 }
 
 export async function cancelQueuedMessage(
@@ -544,6 +505,7 @@ export interface Contact {
   birthday_month_only?: boolean;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   notes?: string;
+  group_id?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -555,6 +517,7 @@ export interface CreateContactPayload {
   birthday_month_only?: boolean;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   notes?: string;
+  group_id?: string | null;
 }
 
 export interface UpdateContactPayload {
@@ -564,6 +527,7 @@ export interface UpdateContactPayload {
   birthday_month_only?: boolean;
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
   notes?: string;
+  group_id?: string | null;
 }
 
 export async function listContacts(
@@ -580,7 +544,7 @@ export async function createContact(
   accessToken: string,
   payload: CreateContactPayload,
 ): Promise<Contact> {
-  return request(baseUrl, '/api/contacts/', 'POST', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, '/api/contacts/', 'POST', payload, accessToken);
 }
 
 export async function updateContact(
@@ -589,13 +553,7 @@ export async function updateContact(
   id: string,
   payload: UpdateContactPayload,
 ): Promise<Contact> {
-  return request(
-    baseUrl,
-    `/api/contacts/${id}`,
-    'PUT',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, `/api/contacts/${id}`, 'PUT', payload, accessToken);
 }
 
 export async function deleteContact(
@@ -611,35 +569,26 @@ export async function bulkCreateContacts(
   accessToken: string,
   contacts: CreateContactPayload[],
 ): Promise<Contact[]> {
-  return request(
-    baseUrl,
-    '/api/contacts/bulk',
-    'POST',
-    contacts as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, '/api/contacts/bulk', 'POST', contacts, accessToken);
 }
 
 // ========== Message Groups ==========
 export interface MessageGroup {
   id: string;
   name: string;
-  gender: 'MALE' | 'FEMALE' | 'NEUTRAL';
-  segment_ids: string[];
+  color: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateMessageGroupPayload {
   name: string;
-  gender: 'MALE' | 'FEMALE' | 'NEUTRAL';
-  segment_ids: string[];
+  color?: string;
 }
 
 export interface UpdateMessageGroupPayload {
   name?: string;
-  gender?: 'MALE' | 'FEMALE' | 'NEUTRAL';
-  segment_ids?: string[];
+  color?: string;
 }
 
 export async function listMessageGroups(
@@ -654,13 +603,7 @@ export async function createMessageGroup(
   accessToken: string,
   payload: CreateMessageGroupPayload,
 ): Promise<MessageGroup> {
-  return request(
-    baseUrl,
-    '/api/message-groups/',
-    'POST',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, '/api/message-groups/', 'POST', payload, accessToken);
 }
 
 export async function updateMessageGroup(
@@ -669,13 +612,7 @@ export async function updateMessageGroup(
   id: string,
   payload: UpdateMessageGroupPayload,
 ): Promise<MessageGroup> {
-  return request(
-    baseUrl,
-    `/api/message-groups/${id}`,
-    'PUT',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, `/api/message-groups/${id}`, 'PUT', payload, accessToken);
 }
 
 export async function deleteMessageGroup(
@@ -702,6 +639,7 @@ export interface Post {
   font_family?: string;
   font_size?: number;
   font_color?: string;
+  group_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -715,6 +653,7 @@ export interface CreatePostPayload {
   font_family?: string;
   font_size?: number;
   font_color?: string;
+  group_id?: string | null;
 }
 
 export interface UpdatePostPayload {
@@ -726,6 +665,7 @@ export interface UpdatePostPayload {
   font_family?: string;
   font_size?: number;
   font_color?: string;
+  group_id?: string | null;
 }
 
 export async function listPosts(baseUrl: string, accessToken: string): Promise<Post[]> {
@@ -737,7 +677,7 @@ export async function createPost(
   accessToken: string,
   payload: CreatePostPayload,
 ): Promise<Post> {
-  return request(baseUrl, '/api/posts/', 'POST', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, '/api/posts/', 'POST', payload, accessToken);
 }
 
 export async function updatePost(
@@ -746,7 +686,7 @@ export async function updatePost(
   id: string,
   payload: UpdatePostPayload,
 ): Promise<Post> {
-  return request(baseUrl, `/api/posts/${id}`, 'PUT', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, `/api/posts/${id}`, 'PUT', payload, accessToken);
 }
 
 export async function deletePost(
@@ -781,13 +721,7 @@ export async function createImage(
   accessToken: string,
   payload: CreateImagePayload,
 ): Promise<UserImage> {
-  return request(
-    baseUrl,
-    '/api/images/upload',
-    'POST',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, '/api/images/upload', 'POST', payload, accessToken);
 }
 
 export interface UploadImageFilePayload {
@@ -801,13 +735,7 @@ export async function uploadImageFile(
   accessToken: string,
   payload: UploadImageFilePayload,
 ): Promise<UserImage> {
-  return request(
-    baseUrl,
-    '/api/images/upload-file',
-    'POST',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, '/api/images/upload-file', 'POST', payload, accessToken);
 }
 
 export async function deleteImage(
@@ -852,7 +780,7 @@ export async function updateSMTPConfig(
   accessToken: string,
   payload: UpdateSMTPConfigPayload,
 ): Promise<SMTPConfig> {
-  return request(baseUrl, '/smtp/config', 'PUT', payload as unknown as JsonValue, accessToken);
+  return request(baseUrl, '/smtp/config', 'PUT', payload, accessToken);
 }
 
 // ========== User Profile Management ==========
@@ -880,7 +808,7 @@ export async function updateUserProfile(
     backendPayload.timezone = payload.timezone;
   }
 
-  return request(baseUrl, '/auth/profile', 'PUT', backendPayload as JsonValue, accessToken);
+  return request(baseUrl, '/auth/profile', 'PUT', backendPayload, accessToken);
 }
 
 export async function deleteUserAccount(
@@ -906,6 +834,7 @@ export interface MessageTemplate {
   image_url: string | null;
   days_in_advance: number;
   gender: 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL';
+  group_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -918,6 +847,7 @@ export interface CreateMessageTemplatePayload {
   image_url?: string | null;
   days_in_advance?: number;
   gender?: 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL';
+  group_id?: string | null;
 }
 
 export interface UpdateMessageTemplatePayload {
@@ -928,6 +858,7 @@ export interface UpdateMessageTemplatePayload {
   image_url?: string | null;
   days_in_advance?: number;
   gender?: 'ALL' | 'MALE' | 'FEMALE' | 'NEUTRAL';
+  group_id?: string | null;
 }
 
 export async function createMessageTemplate(
@@ -935,13 +866,7 @@ export async function createMessageTemplate(
   accessToken: string,
   payload: CreateMessageTemplatePayload,
 ): Promise<MessageTemplate> {
-  return request(
-    baseUrl,
-    '/api/message-templates',
-    'POST',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, '/api/message-templates', 'POST', payload, accessToken);
 }
 
 export async function listMessageTemplates(
@@ -967,13 +892,7 @@ export async function updateMessageTemplate(
   templateId: string,
   payload: UpdateMessageTemplatePayload,
 ): Promise<MessageTemplate> {
-  return request(
-    baseUrl,
-    `/api/message-templates/${templateId}`,
-    'PUT',
-    payload as unknown as JsonValue,
-    accessToken,
-  );
+  return request(baseUrl, `/api/message-templates/${templateId}`, 'PUT', payload, accessToken);
 }
 
 export async function deleteMessageTemplate(

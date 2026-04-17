@@ -177,7 +177,6 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(
 
     const handleGenerateAI = async () => {
       setError('AI image generation coming soon!');
-      // TODO: Implement AI image generation
     };
 
     async function handleDelete(id: string) {

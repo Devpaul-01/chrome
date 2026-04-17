@@ -38,7 +38,10 @@ async def client(app_with_headers):
 class TestSecurityHeaders:
     async def test_hsts_header(self, client):
         r = await client.get("/hello")
-        assert r.headers["strict-transport-security"] == "max-age=31536000; includeSubDomains"
+        assert (
+            r.headers["strict-transport-security"]
+            == "max-age=31536000; includeSubDomains"
+        )
 
     async def test_x_frame_options(self, client):
         r = await client.get("/hello")

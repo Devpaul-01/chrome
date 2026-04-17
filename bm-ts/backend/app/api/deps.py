@@ -72,7 +72,9 @@ async def get_current_token_payload(
         raise _raise_credentials_error() from exc
 
     result = await db.execute(
-        select(UserSession).where(UserSession.id == session_uuid, UserSession.user_id == user_id)
+        select(UserSession).where(
+            UserSession.id == session_uuid, UserSession.user_id == user_id
+        )
     )
     session = result.scalar_one_or_none()
     if session is None or session.revoked_at is not None:
@@ -85,7 +87,8 @@ async def get_current_token_payload(
 
 
 async def get_current_user(
-    payload: dict[str, Any] = Depends(get_current_token_payload), db: AsyncSession = Depends(get_db)
+    payload: dict[str, Any] = Depends(get_current_token_payload),
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     """
     FastAPI dependency that resolves a Bearer access token to a ``User`` row.
@@ -120,7 +123,8 @@ async def get_current_user(
 
 
 async def get_current_user_allow_unverified(
-    payload: dict[str, Any] = Depends(get_current_token_payload), db: AsyncSession = Depends(get_db)
+    payload: dict[str, Any] = Depends(get_current_token_payload),
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     """Like ``get_current_user`` but skips the email-verification check.
 
@@ -143,9 +147,7 @@ async def get_current_user_allow_unverified(
     return user
 
 
-async def _resolve_user(
-    payload: dict[str, Any], db: AsyncSession
-) -> User:
+async def _resolve_user(payload: dict[str, Any], db: AsyncSession) -> User:
     """Shared helper — loads User by token ``sub`` claim, raises 401 if not found."""
     user_id = payload.get("sub")
     result = await db.execute(select(User).where(User.id == user_id))

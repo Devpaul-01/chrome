@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, constr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, constr, field_validator
 
 from app.core.validators import sanitize_text
 from app.schemas.enums import GenderEnum
@@ -34,9 +34,11 @@ class PostCreate(BaseModel):
     @classmethod
     def sanitize_label(cls, v: Optional[str]) -> Optional[str]:
         return sanitize_text(v) if v is not None else v
+
     font_family: Optional[str] = Field("Arial", max_length=100)
     font_size: Optional[int] = Field(48, ge=24, le=96)
     font_color: Optional[str] = Field("#ffffff", max_length=20)
+    group_id: Optional[UUID] = None
 
 
 class PostUpdate(BaseModel):
@@ -49,9 +51,11 @@ class PostUpdate(BaseModel):
     @classmethod
     def sanitize_optional(cls, v: Optional[str]) -> Optional[str]:
         return sanitize_text(v) if v is not None else v
+
     font_family: Optional[str] = Field(None, max_length=100)
     font_size: Optional[int] = Field(None, ge=24, le=96)
     font_color: Optional[str] = Field(None, max_length=20)
+    group_id: Optional[UUID] = None
 
 
 class PostOut(BaseModel):
@@ -63,6 +67,7 @@ class PostOut(BaseModel):
     font_family: Optional[str]
     font_size: Optional[int]
     font_color: Optional[str]
+    group_id: Optional[UUID]
     created_at: datetime
     updated_at: datetime
 

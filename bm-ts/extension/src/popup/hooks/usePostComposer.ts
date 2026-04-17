@@ -14,6 +14,7 @@ type PostForm = {
   fontColor?: string;
   textX?: number;
   textY?: number;
+  group_id?: string | null;
 };
 
 export type EditingPost = {
@@ -25,6 +26,7 @@ export type EditingPost = {
   font_family?: string;
   font_size?: number;
   font_color?: string;
+  group_id?: string | null;
 };
 
 const POST_FORM_DEFAULT: PostForm = {
@@ -37,6 +39,7 @@ const POST_FORM_DEFAULT: PostForm = {
   fontColor: '#ffffff',
   textX: 0.5,
   textY: 0.5,
+  group_id: null,
 };
 
 const POST_DRAFT_KEY = 'bm_post_draft';
@@ -57,6 +60,7 @@ export function usePostComposer() {
       fontFamily: post.font_family ?? 'Arial',
       fontSize: post.font_size ?? 48,
       fontColor: post.font_color ?? '#ffffff',
+      group_id: post.group_id ?? null,
     });
   }
 
@@ -118,7 +122,9 @@ export function usePostComposer() {
             payload: {
               filename: `composed_${Date.now()}.jpg`,
               data: composedDataUrl,
-              size: composedDataUrl.length,
+              size: atob(
+                composedDataUrl.includes(',') ? composedDataUrl.split(',')[1] : composedDataUrl,
+              ).length,
             },
           });
           imageUrlToUse = uploaded.url;
@@ -134,6 +140,7 @@ export function usePostComposer() {
           font_family: postForm.fontFamily,
           font_size: postForm.fontSize,
           font_color: postForm.fontColor,
+          group_id: postForm.group_id,
         };
 
         if (editingPostId) {

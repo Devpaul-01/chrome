@@ -9,6 +9,3 @@ class RequestEmailVerificationRequest(BaseModel):
 
 class VerifyEmailRequest(BaseModel):
     token: str
-
-
-

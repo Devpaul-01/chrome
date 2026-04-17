@@ -73,8 +73,11 @@ async def get_status(
     record = result.scalar_one_or_none()
     if not record:
         return SubscriptionStatusResponse(
-            is_active=False, plan=None, status=None,
-            current_period_end=None, stripe_customer_id=None,
+            is_active=False,
+            plan=None,
+            status=None,
+            current_period_end=None,
+            stripe_customer_id=None,
             stripe_subscription_id=None,
         )
 
@@ -84,9 +87,7 @@ async def get_status(
     if period_end is not None and period_end.tzinfo is None:
         period_end = period_end.replace(tzinfo=timezone.utc)
     in_grace_period = (
-        record.status == "PAST_DUE"
-        and period_end is not None
-        and period_end > now
+        record.status == "PAST_DUE" and period_end is not None and period_end > now
     )
 
     return SubscriptionStatusResponse(
@@ -120,9 +121,8 @@ async def create_session(
 
 # -- helpers -----------------------------------------------------------------
 
-async def _get_active_record(
-    user: User, db: AsyncSession
-) -> SubscriptionRecord:
+
+async def _get_active_record(user: User, db: AsyncSession) -> SubscriptionRecord:
     """Return the user's active subscription record or raise 404."""
     stmt = (
         select(SubscriptionRecord)
@@ -135,11 +135,14 @@ async def _get_active_record(
     result = await db.execute(stmt)
     record = result.scalar_one_or_none()
     if not record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active subscription")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No active subscription"
+        )
     return record
 
 
 # -- cancellation / reactivation -------------------------------------------
+
 
 @router.post("/cancel", response_model=CancelSubscriptionResponse)
 async def cancel(
@@ -187,6 +190,7 @@ async def reactivate(
 
 # -- upgrade / downgrade ---------------------------------------------------
 
+
 @router.post("/change-plan", response_model=ChangePlanResponse)
 async def change_plan(
     data: ChangePlanRequest,
@@ -217,6 +221,7 @@ async def change_plan(
 
 
 # -- billing portal --------------------------------------------------------
+
 
 @router.post("/billing-portal", response_model=BillingPortalResponse)
 async def billing_portal(

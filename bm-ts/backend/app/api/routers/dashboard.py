@@ -96,7 +96,11 @@ async def get_dashboard_stats(
         )
     )
     successful_messages = success_result.scalar() or 0
-    success_rate = (successful_messages / total_messages_sent * 100) if total_messages_sent > 0 else 0.0
+    success_rate = (
+        (successful_messages / total_messages_sent * 100)
+        if total_messages_sent > 0
+        else 0.0
+    )
 
     # Queued messages
     queued_result = await db.execute(
@@ -115,7 +119,9 @@ async def get_dashboard_stats(
     future = now + timedelta(days=30)
     future_md = future.month * 100 + future.day
 
-    contact_md = extract('month', Contact.birthday) * literal(100) + extract('day', Contact.birthday)
+    contact_md = extract("month", Contact.birthday) * literal(100) + extract(
+        "day", Contact.birthday
+    )
 
     if today_md <= future_md:
         # Normal case: no year wrap (e.g. Apr 12 → May 12)
@@ -128,6 +134,7 @@ async def get_dashboard_stats(
         select(func.count(Contact.id)).where(
             and_(
                 Contact.user_id == current_user.id,
+                Contact.birthday_month_only.is_(False),
                 upcoming_filter,
             )
         )

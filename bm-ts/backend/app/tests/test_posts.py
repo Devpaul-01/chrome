@@ -53,9 +53,7 @@ async def test_create_post_with_options(async_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_get_post(async_client: AsyncClient) -> None:
-    create_resp = await async_client.post(
-        "/api/posts", json={"content": "Test post"}
-    )
+    create_resp = await async_client.post("/api/posts", json={"content": "Test post"})
     post_id = create_resp.json()["id"]
 
     resp = await async_client.get(f"/api/posts/{post_id}")
@@ -71,9 +69,7 @@ async def test_get_post_not_found(async_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_update_post(async_client: AsyncClient) -> None:
-    create_resp = await async_client.post(
-        "/api/posts", json={"content": "Original"}
-    )
+    create_resp = await async_client.post("/api/posts", json={"content": "Original"})
     post_id = create_resp.json()["id"]
 
     resp = await async_client.put(
@@ -96,9 +92,7 @@ async def test_update_post_not_found(async_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_delete_post(async_client: AsyncClient) -> None:
-    create_resp = await async_client.post(
-        "/api/posts", json={"content": "Delete me"}
-    )
+    create_resp = await async_client.post("/api/posts", json={"content": "Delete me"})
     post_id = create_resp.json()["id"]
 
     resp = await async_client.delete(f"/api/posts/{post_id}")
@@ -117,8 +111,12 @@ async def test_delete_post_not_found(async_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_list_posts_filter_by_gender(async_client: AsyncClient) -> None:
-    await async_client.post("/api/posts", json={"content": "Male post", "gender": "MALE"})
-    await async_client.post("/api/posts", json={"content": "Female post", "gender": "FEMALE"})
+    await async_client.post(
+        "/api/posts", json={"content": "Male post", "gender": "MALE"}
+    )
+    await async_client.post(
+        "/api/posts", json={"content": "Female post", "gender": "FEMALE"}
+    )
 
     resp = await async_client.get("/api/posts", params={"gender": "MALE"})
     assert resp.status_code == 200

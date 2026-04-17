@@ -76,15 +76,30 @@ export async function getBackendUrl(): Promise<string> {
  * HTTPS is always allowed; HTTP is only allowed for localhost (development).
  * Returns `true` if the URL is safe to use.
  */
+function isValidIpv4Octet(value: string): boolean {
+  if (!/^\d{1,3}$/.test(value)) return false;
+
+  const octet = Number(value);
+  return octet >= 0 && octet <= 255;
+}
+
+function isAllowedSslipIoHostname(hostname: string): boolean {
+  const match = hostname.match(/^((?:\d{1,3}-){3}\d{1,3})\.sslip\.io$/i);
+  if (!match) return false;
+
+  const octets = match[1].split('-');
+  return octets.length === 4 && octets.every(isValidIpv4Octet);
+}
+
+function isAllowedDevHostname(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || isAllowedSslipIoHostname(hostname);
+}
+
 function isValidBackendUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     if (parsed.protocol === 'https:') return true;
-    if (
-      parsed.protocol === 'http:' &&
-      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
-    )
-      return true;
+    if (parsed.protocol === 'http:' && isAllowedDevHostname(parsed.hostname)) return true;
     return false;
   } catch {
     return false;
@@ -92,11 +107,11 @@ function isValidBackendUrl(url: string): boolean {
 }
 
 /** Persists a custom backend URL so the extension points to the right server instance.
- *  Validates the URL scheme first — only HTTPS or HTTP-to-localhost are accepted. */
+ *  Validates the URL scheme first — only HTTPS or HTTP to localhost, 127.0.0.1, or *.sslip.io are accepted for development. */
 export async function setBackendUrl(url: string): Promise<void> {
   if (!isValidBackendUrl(url)) {
     throw new Error(
-      'Invalid backend URL: only https:// URLs (or http://localhost for development) are allowed',
+      'Invalid backend URL: only https:// URLs (or http://localhost, http://127.0.0.1, and http://*.sslip.io for development) are allowed',
     );
   }
   return new Promise((resolve) => {

@@ -16,6 +16,7 @@ function toSavedTemplate(t: MessageTemplate): SavedTemplate {
     templateTitle: t.title,
     daysInAdvance: t.days_in_advance,
     gender: t.gender as 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL',
+    groupId: t.group_id ?? null,
     createdAt: t.created_at,
     updatedAt: t.updated_at,
   };
@@ -61,6 +62,7 @@ export function useMessageTemplates() {
             image_url: data.imageUrl,
             days_in_advance: data.daysInAdvance,
             gender: data.gender,
+            group_id: data.groupId,
           },
         });
         await loadMessageTemplates();
@@ -92,6 +94,7 @@ export function useMessageTemplates() {
             image_url: data.imageUrl,
             days_in_advance: data.daysInAdvance,
             gender: data.gender,
+            group_id: data.groupId,
           },
         });
         await loadMessageTemplates();

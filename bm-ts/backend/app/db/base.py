@@ -10,4 +10,4 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
-import app.db.models
+import app.db.models  # noqa: E402, F401 — registers ORM models in metadata
