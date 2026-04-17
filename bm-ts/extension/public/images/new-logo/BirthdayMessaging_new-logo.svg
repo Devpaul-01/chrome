@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="66"
+   height="32"
+   viewBox="0 0 16.5 8"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   sodipodi:docname="BirthdayMessaging_new-logo.svg"
+   inkscape:export-filename="BirthdayMessaging_new-logo-clear-BG_blue-cake-9ae8ff.png"
+   inkscape:export-xdpi="1536"
+   inkscape:export-ydpi="1536"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     inkscape:zoom="11.616723"
+     inkscape:cx="33.658373"
+     inkscape:cy="12.266798"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g31"
+     showgrid="false" />
+  <defs
+     id="defs1" />
+  <g
+     id="g13"
+     inkscape:label="Logo-Orange-BG"
+     style="display:none">
+    <rect
+       style="fill:#e56717;fill-opacity:1;stroke:none;stroke-width:2.67765;paint-order:markers fill stroke"
+       id="rect1"
+       width="17"
+       height="8"
+       x="0"
+       y="0"
+       inkscape:label="Orange-BG" />
+    <g
+       inkscape:label="Cake v5"
+       inkscape:groupmode="layer"
+       id="layer1"
+       transform="translate(-3.125,0.25)">
+      <g
+         id="g11"
+         inkscape:label="Cake"
+         transform="translate(16)">
+        <rect
+           style="fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:1.29192;paint-order:markers fill stroke"
+           id="rect2"
+           width="3"
+           height="1.25"
+           x="0.5"
+           y="1.75"
+           ry="0.51739663"
+           inkscape:label="Cake-Top" />
+        <rect
+           style="fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:1.3498;paint-order:markers fill stroke"
+           id="rect3"
+           width="3"
+           height="1.125"
+           x="0.5"
+           y="2.375"
+           inkscape:label="Cake-Bottom" />
+      </g>
+      <g
+         id="g10"
+         inkscape:label="Candles"
+         transform="translate(16)">
+        <rect
+           style="fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:0.851034;paint-order:markers fill stroke"
+           id="rect4"
+           width="0.375"
+           height="0.75"
+           x="1"
+           y="0.875"
+           inkscape:label="Candlestick1" />
+        <rect
+           style="fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:0.851034;paint-order:markers fill stroke"
+           id="rect5"
+           width="0.375"
+           height="0.75"
+           x="1.8125"
+           y="0.875"
+           inkscape:label="Candlestick2" />
+        <rect
+           style="fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:0.851034;paint-order:markers fill stroke"
+           id="rect6"
+           width="0.375"
+           height="0.75"
+           x="2.625"
+           y="0.875"
+           inkscape:label="Candlestick3" />
+        <path
+           style="fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:0.995379;paint-order:markers fill stroke"
+           d="M 1.0625,0.80739444 C 1.0072936,0.81375231 0.94226026,0.67434691 1,0.5625 1.0494889,0.46663571 1.1059339,0.42884156 1.1363184,0.37051725 1.1750348,0.29619934 1.1875,0.25 1.1875,0.25 c 0,0 0.3536575,0.23430952 0.125,0.5625 -0.021129,-0.1927786 -0.2110914,-0.27681715 -0.25,-0.005106 z"
+           id="path6"
+           sodipodi:nodetypes="cssccc"
+           inkscape:label="Flame1" />
+        <use
+           x="0"
+           y="0"
+           xlink:href="#path6"
+           id="use9"
+           transform="translate(0.8125)"
+           inkscape:label="Flame2-from-1" />
+        <use
+           x="0"
+           y="0"
+           xlink:href="#use9"
+           id="use10"
+           transform="translate(0.8125)"
+           inkscape:label="Flame3-from-1" />
+      </g>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:4.66667px;line-height:0.8;font-family:'Yanone Kaffeesatz';-inkscape-font-specification:'Yanone Kaffeesatz Semi-Bold';writing-mode:lr-tb;direction:ltr;fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:0.918425;paint-order:markers fill stroke"
+       x="0.34133136"
+       y="3.7760007"
+       id="text11"><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:4.66667px;font-family:'Yanone Kaffeesatz';-inkscape-font-specification:'Yanone Kaffeesatz Semi-Bold';stroke-width:0.918425"
+         x="0.34133136"
+         y="3.7760007"
+         id="tspan12">BIRTHDAY</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:4.66667px;font-family:'Yanone Kaffeesatz';-inkscape-font-specification:'Yanone Kaffeesatz Semi-Bold';stroke-width:0.918425"
+         x="0.34133136"
+         y="7.5093365"
+         id="tspan13">MESSAGING</tspan></text>
+  </g>
+  <g
+     id="g21"
+     inkscape:label="Logo-Orange-on-Clear"
+     style="display:none">
+    <rect
+       style="display:none;fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:2.67765;paint-order:markers fill stroke"
+       id="rect13"
+       width="17"
+       height="8"
+       x="0"
+       y="0"
+       inkscape:label="Orange-BG" />
+    <g
+       inkscape:label="Cake v5 Blue-Orange"
+       inkscape:groupmode="layer"
+       id="g20"
+       transform="translate(-3.3832484,0.25)">
+      <g
+         id="g15"
+         inkscape:label="Cake"
+         transform="translate(16)">
+        <rect
+           style="fill:#0080a6;fill-opacity:1;stroke:none;stroke-width:1.29192;paint-order:markers fill stroke"
+           id="rect14"
+           width="3"
+           height="1.25"
+           x="0.5"
+           y="1.75"
+           ry="0.51739663"
+           inkscape:label="Cake-Top" />
+        <rect
+           style="fill:#0080a6;fill-opacity:1;stroke:none;stroke-width:1.3498;paint-order:markers fill stroke"
+           id="rect15"
+           width="3"
+           height="1.125"
+           x="0.5"
+           y="2.375"
+           inkscape:label="Cake-Bottom" />
+      </g>
+      <g
+         id="g19"
+         inkscape:label="Candles"
+         transform="translate(16)">
+        <rect
+           style="fill:#0080a6;fill-opacity:1;stroke:none;stroke-width:0.851034;paint-order:markers fill stroke"
+           id="rect16"
+           width="0.375"
+           height="0.75"
+           x="1"
+           y="0.875"
+           inkscape:label="Candlestick1" />
+        <rect
+           style="fill:#0080a6;fill-opacity:1;stroke:none;stroke-width:0.851034;paint-order:markers fill stroke"
+           id="rect17"
+           width="0.375"
+           height="0.75"
+           x="1.8125"
+           y="0.875"
+           inkscape:label="Candlestick2" />
+        <rect
+           style="fill:#0080a6;fill-opacity:1;stroke:none;stroke-width:0.851034;paint-order:markers fill stroke"
+           id="rect18"
+           width="0.375"
+           height="0.75"
+           x="2.625"
+           y="0.875"
+           inkscape:label="Candlestick3" />
+        <path
+           style="fill:#e56717;fill-opacity:1;stroke:none;stroke-width:0.995379;paint-order:markers fill stroke"
+           d="M 1.0625,0.80739444 C 1.0072936,0.81375231 0.94226026,0.67434691 1,0.5625 1.0494889,0.46663571 1.1059339,0.42884156 1.1363184,0.37051725 1.1750348,0.29619934 1.1875,0.25 1.1875,0.25 c 0,0 0.3536575,0.23430952 0.125,0.5625 -0.021129,-0.1927786 -0.2110914,-0.27681715 -0.25,-0.005106 z"
+           id="path18"
+           sodipodi:nodetypes="cssccc"
+           inkscape:label="Flame1" />
+        <use
+           x="0"
+           y="0"
+           xlink:href="#path18"
+           id="use21"
+           transform="translate(0.81253569)" />
+        <use
+           x="0"
+           y="0"
+           xlink:href="#use21"
+           id="use22"
+           transform="translate(0.8125)" />
+      </g>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:4.66667px;line-height:0.8;font-family:'Yanone Kaffeesatz';-inkscape-font-specification:'Yanone Kaffeesatz Semi-Bold';writing-mode:lr-tb;direction:ltr;fill:#e56717;fill-opacity:1;stroke:none;stroke-width:0.918425;paint-order:markers fill stroke"
+       x="0.34133136"
+       y="3.7760007"
+       id="text21"><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:4.66667px;font-family:'Yanone Kaffeesatz';-inkscape-font-specification:'Yanone Kaffeesatz Semi-Bold';fill:#e56717;fill-opacity:1;stroke-width:0.918425"
+         x="0.34133136"
+         y="3.7760007"
+         id="tspan20">BIRTHDAY</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:4.66667px;font-family:'Yanone Kaffeesatz';-inkscape-font-specification:'Yanone Kaffeesatz Semi-Bold';fill:#e56717;fill-opacity:1;stroke-width:0.918425"
+         x="0.34133136"
+         y="7.5093365"
+         id="tspan21">MESSAGING</tspan></text>
+  </g>
+  <g
+     id="g32"
+     inkscape:label="Logo-White-on-Clear"
+     style="display:inline">
+    <rect
+       style="display:none;fill:#e56717;fill-opacity:1;stroke:none;stroke-width:2.63798;paint-order:markers fill stroke"
+       id="rect22"
+       width="16.5"
+       height="8"
+       x="0"
+       y="0"
+       inkscape:label="Orange-BG" />
+    <g
+       inkscape:label="Cake v5 Blue-Orange"
+       inkscape:groupmode="layer"
+       id="g31"
+       transform="translate(-3.3832484,0.25)"
+       style="display:inline">
+      <g
+         id="g24"
+         inkscape:label="Cake"
+         transform="translate(16)">
+        <rect
+           style="fill:#9ae8ff;fill-opacity:1;stroke:none;stroke-width:1.29192;paint-order:markers fill stroke"
+           id="rect23"
+           width="3"
+           height="1.25"
+           x="0.5"
+           y="1.75"
+           ry="0.51739663"
+           inkscape:label="Cake-Top" />
+        <rect
+           style="fill:#9ae8ff;fill-opacity:1;stroke:none;stroke-width:1.3498;paint-order:markers fill stroke"
+           id="rect24"
+           width="3"
+           height="1.125"
+           x="0.5"
+           y="2.375"
+           inkscape:label="Cake-Bottom" />
+      </g>
+      <g
+         id="g30"
+         inkscape:label="Candles"
+         transform="translate(16)">
+        <rect
+           style="fill:#9ae8ff;fill-opacity:1;stroke:none;stroke-width:0.851034;paint-order:markers fill stroke"
+           id="rect25"
+           width="0.375"
+           height="0.75"
+           x="1"
+           y="0.875"
+           inkscape:label="Candlestick1" />
+        <rect
+           style="fill:#9ae8ff;fill-opacity:1;stroke:none;stroke-width:0.851034;paint-order:markers fill stroke"
+           id="rect26"
+           width="0.375"
+           height="0.75"
+           x="1.8125"
+           y="0.875"
+           inkscape:label="Candlestick2" />
+        <rect
+           style="fill:#9ae8ff;fill-opacity:1;stroke:none;stroke-width:0.851034;paint-order:markers fill stroke"
+           id="rect27"
+           width="0.375"
+           height="0.75"
+           x="2.625"
+           y="0.875"
+           inkscape:label="Candlestick3" />
+        <path
+           style="fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:0.995379;paint-order:markers fill stroke"
+           d="M 1.0625,0.80739444 C 1.0072936,0.81375231 0.94226026,0.67434691 1,0.5625 1.0494889,0.46663571 1.1059339,0.42884156 1.1363184,0.37051725 1.1750348,0.29619934 1.1875,0.25 1.1875,0.25 c 0,0 0.3536575,0.23430952 0.125,0.5625 -0.021129,-0.1927786 -0.2110914,-0.27681715 -0.25,-0.005106 z"
+           id="path27"
+           sodipodi:nodetypes="cssccc"
+           inkscape:label="Flame1" />
+        <use
+           x="0"
+           y="0"
+           xlink:href="#path6"
+           id="use27"
+           transform="translate(0.8125)"
+           inkscape:label="Flame2-from-1" />
+        <use
+           x="0"
+           y="0"
+           xlink:href="#use9"
+           id="use28"
+           transform="translate(0.8125)"
+           inkscape:label="Flame3-from-1" />
+      </g>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:4.66667px;line-height:0.8;font-family:'Yanone Kaffeesatz';-inkscape-font-specification:'Yanone Kaffeesatz Semi-Bold';writing-mode:lr-tb;direction:ltr;display:inline;fill:#f7f7f7;fill-opacity:1;stroke:none;stroke-width:0.918425;paint-order:markers fill stroke"
+       x="0.34133136"
+       y="3.7760007"
+       id="text32"><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:4.66667px;font-family:'Yanone Kaffeesatz';-inkscape-font-specification:'Yanone Kaffeesatz Semi-Bold';fill:#f7f7f7;fill-opacity:1;stroke-width:0.918425"
+         x="0.34133136"
+         y="3.7760007"
+         id="tspan31">BIRTHDAY</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:4.66667px;font-family:'Yanone Kaffeesatz';-inkscape-font-specification:'Yanone Kaffeesatz Semi-Bold';fill:#f7f7f7;fill-opacity:1;stroke-width:0.918425"
+         x="0.34133136"
+         y="7.5093365"
+         id="tspan32">MESSAGING</tspan></text>
+  </g>
+</svg>
