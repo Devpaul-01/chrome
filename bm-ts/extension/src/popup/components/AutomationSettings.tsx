@@ -484,12 +484,12 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
                                 entry.level === 'emergency'
                                   ? 'bg-red-50 text-red-700'
                                   : entry.level === 'warning'
-                                    ? 'bg-yellow-50 text-yellow-700'
-                                    : entry.level === 'error'
-                                      ? 'bg-red-50 text-red-600'
-                                      : entry.level === 'send' || entry.level === 'post'
-                                        ? 'bg-green-50 text-green-700'
-                                        : 'bg-white text-gray-600'
+                                  ? 'bg-yellow-50 text-yellow-700'
+                                  : entry.level === 'error'
+                                  ? 'bg-red-50 text-red-600'
+                                  : entry.level === 'send' || entry.level === 'post'
+                                  ? 'bg-green-50 text-green-700'
+                                  : 'bg-white text-gray-600'
                               }`}
                             >
                               <div className="flex justify-between items-start gap-2">

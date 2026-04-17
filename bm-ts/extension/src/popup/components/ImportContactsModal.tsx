@@ -456,15 +456,15 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                         monthOnlySet.has(i)
                           ? 'text-blue-600'
                           : c.birthday === todayISO() && missingDateCount > 0
-                            ? 'text-yellow-600'
-                            : 'text-orangeBrand'
+                          ? 'text-yellow-600'
+                          : 'text-orangeBrand'
                       }`}
                     >
                       {monthOnlySet.has(i)
                         ? `📅 Birth month: ${MONTH_NAMES[c.birthday.split('-')[1]] ?? c.birthday}`
                         : c.birthday === todayISO() && missingDateCount > 0
-                          ? `⚠ Birthday: ${c.birthday}`
-                          : `Birthday: ${c.birthday}`}
+                        ? `⚠ Birthday: ${c.birthday}`
+                        : `Birthday: ${c.birthday}`}
                     </p>
                   </div>
                 ))}
