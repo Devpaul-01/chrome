@@ -1,6 +1,7 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import type { Contact } from './ContactList';
-import HelpTooltip from './HelpTooltip';
+import { sendBackgroundMessage } from '../api';
+import type { MessageGroup } from './MessageGroups';
 
 type ContactFormProps = {
   contact?: Contact; // If editing existing contact
@@ -34,24 +35,15 @@ export default function ContactForm({
       (typeof loosedContact?.facebookProfileUrl === 'string' && loosedContact.facebookProfileUrl) ||
       '',
   );
-  // Parse notes for relationship, phone, email
-  let parsedRelationship = '';
-  // let parsedPhone = '';
-  // let parsedEmail = '';
-  if (contact?.notes) {
-    const parts = contact.notes.split(' | ');
-    for (const part of parts) {
-      if (part.startsWith('relationship: '))
-        parsedRelationship = part.replace('relationship: ', '').trim();
-      // if (part.startsWith('phone: ')) parsedPhone = part.replace('phone: ', '').trim();
-      // if (part.startsWith('email: ')) parsedEmail = part.replace('email: ', '').trim();
-    }
-  }
-  const [relationship, setRelationship] = useState(parsedRelationship);
   const [birthday, setBirthday] = useState(contact?.birthday ? contact.birthday.slice(0, 10) : '');
-  const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'NEUTRAL'>(contact?.gender ?? 'NEUTRAL');
-  // const [phone, setPhone] = useState(parsedPhone);
-  // const [email, setEmail] = useState(parsedEmail);
+  const [groupId, setGroupId] = useState<string>(contact?.group_id ?? '');
+  const [groups, setGroups] = useState<MessageGroup[]>([]);
+
+  useEffect(() => {
+    sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' })
+      .then((data) => setGroups(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -64,19 +56,12 @@ export default function ContactForm({
         ? `https://facebook.com/${name.replace(/\s+/g, '.').toLowerCase()}`
         : '';
 
-    const payload: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> & { notes?: string } = {
+    const payload: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> = {
       name,
       facebook_profile_url: fb,
       birthday: new Date(birthday).toISOString(),
-      gender,
+      group_id: groupId || null,
     };
-
-    // Combine optional fields into notes if present
-    const notesParts: string[] = [];
-    if (relationship.trim()) notesParts.push(`relationship: ${relationship.trim()}`);
-    // if (phone.trim()) notesParts.push(`phone: ${phone.trim()}`);
-    // if (email.trim()) notesParts.push(`email: ${email.trim()}`);
-    if (notesParts.length) payload.notes = notesParts.join(' | ');
 
     await onSubmit(payload);
   };
@@ -101,7 +86,7 @@ export default function ContactForm({
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="Enter first name"
             required
-            className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+            className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
           />
           <p className="text-xs text-gray-500 mt-1">Enter the contact&apos;s given name.</p>
         </div>
@@ -118,25 +103,9 @@ export default function ContactForm({
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Enter last name"
             required
-            className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+            className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
           />
           <p className="text-xs text-gray-500 mt-1">Enter the contact&apos;s family name.</p>
-        </div>
-
-        {/* Relationship */}
-        <div>
-          <label htmlFor="relationship" className="block text-sm font-medium mb-1">
-            Relationship
-          </label>
-          <input
-            type="text"
-            id="relationship"
-            value={relationship}
-            onChange={(e) => setRelationship(e.target.value)}
-            placeholder="Friend, Family, etc."
-            className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
-          />
-          <p className="text-xs text-gray-500 mt-1">Describe how you know this contact.</p>
         </div>
 
         {/* Birthday */}
@@ -150,28 +119,30 @@ export default function ContactForm({
             value={birthday}
             onChange={(e) => setBirthday(e.target.value)}
             required
-            className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+            className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
           />
         </div>
 
-        {/* Gender */}
+        {/* Group */}
         <div>
-          <label htmlFor="gender" className="block text-sm font-medium mb-1">
-            Gender{' '}
-            <HelpTooltip label="Gender is used to select gender-appropriate templates and timeline posts during automation." />
+          <label htmlFor="groupId" className="block text-sm font-medium mb-1">
+            Group Label
           </label>
           <select
-            id="gender"
-            value={gender}
-            onChange={(e) => setGender(e.target.value as 'MALE' | 'FEMALE' | 'NEUTRAL')}
-            className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+            id="groupId"
+            value={groupId}
+            onChange={(e) => setGroupId(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
           >
-            <option value="NEUTRAL">Neutral / Unknown</option>
-            <option value="MALE">Male</option>
-            <option value="FEMALE">Female</option>
+            <option value="">— No group —</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
           </select>
           <p className="text-xs text-gray-500 mt-1">
-            Used to select gender-appropriate message templates during automation.
+            Assign this contact to a group for filtering and targeted messaging.
           </p>
         </div>
 
@@ -187,7 +158,7 @@ export default function ContactForm({
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Enter phone number"
             required
-            className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+            className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
           />
         </div> */}
 
@@ -203,7 +174,7 @@ export default function ContactForm({
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter contact's email address"
             required
-            className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+            className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
           />
         </div> */}
 
@@ -222,7 +193,7 @@ export default function ContactForm({
             onChange={(e) => setFacebookProfileUrl(e.target.value)}
             placeholder="https://facebook.com/username"
             required
-            className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+            className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
           />
           <p className="text-xs text-gray-500 mt-1">
             Provide a public Facebook profile URL for this contact.

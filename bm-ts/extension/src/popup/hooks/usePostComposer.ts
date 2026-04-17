@@ -52,10 +52,14 @@ export function usePostComposer() {
 
   function startEditing(post: EditingPost) {
     setEditingPostId(post.id);
+    // post.image_url is a pre-composed JPEG (text baked in). Re-using it as a raw
+    // background would render double text in the editor. Clear it and restore the
+    // [Image] keyword so the submit step re-composes a fresh image from the library.
+    const content = post.image_url ? `${post.content.trim()} [Image]` : post.content;
     setPostForm({
-      content: post.content,
+      content,
       gender: post.gender,
-      image_url: post.image_url ?? '',
+      image_url: '',
       label: post.label ?? '',
       fontFamily: post.font_family ?? 'Arial',
       fontSize: post.font_size ?? 48,
@@ -125,12 +129,13 @@ export function usePostComposer() {
               size: atob(
                 composedDataUrl.includes(',') ? composedDataUrl.split(',')[1] : composedDataUrl,
               ).length,
-            },
+              source: 'post',
+            } as import('../../api/client').UploadImageFilePayload,
           });
           imageUrlToUse = uploaded.url;
         }
 
-        const finalContent = (postForm.content || '').replace(/\[Image\]/g, '');
+        const finalContent = (postForm.content || '').replace(/\[Image\]/g, '').trim();
 
         const sharedPayload = {
           content: finalContent,

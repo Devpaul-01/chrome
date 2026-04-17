@@ -243,16 +243,10 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
                         <h3 className="text-sm font-bold text-textPrimary">{group.name}</h3>
                       </div>
                       <div className="flex gap-2 ml-2">
-                        <button
-                          onClick={() => handleEdit(group)}
-                          className="btn-secondary text-xs py-1.5 px-3"
-                        >
+                        <button onClick={() => handleEdit(group)} className="btn-sm-blue">
                           Edit
                         </button>
-                        <button
-                          onClick={() => handleDelete(group.id)}
-                          className="text-xs py-1.5 px-3 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium"
-                        >
+                        <button onClick={() => handleDelete(group.id)} className="btn-sm-danger">
                           Delete
                         </button>
                       </div>
@@ -265,7 +259,7 @@ const MessageGroups = forwardRef<MessageGroupsHandle, MessageGroupsPropsExtended
         )}
 
         {showClose && (
-          <button onClick={onClose} className="btn-secondary btn-block">
+          <button onClick={onClose} className="btn btn-block">
             ← Back
           </button>
         )}

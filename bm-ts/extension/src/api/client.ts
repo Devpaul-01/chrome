@@ -322,55 +322,6 @@ export async function changePassword(
   return request(baseUrl, '/auth/change-password', 'POST', payload, accessToken);
 }
 
-export interface BirthdaySchedule {
-  id: string;
-  days_before: number;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateSchedulePayload {
-  days_before: number;
-  enabled?: boolean;
-}
-
-export interface UpdateSchedulePayload {
-  enabled?: boolean;
-}
-
-export async function listSchedules(
-  baseUrl: string,
-  accessToken: string,
-): Promise<BirthdaySchedule[]> {
-  return request(baseUrl, '/api/schedules/', 'GET', undefined, accessToken);
-}
-
-export async function createSchedule(
-  baseUrl: string,
-  accessToken: string,
-  payload: CreateSchedulePayload,
-): Promise<BirthdaySchedule> {
-  return request(baseUrl, '/api/schedules/', 'POST', payload, accessToken);
-}
-
-export async function updateSchedule(
-  baseUrl: string,
-  accessToken: string,
-  id: string,
-  payload: UpdateSchedulePayload,
-): Promise<BirthdaySchedule> {
-  return request(baseUrl, `/api/schedules/${id}`, 'PUT', payload, accessToken);
-}
-
-export async function deleteSchedule(
-  baseUrl: string,
-  accessToken: string,
-  id: string,
-): Promise<{ status: string }> {
-  return request(baseUrl, `/api/schedules/${id}`, 'DELETE', undefined, accessToken);
-}
-
 export interface QueuedMessage {
   id: string;
   friend_name: string;
@@ -728,6 +679,7 @@ export interface UploadImageFilePayload {
   filename: string;
   data: string; // base64 data URL
   size: number; // decoded byte count
+  source?: 'library' | 'post';
 }
 
 export async function uploadImageFile(

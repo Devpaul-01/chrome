@@ -532,7 +532,7 @@ export default function PostEditor({
         <button
           type="button"
           onClick={onViewPosts}
-          className="btn-secondary btn-block mb-5 py-3 font-semibold"
+          className="btn btn-block mb-5 py-3 font-semibold"
         >
           View Birthday Posts
         </button>

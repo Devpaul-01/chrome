@@ -237,6 +237,69 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               Fields marked * are required.
             </p>
 
+            {/* Template Title */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Template Title <span className="text-red-500">*</span>{' '}
+                <HelpTooltip label="A private name for this template — not sent to friends. Helps you identify it in the gallery, e.g. 'Formal – Colleagues' or 'Casual – Close Friends'." />
+              </label>
+              <input
+                type="text"
+                value={formData.templateTitle}
+                onChange={(e) => setFormData({ ...formData, templateTitle: e.target.value })}
+                placeholder="SimpleBirthday"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
+                required
+              />
+            </div>
+
+            {/* Days in Advance */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Days in Advance{' '}
+                <HelpTooltip label="Positive values send before the birthday, 0 sends on the day, and negative values send after. Useful for follow-up messages like 'Hope you had a great birthday yesterday!'" />
+              </label>
+              <select
+                value={formData.daysInAdvance}
+                onChange={(e) =>
+                  setFormData({ ...formData, daysInAdvance: parseInt(e.target.value) })
+                }
+                className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
+              >
+                <option value="0">On Birthday</option>
+                <option value="1">1 Day Early</option>
+                <option value="2">2 Days Early</option>
+                <option value="3">3 Days Early</option>
+                <option value="4">4 Days Early</option>
+                <option value="5">5 Days Early</option>
+                <option value="7">1 Week Early</option>
+                <option value="-1">1 Day Late</option>
+                <option value="-2">2 Days Late</option>
+              </select>
+            </div>
+
+            {/* Group */}
+            {groups.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Group{' '}
+                  <HelpTooltip label="Assign this template to a group so it is only used for contacts in the same group. Leave as 'None' to use for any contact." />
+                </label>
+                <select
+                  value={formData.groupId || ''}
+                  onChange={(e) => setFormData({ ...formData, groupId: e.target.value || null })}
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
+                >
+                  <option value="">None</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
               A template has three parts — <strong>Greeting</strong>, <strong>Sentiment</strong>,
               and <strong>Closing</strong> — joined together to form the final message sent to your
@@ -324,92 +387,6 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
               />
             </div>
 
-            {/* Template Title */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Template Title <span className="text-red-500">*</span>{' '}
-                <HelpTooltip label="A private name for this template — not sent to friends. Helps you identify it in the gallery, e.g. 'Formal – Colleagues' or 'Casual – Close Friends'." />
-              </label>
-              <input
-                type="text"
-                value={formData.templateTitle}
-                onChange={(e) => setFormData({ ...formData, templateTitle: e.target.value })}
-                placeholder="SimpleBirthday"
-                className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
-                required
-              />
-            </div>
-
-            {/* Days in Advance */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Days in Advance{' '}
-                <HelpTooltip label="Positive values send before the birthday, 0 sends on the day, and negative values send after. Useful for follow-up messages like 'Hope you had a great birthday yesterday!'" />
-              </label>
-              <select
-                value={formData.daysInAdvance}
-                onChange={(e) =>
-                  setFormData({ ...formData, daysInAdvance: parseInt(e.target.value) })
-                }
-                className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
-              >
-                <option value="0">On Birthday</option>
-                <option value="1">1 Day Early</option>
-                <option value="2">2 Days Early</option>
-                <option value="3">3 Days Early</option>
-                <option value="4">4 Days Early</option>
-                <option value="5">5 Days Early</option>
-                <option value="7">1 Week Early</option>
-                <option value="-1">1 Day Late</option>
-                <option value="-2">2 Days Late</option>
-              </select>
-            </div>
-
-            {/* Gender Filter — commented out, feature not currently needed */}
-            {/* <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Gender Filter{' '}
-                <HelpTooltip label="Restrict this template to contacts of a specific gender. 'All Genders' sends to everyone. Use gender-specific templates to personalise messages for male or female friends." />
-              </label>
-              <select
-                value={formData.gender}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    gender: e.target.value as 'MALE' | 'FEMALE' | 'NEUTRAL' | 'ALL',
-                  })
-                }
-                className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
-              >
-                <option value="ALL">All Genders</option>
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="NEUTRAL">Neutral</option>
-              </select>
-            </div> */}
-
-            {/* Group */}
-            {groups.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Group{' '}
-                  <HelpTooltip label="Assign this template to a group so it is only used for contacts in the same group. Leave as 'None' to use for any contact." />
-                </label>
-                <select
-                  value={formData.groupId || ''}
-                  onChange={(e) => setFormData({ ...formData, groupId: e.target.value || null })}
-                  className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
-                >
-                  <option value="">None</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             {/* [IMAGE DISABLED] Attach Image section — hidden until image support is re-enabled */}
             {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -489,41 +466,39 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
         )}
 
         {/* Action Buttons */}
-        <div className="space-y-3 mt-8">
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setActiveTab('preview')}
-              className="flex-1 btn-outline-orange"
-              disabled={isSubmitting}
-            >
-              Preview
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setFormData({
-                  greeting: '',
-                  sentiment: '',
-                  closing: '',
-                  imageUrl: null,
-                  templateTitle: '',
-                  daysInAdvance: 0,
-                  gender: 'ALL',
-                  groupId: null,
-                });
-                setActiveTab('create');
-                onCancel();
-              }}
-              className="flex-1 btn-outline-orange"
-              disabled={isSubmitting}
-            >
-              Cancel
-            </button>
-          </div>
+        <div className="flex gap-3 mt-8">
+          <button
+            type="button"
+            onClick={() => setActiveTab('preview')}
+            className="flex-1 btn-sm-blue"
+            disabled={isSubmitting}
+          >
+            Preview
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                greeting: '',
+                sentiment: '',
+                closing: '',
+                imageUrl: null,
+                templateTitle: '',
+                daysInAdvance: 0,
+                gender: 'ALL',
+                groupId: null,
+              });
+              setActiveTab('create');
+              onCancel();
+            }}
+            className="flex-1 btn-sm-danger"
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
           <button
             type="submit"
-            className="w-full btn-orange flex items-center justify-center gap-2"
+            className="flex-1 btn-sm-orange flex items-center justify-center gap-2"
             disabled={isSubmitting}
             aria-busy={isSubmitting ? 'true' : 'false'}
             aria-disabled={isSubmitting ? 'true' : 'false'}

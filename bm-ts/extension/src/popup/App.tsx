@@ -31,7 +31,7 @@ import ImageManager from './components/ImageManager';
 // import SMTPSettings from './components/SMTPSettings'; // Uncomment when SMTP/multi-platform support is added
 // Contacts UI — read-only list re-enabled; add/import/edit remain disabled.
 import ContactList from './components/ContactList';
-// import ContactForm from './components/ContactForm';
+import ContactForm from './components/ContactForm';
 // import ImportContactsModal from './components/ImportContactsModal';
 // import BirthdayCalendar from './components/BirthdayCalendar';
 import UpcomingBirthdays from './components/UpcomingBirthdays';
@@ -57,21 +57,24 @@ import wsClient from '../api/websocket';
 import { AppProvider, useAppContext, type AuthMode, type TabType } from './context/AppContext';
 import { useMessageTemplates } from './hooks/useMessageTemplates';
 import { usePostComposer } from './hooks/usePostComposer';
-// import { useContacts } from './hooks/useContacts'; // Uncomment to re-enable contacts UI
+import { useContacts } from './hooks/useContacts';
 
 // ---- Read-only contacts page wrapper ------------------------------------
-function ContactsPage({ onClose }: { onClose: () => void }) {
-  const [contacts, setContacts] = useState<import('../api/client').Contact[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+type ContactsPageProps = {
+  onClose: () => void;
+  onEditContact: (contact: import('../api/client').Contact) => void;
+  onDeleteContact: (id: string) => void;
+  contacts: import('../api/client').Contact[];
+  isLoading: boolean;
+};
 
-  useEffect(() => {
-    setIsLoading(true);
-    sendBackgroundMessage<import('../api/client').Contact[]>({ type: 'contacts.list' })
-      .then((data) => setContacts(data || []))
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, []);
-
+function ContactsPage({
+  onClose,
+  onEditContact,
+  onDeleteContact,
+  contacts,
+  isLoading,
+}: ContactsPageProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -80,7 +83,14 @@ function ContactsPage({ onClose }: { onClose: () => void }) {
     );
   }
 
-  return <ContactList contacts={contacts} onClose={onClose} />;
+  return (
+    <ContactList
+      contacts={contacts}
+      onClose={onClose}
+      onEditContact={onEditContact}
+      onDeleteContact={onDeleteContact}
+    />
+  );
 }
 
 // ---- Root component: just the provider + error boundary -----------------
@@ -111,7 +121,7 @@ function AppShell() {
 
   const msgTemplates = useMessageTemplates();
   const post = usePostComposer();
-  // const contactsHook = useContacts(); // Uncomment to re-enable contacts UI
+  const contactsHook = useContacts();
 
   // ---- Onboarding wizard --------------------------------------------------
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -256,12 +266,96 @@ function AppShell() {
     const tabs: {
       id: TabType;
       label: string;
+      icon: React.ReactNode;
     }[] = [
-      { id: 'home', label: 'Home' },
-      { id: 'messages', label: 'Create' },
-      { id: 'scheduling', label: 'Schedule' },
-      // { id: 'contacts', label: 'Contacts' }, // Uncomment to re-enable contacts tab
-      { id: 'account', label: 'Account' },
+      {
+        id: 'home',
+        label: 'Home',
+        icon: (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+        ),
+      },
+      {
+        id: 'messages',
+        label: 'Create',
+        icon: (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="10" y1="10" x2="14" y2="10" />
+          </svg>
+        ),
+      },
+      {
+        id: 'scheduling',
+        label: 'Automate',
+        icon: (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        ),
+      },
+      // { id: 'contacts', label: 'Contacts', icon: null }, // Uncomment to re-enable contacts tab
+      {
+        id: 'account',
+        label: 'Account',
+        icon: (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        ),
+      },
     ];
 
     function handleTabKeyDown(e: React.KeyboardEvent, tabIndex: number) {
@@ -296,7 +390,7 @@ function AppShell() {
 
     return (
       <nav ref={navRef} className="tab-navigation mb-4" role="tablist" aria-label="Main navigation">
-        <div className="flex gap-1" role="presentation">
+        <div className="flex gap-2" role="presentation">
           {tabs.map((tab, tabIndex) => (
             <div key={tab.id} className="tab-wrapper" role="presentation">
               <button
@@ -314,6 +408,7 @@ function AppShell() {
                 }}
                 onKeyDown={(e) => handleTabKeyDown(e, tabIndex)}
               >
+                <span className="tab-icon">{tab.icon}</span>
                 {tab.label}
               </button>
             </div>
@@ -344,7 +439,7 @@ function AppShell() {
         <div>
           <Dashboard onClose={() => setViewMode('main')} />
           <button
-            className="btn mt-4"
+            className="btn"
             onClick={() => {
               setActiveTab('home');
               setViewMode('main');
@@ -380,7 +475,7 @@ function AppShell() {
               setViewMode('message-templates');
             }}
           />
-          <button className="btn mt-4" onClick={() => setViewMode('message-templates')}>
+          <button className="btn" onClick={() => setViewMode('message-templates')}>
             ← Back to Message Templates
           </button>
         </div>
@@ -394,8 +489,8 @@ function AppShell() {
             <h2 className="text-lg font-bold text-blueStrong">Message Templates</h2>
             <div />
           </div>
-          <div className="mb-6">
-            <div className="mb-4">
+          <div className="mb-3">
+            <div className="mb-2">
               <TemplateCreator
                 onSubmit={
                   editingTemplate
@@ -420,12 +515,12 @@ function AppShell() {
                 }
               />
             </div>
-            <button className="btn w-full" onClick={() => setViewMode('template-gallery')}>
+            <button className="btn-orange w-full" onClick={() => setViewMode('template-gallery')}>
               View/Edit Message Templates
             </button>
           </div>
           <button
-            className="btn mt-4"
+            className="btn"
             onClick={() => {
               setActiveTab('messages');
               setViewMode('main');
@@ -442,7 +537,7 @@ function AppShell() {
           <h2 className="text-lg font-bold text-blueStrong mb-3">
             {post.editingPostId ? 'Edit Timeline Post' : 'Create Timeline Post'}
           </h2>
-          <p className="text-xs text-gray-600 mb-4">
+          <p className="text-xs text-gray-600 mb-2">
             Design a birthday post to be sent to friends&apos; timelines on their special day.
           </p>
           <PostEditor
@@ -458,14 +553,14 @@ function AppShell() {
             onViewPosts={() => setViewMode('postLibrary')}
           />
           <button
-            className="btn mt-4"
+            className="btn"
             onClick={() => {
               post.cancelEditing();
               setActiveTab('messages');
               setViewMode('main');
             }}
           >
-            ← Back to Templates
+            ← Back to Create
           </button>
         </div>
       );
@@ -488,7 +583,7 @@ function AppShell() {
         <div>
           <ImageManager onClose={() => setViewMode('main')} />
           <button
-            className="btn mt-4"
+            className="btn"
             onClick={() => {
               setActiveTab('messages');
               setViewMode('main');
@@ -512,10 +607,31 @@ function AppShell() {
     if (viewMode === 'contacts') {
       return (
         <ContactsPage
+          contacts={contactsHook.contacts}
+          isLoading={false}
           onClose={() => {
             setActiveTab('home');
             setViewMode('main');
           }}
+          onEditContact={(contact) => {
+            contactsHook.setEditingContact(contact);
+            setViewMode('edit-contact');
+          }}
+          onDeleteContact={contactsHook.handleDeleteContact}
+        />
+      );
+    }
+    if (viewMode === 'edit-contact' && contactsHook.editingContact) {
+      return (
+        <ContactForm
+          contact={contactsHook.editingContact}
+          onSubmit={contactsHook.handleUpdateContact}
+          onCancel={() => {
+            contactsHook.setEditingContact(null);
+            setViewMode('contacts');
+          }}
+          isSubmitting={contactsHook.isSubmitting}
+          message={contactsHook.message}
         />
       );
     }
@@ -527,27 +643,6 @@ function AppShell() {
     //       onSave={smtpHook.handleSaveSMTPConfig}
     //       isSubmitting={smtpHook.isSubmitting}
     //       message={smtpHook.message}
-    //     />
-    //   );
-    // }
-    // Contacts views — commented out; contacts are auto-populated via scraping.
-    // Uncomment to re-enable manual contacts management UI.
-    // if (viewMode === 'add-contact') {
-    //   return (
-    //     <ContactForm
-    //       onSubmit={(data) => contactsHook.createContact(data)}
-    //       onCancel={() => setViewMode('contacts')}
-    //       isSubmitting={contactsHook.isSubmitting}
-    //     />
-    //   );
-    // }
-    // if (viewMode === 'edit-contact' && contactsHook.selectedContact) {
-    //   return (
-    //     <ContactForm
-    //       contact={contactsHook.selectedContact}
-    //       onSubmit={(data) => contactsHook.updateContact(contactsHook.selectedContact!.id, data)}
-    //       onCancel={() => setViewMode('contacts')}
-    //       isSubmitting={contactsHook.isSubmitting}
     //     />
     //   );
     // }
@@ -635,15 +730,14 @@ function AppShell() {
       case 'account':
         return (
           <div role="tabpanel" id="account-panel" className="tab-content">
-            <div className="card mb-6">
-              <h2 className="text-lg font-semibold mb-4">Account Information</h2>
-              <p className="text-textMuted text-sm mb-2">
+            <div className="card mb-3">
+              <h2 className="text-lg font-semibold mb-2">Account Information</h2>
+              <p className="text-textMuted text-sm">
                 Logged in as <strong className="text-textPrimary">{user?.email}</strong>
               </p>
             </div>
-            <div className="h-4" />
-            <div className="card mb-6">
-              <h3 className="text-md font-semibold mb-4">Account Settings</h3>
+            <div className="card mb-3">
+              <h3 className="text-md font-semibold mb-2">Account Settings</h3>
               <div className="space-y-3">
                 <button onClick={() => setViewMode('account-management')} className="btn btn-block">
                   Profile
@@ -675,7 +769,7 @@ function AppShell() {
             {/* Timezone Settings — moved to Scheduling tab */}
 
             {/* Restart Welcome Tour */}
-            <div className="card mb-6">
+            <div className="card mb-3">
               <button
                 type="button"
                 onClick={handleRestartTour}
@@ -686,7 +780,7 @@ function AppShell() {
             </div>
 
             {/* Delete Account */}
-            <div className="card mb-6">
+            <div className="card mb-3">
               {!showAccountDeleteConfirm ? (
                 <button
                   onClick={() => setShowAccountDeleteConfirm(true)}
@@ -738,7 +832,7 @@ function AppShell() {
 
       <header role="banner">
         <img
-          src="./images/Birthday_messaging-logo.png"
+          src="./images/new-logo/BirthdayMessaging_new-logo-orange-text_blue-cake-Primary-Blue.png"
           alt="Birthday Messaging Logo"
           className="app-logo block mx-auto mb-2"
         />

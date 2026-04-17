@@ -41,7 +41,9 @@
     }
   ],
   "icons": {
-    "128": "images/Birthday_messaging-logo.png"
+    "16": "images/new-logo/Birthday_messaging-small_icon-white-cake-orange-BG.png",
+    "48": "images/new-logo/Birthday_messaging-medium_icon-white-cake-orange-BG.png",
+    "128": "images/new-logo/Birthday_messaging-large_icon-white-cake-orange-BG.png"
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"

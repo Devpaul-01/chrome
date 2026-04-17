@@ -156,10 +156,23 @@ async function refreshFriendList() {
         birthday_month_only: s.monthOnly ?? false,
       }));
     if (payloads.length > 0) {
-      await sendContentMessage({
+      const persisted = await sendContentMessage<
+        Array<{ id: string; facebook_profile_url: string; group_id?: string | null }>
+      >({
         type: 'contacts.bulkCreate',
         payload: { contacts: payloads },
       });
+      // Update the ID map so overlay group dropdowns work for newly created contacts
+      if (Array.isArray(persisted)) {
+        for (const c of persisted) {
+          if (c.facebook_profile_url && c.id) {
+            friendContactIdMap.set(c.facebook_profile_url, c.id);
+            if (!friendGroupMap.has(c.facebook_profile_url)) {
+              friendGroupMap.set(c.facebook_profile_url, c.group_id ?? null);
+            }
+          }
+        }
+      }
       logger.log(`[BM] Auto-synced ${payloads.length} birthday contacts from page`);
     }
   } catch (err) {
@@ -745,8 +758,8 @@ function injectOverlayStyles(): void {
       width: 340px;
       max-height: 90vh;
       overflow-y: auto;
-      background: #ffb34c;
-      border: none;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
       border-radius: 0.75rem;
       padding: 0.75rem;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -811,7 +824,7 @@ function injectOverlayStyles(): void {
 
     /* ── Inner sections (tinted areas within the body card) ── */
     .bm-inner-section {
-      background: #fef7f0;
+      background: #f9fafb;
       border-radius: 0.5rem;
       padding: 0.5rem 0.75rem;
     }
@@ -1016,7 +1029,7 @@ function injectOverlayStyles(): void {
       font-size: 0.6875rem;
       padding: 0.25rem 0.625rem;
       border-radius: 9999px;
-      background: #fef7f0;
+      background: #f9fafb;
       color: #6e5a49;
       font-weight: 600;
       white-space: nowrap;
@@ -1048,7 +1061,7 @@ function injectOverlayStyles(): void {
       padding: 0.5rem;
       margin-bottom: 4px;
       border-radius: 0.5rem;
-      background: #fef7f0;
+      background: #f9fafb;
       transition: background 0.2s ease;
       cursor: pointer;
     }
@@ -1151,7 +1164,7 @@ function injectOverlayStyles(): void {
       margin-top: 10px;
       border-radius: 0.5rem;
       padding: 0.75rem 1rem;
-      background: #fef7f0;
+      background: #f9fafb;
     }
     .bm-help-content {
       font-size: 0.6875rem;

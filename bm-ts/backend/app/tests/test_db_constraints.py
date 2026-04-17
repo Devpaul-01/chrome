@@ -38,17 +38,6 @@ async def test_duplicate_email_rejected(
 
 
 @pytest.mark.asyncio
-async def test_schedule_unique_days_before(async_client: AsyncClient) -> None:
-    """Each user can only have one schedule per days_before value."""
-    await async_client.post("/api/schedules", json={"days_before": 1, "enabled": True})
-    resp2 = await async_client.post(
-        "/api/schedules", json={"days_before": 1, "enabled": True}
-    )
-    # Should fail with 400 or 409 (unique constraint)
-    assert resp2.status_code in (400, 409, 422, 500)
-
-
-@pytest.mark.asyncio
 async def test_cascade_delete_user_contacts(
     db_session: AsyncSession, test_user: User
 ) -> None:

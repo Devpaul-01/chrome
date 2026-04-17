@@ -21,20 +21,20 @@ export default function KeywordInserter({ onInsert, compact = false }: KeywordIn
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="btn"
+          className="btn-sm-orange"
           style={{ marginBottom: '4px' }}
         >
           {isExpanded ? '− Hide Keywords' : '+ Insert Keyword'}
         </button>
 
         {isExpanded && (
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
             {keywords.map((kw) => (
               <button
                 key={kw.value}
                 type="button"
                 onClick={() => onInsert(kw.value)}
-                className="btn"
+                className="btn-sm-orange"
                 title={kw.description}
               >
                 {kw.label}

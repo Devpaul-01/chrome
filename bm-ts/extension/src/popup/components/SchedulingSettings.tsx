@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import ScheduleSettings from './ScheduleSettings';
 import AutomationSettings from './AutomationSettings';
 import Spinner from './Spinner';
 import HelpTooltip from './HelpTooltip';
@@ -36,6 +35,8 @@ export default function SchedulingSettings({
 
   return (
     <div className="space-y-4">
+      <AutomationSettings onClose={() => {}} showClose={false} />
+
       {/* Timezone Settings */}
       <div className="card">
         <h3 className="text-md font-semibold mb-4">Timezone Settings</h3>
@@ -49,7 +50,7 @@ export default function SchedulingSettings({
               id="schedulingTimezone"
               value={localTimezone}
               onChange={(e) => setLocalTimezone(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+              className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
             >
               {COMMON_TIMEZONES.map((tz) => (
                 <option key={tz} value={tz}>
@@ -71,9 +72,6 @@ export default function SchedulingSettings({
           </button>
         </div>
       </div>
-
-      <ScheduleSettings onClose={() => {}} showClose={false} />
-      <AutomationSettings onClose={() => {}} showClose={false} />
     </div>
   );
 }

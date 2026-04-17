@@ -66,7 +66,7 @@ export default function SMTPSettings({ config, onSave, isSubmitting, message }: 
               onChange={(e) => setHost(e.target.value)}
               placeholder="Enter SMTP host (e.g., smtp.gmail.com)"
               required
-              className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+              className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
             />
           </div>
 
@@ -84,7 +84,7 @@ export default function SMTPSettings({ config, onSave, isSubmitting, message }: 
               required
               min="1"
               max="65535"
-              className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+              className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
             />
             <p className="text-xs text-gray-500 mt-1">
               Common ports: 587 (TLS), 465 (SSL), 25 (non-encrypted)
@@ -117,7 +117,7 @@ export default function SMTPSettings({ config, onSave, isSubmitting, message }: 
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter SMTP username"
               required
-              className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+              className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
             />
           </div>
 
@@ -134,7 +134,7 @@ export default function SMTPSettings({ config, onSave, isSubmitting, message }: 
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter SMTP password"
                 required
-                className="w-full px-3 py-2 pr-10 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+                className="w-full px-3 py-2 pr-10 rounded-lg focus:outline-none input-styled"
               />
               <button
                 type="button"
@@ -161,7 +161,7 @@ export default function SMTPSettings({ config, onSave, isSubmitting, message }: 
               value={fromEmail}
               onChange={(e) => setFromEmail(e.target.value)}
               placeholder="email@example.com"
-              className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+              className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
             />
             <p className="text-xs text-gray-500 mt-1">
               If not specified, will use the SMTP username as the from address

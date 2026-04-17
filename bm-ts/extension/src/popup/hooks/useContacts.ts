@@ -58,6 +58,10 @@ function normalizeContactFields(
     const g = String(c.gender).toUpperCase();
     mapped.gender = g === 'MALE' || g === 'FEMALE' || g === 'NEUTRAL' ? g : undefined;
   }
+  // Always include group_id when present in the source so it can be set or cleared
+  if ('group_id' in c) {
+    mapped.group_id = c.group_id || null;
+  }
 
   return mapped;
 }

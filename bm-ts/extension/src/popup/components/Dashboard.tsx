@@ -132,7 +132,7 @@ const Dashboard = memo(function Dashboard({ onClose: _onClose }: DashboardProps)
       ) : (
         <>
           {/* Success Rate Hero */}
-          <div className="bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-xl p-8 mb-6 text-center shadow-lg">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-8 mb-6 text-center shadow-lg">
             <div className="text-xs opacity-90 font-semibold uppercase tracking-wider mb-3">
               ✨ Success Rate{' '}
               <HelpTooltip label="Percentage of messages delivered successfully out of all messages attempted. Failed messages (e.g. Facebook errors) lower this rate." />
@@ -182,21 +182,21 @@ const Dashboard = memo(function Dashboard({ onClose: _onClose }: DashboardProps)
               <HelpTooltip label="'Upcoming' shows how many friends have birthdays in the next 30 days. 'In queue' shows messages waiting to be sent." />
             </h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-xs text-amber-700 font-semibold mb-2 uppercase tracking-wide">
+              <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="text-xs text-gray-600 font-semibold mb-2 uppercase tracking-wide">
                   🎉 Upcoming
                 </div>
-                <div className="text-3xl font-bold text-amber-900">
+                <div className="text-3xl font-bold text-gray-900">
                   {stats.friends_with_upcoming_birthdays}
                 </div>
-                <div className="text-xs text-amber-600 mt-1">birthdays</div>
+                <div className="text-xs text-gray-500 mt-1">birthdays</div>
               </div>
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-xs text-orange-700 font-semibold mb-2 uppercase tracking-wide">
+              <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="text-xs text-gray-600 font-semibold mb-2 uppercase tracking-wide">
                   📬 In Queue
                 </div>
-                <div className="text-3xl font-bold text-orange-900">{stats.queued_messages}</div>
-                <div className="text-xs text-orange-600 mt-1">messages</div>
+                <div className="text-3xl font-bold text-gray-900">{stats.queued_messages}</div>
+                <div className="text-xs text-gray-500 mt-1">messages</div>
               </div>
             </div>
           </div>

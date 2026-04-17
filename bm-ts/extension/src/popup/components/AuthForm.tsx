@@ -86,8 +86,8 @@ export default function AuthForm({
           aria-invalid={emailTouched && !emailValid ? 'true' : 'false'}
           aria-describedby={emailTouched && !emailValid ? emailErrorId : undefined}
           placeholder="Enter your email"
-          className={`w-full p-1.5 mt-0.5 border rounded ${
-            emailTouched && !emailValid ? 'border-red-500' : 'border-gray-300'
+          className={`w-full p-1.5 mt-0.5 rounded input-styled ${
+            emailTouched && !emailValid ? '!border-red-500' : ''
           }`}
         />
         {emailTouched && !emailValid && (
@@ -115,8 +115,8 @@ export default function AuthForm({
           }
           placeholder="Enter your password (min 8 characters)"
           minLength={8}
-          className={`w-full p-1.5 mt-0.5 border rounded ${
-            passwordTouched && !passwordValid ? 'border-red-500' : 'border-gray-300'
+          className={`w-full p-1.5 mt-0.5 rounded input-styled ${
+            passwordTouched && !passwordValid ? '!border-red-500' : ''
           }`}
         />
       </label>

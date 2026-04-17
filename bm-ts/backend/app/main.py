@@ -11,7 +11,6 @@ from app.api.routers import (
     templates,
     subscription,
     webhook,
-    schedules,
     messages,
     dashboard,
     websocket,
@@ -44,10 +43,6 @@ openapi_tags = [
     {
         "name": "templates",
         "description": "CRUD for template segments (greeting / body / closing)",
-    },
-    {
-        "name": "schedules",
-        "description": "Birthday schedule management (days-before triggers)",
     },
     {"name": "messages", "description": "Message queue and delivery history"},
     {"name": "dashboard", "description": "Dashboard statistics and analytics"},
@@ -122,7 +117,6 @@ app.include_router(subscription.router, prefix="/subscription", tags=["subscript
 app.include_router(webhook.router, prefix="/stripe", tags=["stripe"])
 
 # Phase 1 - Registered routers
-app.include_router(schedules.router, prefix="/api")
 app.include_router(messages.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(websocket.router)

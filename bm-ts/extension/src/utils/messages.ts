@@ -97,11 +97,6 @@ export type BackgroundMessage =
   | { type: 'config.getBackendUrl' }
   | { type: 'config.setBackendUrl'; payload: { backendUrl: string } }
   | { type: 'config.getWSConfig' }
-  // Schedule messages
-  | { type: 'schedules.list' }
-  | { type: 'schedules.create'; payload: { days_before: number; enabled?: boolean } }
-  | { type: 'schedules.update'; payload: { id: string; enabled?: boolean } }
-  | { type: 'schedules.delete'; payload: { id: string } }
   // Automation messages
   | { type: 'automation.scanFacebook' }
   | { type: 'automation.getConfig' }

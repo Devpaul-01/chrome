@@ -90,7 +90,7 @@ describe('usePostComposer', () => {
     });
 
     expect(result.current.editingPostId).toBe('post-1');
-    expect(result.current.postForm.content).toBe('Happy Birthday!');
+    expect(result.current.postForm.content).toBe('Happy Birthday! [Image]');
     expect(result.current.postForm.gender).toBe('MALE');
     expect(result.current.postForm.fontFamily).toBe('Helvetica');
     expect(result.current.postForm.fontSize).toBe(36);

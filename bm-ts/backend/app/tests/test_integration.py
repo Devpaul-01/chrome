@@ -174,39 +174,3 @@ async def test_message_queue_to_history(async_client: AsyncClient) -> None:
     # Queue should be empty
     queue2 = await async_client.get("/api/messages/queue")
     assert len(queue2.json()) == 0
-
-
-# --------------------------------------------------------- Schedule CRUD flow
-@pytest.mark.asyncio
-async def test_schedule_crud_flow(async_client: AsyncClient) -> None:
-    """Create schedule → list → update → delete."""
-    create = await async_client.post(
-        "/api/schedules",
-        json={
-            "days_before": 1,
-            "enabled": True,
-        },
-    )
-    assert create.status_code == 201
-    sched_id = create.json()["id"]
-
-    # List
-    list_resp = await async_client.get("/api/schedules")
-    assert len(list_resp.json()) == 1
-
-    # Update
-    update = await async_client.put(
-        f"/api/schedules/{sched_id}",
-        json={
-            "enabled": False,
-        },
-    )
-    assert update.status_code == 200
-    assert update.json()["enabled"] is False
-
-    # Delete
-    delete = await async_client.delete(f"/api/schedules/{sched_id}")
-    assert delete.status_code == 200
-
-    list_resp2 = await async_client.get("/api/schedules")
-    assert len(list_resp2.json()) == 0
