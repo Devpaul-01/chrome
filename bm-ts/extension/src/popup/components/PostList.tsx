@@ -273,22 +273,16 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
                     <div className="flex gap-2">
                       <button
                         onClick={() => setExpandedId(expandedId === post.id ? null : post.id)}
-                        className="btn-secondary text-xs py-1.5 px-3"
+                        className="btn text-xs py-1.5 px-3"
                       >
                         {expandedId === post.id ? '▲ Collapse' : '▼ Expand'}
                       </button>
                       {onEdit && (
-                        <button
-                          onClick={() => onEdit(post)}
-                          className="text-xs py-1.5 px-3 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors font-medium"
-                        >
+                        <button onClick={() => onEdit(post)} className="btn-sm-blue">
                           Edit
                         </button>
                       )}
-                      <button
-                        onClick={() => handleDelete(post.id)}
-                        className="text-xs py-1.5 px-3 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium"
-                      >
+                      <button onClick={() => handleDelete(post.id)} className="btn-sm-danger">
                         Delete
                       </button>
                     </div>
@@ -304,7 +298,7 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
         )}
 
         {showClose && (
-          <button onClick={onClose} className="btn-secondary btn-block mt-5">
+          <button onClick={onClose} className="btn btn-block mt-5">
             ← Back
           </button>
         )}

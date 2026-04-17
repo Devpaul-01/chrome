@@ -54,7 +54,6 @@ async def test_unauthenticated_multiple_endpoints() -> None:
         for path in [
             "/api/contacts/",
             "/api/posts",
-            "/api/schedules",
             "/api/message-templates",
             "/api/images",
             "/api/messages/queue",
@@ -74,12 +73,6 @@ async def test_delete_nonexistent_contact(async_client: AsyncClient) -> None:
     resp = await async_client.delete(f"/api/contacts/{uuid4()}")
     assert resp.status_code == 404
     assert "detail" in resp.json()
-
-
-@pytest.mark.asyncio
-async def test_delete_nonexistent_schedule(async_client: AsyncClient) -> None:
-    resp = await async_client.delete(f"/api/schedules/{uuid4()}")
-    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -214,12 +207,6 @@ async def test_create_contact_missing_name(async_client: AsyncClient) -> None:
             "birthday": datetime.now(timezone.utc).isoformat(),
         },
     )
-    assert resp.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_create_schedule_missing_days_before(async_client: AsyncClient) -> None:
-    resp = await async_client.post("/api/schedules", json={"enabled": True})
     assert resp.status_code == 422
 
 
@@ -402,19 +389,6 @@ async def test_post_response_schema(async_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_schedule_response_schema(async_client: AsyncClient) -> None:
-    resp = await async_client.post(
-        "/api/schedules", json={"days_before": 7, "enabled": True}
-    )
-    assert resp.status_code == 201
-    data = resp.json()
-    for key in ["id", "user_id", "days_before", "enabled"]:
-        assert key in data, f"Schedule missing key: {key}"
-    assert isinstance(data["days_before"], int)
-    assert isinstance(data["enabled"], bool)
-
-
-@pytest.mark.asyncio
 async def test_message_template_response_schema(async_client: AsyncClient) -> None:
     payload = {
         "title": "Schema Check",
@@ -567,11 +541,6 @@ async def test_delete_response_schema_all_resources(async_client: AsyncClient) -
         },
     )
     resp = await async_client.delete(f"/api/posts/{post_resp.json()['id']}")
-    assert resp.json() == {"status": "deleted"}
-
-    # Schedule
-    sched_resp = await async_client.post("/api/schedules", json={"days_before": 1})
-    resp = await async_client.delete(f"/api/schedules/{sched_resp.json()['id']}")
     assert resp.json() == {"status": "deleted"}
 
     # Message template
@@ -866,17 +835,6 @@ async def test_contacts_sorted_by_name(async_client: AsyncClient) -> None:
     resp = await async_client.get("/api/contacts/")
     names = [c["name"] for c in resp.json()]
     assert names == sorted(names), f"Contacts not sorted by name: {names}"
-
-
-@pytest.mark.asyncio
-async def test_schedules_sorted_by_days_before(async_client: AsyncClient) -> None:
-    """Schedules list is sorted ascending by days_before."""
-    for d in [10, 1, 5]:
-        await async_client.post("/api/schedules", json={"days_before": d})
-
-    resp = await async_client.get("/api/schedules")
-    days = [s["days_before"] for s in resp.json()]
-    assert days == sorted(days), f"Schedules not sorted: {days}"
 
 
 @pytest.mark.asyncio

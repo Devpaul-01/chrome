@@ -176,16 +176,10 @@ export default function TemplateGallery({
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => onEdit(template)}
-                    className="flex-1 btn-outline-orange text-sm py-1"
-                  >
+                  <button onClick={() => onEdit(template)} className="flex-1 btn-sm-blue">
                     Edit
                   </button>
-                  <button
-                    onClick={() => onDelete(template.id)}
-                    className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-md text-sm py-1 transition"
-                  >
+                  <button onClick={() => onDelete(template.id)} className="flex-1 btn-sm-danger">
                     Delete
                   </button>
                 </div>

@@ -9,6 +9,7 @@ schemas/user_image.py — Pydantic schemas for user-uploaded image endpoints.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class UserImageUploadUrl(BaseModel):
     url: str = Field(..., min_length=1)
+    source: Literal['library', 'post'] = 'library'
 
 
 class UserImageUploadFile(BaseModel):
@@ -24,6 +26,7 @@ class UserImageUploadFile(BaseModel):
     size: int = Field(
         ..., gt=0, le=10 * 1024 * 1024, description="File size in bytes, max 10MB"
     )
+    source: Literal['library', 'post'] = 'library'
 
 
 class UserImageOut(BaseModel):
@@ -31,6 +34,7 @@ class UserImageOut(BaseModel):
     url: str
     filename: str
     size: int
+    source: str
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

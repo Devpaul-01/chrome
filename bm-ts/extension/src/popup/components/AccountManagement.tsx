@@ -64,7 +64,7 @@ export default function AccountManagement({
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               placeholder="First Name"
-              className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+              className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
             />
           </div>
 
@@ -79,7 +79,7 @@ export default function AccountManagement({
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               placeholder="Last Name"
-              className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+              className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
             />
           </div>
 
@@ -96,7 +96,7 @@ export default function AccountManagement({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@example.com"
               required
-              className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+              className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
             />
           </div>
 
@@ -112,7 +112,7 @@ export default function AccountManagement({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+1 234 567 8900"
-              className="w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+              className="w-full px-3 py-2 rounded-lg focus:outline-none input-styled"
             />
           </div>
 

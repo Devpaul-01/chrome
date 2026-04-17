@@ -64,10 +64,14 @@ async def bulk_create_contacts(
 
         if contact:
             contact.name = data.name
-            contact.birthday = data.birthday
-            contact.birthday_month_only = data.birthday_month_only or False
-            contact.gender = data.gender.value if data.gender else None
-            contact.notes = data.notes
+            # Never downgrade a known full date to month-only on rescan.
+            # Only update birthday when the incoming data is an improvement
+            # (month-only → full) or when both are full dates (possible correction).
+            incoming_month_only = data.birthday_month_only or False
+            existing_full = not (contact.birthday_month_only or False)
+            if not (existing_full and incoming_month_only):
+                contact.birthday = data.birthday
+                contact.birthday_month_only = incoming_month_only
             contact.updated_at = now
         else:
             contact = Contact(
@@ -167,7 +171,7 @@ async def update_contact(
         contact.gender = data.gender.value
     if data.notes is not None:
         contact.notes = data.notes
-    if data.group_id is not None:
+    if 'group_id' in data.model_fields_set:
         contact.group_id = data.group_id
 
     await db.commit()

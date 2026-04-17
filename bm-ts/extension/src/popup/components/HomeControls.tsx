@@ -210,23 +210,63 @@ export default function HomeControls({
         </label>
       </div> */}
 
-      {/* Open Facebook Birthdays */}
-      <a
-        href="https://www.facebook.com/friends/birthdays"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="btn w-full text-center block"
-      >
-        Open Facebook Birthdays
-      </a>
-
-      {/* View Contacts */}
-      <button onClick={onViewContacts} className="btn w-full text-center">
-        📇 View Contacts
-      </button>
-
-      {/* Analytics & Upcoming Birthdays */}
+      {/* Quick Actions Grid — Open Facebook, Contacts, Analytics, Birthdays */}
       <div className="messages-hub-grid">
+        <a
+          href="https://www.facebook.com/friends/birthdays"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="messages-hub-card messages-hub-card--blue"
+          aria-label="Open Facebook Birthdays"
+        >
+          <span className="messages-hub-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+            </svg>
+          </span>
+          <span className="messages-hub-label">Facebook</span>
+          <span className="messages-hub-desc">Open birthdays page</span>
+        </a>
+
+        <button
+          onClick={onViewContacts}
+          className="messages-hub-card messages-hub-card--green"
+          aria-label="View Contacts"
+        >
+          <span className="messages-hub-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </span>
+          <span className="messages-hub-label">Contacts</span>
+          <span className="messages-hub-desc">Manage contacts</span>
+        </button>
+
         <button
           onClick={onViewAnalytics}
           className="messages-hub-card messages-hub-card--orange"

@@ -370,7 +370,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
                       value={config.maxMessages}
                       onChange={(e) => handleUpdateMaxMessages(parseInt(e.target.value) || 0)}
                       disabled={isSaving}
-                      className="w-24 px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm focus:shadow-lg transition-shadow"
+                      className="w-24 px-3 py-2 rounded-lg focus:outline-none input-styled"
                     />
                     <span className="text-sm text-gray-500">
                       {config.maxMessages === 0 ? '(unlimited)' : 'per run'}
@@ -440,7 +440,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
                   <button
                     onClick={handleClearSentToday}
                     disabled={isSaving}
-                    className="btn-secondary btn-block"
+                    className="btn btn-block"
                     title="Reset deduplication so automation can re-send to contacts already processed today"
                   >
                     Clear Sent-Today List
@@ -455,7 +455,7 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
                 {!emergencyStop.active && (
                   <button
                     onClick={handleEmergencyStop}
-                    className="btn-secondary btn-block text-red-600 border-red-300 hover:bg-red-50"
+                    className="btn btn-danger btn-block"
                     title="Immediately halt all automated sending for 24 hours. Use this if something goes wrong."
                   >
                     Pause All Activity (24h cooldown)

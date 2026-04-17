@@ -53,7 +53,7 @@ export default function HelpTooltip({ label, id }: HelpTooltipProps) {
     <span className="relative inline-flex items-center">
       <button
         type="button"
-        className="inline-flex items-center justify-center w-4 h-4 rounded-full text-xs font-bold bg-gray-200 text-gray-600 hover:bg-orangeStrong hover:text-white focus:outline-none focus:ring-2 focus:ring-orangeStrong transition-colors"
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full text-xs font-bold bg-white text-blueStrong border border-blueStrong hover:bg-blueStrong hover:text-white focus:outline-none focus:ring-2 focus:ring-blueStrong transition-colors"
         aria-label="Help"
         aria-describedby={tooltipId}
         onMouseEnter={show}
@@ -73,9 +73,7 @@ export default function HelpTooltip({ label, id }: HelpTooltipProps) {
           className="absolute bottom-full left-1/2 mb-1.5 z-50 w-56 max-w-xs rounded-lg text-xs px-3 py-2 leading-relaxed pointer-events-none"
           style={{
             transform: `translateX(calc(-50% - ${nudge}px))`,
-            background: 'rgba(0, 78, 100, 0.92)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
+            background: '#004e64',
             border: '1px solid #0080A6',
             borderLeft: '4px solid #0080A6',
             color: '#f0f4f5',

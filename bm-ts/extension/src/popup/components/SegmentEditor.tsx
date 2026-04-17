@@ -56,8 +56,8 @@ export default function SegmentEditor({
         rows={rows}
         aria-label={ariaLabel}
         placeholder={placeholder}
-        className={`w-full px-3 py-2 rounded-lg focus:outline-none bg-white shadow-sm transition-shadow ${
-          contentTouched && contentTooLong ? 'border-red-500' : 'border-gray-300'
+        className={`w-full px-3 py-2 rounded-lg focus:outline-none input-styled ${
+          contentTouched && contentTooLong ? '!border-red-500' : ''
         }`}
       />
 

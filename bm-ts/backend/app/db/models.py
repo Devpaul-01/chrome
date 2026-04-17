@@ -659,13 +659,17 @@ class UserImage(Base):
     url = Column(Text(), nullable=False)
     filename = Column(Text(), nullable=False)
     size = Column(Integer, nullable=False)
+    source = Column(String(32), nullable=False, server_default="library")
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
     user = relationship("User")
 
-    __table_args__ = (Index("idx_user_image_user_created", "user_id", "created_at"),)
+    __table_args__ = (
+        Index("idx_user_image_user_created", "user_id", "created_at"),
+        Index("idx_user_image_source", "user_id", "source"),
+    )
 
 
 class BirthdayConfig(Base):

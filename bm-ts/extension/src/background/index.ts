@@ -6,7 +6,6 @@ import {
   TokenResponse,
   SubscriptionStatus,
   UserProfile,
-  BirthdaySchedule,
   QueuedMessage,
   MessageHistoryItem,
   MessageHistoryPage,
@@ -33,10 +32,6 @@ import {
   resetPassword,
   changePassword,
   requestEmailVerification,
-  listSchedules,
-  createSchedule,
-  updateSchedule,
-  deleteSchedule,
   listQueuedMessages,
   updateQueuedMessage,
   cancelQueuedMessage,
@@ -417,8 +412,6 @@ type BackgroundResponse =
   | SubscriptionStatus
   | CheckoutSessionResponse
   | BillingPortalResponse
-  | BirthdaySchedule
-  | BirthdaySchedule[]
   | AutomationConfig
   | QueuedMessage
   | QueuedMessage[]
@@ -559,6 +552,7 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
           filename: message.payload.filename,
           data: message.payload.data,
           size: message.payload.size,
+          source: message.payload.source,
         }),
       );
     }
@@ -602,24 +596,6 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
         wsUrl: `${wsUrl}/ws`,
         token: tokens.accessToken,
       };
-    }
-    case 'schedules.list': {
-      return runAuthAware((accessToken, url) => listSchedules(url, accessToken));
-    }
-    case 'schedules.create': {
-      return runAuthAware((accessToken, url) => createSchedule(url, accessToken, message.payload));
-    }
-    case 'schedules.update': {
-      return runAuthAware((accessToken, url) =>
-        updateSchedule(url, accessToken, message.payload.id, {
-          enabled: message.payload.enabled,
-        }),
-      );
-    }
-    case 'schedules.delete': {
-      return runAuthAware((accessToken, url) =>
-        deleteSchedule(url, accessToken, message.payload.id),
-      );
     }
     case 'automation.getConfig': {
       return getAutomationConfig();
