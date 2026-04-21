@@ -26,9 +26,7 @@ os.environ.setdefault(
     "SMTP_ENCRYPTION_KEY",
     "ci-test-only-smtp-encryption-key-placeholder-value",
 )
-os.environ.setdefault(
-    "DATABASE_URL", "sqlite+aiosqlite:///:memory:"
-)
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 import uuid
 from datetime import datetime, timezone
