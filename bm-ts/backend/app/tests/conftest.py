@@ -9,6 +9,27 @@ are performed against an in-memory SQLite instance.
 
 from __future__ import annotations
 
+# ---------------------------------------------------------------------------
+# Inject test-safe environment variables BEFORE any app module is imported.
+# config.py calls Settings() at module level, and its validators reject the
+# default placeholder values. os.environ.setdefault() means real env vars
+# (from Coolify or a .env file) still take priority over these test values.
+# ---------------------------------------------------------------------------
+import os
+
+os.environ.setdefault(
+    "JWT_SECRET_KEY",
+    "ci-test-only-secret-not-for-production-minimum32chars",
+)
+os.environ.setdefault("STRIPE_API_KEY", "sk_test_ci_dummy_not_real")
+os.environ.setdefault(
+    "SMTP_ENCRYPTION_KEY",
+    "ci-test-only-smtp-encryption-key-placeholder-value",
+)
+os.environ.setdefault(
+    "DATABASE_URL", "sqlite+aiosqlite:///:memory:"
+)
+
 import uuid
 from datetime import datetime, timezone
 from typing import AsyncGenerator
