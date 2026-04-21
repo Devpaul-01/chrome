@@ -1,7 +1,7 @@
 ﻿# BirthdayMessaging (bm-ts) — MVP Checklist
 
-**Last Updated:** July 18, 2025
-**Status:** Development-Complete / Pre-Production — All features implemented on both backend and frontend. Facebook automation pipeline fully functional. Production infrastructure, deployment, and Chrome Web Store submission are the remaining blockers.
+**Last Updated:** April 21, 2026
+**Status:** Live on self-hosted Coolify — Backend deployed, PostgreSQL running, TLS active. Chrome Web Store submission is the primary remaining blocker.
 
 ---
 
@@ -9,39 +9,14 @@
 
 This checklist tracks all remaining tasks required to ship bm-ts as a production-ready MVP. The application is **feature-complete for MVP scope** — all backend routers, database models, frontend components, content scripts, and the automation pipeline are built, tested, and wired together. The primary remaining work is **production infrastructure, deployment, and Chrome Web Store publication**.
 
-### Verified Codebase Statistics (April 14, 2026)
-
-| Metric                        | Count                                                                                                            |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Backend Routers               | 15 active + 1 deactivated (+ 2 inline endpoints in main.py; message_groups deactivated)                          |
-| Backend HTTP Endpoints        | 75 active + 1 WebSocket (80 total defined incl. deactivated message_groups)                                      |
-| Backend ORM Models            | 18 (18 tables, 5 enums, 34 indexes)                                                                              |
-| Backend Tests                 | 287 across 24 test files                                                                                         |
-| Backend Runtime Dependencies  | 15 (`aiosqlite` moved to `[project.optional-dependencies]` test group; `psycopg[binary]` moved to alembic group) |
-| Backend LOC                   | ~5,324 Python                                                                                                    |
-| Alembic Migrations            | 7                                                                                                                |
-| Frontend Components           | 40 (in components/)                                                                                              |
-| Frontend Custom Hooks         | 7 (across 7 files + 1 context)                                                                                   |
-| Frontend Tests                | 417 across 24 test files                                                                                         |
-| Frontend Runtime Dependencies | 3 (React, ReactDOM, react-calendar)                                                                              |
-| API Client Functions          | 60                                                                                                               |
-| Background Message Types      | 73 active (76 defined; 3 commented out)                                                                          |
-| Content Script Files          | 5 (~4,095 lines)                                                                                                 |
-| Utility Files                 | 13 (~2,043 lines)                                                                                                |
-| ViewMode States               | 24 (18 active + 5 disabled/commented + 1 transitional)                                                           |
-| CI/CD Workflows               | 4 (Gitea Actions: frontend-ci, backend-ci, deploy, dependency-scan)                                              |
-| User-Facing HTML Pages        | 6                                                                                                                |
-
 ### What Remains (Priority Order)
 
-1. **P0 — Production Infrastructure** — Cloud provider, managed PostgreSQL, domain + TLS, environment configuration
-2. **P0 — Chrome Web Store Submission** — Listing assets, permissions justification, production build testing
-3. ~~**P1 — Backend Test CI**~~ — ✅ DONE (`backend-ci.yaml`: Ruff lint+format, pytest, pip-audit)
-4. **P1 — Monitoring & Observability** — Error tracking, uptime monitoring, alerting
-5. **P1 — End-to-End Testing** — Manual verification of all critical user flows in production
-6. **P2 — Image Upload/Storage** — Currently URL-based; needs S3/R2 for actual file uploads
-7. **P2 — Extended Test Coverage** — E2E (Playwright), expand background worker & hook tests, more integration tests
-8. **P3 — Nice to Have** — Dark mode, i18n, interactive tutorials, analytics improvements
+1. **P0 — Chrome Web Store Submission** — Listing assets, permissions justification, production build testing
+2. **P1 — Monitoring & Observability** — Error tracking, uptime monitoring, alerting
+3. **P1 — End-to-End Testing** — Manual verification of all critical user flows in production
+4. **P2 — Image Upload/Storage** — Currently URL-based; needs S3/R2 for actual file uploads
+5. **P2 — Extended Test Coverage** — E2E (Playwright), expand background worker & hook tests, more integration tests
+6. **P3 — Nice to Have** — Dark mode, i18n, interactive tutorials, analytics improvements
 
 ---
 
@@ -49,43 +24,11 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 
 ### 1. Production Infrastructure Setup
 
-**Status:** Not Started
-
-#### Cloud Infrastructure
-
-- [ ] Choose cloud provider (Render, Fly.io, AWS, DigitalOcean)
-- [ ] Set up managed PostgreSQL (15+)
-- [ ] Set up backend hosting (container service)
-- [ ] Set up domain and TLS/SSL certificates
-- [ ] Set up object storage for images (S3, CloudFlare R2 — optional for MVP, URL-only is acceptable)
-
-#### Database Production Setup
-
-- [ ] Create production database instance
-- [ ] Run `alembic upgrade head` against production database
-- [ ] Verify all 18 tables and 32 indexes created
-- [ ] Configure connection pooling (PgBouncer or provider-managed)
-- [ ] Set up automatic backups (daily minimum)
-- [ ] Test backup restore procedure
+**Status:** ✅ DONE (April 2026) — Self-hosted on Coolify
 
 #### Backend Production Deployment
 
-- [ ] Configure production environment variables:
-  - [ ] `JWT_SECRET_KEY` (generate strong 64+ char random key)
-  - [ ] `DATABASE_URL` (production PostgreSQL connection string)
-  - [ ] `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (live mode)
-  - [ ] `CORS_ORIGINS` (published extension ID + production domain)
-  - [ ] `SENDGRID_API_KEY` (production key + domain verification)
-  - [ ] `EMAIL_FROM_ADDRESS` + `PASSWORD_RESET_URL_BASE`
-  - [ ] `SMTP_ENCRYPTION_KEY` (32-byte Fernet key)
-  - [ ] `LOG_LEVEL` = WARNING or ERROR
-- [ ] Set up secrets management (provider secrets, Vault, etc.)
-- [ ] Build and push production Docker image
-- [ ] Deploy container to production environment
-- [ ] Configure HTTPS reverse proxy (Caddy, nginx, or cloud LB)
 - [ ] Configure Stripe webhook endpoint with production URL
-- [ ] Verify health check endpoint accessible (`GET /health`)
-- [ ] Test API accessible from internet
 
 #### End-to-End Production Verification
 
@@ -113,7 +56,6 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
   - [ ] Small tile icon (128x128)
   - [ ] Large tile icon (440x280)
   - [ ] Marquee image (1400x560)
-- [x] Remove `localhost/*` from `host_permissions` in `manifest.json` before production build — ✅ Automated via `stripLocalhostInProduction` Vite plugin (strips localhost from host_permissions in production builds)
 - [ ] Prepare permissions justification document:
   - `storage` — Save user preferences and auth tokens
   - `scripting` — Inject content scripts on Facebook
@@ -124,8 +66,6 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
   - `clipboardWrite` — Fill message input fields and attach images via clipboard API
   - `host_permissions` (facebook.com) — Automate birthday messages
 - [ ] Confirm privacy policy URL (already created: `privacy-policy.html`)
-- [x] Replace `[SUPPORT_EMAIL]` placeholder in `privacy-policy.html` and `terms-of-service.html` — ✅ Set to `support@birthdaymessaging.io`
-- [x] Add `clipboardWrite` justification to privacy policy — ✅ Added row to permissions table in `privacy-policy.html`
 - [ ] Set support email
 - [ ] Submit for Chrome Web Store review
 
@@ -135,16 +75,10 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 
 ### 3. Backend Test CI Pipeline
 
-**Status:** ✅ DONE (April 15, 2026)
+**Status:** ✅ DONE (April 21, 2026)
 
-- [x] Created `.gitea/workflows/backend-ci.yaml`:
-  - [x] Run `pytest` on all 287 tests (24 files)
-  - [x] Run linting (`ruff check` + `ruff format --check`)
-  - [ ] Run type checking (`mypy`) — optional, not yet added
-  - [ ] Report code coverage (`pytest-cov`, target >80%) — not yet added
-- [x] Wired to run on PR to `main`/`develop`
-- [x] Created `.gitea/workflows/dependency-scan.yaml` (pip-audit for Python CVE scanning)
-- [x] Added pytest step to existing `deploy.yaml` pipeline
+- [ ] Run type checking (`mypy`) — optional, not yet added
+- [ ] Report code coverage (`pytest-cov`, target >80%) — not yet added
 
 ### 4. Monitoring & Observability
 
@@ -163,25 +97,9 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 
 ### 5. Alembic Migration Testing
 
-- [ ] Test all 7 migrations up (upgrade) against clean PostgreSQL
-- [ ] Test all 7 migrations down (downgrade)
+- [ ] Test all 9 migrations up (upgrade) against clean PostgreSQL
+- [ ] Test all 9 migrations down (downgrade)
 - [ ] Document rollback procedure
-
-### 6. Clarify / Remove Redundant `psycopg[binary]` Dependency
-
-**Status:** ✅ DONE
-
-- [x] Verify which parts of the codebase require `psycopg` — only Alembic sync scripts
-- [x] Moved `psycopg[binary]>=3.1` from `[project.dependencies]` to `[project.optional-dependencies]` alembic group
-- [x] `asyncpg` remains as the async runtime driver in core dependencies
-- [x] Dockerfile installs `.[alembic]` to include psycopg
-
-### 6a. Gunicorn Production Configuration
-
-**Status:** ✅ DONE
-
-- [x] Created `gunicorn.conf.py` with production settings (4 workers, UvicornWorker, timeout=120, graceful-timeout=30, max-requests=1000, max-requests-jitter=50)
-- [x] Updated Dockerfile CMD to reference config file
 
 ---
 
@@ -210,9 +128,6 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 
 #### Frontend/Extension Gaps
 
-- [x] Background service worker tests (`background/__tests__/index.test.ts` — 9 tests)
-- [x] Custom hook tests (`useMessages.test.ts` — 18 tests, `useImageLibrary.test.ts` — 10 tests)
-- [x] Custom hook tests: `usePostComposer.test.ts` — 6 tests, `useTemplateSegments.test.ts` — 9 tests, `useMessageTemplates.test.ts` — 9 tests
 - [ ] Expand background service worker test coverage (currently minimal)
 - [ ] Add hook tests for remaining hooks when features re-enabled (`useContacts`, `useSMTPConfig` — currently disabled features)
 - [ ] E2E testing framework (Playwright or Puppeteer)
@@ -297,35 +212,20 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 2. **`POST /images/upload-file`** — Stores base64 data URIs directly in DB (`# TODO: Upload to cloud storage`). Works but not scalable.
 3. **Image storage** — All image handling is URL-based or base64-in-DB. No cloud object storage configured.
 4. **Subscription proration** — `change-plan` modal shows generic Stripe proration message, no calculated amount preview from Stripe API.
-5. ~~**Redundant database drivers**~~ — ✅ RESOLVED: `psycopg[binary]` moved to `[project.optional-dependencies]` alembic group. `asyncpg` remains as async runtime driver.
-6. ~~**`localhost/*` in manifest.json `host_permissions`**~~ — ✅ RESOLVED: `stripLocalhostInProduction` Vite plugin automatically removes localhost from host_permissions in production builds.
-7. **CORS default extension ID** — `config.py` defaults CORS to legacy extension ID `cpobkmncaokclgimgcefglokgigjlcoj`. New published extension will have a different ID; must override via `CORS_ORIGINS` env var.
-8. ~~**`clipboardWrite` undocumented**~~ — ✅ RESOLVED: Added to permissions table in `privacy-policy.html`.
-9. ~~**`[SUPPORT_EMAIL]` placeholders**~~ — ✅ RESOLVED: Replaced with `support@birthdaymessaging.io` in both files.
-10. ~~**No gunicorn config file**~~ — ✅ RESOLVED: Created `gunicorn.conf.py` with production settings.
-11. ~~**No Stripe test/live mode distinction**~~ — ✅ RESOLVED: Added startup warning log when Stripe test keys (`sk_test_`) are used in production environment.
+5. **CORS default extension ID** — `config.py` defaults CORS to legacy extension ID `cpobkmncaokclgimgcefglokgigjlcoj`. New published extension will have a different ID; must override via `CORS_ORIGINS` env var.
+
 
 ---
 
 ## Actionable Next Steps
 
-### This Week
-
-1. [ ] Choose cloud provider and provision infrastructure (database + backend hosting + domain)
-2. [ ] Configure all production environment variables
-3. [ ] Deploy backend and run Alembic migrations
-
-### Next Week
-
-4. [ ] Test end-to-end user flows against production API
-5. [ ] Build production extension and test in Chrome
-6. [ ] Prepare Chrome Web Store listing assets
-7. [ ] Submit extension update to Chrome Web Store
-8. [ ] Set up basic monitoring (Sentry + uptime check)
-
-### Soon
-
-9. [x] ~~Add backend test CI pipeline~~ (DONE — `backend-ci.yaml`, `dependency-scan.yaml`, pytest in `deploy.yaml`)
-10. [ ] Expand test coverage (background worker, hooks, E2E)
-11. [ ] Set up cloud image storage (if needed beyond URL-based)
-12. [ ] Soft launch to beta group and iterate on feedback
+1. [ ] Configure Stripe webhook endpoint with production URL
+2. [ ] Verify all 18 DB tables and indexes exist in production
+3. [ ] Test end-to-end user flows against production API
+4. [ ] Build production extension and test in Chrome
+5. [ ] Prepare Chrome Web Store listing assets
+6. [ ] Submit extension update to Chrome Web Store
+7. [ ] Set up basic monitoring (Sentry + uptime check)
+8. [ ] Expand test coverage (background worker, hooks, E2E)
+9. [ ] Set up cloud image storage (if needed beyond URL-based)
+10. [ ] Soft launch to beta group and iterate on feedback
