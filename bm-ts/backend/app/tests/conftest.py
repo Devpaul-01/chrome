@@ -24,7 +24,7 @@ os.environ.setdefault(
 os.environ.setdefault("STRIPE_API_KEY", "sk_test_ci_dummy_not_real")
 os.environ.setdefault(
     "SMTP_ENCRYPTION_KEY",
-    "ci-test-only-smtp-encryption-key-placeholder-value",
+    "ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg=",  # valid Fernet key, CI/test only
 )
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
