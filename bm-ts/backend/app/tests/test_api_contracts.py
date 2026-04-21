@@ -804,10 +804,10 @@ async def test_history_date_range_filter(
 @pytest.mark.asyncio
 async def test_posts_no_filter_returns_all(async_client: AsyncClient) -> None:
     await async_client.post(
-        "/api/posts", json={**_POST_BASE, "content": "A", "gender": "MALE"}
+        "/api/posts", json={**_POST_BASE, "content": "A", "gender": "MALE", "label": "L-A"}
     )
     await async_client.post(
-        "/api/posts", json={**_POST_BASE, "content": "B", "gender": "FEMALE"}
+        "/api/posts", json={**_POST_BASE, "content": "B", "gender": "FEMALE", "label": "L-B"}
     )
 
     resp = await async_client.get("/api/posts")
