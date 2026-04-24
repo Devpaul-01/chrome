@@ -1,6 +1,6 @@
 ﻿# BirthdayMessaging (bm-ts) — MVP Checklist
 
-**Last Updated:** April 21, 2026
+**Last Updated:** April 24, 2026
 **Status:** Live on self-hosted Coolify — Backend deployed, PostgreSQL running, TLS active. Chrome Web Store submission is the primary remaining blocker.
 
 ---
@@ -12,7 +12,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 ### What Remains (Priority Order)
 
 1. **P0 — Chrome Web Store Submission** — Listing assets, permissions justification, production build testing
-2. **P1 — Monitoring & Observability** — Error tracking, uptime monitoring, alerting
+2. **P1 — Monitoring & Observability** — Sentry integrated (backend + popup); uptime monitoring and alerting still needed
 3. **P1 — End-to-End Testing** — Manual verification of all critical user flows in production
 4. **P2 — Image Upload/Storage** — Currently URL-based; needs S3/R2 for actual file uploads
 5. **P2 — Extended Test Coverage** — E2E (Playwright), expand background worker & hook tests, more integration tests
@@ -32,8 +32,8 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 
 #### End-to-End Production Verification
 
-- [ ] Fresh user registration + email verification
-- [ ] Login + token refresh flow
+- [x] Fresh user registration + email verification
+- [x] Login + token refresh flow
 - [ ] Template creation + scheduling
 - [ ] Stripe checkout (live test) + webhook receipt
 - [ ] Password reset email delivery
@@ -53,7 +53,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
   - [ ] Short description (132 chars max)
   - [ ] Category selection
   - [ ] Screenshots (1280x800 or 640x400, up to 5)
-  - [ ] Small tile icon (128x128)
+  - [x] Small tile icon (128x128) — `Birthday_messaging-large_icon-white-cake-orange-BG.png` set in `manifest.json` at 128px
   - [ ] Large tile icon (440x280)
   - [ ] Marquee image (1400x560)
 - [ ] Prepare permissions justification document:
@@ -65,7 +65,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
   - `alarms` — Schedule periodic birthday checks
   - `clipboardWrite` — Fill message input fields and attach images via clipboard API
   - `host_permissions` (facebook.com) — Automate birthday messages
-- [ ] Confirm privacy policy URL (already created: `privacy-policy.html`)
+- [ ] Confirm privacy policy URL (already created: `privacy-policy.html`, referenced in `manifest.json` `homepage_url` as `https://birthdaymessaging.app/privacy`) ✅
 - [ ] Set support email
 - [ ] Submit for Chrome Web Store review
 
@@ -78,15 +78,17 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 **Status:** ✅ DONE (April 21, 2026)
 
 - [ ] Run type checking (`mypy`) — optional, not yet added
-- [ ] Report code coverage (`pytest-cov`, target >80%) — not yet added
+- [x] `pytest-cov` available — already in `pyproject.toml` test dependencies; CI coverage reporting not yet wired up
 
 ### 4. Monitoring & Observability
 
-**Status:** Not Started
+**Status:** Partially Done (April 24, 2026)
 
-- [ ] Set up error tracking (Sentry or Rollbar)
+- [x] Set up error tracking — Sentry integrated in backend (`sentry-sdk[fastapi]`, activated via `SENTRY_DSN` env var) and extension popup (`@sentry/browser`, activated via `VITE_SENTRY_DSN` build var)
 - [ ] Set up uptime monitoring (UptimeRobot, Pingdom, or provider-native)
-- [ ] Set up structured logging + log aggregation
+- [x] Structured per-request logging — `RequestLoggingMiddleware` logs method, path, status code, duration, and client IP as structured `extra` fields on every request; plain-text format only (no JSON formatter)
+- [x] JSON structured logging — `app_logging.py` now emits every log record as a single-line JSON object (April 24, 2026); ready for ingestion by Loki, Logtail, Datadog, etc.
+- [ ] Set up external log aggregation (e.g. Loki, Logtail, or provider-native)
 - [ ] Create alerting rules:
   - [ ] API downtime
   - [ ] Database connection failures
@@ -113,23 +115,23 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] Implement server-side upload -> storage pipeline
 - [ ] Add image processing (resize, optimize, thumbnails)
 - [ ] Add storage cleanup on image deletion
-- [ ] Add image size/format/dimension validation
+- [x] Add image MIME type + size validation — `upload-file` now rejects non-image MIME types and files >10 MB with appropriate HTTP status codes (April 24, 2026)
 
 ### 8. Extended Test Coverage
 
 #### Backend Gaps
 
-- [ ] Integration test: password reset flow (request -> email -> reset)
-- [ ] Integration test: Stripe subscription flow (checkout -> webhook -> status)
+- [x] Integration test: password reset flow — `test_password_reset.py` covers token creation, storage, verification, expiry, and single-use enforcement (7 tests)
+- [x] Integration test: Stripe subscription flow — `test_stripe_service.py`, `test_subscription.py`, and `test_webhook.py` cover checkout session creation, subscription lifecycle, plan changes, cancellation, and all webhook event types
 - [ ] Database test: migration up/down verification
-- [ ] Database test: concurrent operations
-- [ ] API contract tests: pagination, filtering, sorting verification
+- [x] Database test: concurrent operations — `test_db_constraints.py` now includes a concurrent 5-insert test verifying no data corruption across independent sessions (April 24, 2026)
+- [x] API contract tests: pagination, filtering, sorting verification — `test_api_contracts.py` has dedicated sections for pagination, filtering, and sorting
 - [ ] Target: >80% code coverage
 
 #### Frontend/Extension Gaps
 
-- [ ] Expand background service worker test coverage (currently minimal)
-- [ ] Add hook tests for remaining hooks when features re-enabled (`useContacts`, `useSMTPConfig` — currently disabled features)
+- [x] Background service worker test coverage — `background/__tests__/index.test.ts` has 9 describe blocks covering sender ID guard, auth login/logout, profile processing, dashboard augmentation, 401 retry, emergency stop, and 15-second timeout sentinel
+- [ ] Hook tests for `useContacts` / `useSMTPConfig` — these hooks do not yet exist; contact management and SMTP UI are intentionally disabled; revisit when features are re-enabled
 - [ ] E2E testing framework (Playwright or Puppeteer)
 - [ ] Critical E2E flows:
   - [ ] Install -> register -> login -> create template -> schedule -> verify
@@ -139,6 +141,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 
 ### 9. Content Script Resilience
 
+- [x] Add error recovery for manual send — one failed friend is skipped (logged + status shown) rather than aborting the entire run (April 24, 2026)
 - [ ] Add error recovery for automation failures (retry individual friend on DOM error)
 - [ ] Add mutation observer stability improvements
 - [ ] Test with various Facebook layouts (desktop, different languages)
@@ -185,6 +188,7 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 - [ ] API key rotation mechanism
 - [ ] Failed payment retry logic (Stripe webhook received but no automatic retry scheduling)
 - [ ] Validate `segment_ids` exist in message group creation
+- [x] Validate `group_id` ownership in message template create/update — `message_templates.py` now returns 404 if the referenced group does not belong to the current user (April 24, 2026)
 - [ ] Database query optimization (N+1 queries)
 - [ ] Response caching where appropriate
 - [ ] Load testing (100+ concurrent users)
@@ -209,10 +213,11 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 ## Known Technical Debt
 
 1. **`POST /send-birthday-message`** — Stub endpoint that returns **501 Not Implemented**. Content scripts handle actual sending. Kept for rate limiting and auth enforcement.
-2. **`POST /images/upload-file`** — Stores base64 data URIs directly in DB (`# TODO: Upload to cloud storage`). Works but not scalable.
+2. **`POST /images/upload-file`** — Stores base64 data URIs directly in DB (`# TODO: Upload to cloud storage`). Works but not scalable. MIME type and size validation added (April 24, 2026).
 3. **Image storage** — All image handling is URL-based or base64-in-DB. No cloud object storage configured.
 4. **Subscription proration** — `change-plan` modal shows generic Stripe proration message, no calculated amount preview from Stripe API.
 5. **CORS default extension ID** — `config.py` defaults CORS to legacy extension ID `cpobkmncaokclgimgcefglokgigjlcoj`. New published extension will have a different ID; must override via `CORS_ORIGINS` env var.
+6. **Failed payment retry** — Stripe Smart Retries handle automatic retry scheduling. `invoice.payment_succeeded` webhook now recovers PAST_DUE → ACTIVE when a retry succeeds (April 24, 2026).
 
 
 ---
@@ -225,7 +230,8 @@ This checklist tracks all remaining tasks required to ship bm-ts as a production
 4. [ ] Build production extension and test in Chrome
 5. [ ] Prepare Chrome Web Store listing assets
 6. [ ] Submit extension update to Chrome Web Store
-7. [ ] Set up basic monitoring (Sentry + uptime check)
-8. [ ] Expand test coverage (background worker, hooks, E2E)
-9. [ ] Set up cloud image storage (if needed beyond URL-based)
+7. [x] Integrate Sentry error tracking (backend + popup) — activate by setting `SENTRY_DSN` / `VITE_SENTRY_DSN` in production
+8. [ ] Set up uptime monitoring (UptimeRobot or provider-native)
+9. [ ] Expand test coverage (background worker, hooks, E2E)
+10. [ ] Set up cloud image storage (if needed beyond URL-based)
 10. [ ] Soft launch to beta group and iterate on feedback

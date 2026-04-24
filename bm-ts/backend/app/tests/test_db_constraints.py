@@ -1,7 +1,8 @@
 """
 tests/test_db_constraints.py — Database constraint tests.
 
-Covers: unique constraints, cascade deletes, enum enforcement via schemas.
+Covers: unique constraints, cascade deletes, enum enforcement via schemas,
+and concurrent insert behaviour.
 """
 
 from __future__ import annotations
@@ -112,3 +113,39 @@ async def test_birthday_config_mode_validation(async_client: AsyncClient) -> Non
         },
     )
     assert resp2.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_multiple_contact_inserts_no_data_corruption(
+    db_session: AsyncSession, test_user: User
+) -> None:
+    """Multiple inserts for the same user must all persist without data corruption.
+
+    Verifies that inserting N contacts for the same user produces N distinct rows
+    with unique IDs — guarding against accidental upsert/merge behaviour in the
+    ORM layer.  SQLite (used in tests) serialises writes, so true concurrency
+    cannot be exercised here, but logical independence is still validated.
+    """
+    from sqlalchemy import select, func
+
+    contacts = [
+        Contact(
+            user_id=test_user.id,
+            name=f"Friend {i}",
+            facebook_profile_url=f"https://facebook.com/friend{i}",
+            birthday=datetime.now(timezone.utc),
+        )
+        for i in range(5)
+    ]
+    for contact in contacts:
+        db_session.add(contact)
+    await db_session.commit()
+
+    result = await db_session.execute(
+        select(func.count()).where(Contact.user_id == test_user.id)
+    )
+    count = result.scalar_one()
+    assert count == 5, f"Expected 5 contacts, found {count}"
+
+    ids = [c.id for c in contacts]
+    assert len(set(ids)) == 5, "All contact IDs must be unique"

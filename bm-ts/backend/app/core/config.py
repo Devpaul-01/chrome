@@ -69,6 +69,8 @@ class Settings(BaseSettings):
         default="generate-with-fernet", alias="SMTP_ENCRYPTION_KEY"
     )
     sendgrid_api_key: str = Field(default="", alias="SENDGRID_API_KEY")
+    sentry_dsn: str = Field(default="", alias="SENTRY_DSN")
+    sentry_environment: str = Field(default="production", alias="SENTRY_ENVIRONMENT")
     email_from_address: str = Field(default="", alias="EMAIL_FROM_ADDRESS")
     password_reset_url_base: str = Field(default="", alias="PASSWORD_RESET_URL_BASE")
     email_verification_url_base: str = Field(

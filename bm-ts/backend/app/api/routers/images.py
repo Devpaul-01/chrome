@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+_ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+_MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
+
 
 @router.post(
     "/images/upload", response_model=UserImageOut, status_code=status.HTTP_201_CREATED
@@ -66,12 +69,29 @@ async def upload_image_file(
         if "," in data.data:
             # Strip data URI prefix if present (e.g., "data:image/png;base64,")
             data_uri_parts = data.data.split(",", 1)
+            prefix = data_uri_parts[0]  # e.g. "data:image/png;base64"
             base64_data = data_uri_parts[1]
+
+            # Validate MIME type from the data URI prefix
+            if prefix.startswith("data:"):
+                mime_type = prefix[5:].split(";")[0].strip().lower()
+                if mime_type not in _ALLOWED_MIME_TYPES:
+                    raise HTTPException(
+                        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                        detail=f"Unsupported image type '{mime_type}'. Allowed: {', '.join(sorted(_ALLOWED_MIME_TYPES))}",
+                    )
         else:
             base64_data = data.data
 
         # Decode to verify it's valid base64
         image_bytes = base64.b64decode(base64_data)
+
+        # Enforce maximum file size
+        if len(image_bytes) > _MAX_IMAGE_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Image too large: {len(image_bytes)} bytes. Maximum allowed is {_MAX_IMAGE_BYTES} bytes (10 MB).",
+            )
 
         # Verify size matches
         if len(image_bytes) != data.size:

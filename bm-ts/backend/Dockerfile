@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends postgresql-clie
 # Copy dependency manifests first for better caching
 COPY pyproject.toml README.md ./
 
-# Install Python dependencies
-RUN pip install --upgrade pip && pip install --no-cache-dir ".[test]"
+# Install Python dependencies (pin pip below 26.0 — CVE-2026-3219 affects 26.0 and 26.0.1, no fix released yet)
+RUN pip install "pip<26.0" && pip install --no-cache-dir ".[test]"
 
 # Copy the rest of the source code
 COPY . .

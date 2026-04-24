@@ -14,6 +14,7 @@ Handled event types:
   - ``customer.subscription.updated``   → sync changes (cancel, plan swap, etc.)
   - ``customer.subscription.deleted``   → mark subscription CANCELED
   - ``invoice.payment_failed``          → transition subscription to PAST_DUE
+  - ``invoice.payment_succeeded``       → recover PAST_DUE subscription back to ACTIVE
 
 All other event types return ``{"received": True}`` immediately.
 
@@ -72,6 +73,31 @@ async def _handle_payment_failed(
     await db.commit()
 
 
+async def _handle_payment_succeeded(
+    db: AsyncSession,
+    event_data: dict,
+) -> None:
+    """
+    Handle ``invoice.payment_succeeded`` by recovering a PAST_DUE subscription
+    back to ACTIVE.  This fires when Stripe Smart Retries eventually succeed,
+    ensuring the local record is consistent without waiting for a
+    ``customer.subscription.updated`` event.
+    """
+    subscription_id = event_data.get("subscription")
+    if not subscription_id:
+        return
+
+    await db.execute(
+        update(SubscriptionRecord)
+        .where(
+            SubscriptionRecord.stripe_subscription_id == subscription_id,
+            SubscriptionRecord.status == "PAST_DUE",
+        )
+        .values(status="ACTIVE", updated_at=datetime.now(timezone.utc))
+    )
+    await db.commit()
+
+
 @router.post("/webhook")
 async def stripe_webhook(
     request: Request, db: AsyncSession = Depends(get_db)
@@ -99,6 +125,11 @@ async def stripe_webhook(
     # --- invoice.payment_failed ---
     if event.type == "invoice.payment_failed":
         await _handle_payment_failed(db, object_data)
+        return {"received": True}
+
+    # --- invoice.payment_succeeded (retry recovery) ---
+    if event.type == "invoice.payment_succeeded":
+        await _handle_payment_succeeded(db, object_data)
         return {"received": True}
 
     # --- subscription lifecycle events ---
