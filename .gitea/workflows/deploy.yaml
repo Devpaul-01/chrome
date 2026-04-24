@@ -28,7 +28,14 @@ jobs:
       - name: Install backend dependencies
         working-directory: bm-ts/backend
         run: |
+          pip install "pip<26.0.1"  # CVE-2026-3219 — pin until fix is released
+          pip install pip-audit
           pip install -e ".[test]"
+
+      - name: Audit dependencies for vulnerabilities
+        working-directory: bm-ts/backend
+        run: |
+          pip-audit --skip-editable
 
       - name: Run backend tests
         working-directory: bm-ts/backend
