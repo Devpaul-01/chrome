@@ -3,10 +3,10 @@ name: Deploy Backend
 run-name: ${{ gitea.actor }} is deploying the backend
 
 # runs when i push to these branches
+# main = CI only (no deploy) — prevents accidental prod deploys on routine merges
 on:
   push:
     branches:
-      - main
       - develop
       - backend-ci-deploy
 
