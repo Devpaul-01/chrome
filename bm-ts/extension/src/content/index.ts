@@ -541,8 +541,9 @@ async function handleSendAll() {
         await randomDelay();
       }
     } catch (error) {
-      setStatus(`Error on ${friend.name}: ${(error as Error).message}`);
-      break;
+      logger.error(`[BM] Error sending to ${friend.name}:`, error);
+      setStatus(`Skipped ${friend.name}: ${(error as Error).message}`);
+      showProgressBar(sent, targets.length);
     }
   }
 

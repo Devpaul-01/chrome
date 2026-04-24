@@ -19,7 +19,8 @@ dependencies = [
     "pydantic-settings>=2",
     "slowapi>=0.1.8",
     "alembic>=1.13",
-    "sendgrid>=6.11"
+    "sendgrid>=6.11",
+    "sentry-sdk[fastapi]>=1.40"
 ]
 
 [project.optional-dependencies]

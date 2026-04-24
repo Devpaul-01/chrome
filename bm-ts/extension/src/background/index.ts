@@ -63,6 +63,8 @@ import {
   recordServerSend,
   ServerRateLimitStatus,
   listContacts,
+  createContact,
+  deleteContact,
   bulkCreateContacts,
   Contact,
   updateContact,
@@ -679,26 +681,23 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) => recordServerSend(url, accessToken));
     }
 
-    // Contact handlers — bulk create is active (used by scraping).
-    // Other CRUD handlers are commented out until manual contacts UI is re-enabled.
+    // Contact handlers — full CRUD enabled.
     case 'contacts.list': {
       return runAuthAware((accessToken, url) => listContacts(url, accessToken));
     }
 
-    // case 'contacts.create': {
-    //   return runAuthAware((accessToken, url) =>
-    //     createContact(url, accessToken, message.payload),
-    //   );
-    // }
+    case 'contacts.create': {
+      return runAuthAware((accessToken, url) => createContact(url, accessToken, message.payload));
+    }
     case 'contacts.update': {
       const { id, ...payload } = message.payload;
       return runAuthAware((accessToken, url) => updateContact(url, accessToken, id, payload));
     }
-    // case 'contacts.delete': {
-    //   return runAuthAware((accessToken, url) =>
-    //     deleteContact(url, accessToken, message.payload.id),
-    //   );
-    // }
+    case 'contacts.delete': {
+      return runAuthAware((accessToken, url) =>
+        deleteContact(url, accessToken, message.payload.id),
+      );
+    }
     case 'contacts.bulkCreate': {
       return runAuthAware((accessToken, url) =>
         bulkCreateContacts(url, accessToken, message.payload.contacts),

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
-from app.db.models import MessageTemplate, User
+from app.db.models import MessageGroup, MessageTemplate, User
 from app.schemas.message_template import (
     MessageTemplateCreate,
     MessageTemplateOut,
@@ -29,6 +29,20 @@ async def create_message_template(
     current_user: User = Depends(get_current_user),
 ) -> MessageTemplateOut:
     """Create a new complete message template"""
+    # Validate that the referenced group belongs to the current user
+    if data.group_id is not None:
+        group_result = await db.execute(
+            select(MessageGroup).where(
+                MessageGroup.id == data.group_id,
+                MessageGroup.user_id == current_user.id,
+            )
+        )
+        if group_result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Message group not found",
+            )
+
     # Check unique title per user
     dup_stmt = select(MessageTemplate).where(
         MessageTemplate.user_id == current_user.id,
@@ -145,6 +159,20 @@ async def update_message_template(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="A template with this title already exists",
+            )
+
+    # Validate group ownership if group_id is being changed
+    if "group_id" in update_data and update_data["group_id"] is not None:
+        group_result = await db.execute(
+            select(MessageGroup).where(
+                MessageGroup.id == update_data["group_id"],
+                MessageGroup.user_id == current_user.id,
+            )
+        )
+        if group_result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Message group not found",
             )
 
     for field, value in update_data.items():
