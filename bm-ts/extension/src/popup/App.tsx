@@ -17,6 +17,7 @@
 
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AuthForm from './components/AuthForm';
+import ResendVerificationEmailButton from './components/ResendVerificationEmailButton';
 import TemplateCreator, { type TemplateFormData } from './components/TemplateCreator';
 import SubscriptionPanel from './components/SubscriptionPanel';
 import ForgotPassword from './components/ForgotPassword';
@@ -174,8 +175,19 @@ function AppShell() {
     } catch (error) {
       const msg = getErrorMessage(error);
       logError(error, `handleAuthSubmit:${authMode}`);
-      setAuthMessage(msg);
-      showToast(msg, 'error');
+      // If login failed due to unverified email, show the resend verification UI
+      if (
+        authMode === 'login' &&
+        (msg.toLowerCase().includes('verify your email') ||
+          msg.toLowerCase().includes('check your inbox'))
+      ) {
+        setAuthMode('verify-email-pending');
+        setAuthMessage(null); // Message will be shown in the verify-email-pending view
+        // Do not clear email so the resend button works
+      } else {
+        setAuthMessage(msg);
+        showToast(msg, 'error');
+      }
     } finally {
       setIsAuthSubmitting(false);
     }
@@ -863,6 +875,7 @@ function AppShell() {
                   We sent a verification link to <strong>{email}</strong>. Click the link to verify
                   your account, then come back and log in.
                 </p>
+                <ResendVerificationEmailButton email={email} />
                 <button
                   type="button"
                   className="btn-primary w-full mb-2"
