@@ -28,6 +28,8 @@ export default function AuthForm({
   const emailRef = useRef<HTMLInputElement | null>(null);
   const [emailErrorId] = useState(() => generateId('email-error'));
   const [passwordErrorId] = useState(() => generateId('password-error'));
+  // State for form-level errors
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     emailRef.current?.focus();
@@ -56,7 +58,7 @@ export default function AuthForm({
           className={`flex-1 mr-1 bg-orangeStrong text-white uppercase rounded-lg hover:bg-orangeBrand transition px-6 py-3 auth-btn ${
             authMode === 'login' ? 'active' : ''
           }`}
-          aria-pressed={authMode === 'login'}
+          aria-pressed={authMode === 'login' ? 'true' : 'false'}
         >
           Login
         </button>
@@ -66,7 +68,7 @@ export default function AuthForm({
           className={`flex-1 ml-1 bg-orangeStrong text-white uppercase rounded-lg hover:bg-orangeBrand transition px-6 py-3 auth-btn ${
             authMode === 'register' ? 'active' : ''
           }`}
-          aria-pressed={authMode === 'register'}
+          aria-pressed={authMode === 'register' ? 'true' : 'false'}
         >
           Register
         </button>
@@ -83,7 +85,7 @@ export default function AuthForm({
           type="email"
           required
           aria-required="true"
-          aria-invalid={emailTouched && !emailValid}
+          aria-invalid={emailTouched && !emailValid ? 'true' : 'false'}
           aria-describedby={emailTouched && !emailValid ? emailErrorId : undefined}
           placeholder="Enter your email"
           className={`w-full p-1.5 mt-0.5 rounded input-styled ${
@@ -105,7 +107,7 @@ export default function AuthForm({
           type="password"
           required
           aria-required="true"
-          aria-invalid={passwordTouched && !passwordValid}
+          aria-invalid={passwordTouched && !passwordValid ? 'true' : 'false'}
           aria-describedby={
             authMode === 'register' && passwordTouched
               ? `${passwordErrorId} password-requirements`
@@ -161,14 +163,16 @@ export default function AuthForm({
 
       <div className="h-4" />
 
+
+      {formError && (
+        <div className="text-red-600 text-xs mt-1 mb-2" id="auth-error">
+          {formError}
+        </div>
+      )}
       <button
         type="submit"
         disabled={isSubmitting || !formValid}
-            {formError && (
-              <div className="text-red-600 text-xs mt-1" id="auth-error">
-                {formError}
-              </div>
-            )}
+      >
         {isSubmitting && <Spinner size="sm" />}
         <span>{isSubmitting ? 'Please wait...' : authMode === 'login' ? 'Login' : 'Register'}</span>
       </button>
