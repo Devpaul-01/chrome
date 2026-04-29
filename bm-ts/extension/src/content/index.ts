@@ -96,7 +96,7 @@ type BirthdayFriend = {
   messageButton?: HTMLElement;
 };
 
-const overlay = createOverlay();
+let overlay: HTMLElement | null = null;
 let friends: BirthdayFriend[] = [];
 let segments: SegmentGroups = { GREETING: [], BODY: [], CLOSING: [] };
 
@@ -283,6 +283,7 @@ async function loadSegments() {
 
 /** Renders the current `friends` array into the overlay sidebar list. */
 function renderFriendList() {
+  if (!overlay) return;
   const list = overlay.querySelector<HTMLDivElement>('#bm-friend-list');
   const countBadge = overlay.querySelector<HTMLElement>('#bm-friend-count');
   if (!list) return;
@@ -462,6 +463,7 @@ async function handleSendOne(friend: BirthdayFriend) {
 
 /** Updates the send button label to reflect selected count. */
 function updateSendButton() {
+  if (!overlay) return;
   const sendBtn = overlay.querySelector<HTMLButtonElement>('#bm-send');
   if (!sendBtn) return;
   const count = friends.filter((f) => selectedFriends.has(f.id)).length;
@@ -473,6 +475,7 @@ function updateSendButton() {
 
 /** Updates the status line shown in the overlay sidebar. */
 function setStatus(text: string) {
+  if (!overlay) return;
   const status = overlay.querySelector<HTMLParagraphElement>('#bm-status');
   if (status) {
     status.textContent = text;
@@ -510,6 +513,7 @@ async function handleSendAll() {
 
   isSending = true;
   abortManualSend = false;
+  if (!overlay) return;
   const sendBtn = overlay.querySelector<HTMLButtonElement>('#bm-send');
 
   // Switch to stop button
@@ -562,6 +566,7 @@ async function handleSendAll() {
 
 /** Shows a progress bar inside the overlay. */
 function showProgressBar(current: number, total: number) {
+  if (!overlay) return;
   let container = overlay.querySelector<HTMLDivElement>('#bm-progress');
   if (!container) {
     container = document.createElement('div');
@@ -581,6 +586,7 @@ function showProgressBar(current: number, total: number) {
     container.appendChild(track);
     container.appendChild(label);
     // Insert before the send button
+    if (!overlay) return;
     const sendBtn = overlay.querySelector('#bm-send');
     sendBtn?.parentNode?.insertBefore(container, sendBtn);
   }
@@ -596,6 +602,7 @@ function showProgressBar(current: number, total: number) {
 function showInlineConfirm(message: string): Promise<boolean> {
   return new Promise((resolve) => {
     // Remove any existing confirm bar
+    if (!overlay) return;
     overlay.querySelector('#bm-confirm')?.remove();
 
     const bar = document.createElement('div');
@@ -629,6 +636,7 @@ function showInlineConfirm(message: string): Promise<boolean> {
     bar.appendChild(btnRow);
 
     // Insert before the send button
+    if (!overlay) return;
     const sendBtn = overlay.querySelector('#bm-send');
     sendBtn?.parentNode?.insertBefore(bar, sendBtn);
   });
@@ -1242,6 +1250,8 @@ function createOverlay(): HTMLElement {
           aria-label="Toggle help and tips" title="Show help &amp; tips">?</button>
         <button id="bm-minimize" class="bm-icon-btn bm-minimize-btn"
           aria-label="Minimize panel" title="Collapse / expand this panel">−</button>
+        <button id="bm-close" class="bm-icon-btn bm-close-btn"
+          aria-label="Close panel" title="Close this panel">×</button>
         <button id="bm-refresh" class="bm-btn-outline"
           aria-label="Refresh friend list" title="Re-scan the page for birthday friends and reload templates">Refresh</button>
       </div>
@@ -1290,6 +1300,12 @@ function createOverlay(): HTMLElement {
   const sendBtn = wrapper.querySelector<HTMLButtonElement>('#bm-send');
   const helpToggle = wrapper.querySelector<HTMLButtonElement>('#bm-help-toggle');
   const helpPanel = wrapper.querySelector<HTMLDivElement>('#bm-help');
+  const closeBtn = wrapper.querySelector<HTMLButtonElement>('#bm-close');
+  // Close button: fully remove overlay from DOM
+  closeBtn?.addEventListener('click', () => {
+    wrapper.remove();
+    if (overlay === wrapper) overlay = null;
+  });
 
   // Populate help content
   renderHelpContent(wrapper);
@@ -1387,6 +1403,15 @@ function createOverlay(): HTMLElement {
 // OVERLAY DYNAMIC SECTIONS
 // ============================================================
 
+function showOverlay() {
+  if (!overlay) {
+    overlay = createOverlay();
+  } else {
+    overlay.style.display = '';
+    overlay.focus();
+  }
+}
+
 /** Loads feature flags from storage. */
 async function loadFeatureFlags(): Promise<OverlayFeatureFlags> {
   const result = await chrome.storage.local.get(FEATURE_FLAGS_KEY);
@@ -1418,6 +1443,7 @@ async function renderOverlayStatus() {
 
 /** Renders rate-limit session stats. */
 async function renderSessionStats() {
+  if (!overlay) return;
   const container = overlay.querySelector<HTMLDivElement>('#bm-stats');
   if (!container) return;
 
@@ -1461,6 +1487,7 @@ async function renderSessionStats() {
 
 /** Renders a compact queue status bar showing pending/failed counts with a retry button. */
 async function renderQueueStatus() {
+  if (!overlay) return;
   const container = overlay.querySelector<HTMLDivElement>('#bm-queue-status');
   if (!container) return;
 
@@ -1524,6 +1551,7 @@ async function renderQueueStatus() {
 
 /** Renders a bulk group assignment dropdown in the overlay. */
 async function renderGroupSelector() {
+  if (!overlay) return;
   const container = overlay.querySelector<HTMLDivElement>('#bm-group-selector');
   if (!container) return;
 
@@ -1598,6 +1626,7 @@ async function renderGroupSelector() {
 
 /** Renders feature flag quick-toggles in the overlay. */
 async function renderFeatureToggles() {
+  if (!overlay) return;
   const container = overlay.querySelector<HTMLDivElement>('#bm-toggles');
   if (!container) return;
 
@@ -1645,6 +1674,7 @@ async function renderFeatureToggles() {
 
 /** Renders a sample template preview so users can see what will be sent. */
 function renderTemplatePreview() {
+  if (!overlay) return;
   const container = overlay.querySelector<HTMLDivElement>('#bm-template-preview');
   if (!container) return;
   container.innerHTML = '';
@@ -1685,6 +1715,7 @@ function renderTemplatePreview() {
 
 /** Updates the status indicator dot (green/yellow/red). */
 async function renderStatusDot() {
+  if (!overlay) return;
   const dot = overlay.querySelector<HTMLElement>('#bm-status-dot');
   if (!dot) return;
 
@@ -2683,6 +2714,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Security: reject messages not from our own extension
   if (sender.id !== chrome.runtime.id) return false;
 
+  if (message?.type === 'show.overlay') {
+    showOverlay();
+    sendResponse({ success: true });
+    return true;
+  }
   if (message?.type === 'automation.scan') {
     void refreshFriendList();
   }

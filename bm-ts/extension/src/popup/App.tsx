@@ -1,4 +1,5 @@
-﻿/**
+﻿/// <reference types="chrome" />
+/**
  * popup/App.tsx — Root React component for the extension popup.
  *
  * Component tree:
@@ -51,6 +52,19 @@ import './popup.css';
 
 import type { UserProfile } from '../api/client';
 import { sendBackgroundMessage } from './api';
+// For sending messages to content scripts
+// @ts-ignore: Chrome extension global
+function sendShowOverlayToFacebookTab() {
+  if (typeof chrome === 'undefined' || !chrome.tabs) return;
+  chrome.tabs.query({ url: '*://*.facebook.com/*', active: true, currentWindow: true }, (tabs: any[]) => {
+    const tab = tabs && tabs[0];
+    if (tab && tab.id) {
+      chrome.tabs.sendMessage(tab.id, { type: 'show.overlay' });
+    } else {
+      alert('Please open Facebook in a tab and make sure it is active.');
+    }
+  });
+}
 import { getErrorMessage, logError } from '../utils/errors';
 import { getOnboardingComplete, setOnboardingComplete } from '../utils/storage';
 import wsClient from '../api/websocket';
@@ -919,8 +933,17 @@ function AppShell() {
         )}
       </main>
 
+
       {isAuthenticated && (
         <footer role="contentinfo" className="mt-2">
+          <button
+            type="button"
+            onClick={sendShowOverlayToFacebookTab}
+            className="bm-btn-primary w-full mb-2"
+            aria-label="Show Facebook Overlay"
+          >
+            Show Facebook Overlay
+          </button>
           <button
             type="button"
             onClick={() => setShowHelpPanel(true)}
