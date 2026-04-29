@@ -214,7 +214,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
   // ── Confirm import ─────────────────────────────────────────────
   const handleImport = async () => {
     try {
-      await onImport(parsedContacts);
+          await onImport(parsedContacts);
       onClose();
     } catch (err) {
       setError(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -236,7 +236,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
       className="fixed inset-0 bg-black/50 flex items-center justify-center"
       style={{ zIndex: 9999 }}
     >
-      <div
+          <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"

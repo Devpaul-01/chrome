@@ -164,11 +164,11 @@ export default function AuthForm({
       <button
         type="submit"
         disabled={isSubmitting || !formValid}
-        className="btn flex items-center justify-center gap-2"
-        aria-busy={isSubmitting}
-        aria-disabled={isSubmitting || !formValid}
-        title={!formValid ? 'Please fix form errors before submitting' : ''}
-      >
+            {formError && (
+              <div className="text-red-600 text-xs mt-1" id="auth-error">
+                {formError}
+              </div>
+            )}
         {isSubmitting && <Spinner size="sm" />}
         <span>{isSubmitting ? 'Please wait...' : authMode === 'login' ? 'Login' : 'Register'}</span>
       </button>

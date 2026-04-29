@@ -18,9 +18,10 @@ export default function ResendVerificationEmailButton({ email }: Props) {
       const res = await requestEmailVerification(baseUrl, { email });
       setStatus('success');
       setMessage(res.message || 'Verification email sent. Please check your inbox.');
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { status?: number } | undefined;
       setStatus('error');
-      if (err?.status === 429) {
+      if (error?.status === 429) {
         setMessage('You are sending requests too quickly. Please wait and try again.');
       } else {
         setMessage('Failed to resend verification email. Please try again later.');
