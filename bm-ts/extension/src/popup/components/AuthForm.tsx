@@ -56,7 +56,7 @@ export default function AuthForm({
           className={`flex-1 mr-1 bg-orangeStrong text-white uppercase rounded-lg hover:bg-orangeBrand transition px-6 py-3 auth-btn ${
             authMode === 'login' ? 'active' : ''
           }`}
-          aria-pressed={authMode === 'login' ? 'true' : 'false'}
+          aria-pressed={authMode === 'login'}
         >
           Login
         </button>
@@ -66,7 +66,7 @@ export default function AuthForm({
           className={`flex-1 ml-1 bg-orangeStrong text-white uppercase rounded-lg hover:bg-orangeBrand transition px-6 py-3 auth-btn ${
             authMode === 'register' ? 'active' : ''
           }`}
-          aria-pressed={authMode === 'register' ? 'true' : 'false'}
+          aria-pressed={authMode === 'register'}
         >
           Register
         </button>
@@ -83,11 +83,11 @@ export default function AuthForm({
           type="email"
           required
           aria-required="true"
-          aria-invalid={emailTouched && !emailValid ? 'true' : 'false'}
+          aria-invalid={emailTouched && !emailValid}
           aria-describedby={emailTouched && !emailValid ? emailErrorId : undefined}
           placeholder="Enter your email"
           className={`w-full p-1.5 mt-0.5 rounded input-styled ${
-            emailTouched && !emailValid ? '!border-red-500' : ''
+            emailTouched && !emailValid ? 'border-red-500!' : ''
           }`}
         />
         {emailTouched && !emailValid && (
@@ -105,18 +105,18 @@ export default function AuthForm({
           type="password"
           required
           aria-required="true"
-          aria-invalid={passwordTouched && !passwordValid ? 'true' : 'false'}
+          aria-invalid={passwordTouched && !passwordValid}
           aria-describedby={
             authMode === 'register' && passwordTouched
               ? `${passwordErrorId} password-requirements`
               : passwordTooShort && authMode === 'login'
-              ? passwordErrorId
-              : undefined
+                ? passwordErrorId
+                : undefined
           }
           placeholder="Enter your password (min 8 characters)"
           minLength={8}
           className={`w-full p-1.5 mt-0.5 rounded input-styled ${
-            passwordTouched && !passwordValid ? '!border-red-500' : ''
+            passwordTouched && !passwordValid ? 'border-red-500!' : ''
           }`}
         />
       </label>
@@ -165,8 +165,8 @@ export default function AuthForm({
         type="submit"
         disabled={isSubmitting || !formValid}
         className="btn flex items-center justify-center gap-2"
-        aria-busy={isSubmitting ? 'true' : 'false'}
-        aria-disabled={isSubmitting || !formValid ? 'true' : 'false'}
+        aria-busy={isSubmitting}
+        aria-disabled={isSubmitting || !formValid}
         title={!formValid ? 'Please fix form errors before submitting' : ''}
       >
         {isSubmitting && <Spinner size="sm" />}

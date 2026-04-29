@@ -14,7 +14,7 @@ export default function ResendVerificationEmailButton({ email }: Props) {
     setMessage(null);
     try {
       // Use the same baseUrl logic as other API calls (assume /api for now)
-      const baseUrl = process.env.REACT_APP_API_BASE_URL || '/api';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
       const res = await requestEmailVerification(baseUrl, { email });
       setStatus('success');
       setMessage(res.message || 'Verification email sent. Please check your inbox.');
