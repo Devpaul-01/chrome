@@ -29,7 +29,7 @@ export default function AuthForm({
   const [emailErrorId] = useState(() => generateId('email-error'));
   const [passwordErrorId] = useState(() => generateId('password-error'));
   // State for form-level errors
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError] = useState<string | null>(null);
 
   useEffect(() => {
     emailRef.current?.focus();
@@ -86,7 +86,7 @@ export default function AuthForm({
           required
           aria-required="true"
           aria-invalid={emailTouched && !emailValid ? 'true' : 'false'}
-          aria-describedby={emailTouched && !emailValid ? emailErrorId : undefined}
+          aria-describedby={emailTouched && !emailValid ? emailErrorId : ''}
           placeholder="Enter your email"
           className={`w-full p-1.5 mt-0.5 rounded input-styled ${
             emailTouched && !emailValid ? 'border-red-500!' : ''
@@ -112,8 +112,8 @@ export default function AuthForm({
             authMode === 'register' && passwordTouched
               ? `${passwordErrorId} password-requirements`
               : passwordTooShort && authMode === 'login'
-                ? passwordErrorId
-                : undefined
+              ? passwordErrorId
+              : ''
           }
           placeholder="Enter your password (min 8 characters)"
           minLength={8}
@@ -163,16 +163,12 @@ export default function AuthForm({
 
       <div className="h-4" />
 
-
       {formError && (
         <div className="text-red-600 text-xs mt-1 mb-2" id="auth-error">
           {formError}
         </div>
       )}
-      <button
-        type="submit"
-        disabled={isSubmitting || !formValid}
-      >
+      <button type="submit" disabled={isSubmitting || !formValid}>
         {isSubmitting && <Spinner size="sm" />}
         <span>{isSubmitting ? 'Please wait...' : authMode === 'login' ? 'Login' : 'Register'}</span>
       </button>

@@ -54,13 +54,11 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
   const [showPreview, setShowPreview] = useState(false);
   const [parsedContacts, setParsedContacts] = useState<ImportContact[]>([]);
   const [missingDateCount, setMissingDateCount] = useState(0);
-  const [monthOnlyCount, setMonthOnlyCount] = useState(0);
   const [monthOnlySet, setMonthOnlySet] = useState<Set<number>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScraping, setIsScraping] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -85,12 +83,10 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
       }
       const today = todayISO();
       let missing = 0;
-      let monthOnly = 0;
       const monthOnlyIndices = new Set<number>();
       const mapped: ImportContact[] = scraped.map((c, idx) => {
         if (!c.birthday) missing++;
         if (c.monthOnly) {
-          monthOnly++;
           monthOnlyIndices.add(idx);
         }
         return {
@@ -101,7 +97,6 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
         };
       });
       setMissingDateCount(missing);
-      setMonthOnlyCount(monthOnly);
       setMonthOnlySet(monthOnlyIndices);
       setParsedContacts(mapped);
       setShowPreview(true);
@@ -113,12 +108,12 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
   };
 
   // ── File upload ────────────────────────────────────────────────
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
   const handleDragLeave = () => setIsDragging(false);
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
@@ -147,7 +142,6 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
       } else if (ext === 'vcf') {
         contacts = parseVCF(text);
       }
-      setSelectedFileName(file.name);
       setMissingDateCount(0);
       setParsedContacts(contacts);
       setShowPreview(true);
@@ -214,7 +208,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
   // ── Confirm import ─────────────────────────────────────────────
   const handleImport = async () => {
     try {
-          await onImport(parsedContacts);
+      await onImport(parsedContacts);
       onClose();
     } catch (err) {
       setError(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -225,18 +219,14 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
     setShowPreview(false);
     setParsedContacts([]);
     setMissingDateCount(0);
-    setMonthOnlyCount(0);
     setMonthOnlySet(new Set());
     setError(null);
   };
 
   // ── Render ─────────────────────────────────────────────────────
   return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center"
-      style={{ zIndex: 9999 }}
-    >
-          <div
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+      <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
@@ -309,7 +299,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                         <a
                           href="https://www.facebook.com/friends/birthdays"
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noreferrer noopener"
                           className="text-blueStrong underline hover:text-blueBrand"
                           onClick={(e) => {
                             e.preventDefault();
@@ -367,12 +357,11 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                     <code>facebook_profile_url</code>, and
                     <code> birthday</code> fields.
                   </p>
-                  <div
+                  <label
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition ${
+                    className={`block border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition ${
                       isDragging
                         ? 'border-blueBrand bg-blue-50'
                         : 'border-blueStrong hover:border-blueBrand'
@@ -392,7 +381,7 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                       className="hidden"
                       title="Upload contacts file"
                     />
-                  </div>
+                  </label>
                   {isProcessing && (
                     <div className="flex justify-center py-4">
                       <Spinner size="md" message="Processing file..." />
@@ -418,57 +407,31 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
             {/* Preview */}
             <div className="p-4 overflow-y-auto flex-1">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm text-gray-700 font-medium">
-                  Found <span className="text-orangeBrand font-bold">{parsedContacts.length}</span>{' '}
-                  contact{parsedContacts.length !== 1 ? 's' : ''}
-                  {selectedFileName ? ` in ${selectedFileName}` : ' on the Facebook page'}
-                </p>
+                <span className="text-sm font-medium text-gray-700">
+                  {parsedContacts.length} contact{parsedContacts.length !== 1 ? 's' : ''} found
+                </span>
                 {missingDateCount > 0 && (
-                  <span className="text-xs bg-yellow-100 text-yellow-800 border border-yellow-300 rounded px-2 py-1">
-                    {missingDateCount} with unknown birthday
-                  </span>
-                )}
-                {monthOnlyCount > 0 && (
-                  <span className="text-xs bg-blue-100 text-blue-800 border border-blue-300 rounded px-2 py-1">
-                    {monthOnlyCount} with month only
+                  <span className="text-xs text-amber-600">
+                    ⚠ {missingDateCount} missing date{missingDateCount !== 1 ? 's' : ''} — today
+                    used
                   </span>
                 )}
               </div>
-              {missingDateCount > 0 && (
-                <p className="text-xs text-gray-500 mb-3">
-                  Contacts marked with ⚠ had no birthday found on the page — today&apos;s date has
-                  been set as a placeholder. Edit the contact after import to correct it.
-                </p>
-              )}
-              {monthOnlyCount > 0 && (
-                <p className="text-xs text-gray-500 mb-3">
-                  Contacts marked with 📅 only had a birth month visible on Facebook — the day has
-                  been set to the 1st. Edit the contact after import to set the exact day.
-                </p>
-              )}
-              <div className="space-y-2">
+              <ul className="space-y-2">
                 {parsedContacts.map((c, i) => (
-                  <div key={i} className="p-3 border border-gray-200 rounded text-sm">
-                    <p className="font-semibold">{c.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{c.facebook_profile_url}</p>
-                    <p
-                      className={`text-xs mt-0.5 ${
-                        monthOnlySet.has(i)
-                          ? 'text-blue-600'
-                          : c.birthday === todayISO() && missingDateCount > 0
-                            ? 'text-yellow-600'
-                            : 'text-orangeBrand'
-                      }`}
-                    >
+                  <li key={i} className="p-3 rounded border border-gray-200 text-sm">
+                    <p className="font-medium text-gray-800">{c.name}</p>
+                    <p className="text-gray-500 text-xs truncate">{c.facebook_profile_url}</p>
+                    <p>
                       {monthOnlySet.has(i)
                         ? `📅 Birth month: ${MONTH_NAMES[c.birthday.split('-')[1]] ?? c.birthday}`
                         : c.birthday === todayISO() && missingDateCount > 0
-                          ? `⚠ Birthday: ${c.birthday}`
-                          : `Birthday: ${c.birthday}`}
+                        ? `⚠ Birthday: ${c.birthday}`
+                        : `Birthday: ${c.birthday}`}
                     </p>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
 
             {error && (

@@ -63,27 +63,23 @@ export default function HelpPanel({ open, onClose, onRestartTour }: HelpPanelPro
   }, [open]);
 
   if (!open) return null;
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" role="presentation">
+      <button
+        type="button"
+        aria-label="Close help panel overlay"
+        className="fixed inset-0 w-full h-full cursor-default bg-transparent border-none p-0 m-0"
+        tabIndex={-1}
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'transparent' }}
+      />
       <div
         ref={panelRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Help panel"
-        onClick={(e) => e.stopPropagation()}
-        className="rounded-xl w-full max-w-sm flex flex-col animate-fade-in overflow-y-auto"
-        style={{
-          padding: '2rem',
-          gap: '1.25rem',
-          maxHeight: '90vh',
-          background: 'rgba(255, 255, 255, 0.96)',
-          backdropFilter: 'blur(18px)',
-          WebkitBackdropFilter: 'blur(18px)',
-          border: '1.5px solid rgba(202, 79, 2, 0.18)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
-        }}
+        className="rounded-xl w-full max-w-sm flex flex-col animate-fade-in overflow-y-auto bg-white shadow-xl border border-orange-200 p-8 gap-5 max-h-[90vh] z-50 relative"
       >
         {/* Header */}
         <div className="flex items-center justify-between">

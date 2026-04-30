@@ -48,10 +48,17 @@ export default function MessageHistory({
     const cleanupTrap = trapFocus(detailDialogRef.current);
     const escHandler = handleEscapeKey(() => setDetailMessage(null));
     document.addEventListener('keydown', escHandler);
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (detailDialogRef.current && !detailDialogRef.current.contains(e.target as Node)) {
+        setDetailMessage(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
     detailDialogRef.current.querySelector<HTMLElement>('button')?.focus();
     return () => {
       cleanupTrap();
       document.removeEventListener('keydown', escHandler);
+      document.removeEventListener('mousedown', handleOutsideClick);
     };
   }, [detailMessage]);
 
@@ -199,8 +206,11 @@ export default function MessageHistory({
           {/* Date range */}
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="text-xs text-gray-500 block mb-0.5">From</label>
+              <label htmlFor="startDate" className="text-xs text-gray-500 block mb-0.5">
+                From
+              </label>
               <input
+                id="startDate"
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
@@ -209,8 +219,11 @@ export default function MessageHistory({
               />
             </div>
             <div className="flex-1">
-              <label className="text-xs text-gray-500 block mb-0.5">To</label>
+              <label htmlFor="endDate" className="text-xs text-gray-500 block mb-0.5">
+                To
+              </label>
               <input
+                id="endDate"
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
@@ -339,9 +352,7 @@ export default function MessageHistory({
                   {expandedId === message.id && (
                     <div className="mt-3 pt-3 border-t space-y-2">
                       <div>
-                        <label className="text-xs font-medium text-gray-600 block mb-1">
-                          Message:
-                        </label>
+                        <div className="text-xs font-medium text-gray-600 block mb-1">Message:</div>
                         <div className="text-sm p-2 bg-gray-50 rounded whitespace-pre-wrap">
                           {message.message_content}
                         </div>
@@ -417,17 +428,14 @@ export default function MessageHistory({
 
       {/* Details modal */}
       {detailMessage && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="history-detail-title"
-          ref={detailDialogRef}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDetailMessage(null);
-          }}
-        >
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div
+            className="bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="history-detail-title"
+            ref={detailDialogRef}
+          >
             <div className="flex items-center justify-between p-4 border-b">
               <h3 id="history-detail-title" className="font-semibold text-sm">
                 Message Details — {detailMessage.friend_name}

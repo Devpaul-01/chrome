@@ -271,28 +271,31 @@ export default function PostEditor({
       />
 
       <>
-        <label className="block mb-5">
-          <span className="text-xs font-semibold text-textPrimary mb-2 block">
-            Label / Description{' '}
-            <HelpTooltip label="A private name for this post — not shown to friends. Helps you identify it in your post library, e.g. 'Casual post' or 'Funny birthday'." />
-          </span>
-          <input
-            type="text"
-            value={postForm.label}
-            onChange={(event) => setPostForm({ ...postForm, label: event.target.value })}
-            placeholder="e.g., Casual Birthday Post"
-            className="text-field w-full"
-            required
-          />
+        <label htmlFor="post-label" className="block mb-2 text-xs font-semibold text-textPrimary">
+          Label / Description{' '}
+          <HelpTooltip label="A private name for this post — not shown to friends. Helps you identify it in your post library, e.g. 'Casual post' or 'Funny birthday'." />
         </label>
+        <input
+          id="post-label"
+          type="text"
+          value={postForm.label}
+          onChange={(event) => setPostForm({ ...postForm, label: event.target.value })}
+          placeholder="e.g., Casual Birthday Post"
+          className="text-field w-full"
+          required
+        />
 
         {groups.length > 0 && (
-          <label className="block mb-5">
-            <span className="text-xs font-semibold text-textPrimary mb-2 block">
+          <>
+            <label
+              htmlFor="post-group"
+              className="block mb-2 text-xs font-semibold text-textPrimary"
+            >
               Group{' '}
               <HelpTooltip label="Assign this post to a group so it is only used for contacts in the same group. Leave as 'None' to use for any contact." />
-            </span>
+            </label>
             <select
+              id="post-group"
               value={postForm.group_id || ''}
               onChange={(e) => setPostForm({ ...postForm, group_id: e.target.value || null })}
               className="text-field w-full"
@@ -304,12 +307,12 @@ export default function PostEditor({
                 </option>
               ))}
             </select>
-          </label>
+          </>
         )}
 
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-semibold text-textPrimary">
+            <label htmlFor="post-content" className="text-xs font-semibold text-textPrimary">
               Post Content{' '}
               <HelpTooltip label="Write your birthday post here. Use {First_Name} to insert the friend's first name, {Last_Name} for their last name, or {Today} for today's date." />
             </label>
@@ -348,6 +351,7 @@ export default function PostEditor({
           </div>
 
           <textarea
+            id="post-content"
             ref={textareaRef}
             value={postForm.content}
             onChange={(event) => setPostForm({ ...postForm, content: event.target.value })}
@@ -370,8 +374,14 @@ export default function PostEditor({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Font Family */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-2 block">Font Family</label>
+                <label
+                  htmlFor="post-font-family"
+                  className="text-xs font-medium text-gray-600 mb-2 block"
+                >
+                  Font Family
+                </label>
                 <select
+                  id="post-font-family"
                   value={postForm.fontFamily || 'Arial'}
                   onChange={(e) => setPostForm({ ...postForm, fontFamily: e.target.value })}
                   className="text-field w-full text-sm"
@@ -389,10 +399,14 @@ export default function PostEditor({
 
               {/* Font Size */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-2 block">
+                <label
+                  htmlFor="post-font-size"
+                  className="text-xs font-medium text-gray-600 mb-2 block"
+                >
                   Font Size: {postForm.fontSize || 48}px
                 </label>
                 <input
+                  id="post-font-size"
                   type="range"
                   min="48"
                   max="96"
@@ -405,8 +419,14 @@ export default function PostEditor({
 
               {/* Font Color */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-2 block">Font Color</label>
+                <label
+                  htmlFor="post-font-color"
+                  className="text-xs font-medium text-gray-600 mb-2 block"
+                >
+                  Font Color
+                </label>
                 <input
+                  id="post-font-color"
                   type="color"
                   value={postForm.fontColor || '#ffffff'}
                   onChange={(e) => setPostForm({ ...postForm, fontColor: e.target.value })}
@@ -420,7 +440,10 @@ export default function PostEditor({
 
         {/* Image */}
         <div className="mb-6">
-          <label className="text-xs font-semibold text-textPrimary mb-2 block">
+          <label
+            htmlFor="post-image-upload"
+            className="text-xs font-semibold text-textPrimary mb-2 block"
+          >
             🖼️ Attach Image{' '}
             <HelpTooltip label="Upload a specific image for this post, or pick one from your Image Library. Alternatively, use [Image] in your post content to have a random library image inserted at send time." />{' '}
             <span className="text-gray-400 font-normal">
@@ -430,8 +453,9 @@ export default function PostEditor({
           {postForm.image_url ? (
             <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
               <img
+                id="post-image-upload"
                 src={postForm.image_url}
-                alt="Selected image"
+                alt="Preview"
                 className="w-12 h-12 object-cover rounded flex-shrink-0"
               />
               <div className="flex-1 min-w-0">

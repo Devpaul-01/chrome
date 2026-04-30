@@ -21,7 +21,7 @@
  * the parsed response body (e.g. FastAPI's `{detail: string}` shape).
  */
 export class ApiError extends Error {
-    constructor(public status: number, public data: unknown) {
+  constructor(public status: number, public data: unknown) {
     const detail =
       typeof data === 'object' && data !== null && 'detail' in data
         ? (data as { detail?: string }).detail
