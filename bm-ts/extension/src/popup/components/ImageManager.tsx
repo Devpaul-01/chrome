@@ -222,7 +222,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(
               <div className="relative">
                 <img
                   src={previewImage}
-                  alt="Uploaded image preview"
+                  alt="Preview"
                   className="w-full rounded-lg shadow-md image-preview-max"
                 />
                 <div className="mt-2 text-center text-xs text-gray-600">
@@ -339,7 +339,7 @@ const ImageManager = forwardRef<ImageManagerHandle, ImageManagerProps>(
                   <div key={image.id} className="bg-white/80 rounded-lg p-2 shadow-sm text-center">
                     <img
                       src={image.url}
-                      alt={image.filename}
+                      alt="Preview"
                       className="w-full h-28 object-cover rounded-lg mb-2"
                     />
                     <p className="text-xs mb-1 overflow-hidden overflow-ellipsis whitespace-nowrap text-textPrimary">

@@ -153,11 +153,12 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
             </label> */}
 
             {groups.length > 0 && (
-              <label className="block">
-                <span className="text-xs font-semibold text-textPrimary mb-2 block">
+              <>
+                <label htmlFor="filterGroupId" className="block">
                   Filter by Group
-                </span>
+                </label>
                 <select
+                  id="filterGroupId"
                   value={filterGroupId}
                   onChange={(e) => setFilterGroupId(e.target.value)}
                   className="text-field w-full"
@@ -171,27 +172,26 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
                     </option>
                   ))}
                 </select>
-              </label>
+              </>
             )}
 
-            <label className="block">
-              <span className="text-xs font-semibold text-textPrimary mb-2 block">Sort by</span>
-              <select
-                value={sortBy}
-                onChange={(e) =>
-                  setSortBy(
-                    e.target.value as 'labelAsc' | 'labelDesc' | 'createdAsc' | 'createdDesc',
-                  )
-                }
-                className="text-field w-full"
-                aria-label="Sort posts"
-              >
-                <option value="labelAsc">Label (A → Z)</option>
-                <option value="labelDesc">Label (Z → A)</option>
-                <option value="createdDesc">Newest</option>
-                <option value="createdAsc">Oldest</option>
-              </select>
+            <label htmlFor="sortBy" className="block">
+              Sort by
             </label>
+            <select
+              id="sortBy"
+              value={sortBy}
+              onChange={(e) =>
+                setSortBy(e.target.value as 'labelAsc' | 'labelDesc' | 'createdAsc' | 'createdDesc')
+              }
+              className="text-field w-full"
+              aria-label="Sort posts"
+            >
+              <option value="labelAsc">Label (A → Z)</option>
+              <option value="labelDesc">Label (Z → A)</option>
+              <option value="createdDesc">Newest</option>
+              <option value="createdAsc">Oldest</option>
+            </select>
           </div>
         </div>
 
@@ -256,7 +256,7 @@ const PostList = forwardRef<PostListHandle, PostListPropsExtended>(
                             <div className="mt-2">
                               <img
                                 src={post.image_url}
-                                alt="Post image preview"
+                                alt="Preview"
                                 className="rounded-lg max-h-32 object-cover w-full"
                               />
                             </div>

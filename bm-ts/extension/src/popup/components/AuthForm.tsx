@@ -28,6 +28,8 @@ export default function AuthForm({
   const emailRef = useRef<HTMLInputElement | null>(null);
   const [emailErrorId] = useState(() => generateId('email-error'));
   const [passwordErrorId] = useState(() => generateId('password-error'));
+  // State for form-level errors
+  const [formError] = useState<string | null>(null);
 
   useEffect(() => {
     emailRef.current?.focus();
@@ -84,10 +86,10 @@ export default function AuthForm({
           required
           aria-required="true"
           aria-invalid={emailTouched && !emailValid ? 'true' : 'false'}
-          aria-describedby={emailTouched && !emailValid ? emailErrorId : undefined}
+          aria-describedby={emailTouched && !emailValid ? emailErrorId : ''}
           placeholder="Enter your email"
           className={`w-full p-1.5 mt-0.5 rounded input-styled ${
-            emailTouched && !emailValid ? '!border-red-500' : ''
+            emailTouched && !emailValid ? 'border-red-500!' : ''
           }`}
         />
         {emailTouched && !emailValid && (
@@ -111,12 +113,12 @@ export default function AuthForm({
               ? `${passwordErrorId} password-requirements`
               : passwordTooShort && authMode === 'login'
               ? passwordErrorId
-              : undefined
+              : ''
           }
           placeholder="Enter your password (min 8 characters)"
           minLength={8}
           className={`w-full p-1.5 mt-0.5 rounded input-styled ${
-            passwordTouched && !passwordValid ? '!border-red-500' : ''
+            passwordTouched && !passwordValid ? 'border-red-500!' : ''
           }`}
         />
       </label>
@@ -161,14 +163,12 @@ export default function AuthForm({
 
       <div className="h-4" />
 
-      <button
-        type="submit"
-        disabled={isSubmitting || !formValid}
-        className="btn flex items-center justify-center gap-2"
-        aria-busy={isSubmitting ? 'true' : 'false'}
-        aria-disabled={isSubmitting || !formValid ? 'true' : 'false'}
-        title={!formValid ? 'Please fix form errors before submitting' : ''}
-      >
+      {formError && (
+        <div className="text-red-600 text-xs mt-1 mb-2" id="auth-error">
+          {formError}
+        </div>
+      )}
+      <button type="submit" disabled={isSubmitting || !formValid}>
         {isSubmitting && <Spinner size="sm" />}
         <span>{isSubmitting ? 'Please wait...' : authMode === 'login' ? 'Login' : 'Register'}</span>
       </button>

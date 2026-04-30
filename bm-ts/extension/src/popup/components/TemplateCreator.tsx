@@ -399,7 +399,7 @@ export default function TemplateCreator({ onSubmit, onCancel, initialData }: Pro
                 <div>
                   <img
                     src={formData.imageUrl}
-                    alt="Attached"
+                    alt="Preview"
                     className="w-full rounded-lg shadow-sm mb-2"
                     style={{ maxHeight: '180px', objectFit: 'contain' }}
                   />

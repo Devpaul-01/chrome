@@ -195,7 +195,7 @@ export default function FacebookPostPreview({
         {/* Background image — fills container via object-cover */}
         <img
           src={imageUrl}
-          alt="Post background"
+          alt="Background"
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           draggable={false}
         />
@@ -287,11 +287,7 @@ export default function FacebookPostPreview({
   return (
     <div ref={containerRef}>
       {previewUrl ? (
-        <img
-          src={previewUrl}
-          alt="Facebook post preview with text overlay"
-          className="w-full rounded-lg"
-        />
+        <img src={previewUrl} alt="Preview with text overlay" className="w-full rounded-lg" />
       ) : (
         <div className="flex items-center justify-center p-12 bg-gray-50 rounded-lg">
           <div className="text-center">

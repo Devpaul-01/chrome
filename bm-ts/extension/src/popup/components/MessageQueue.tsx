@@ -41,10 +41,17 @@ export default function MessageQueue({ onClose: _onClose, compact = false }: Mes
     const cleanupTrap = trapFocus(previewDialogRef.current);
     const escHandler = handleEscapeKey(() => setPreviewMessage(null));
     document.addEventListener('keydown', escHandler);
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (previewDialogRef.current && !previewDialogRef.current.contains(e.target as Node)) {
+        setPreviewMessage(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
     previewDialogRef.current.querySelector<HTMLElement>('button')?.focus();
     return () => {
       cleanupTrap();
       document.removeEventListener('keydown', escHandler);
+      document.removeEventListener('mousedown', handleOutsideClick);
     };
   }, [previewMessage]);
 
@@ -367,10 +374,14 @@ export default function MessageQueue({ onClose: _onClose, compact = false }: Mes
                   {expandedId === message.id && (
                     <div className="mt-3 pt-3 border-t space-y-2">
                       <div>
-                        <label className="text-xs font-medium text-gray-600 block mb-1">
+                        <label
+                          htmlFor={`edit-message-${message.id}`}
+                          className="text-xs font-medium text-gray-600 block mb-1"
+                        >
                           Message:
                         </label>
                         <textarea
+                          id={`edit-message-${message.id}`}
                           defaultValue={message.message_content}
                           onBlur={(e) => {
                             if (e.target.value !== message.message_content) {
@@ -430,17 +441,14 @@ export default function MessageQueue({ onClose: _onClose, compact = false }: Mes
 
       {/* Message preview modal */}
       {previewMessage && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="preview-modal-title"
-          ref={previewDialogRef}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setPreviewMessage(null);
-          }}
-        >
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div
+            className="bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="preview-modal-title"
+            ref={previewDialogRef}
+          >
             <div className="flex items-center justify-between p-4 border-b">
               <h3 id="preview-modal-title" className="font-semibold text-sm">
                 Message Preview — {previewMessage.friend_name}

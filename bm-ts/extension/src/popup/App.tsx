@@ -1,4 +1,5 @@
-﻿/**
+﻿/// <reference types="chrome" />
+/**
  * popup/App.tsx — Root React component for the extension popup.
  *
  * Component tree:
@@ -17,6 +18,7 @@
 
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AuthForm from './components/AuthForm';
+import ResendVerificationEmailButton from './components/ResendVerificationEmailButton';
 import TemplateCreator, { type TemplateFormData } from './components/TemplateCreator';
 import SubscriptionPanel from './components/SubscriptionPanel';
 import ForgotPassword from './components/ForgotPassword';
@@ -50,6 +52,21 @@ import './popup.css';
 
 import type { UserProfile } from '../api/client';
 import { sendBackgroundMessage } from './api';
+// For sending messages to content scripts
+function sendShowOverlayToFacebookTab() {
+  if (typeof chrome === 'undefined' || !chrome.tabs) return;
+  chrome.tabs.query(
+    { url: '*://*.facebook.com/*', active: true, currentWindow: true },
+    (tabs: chrome.tabs.Tab[]) => {
+      const tab = tabs && tabs[0];
+      if (tab && tab.id) {
+        chrome.tabs.sendMessage(tab.id, { type: 'show.overlay' });
+      } else {
+        alert('Please open Facebook in a tab and make sure it is active.');
+      }
+    },
+  );
+}
 import { getErrorMessage, logError } from '../utils/errors';
 import { getOnboardingComplete, setOnboardingComplete } from '../utils/storage';
 import wsClient from '../api/websocket';
@@ -174,8 +191,19 @@ function AppShell() {
     } catch (error) {
       const msg = getErrorMessage(error);
       logError(error, `handleAuthSubmit:${authMode}`);
-      setAuthMessage(msg);
-      showToast(msg, 'error');
+      // If login failed due to unverified email, show the resend verification UI
+      if (
+        authMode === 'login' &&
+        (msg.toLowerCase().includes('verify your email') ||
+          msg.toLowerCase().includes('check your inbox'))
+      ) {
+        setAuthMode('verify-email-pending');
+        setAuthMessage(null); // Message will be shown in the verify-email-pending view
+        // Do not clear email so the resend button works
+      } else {
+        setAuthMessage(msg);
+        showToast(msg, 'error');
+      }
     } finally {
       setIsAuthSubmitting(false);
     }
@@ -389,10 +417,11 @@ function AppShell() {
     }
 
     return (
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role
       <nav ref={navRef} className="tab-navigation mb-4" role="tablist" aria-label="Main navigation">
-        <div className="flex gap-2" role="presentation">
+        <div className="flex gap-2">
           {tabs.map((tab, tabIndex) => (
-            <div key={tab.id} className="tab-wrapper" role="presentation">
+            <div key={tab.id} className="tab-wrapper">
               <button
                 id={`${tab.id}-tab`}
                 role="tab"
@@ -657,9 +686,7 @@ function AppShell() {
     if (viewMode === 'account-management' && user) {
       return (
         <AccountManagement
-          // AccountManagement defines its own UserProfile type; cast is intentional
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          user={user as any}
+          user={user}
           onUpdateProfile={
             handleUpdateProfile as Parameters<typeof AccountManagement>[0]['onUpdateProfile']
           }
@@ -863,6 +890,7 @@ function AppShell() {
                   We sent a verification link to <strong>{email}</strong>. Click the link to verify
                   your account, then come back and log in.
                 </p>
+                <ResendVerificationEmailButton email={email} />
                 <button
                   type="button"
                   className="btn-primary w-full mb-2"
@@ -908,6 +936,14 @@ function AppShell() {
 
       {isAuthenticated && (
         <footer role="contentinfo" className="mt-2">
+          <button
+            type="button"
+            onClick={sendShowOverlayToFacebookTab}
+            className="bm-btn-primary w-full mb-2"
+            aria-label="Show Facebook Overlay"
+          >
+            Show Facebook Overlay
+          </button>
           <button
             type="button"
             onClick={() => setShowHelpPanel(true)}
