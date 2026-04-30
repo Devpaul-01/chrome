@@ -125,7 +125,7 @@ export default function TemplateGallery({
                 {template.imageUrl ? (
                   <img
                     src={template.imageUrl}
-                    alt="Preview"
+                    alt={template.templateTitle}
                     className="w-full h-full object-cover"
                   />
                 ) : (
