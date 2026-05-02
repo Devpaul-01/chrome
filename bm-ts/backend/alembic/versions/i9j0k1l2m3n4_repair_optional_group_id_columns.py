@@ -25,11 +25,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def _has_column(inspector: sa.Inspector, table_name: str, column_name: str) -> bool:
-    return any(column["name"] == column_name for column in inspector.get_columns(table_name))
+    return any(
+        column["name"] == column_name for column in inspector.get_columns(table_name)
+    )
 
 
 def _has_index(inspector: sa.Inspector, table_name: str, index_name: str) -> bool:
-    return any(index["name"] == index_name for index in inspector.get_indexes(table_name))
+    return any(
+        index["name"] == index_name for index in inspector.get_indexes(table_name)
+    )
 
 
 def _ensure_nullable_group_id(
@@ -65,7 +69,9 @@ def upgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
-    _ensure_nullable_group_id(inspector, "message_templates", "idx_message_template_group")
+    _ensure_nullable_group_id(
+        inspector, "message_templates", "idx_message_template_group"
+    )
     _ensure_nullable_group_id(inspector, "posts", "idx_post_group")
     _ensure_nullable_group_id(inspector, "contacts", "idx_contact_group")
 

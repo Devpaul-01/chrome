@@ -8,6 +8,7 @@ Configures both offline (URL-only, no live DB connection) and online
 All application models are pulled in via ``app.db.base.Base.metadata`` so
 Alembic autogenerate can diff them against the live schema.
 """
+
 from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
@@ -61,6 +62,7 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 async def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
@@ -83,11 +85,14 @@ async def run_migrations_online() -> None:
 
     await connectable.dispose()
 
+
 def run_migrations():
     if context.is_offline_mode():
         run_migrations_offline()
     else:
         import asyncio
+
         asyncio.run(run_migrations_online())
+
 
 run_migrations()
