@@ -33,7 +33,9 @@ def fb_user_key(request):
 limiter = Limiter(key_func=fb_user_key)
 
 
-async def _json_rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+async def _json_rate_limit_exceeded_handler(
+    request: Request, exc: RateLimitExceeded
+) -> JSONResponse:
     """Return a JSON 429 response so the extension's JSON.parse never sees plain text."""
     return JSONResponse(
         status_code=429,

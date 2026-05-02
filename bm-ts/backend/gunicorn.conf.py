@@ -14,15 +14,15 @@ workers = 4
 worker_class = "uvicorn.workers.UvicornWorker"
 
 # ── Timeouts ──────────────────────────────────────────────
-timeout = 120           # Kill worker if no response within 120s
-graceful_timeout = 30   # Time for graceful shutdown after SIGTERM
-keepalive = 5           # Seconds to wait for next request on Keep-Alive
+timeout = 120  # Kill worker if no response within 120s
+graceful_timeout = 30  # Time for graceful shutdown after SIGTERM
+keepalive = 5  # Seconds to wait for next request on Keep-Alive
 
 # ── Worker recycling (prevents slow memory leaks) ─────────
 max_requests = 1000
 max_requests_jitter = 50
 
 # ── Logging ───────────────────────────────────────────────
-accesslog = "-"         # stdout
-errorlog = "-"          # stderr
+accesslog = "-"  # stdout
+errorlog = "-"  # stderr
 loglevel = "info"

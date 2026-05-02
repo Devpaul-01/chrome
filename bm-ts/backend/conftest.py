@@ -6,6 +6,7 @@ app/core/config.py don't reject placeholder defaults during test runs.
 os.environ.setdefault() is used so any real secrets already present in the
 environment (e.g. from CI secrets) take priority.
 """
+
 import os
 
 os.environ.setdefault(
