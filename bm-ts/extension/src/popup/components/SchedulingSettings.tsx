@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AutomationSettings from './AutomationSettings';
 import Spinner from './Spinner';
 import HelpTooltip from './HelpTooltip';
@@ -32,6 +32,12 @@ export default function SchedulingSettings({
   isSubmitting,
 }: SchedulingSettingsProps) {
   const [localTimezone, setLocalTimezone] = useState(timezone);
+
+  // Sync local state when the persisted timezone prop changes (e.g. after a
+  // successful save propagates back through the user context).
+  useEffect(() => {
+    setLocalTimezone(timezone);
+  }, [timezone]);
 
   return (
     <div className="space-y-4">

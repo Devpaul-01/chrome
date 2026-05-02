@@ -168,7 +168,7 @@ export default function AuthForm({
           {formError}
         </div>
       )}
-      <button type="submit" disabled={isSubmitting || !formValid}>
+      <button type="submit" disabled={isSubmitting || !formValid} className="btn btn-orange w-full">
         {isSubmitting && <Spinner size="sm" />}
         <span>{isSubmitting ? 'Please wait...' : authMode === 'login' ? 'Login' : 'Register'}</span>
       </button>

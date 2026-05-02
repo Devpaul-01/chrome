@@ -195,8 +195,15 @@
       <main id="main">
         <div class="highlight-box" role="note">
           <strong>What you'll accomplish:</strong> By the end of this guide, BirthdayMessaging will
-          be installed, your account will be set up, and the extension will be ready to
-          automatically send personalized birthday messages to your Facebook friends.
+          be installed, your account will be set up, your contacts imported from Facebook, and the
+          extension ready to automatically send personalised birthday messages to your Facebook friends.
+        </div>
+
+        <div class="highlight-box" role="note" style="border-color:#1877f2;background:#eef4fd;">
+          <strong>⚠️ Facebook must be open.</strong> BirthdayMessaging works by reading the
+          Facebook page that is open in your browser — it cannot send messages or scan birthdays
+          unless <strong>Chrome is running</strong> and <strong>you are logged in to Facebook</strong>.
+          Keep Chrome open and make sure your Facebook session hasn't expired.
         </div>
 
         <!-- Step 1 -->
@@ -216,7 +223,7 @@
         <!-- Step 2 -->
         <div class="step-header"><span class="step-number">2</span> Create Your Account</div>
         <ol>
-          <li>Click the 🎂 icon in your toolbar to open the extension.</li>
+          <li>Click the 🎂 icon in your toolbar to open the extension popup.</li>
           <li>Click <strong>Create an account</strong>.</li>
           <li>Enter your email address and a password (minimum 8 characters).</li>
           <li>Click <strong>Register</strong>. You'll be logged in automatically.</li>
@@ -227,52 +234,109 @@
         </div>
 
         <!-- Step 3 -->
-        <div class="step-header"><span class="step-number">3</span> Create a Message Template</div>
+        <div class="step-header">
+          <span class="step-number">3</span> Open Facebook Birthdays &amp; Populate Contacts
+        </div>
         <p>
-          Templates are the birthday messages sent automatically. You can create multiple —
-          BirthdayMessaging picks one at random each day for variety.
+          Before anything else, BirthdayMessaging needs to scan Facebook to find your friends'
+          birthdays and build your contacts list. This is done directly from the Facebook birthdays
+          page.
         </p>
         <ol>
-          <li>Go to the <strong>Templates</strong> tab → <strong>Message Templates</strong>.</li>
-          <li>Click <strong>Create Template</strong>.</li>
-          <li>Fill in the three fields:</li>
-        </ol>
-        <table aria-label="Template fields reference">
-          <thead>
-            <tr>
-              <th>Field</th>
-              <th>Example</th>
-              <th>Max length</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Greeting</strong></td>
-              <td>Happy Birthday, [Tag Person]! 🎉</td>
-              <td>300 chars</td>
-            </tr>
-            <tr>
-              <td><strong>Body (Sentiment)</strong></td>
-              <td>Wishing you an amazing day filled with joy!</td>
-              <td>1000 chars</td>
-            </tr>
-            <tr>
-              <td><strong>Closing</strong></td>
-              <td>— Your friend</td>
-              <td>300 chars</td>
-            </tr>
-          </tbody>
-        </table>
-        <ol start="4">
           <li>
-            (Optional) Set <strong>Days in Advance</strong> to send the message early or as a
-            follow-up after the birthday.
+            In Chrome, open a new tab and navigate to
+            <a href="https://www.facebook.com/friends/birthdays" target="_blank" rel="noopener noreferrer">
+              facebook.com/friends/birthdays
+            </a>.
           </li>
           <li>
-            (Optional) Attach an image or use <code>[Image]</code> in your text to insert a random
-            image from your Image Library.
+            In the extension popup, go to the <strong>Home</strong> tab and click the
+            <strong>Facebook Popup</strong> button. This opens the BirthdayMessaging overlay
+            directly on the Facebook birthdays page.
+          </li>
+          <li>
+            <strong>Scroll to the bottom</strong> of the Facebook birthdays page so that all
+            upcoming birthdays are loaded.
+          </li>
+          <li>
+            In the overlay, click <strong>Refresh</strong>. The extension will scan the page,
+            detect all visible birthdays, and automatically import them as contacts.
+          </li>
+        </ol>
+        <div class="highlight-box">
+          <strong>Tip:</strong> Run this scan regularly (e.g. weekly) to keep your contacts list
+          up to date as new birthdays come into view on Facebook.
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step-header"><span class="step-number">4</span> Create Groups</div>
+        <p>
+          <strong>Groups</strong> let you organise your contacts and assign different message
+          templates to different sets of people. For example, you might have a
+          <em>Close Friends</em> group with warm, personal messages and a <em>Colleagues</em>
+          group with more professional ones.
+        </p>
+        <p>
+          When automation runs, the extension selects a template from the group assigned to each
+          contact, keeping messages relevant and personalised without any manual work.
+        </p>
+        <ol>
+          <li>Go to the <strong>Create</strong> tab → <strong>Groups</strong>.</li>
+          <li>Click <strong>New Group</strong> and give it a descriptive name (e.g. "Close Friends").</li>
+          <li>Save the group. Repeat for as many categories as you need.</li>
+          <li>
+            Assign contacts to groups from the <strong>Contacts</strong> view by editing a contact
+            and selecting a group.
+          </li>
+        </ol>
+        <div class="highlight-box">
+          <strong>Recommended:</strong> Create at least a <em>Default</em> group for general
+          contacts and one or two specialist groups (e.g. family, colleagues) before creating
+          templates.
+        </div>
+
+        <!-- Step 5 -->
+        <div class="step-header"><span class="step-number">5</span> Upload Images</div>
+        <p>
+          Images are stored in your <strong>Image Library</strong> and can be inserted into any
+          message template or timeline post using the <code>[Image]</code> keyword. When a message
+          is sent, a random image from your library is used — adding variety to your messages.
+        </p>
+        <ol>
+          <li>Go to the <strong>Create</strong> tab → <strong>Image Library</strong>.</li>
+          <li>Click <strong>Upload Image</strong> and select one or more images from your device.</li>
+          <li>
+            Upload at least a few images so the <code>[Image]</code> keyword has variety to draw
+            from.
+          </li>
+        </ol>
+
+        <!-- Step 6 -->
+        <div class="step-header"><span class="step-number">6</span> Create Message Templates</div>
+        <p>
+          Message templates are sent as <strong>private Facebook direct messages</strong> on a
+          friend's birthday. You can create as many as you like per group — the extension picks one
+          at random each time, which keeps your messages varied and helps avoid Facebook flagging
+          your account for sending repetitive content.
+        </p>
+        <div class="highlight-box" style="border-color:#e53e3e;background:#fff5f5;">
+          <strong>Important — create at least 3 templates per group.</strong> Facebook may
+          temporarily restrict accounts that repeatedly send identical messages. Having 3 or more
+          templates per group ensures the extension always has enough variety to rotate through,
+          significantly reducing the risk of restrictions.
+        </div>
+        <ol>
+          <li>Go to the <strong>Create</strong> tab → <strong>Message Templates</strong>.</li>
+          <li>Fill in the Greeting, Body, and Closing fields.</li>
+          <li>
+            (Optional) Add <code>[Image]</code> anywhere in the body to insert a random image from
+            your library.
+          </li>
+          <li>
+            Select the <strong>Group</strong> this template belongs to (e.g. "Close Friends").
           </li>
           <li>Click <strong>Save Template</strong>.</li>
+          <li>Repeat until you have <strong>at least 3 templates for each group</strong>.</li>
         </ol>
 
         <h3>Personalization tags you can use</h3>
@@ -307,8 +371,23 @@
           </tbody>
         </table>
 
-        <!-- Step 4 -->
-        <div class="step-header"><span class="step-number">4</span> Set a Schedule</div>
+        <!-- Step 7 -->
+        <div class="step-header">
+          <span class="step-number">7</span> (Optional) Create Timeline Posts
+        </div>
+        <p>
+          Timeline posts are written <strong>directly on a friend's Facebook wall</strong> on their
+          birthday, in addition to (or instead of) a direct message. Create them from the
+          <strong>Create</strong> tab → <strong>Timeline Posts</strong>.
+        </p>
+        <p>
+          Use the same personalization tags as message templates. The
+          <code>{First_Name}</code> and <code>{Last_Name}</code> tags are particularly useful for
+          timeline posts.
+        </p>
+
+        <!-- Step 8 -->
+        <div class="step-header"><span class="step-number">8</span> Set a Schedule</div>
         <p>
           Schedules tell the extension <em>when</em> to send messages relative to a friend's
           birthday.
@@ -330,54 +409,67 @@
           <li>Click <strong>Add Schedule</strong>.</li>
         </ol>
 
-        <!-- Step 5 -->
+        <!-- Step 9 -->
         <div class="step-header">
-          <span class="step-number">5</span> Configure Automation &amp; Go
+          <span class="step-number">9</span> Enable Automation &amp; Go
         </div>
+        <p>
+          Once your contacts, groups, and templates are set up, automation handles everything else.
+          When the automation engine is active, the extension periodically checks Facebook for
+          birthdays and sends messages using your templates — without you needing to do anything.
+        </p>
         <ol>
           <li>
             In the <strong>Scheduling</strong> tab, scroll to <strong>Automation Settings</strong>.
           </li>
           <li>
-            Choose a <strong>Check Interval</strong> (how often to scan for birthdays — default is 1
-            hour).
+            Choose a <strong>Check Interval</strong> (how often to scan for birthdays — default is
+            1 hour).
           </li>
           <li>
             Set your preferred <strong>Send Confirmation</strong> mode:
             <ul>
               <li><strong>Each message</strong> — asks every time (safest)</li>
               <li><strong>Per session</strong> — asks once per run</li>
-              <li><strong>Auto</strong> — sends without asking (higher ban risk)</li>
+              <li><strong>Auto</strong> — sends without asking (higher ban risk — use only with
+              plenty of templates per group)</li>
             </ul>
           </li>
           <li>
             Go to the <strong>Home</strong> tab and turn the
             <strong>Automation Engine</strong> toggle to <strong>ON</strong>.
           </li>
-          <li>Make sure you are logged in to Facebook in your browser and Chrome stays open.</li>
+          <li>
+            Make sure <strong>Chrome is open</strong>, you are <strong>logged in to Facebook</strong>,
+            and the <strong>facebook.com/friends/birthdays</strong> page is accessible in your
+            browser. The extension needs this page to detect birthdays.
+          </li>
         </ol>
         <div class="highlight-box">
           <strong>Manual trigger:</strong> Click <strong>Run Check Now</strong> in Automation
           Settings to immediately scan for today's birthdays without waiting for the next scheduled
-          run.
+          run. You can also open the <strong>Facebook Popup</strong> on the birthdays page at any
+          time for manual sending.
         </div>
 
         <!-- Done -->
-        <h2>You're Done! 🎉</h2>
+        <h2>You're All Set! 🎉</h2>
         <p>BirthdayMessaging will now automatically:</p>
         <ul>
           <li>Detect friends with birthdays on Facebook</li>
-          <li>Compose a personalized message using your templates</li>
-          <li>Send messages via Facebook Messenger</li>
+          <li>Pick a random template from the correct group for each contact</li>
+          <li>Send a personalised message via Facebook Messenger</li>
+          <li>Optionally post on their timeline</li>
           <li>Log all activity in <strong>Message History</strong></li>
         </ul>
 
         <!-- The Facebook Overlay -->
         <h2>The Facebook Overlay</h2>
         <p>
-          When you visit <code>facebook.com/friends/birthdays</code> (or any Facebook page),
-          BirthdayMessaging adds a <strong>floating sidebar overlay</strong> directly on the page.
-          This gives you manual control alongside the automated system.
+          When you open the <strong>Facebook Popup</strong> on
+          <code>facebook.com/friends/birthdays</code>, BirthdayMessaging adds a
+          <strong>floating sidebar overlay</strong> directly on the page. This gives you manual
+          control alongside the automated system.
         </p>
         <h3>What's in the overlay</h3>
         <table aria-label="Overlay sections reference">
@@ -429,6 +521,7 @@
         <ul>
           <li>
             <strong>Refresh</strong> — re-scan the page for birthday friends and reload templates.
+            Also use this after scrolling to the bottom of the birthdays page to import all contacts.
           </li>
           <li><strong>▶ (per-friend)</strong> — send a message to just that one person.</li>
           <li>
@@ -444,14 +537,6 @@
 
         <h2>What's Next?</h2>
         <ul>
-          <li>
-            <strong>Add a timeline post</strong> (Templates → Timeline Posts) to also post on
-            friends' walls.
-          </li>
-          <li>
-            <strong>Upload images</strong> (Templates → Image Library) to use with the
-            <code>[Image]</code> keyword.
-          </li>
           <li>
             <strong>Review sent messages</strong> in the Message Queue and Message History views.
           </li>
@@ -477,7 +562,7 @@
           <ul style="margin-top: 0.5rem">
             <li>
               Wait until the friend's birthday is approaching and
-              <strong>re-import</strong> contacts from Facebook — BirthdayMessaging will
+              <strong>re-scan</strong> the Facebook birthdays page — BirthdayMessaging will
               automatically update the contact with the exact date.
             </li>
             <li>

@@ -7,16 +7,16 @@ import FeatureTip from './FeatureTip';
 
 interface HomeControlsProps {
   // onViewCalendar: () => void; // Uncomment to re-enable Birthday Calendar
-  onViewAnalytics: () => void;
   onViewUpcomingBirthdays: () => void;
   onViewContacts: () => void;
+  onOpenFacebookPopup: () => void;
   userName: string;
 }
 
 export default function HomeControls({
-  onViewAnalytics,
   onViewUpcomingBirthdays,
   onViewContacts,
+  onOpenFacebookPopup,
   userName,
 }: HomeControlsProps) {
   const [automationEnabled, setAutomationEnabled] = useState(false);
@@ -102,10 +102,126 @@ export default function HomeControls({
 
       {/* Welcome */}
       <div className="card text-center">
-        <h2 className="text-xl font-bold text-blueStrong mb-1">Welcome, {userName}!</h2>
+        <div className="flex items-center justify-center gap-1 mb-1">
+          <h2 className="text-xl font-bold text-blueStrong">Welcome, {userName}!</h2>
+          <HelpTooltip label="For birthday scanning and automation to work: open Facebook and go to the Friends › Birthdays page, then click 'Facebook Popup' here to open the birthday scanner overlay on that page." />
+        </div>
         <p className="text-textMuted text-sm">
           Manage your birthday messages and social posts all in one place
         </p>
+      </div>
+
+      {/* Quick Actions Grid — Open Facebook, Contacts, Open Popup, Birthdays */}
+      <div className="messages-hub-grid">
+        <a
+          href="https://www.facebook.com/friends/birthdays"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="messages-hub-card messages-hub-card--blue"
+          aria-label="Open Facebook Birthdays"
+        >
+          <span className="messages-hub-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+            </svg>
+          </span>
+          <span className="messages-hub-label">Facebook</span>
+          <span className="messages-hub-desc">Open birthdays page</span>
+        </a>
+
+        <button
+          onClick={onViewContacts}
+          className="messages-hub-card messages-hub-card--green"
+          aria-label="View Contacts"
+        >
+          <span className="messages-hub-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </span>
+          <span className="messages-hub-label">Contacts</span>
+          <span className="messages-hub-desc">Manage contacts</span>
+        </button>
+
+        <button
+          onClick={onOpenFacebookPopup}
+          className="messages-hub-card messages-hub-card--orange"
+          aria-label="Open Facebook Popup"
+        >
+          <span className="messages-hub-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </span>
+          <span className="messages-hub-label">Facebook Popup</span>
+          <span className="messages-hub-desc">Open facebook popup</span>
+        </button>
+
+        <button
+          onClick={onViewUpcomingBirthdays}
+          className="messages-hub-card messages-hub-card--blue"
+          aria-label="Upcoming Birthdays"
+        >
+          <span className="messages-hub-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M4 21v-2a4 4 0 0 1 3-3.87" />
+              <circle cx="12" cy="7" r="4" />
+              <path d="M12 2v1" />
+              <path d="M9 4l3-2 3 2" />
+            </svg>
+          </span>
+          <span className="messages-hub-label">Birthdays</span>
+          <span className="messages-hub-desc">Upcoming birthdays</span>
+        </button>
       </div>
 
       <FeatureTip
@@ -209,120 +325,6 @@ export default function HomeControls({
           )}
         </label>
       </div> */}
-
-      {/* Quick Actions Grid — Open Facebook, Contacts, Analytics, Birthdays */}
-      <div className="messages-hub-grid">
-        <a
-          href="https://www.facebook.com/friends/birthdays"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="messages-hub-card messages-hub-card--blue"
-          aria-label="Open Facebook Birthdays"
-        >
-          <span className="messages-hub-icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-            </svg>
-          </span>
-          <span className="messages-hub-label">Facebook</span>
-          <span className="messages-hub-desc">Open birthdays page</span>
-        </a>
-
-        <button
-          onClick={onViewContacts}
-          className="messages-hub-card messages-hub-card--green"
-          aria-label="View Contacts"
-        >
-          <span className="messages-hub-icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-          </span>
-          <span className="messages-hub-label">Contacts</span>
-          <span className="messages-hub-desc">Manage contacts</span>
-        </button>
-
-        <button
-          onClick={onViewAnalytics}
-          className="messages-hub-card messages-hub-card--orange"
-          aria-label="Analytics"
-        >
-          <span className="messages-hub-icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <line x1="18" y1="20" x2="18" y2="10" />
-              <line x1="12" y1="20" x2="12" y2="4" />
-              <line x1="6" y1="20" x2="6" y2="14" />
-              <line x1="2" y1="20" x2="22" y2="20" />
-            </svg>
-          </span>
-          <span className="messages-hub-label">Analytics</span>
-          <span className="messages-hub-desc">View message stats</span>
-        </button>
-        <button
-          onClick={onViewUpcomingBirthdays}
-          className="messages-hub-card messages-hub-card--blue"
-          aria-label="Upcoming Birthdays"
-        >
-          <span className="messages-hub-icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M20 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M4 21v-2a4 4 0 0 1 3-3.87" />
-              <circle cx="12" cy="7" r="4" />
-              <path d="M12 2v1" />
-              <path d="M9 4l3-2 3 2" />
-            </svg>
-          </span>
-          <span className="messages-hub-label">Birthdays</span>
-          <span className="messages-hub-desc">Upcoming birthdays</span>
-        </button>
-      </div>
     </div>
   );
 }

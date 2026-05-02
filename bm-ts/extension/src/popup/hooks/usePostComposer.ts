@@ -101,7 +101,35 @@ export function usePostComposer() {
 
         let imageUrlToUse: string | undefined = postForm.image_url || undefined;
 
-        if (previewText.includes('[Image]') || postForm.image_url) {
+        const hasImageKeyword = previewText.includes('[Image]');
+
+        if (postForm.image_url) {
+          // User directly attached an image — compose text onto it; no library needed
+          const composedDataUrl = await composeImageFromUrl(
+            postForm.image_url,
+            previewText.replace(/\[Image\]/g, ''),
+            postForm.fontFamily,
+            postForm.fontSize,
+            postForm.fontColor,
+            postForm.textX ?? 0.5,
+            postForm.textY ?? 0.5,
+          );
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const uploaded = await sendBackgroundMessage<any>({
+            type: 'images.uploadFile',
+            payload: {
+              filename: `composed_${Date.now()}.jpg`,
+              data: composedDataUrl,
+              size: atob(
+                composedDataUrl.includes(',') ? composedDataUrl.split(',')[1] : composedDataUrl,
+              ).length,
+              source: 'post',
+            } as import('../../api/client').UploadImageFilePayload,
+          });
+          imageUrlToUse = uploaded.url;
+        } else if (hasImageKeyword) {
+          // [Image] keyword with no attached image — pick a random library image
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const images = await sendBackgroundMessage<any[]>({ type: 'images.list' });
           if (!images || images.length === 0) {
@@ -134,6 +162,7 @@ export function usePostComposer() {
           });
           imageUrlToUse = uploaded.url;
         }
+        // else: text-only post — no image processing needed
 
         const finalContent = (postForm.content || '').replace(/\[Image\]/g, '').trim();
 

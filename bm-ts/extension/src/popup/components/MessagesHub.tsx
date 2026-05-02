@@ -123,8 +123,8 @@ export default function MessagesHub({ onNavigate }: MessagesHubProps) {
   return (
     <div role="tabpanel" id="messages-panel" className="tab-content">
       <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--color-blue-strong)' }}>
-        Templates{' '}
-        <HelpTooltip label="Message Templates are sent as private direct messages on Facebook. Timeline Posts are written directly on friends' walls. Use the Image Library to store images for the [Image] keyword." />
+        Create templates and posts{' '}
+        <HelpTooltip label="Message Templates are sent as private direct messages on Facebook. Timeline Posts are written directly on friends' walls. Use the Image Library to store images for the [Image] keyword. Tip: it's helpful to first create Groups and upload Images before creating Templates and Posts." />
       </h2>
       <p className="muted mb-4">Create and manage your birthday message content.</p>
 

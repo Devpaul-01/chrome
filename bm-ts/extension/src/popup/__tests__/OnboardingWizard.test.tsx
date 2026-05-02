@@ -26,9 +26,9 @@ describe('OnboardingWizard', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('shows step 1 of 6 on first render', () => {
+  it('shows step 1 of 9 on first render', () => {
     renderWizard();
-    expect(screen.getByText(/step 1 of 6/i)).toBeInTheDocument();
+    expect(screen.getByText(/step 1 of 9/i)).toBeInTheDocument();
   });
 
   it('shows the welcome title on step 1', () => {
@@ -62,7 +62,7 @@ describe('OnboardingWizard', () => {
     const user = userEvent.setup();
     renderWizard();
     await user.click(screen.getByRole('button', { name: /next step/i }));
-    expect(screen.getByText(/step 2 of 6/i)).toBeInTheDocument();
+    expect(screen.getByText(/step 2 of 9/i)).toBeInTheDocument();
   });
 
   it('shows Back button on step 2', async () => {
@@ -77,14 +77,14 @@ describe('OnboardingWizard', () => {
     renderWizard();
     await user.click(screen.getByRole('button', { name: /next step/i }));
     await user.click(screen.getByRole('button', { name: /previous step/i }));
-    expect(screen.getByText(/step 1 of 6/i)).toBeInTheDocument();
+    expect(screen.getByText(/step 1 of 9/i)).toBeInTheDocument();
   });
 
   it('shows "Get Started" button on last step', async () => {
     const user = userEvent.setup();
     renderWizard();
-    // Navigate to step 6 (5 clicks)
-    for (let i = 0; i < 5; i++) {
+    // Navigate to step 9 (8 clicks)
+    for (let i = 0; i < 8; i++) {
       await user.click(screen.getByRole('button', { name: /next step/i }));
     }
     expect(screen.getByRole('button', { name: /finish onboarding/i })).toBeInTheDocument();
@@ -93,7 +93,7 @@ describe('OnboardingWizard', () => {
   it('calls onComplete when "Get Started" is clicked on last step', async () => {
     const user = userEvent.setup();
     renderWizard();
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 8; i++) {
       await user.click(screen.getByRole('button', { name: /next step/i }));
     }
     await user.click(screen.getByRole('button', { name: /finish onboarding/i }));
@@ -109,17 +109,20 @@ describe('OnboardingWizard', () => {
 
   // --- Step content ---------------------------------------------------------
 
-  it('step 2 shows merge tag guidance', async () => {
+  it('step 5 shows merge tag guidance', async () => {
     const user = userEvent.setup();
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /next step/i }));
+    // Step 5 is Message Templates (4 clicks from step 1)
+    for (let i = 0; i < 4; i++) {
+      await user.click(screen.getByRole('button', { name: /next step/i }));
+    }
     expect(screen.getByText(/\[Tag Person\]/i)).toBeInTheDocument();
   });
 
-  it('step 6 title contains "all set"', async () => {
+  it('step 9 title contains "all set"', async () => {
     const user = userEvent.setup();
     renderWizard();
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 8; i++) {
       await user.click(screen.getByRole('button', { name: /next step/i }));
     }
     expect(screen.getByRole('heading', { name: /all set/i })).toBeInTheDocument();

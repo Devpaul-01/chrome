@@ -8,10 +8,12 @@ Call ``init_rate_limiter(app)`` once during application startup (in main.py)
 to attach the middleware and exception handler.
 """
 
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import Limiter
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 
 def fb_user_key(request):
@@ -31,8 +33,16 @@ def fb_user_key(request):
 limiter = Limiter(key_func=fb_user_key)
 
 
+async def _json_rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Return a JSON 429 response so the extension's JSON.parse never sees plain text."""
+    return JSONResponse(
+        status_code=429,
+        content={"detail": f"Rate limit exceeded: {exc.detail}"},
+    )
+
+
 def init_rate_limiter(app):
     """Attach SlowAPI middleware and the 429 exception handler to the FastAPI application."""
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_exception_handler(RateLimitExceeded, _json_rate_limit_exceeded_handler)
     app.add_middleware(SlowAPIMiddleware)
