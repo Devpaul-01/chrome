@@ -210,12 +210,8 @@ describe('usePostComposer', () => {
     });
 
     // images.list must NOT have been called — no library required for a direct upload
-    expect(mockSendBg).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'images.list' }),
-    );
-    expect(mockSendBg).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'images.uploadFile' }),
-    );
+    expect(mockSendBg).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'images.list' }));
+    expect(mockSendBg).toHaveBeenCalledWith(expect.objectContaining({ type: 'images.uploadFile' }));
     expect(mockShowToast).toHaveBeenCalledWith('Post created successfully!', 'success');
   });
 
@@ -266,8 +262,6 @@ describe('usePostComposer', () => {
       'No images in your library. Please upload one first.',
       'error',
     );
-    expect(mockSendBg).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'posts.create' }),
-    );
+    expect(mockSendBg).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'posts.create' }));
   });
 });
