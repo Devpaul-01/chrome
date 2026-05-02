@@ -187,4 +187,87 @@ describe('usePostComposer', () => {
     expect(mockShowToast).toHaveBeenCalledWith('Server error', 'error');
     expect(result.current.isSubmitting).toBe(false);
   });
+
+  it('handlePostSubmit uses attached image directly without fetching library', async () => {
+    mockSendBg
+      .mockResolvedValueOnce({ url: 'https://server.com/composed.jpg' }) // images.uploadFile
+      .mockResolvedValueOnce({ id: 'new-post' }); // posts.create
+
+    const { result } = renderHook(() => usePostComposer());
+
+    act(() => {
+      result.current.setPostForm((f) => ({
+        ...f,
+        content: 'Happy Birthday!',
+        label: 'Test Post',
+        image_url: 'data:image/jpeg;base64,abc123',
+      }));
+    });
+
+    const fakeEvent = { preventDefault: vi.fn() } as unknown as React.FormEvent<HTMLFormElement>;
+    await act(async () => {
+      await result.current.handlePostSubmit(fakeEvent);
+    });
+
+    // images.list must NOT have been called — no library required for a direct upload
+    expect(mockSendBg).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'images.list' }),
+    );
+    expect(mockSendBg).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'images.uploadFile' }),
+    );
+    expect(mockShowToast).toHaveBeenCalledWith('Post created successfully!', 'success');
+  });
+
+  it('handlePostSubmit fetches a library image when [Image] keyword is used', async () => {
+    mockSendBg
+      .mockResolvedValueOnce([{ url: 'https://server.com/img.jpg', id: 'img-1' }]) // images.list
+      .mockResolvedValueOnce({ url: 'https://server.com/composed.jpg' }) // images.uploadFile
+      .mockResolvedValueOnce({ id: 'new-post' }); // posts.create
+
+    const { result } = renderHook(() => usePostComposer());
+
+    act(() => {
+      result.current.setPostForm((f) => ({
+        ...f,
+        content: 'Happy Birthday! [Image]',
+        label: 'Test Post',
+      }));
+    });
+
+    const fakeEvent = { preventDefault: vi.fn() } as unknown as React.FormEvent<HTMLFormElement>;
+    await act(async () => {
+      await result.current.handlePostSubmit(fakeEvent);
+    });
+
+    expect(mockSendBg).toHaveBeenCalledWith(expect.objectContaining({ type: 'images.list' }));
+    expect(mockShowToast).toHaveBeenCalledWith('Post created successfully!', 'success');
+  });
+
+  it('handlePostSubmit shows error when [Image] keyword used but library is empty', async () => {
+    mockSendBg.mockResolvedValueOnce([]); // images.list returns empty array
+
+    const { result } = renderHook(() => usePostComposer());
+
+    act(() => {
+      result.current.setPostForm((f) => ({
+        ...f,
+        content: 'Happy Birthday! [Image]',
+        label: 'Test Post',
+      }));
+    });
+
+    const fakeEvent = { preventDefault: vi.fn() } as unknown as React.FormEvent<HTMLFormElement>;
+    await act(async () => {
+      await result.current.handlePostSubmit(fakeEvent);
+    });
+
+    expect(mockShowToast).toHaveBeenCalledWith(
+      'No images in your library. Please upload one first.',
+      'error',
+    );
+    expect(mockSendBg).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'posts.create' }),
+    );
+  });
 });

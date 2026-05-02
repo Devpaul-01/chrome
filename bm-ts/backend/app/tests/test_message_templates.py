@@ -34,6 +34,7 @@ async def test_create_message_template(async_client: AsyncClient) -> None:
     assert data["greeting"] == "Happy Birthday!"
     assert data["gender"] == "ALL"
     assert data["days_in_advance"] == 0
+    assert data["group_id"] is None
     assert "id" in data
 
 
@@ -54,6 +55,28 @@ async def test_create_message_template_with_options(async_client: AsyncClient) -
     assert data["gender"] == "FEMALE"
     assert data["days_in_advance"] == 3
     assert data["image_url"] == "https://example.com/cake.png"
+
+
+@pytest.mark.asyncio
+async def test_create_message_template_with_group(async_client: AsyncClient) -> None:
+    group_resp = await async_client.post(
+        "/api/message-groups",
+        json={"name": "Close Friends", "color": "#3b82f6"},
+    )
+    assert group_resp.status_code == 201
+    group_id = group_resp.json()["id"]
+
+    payload = {
+        "title": "Grouped Greeting",
+        "greeting": "Happy Birthday!",
+        "sentiment": "Hope your day is full of good people and good cake.",
+        "closing": "Enjoy every minute!",
+        "group_id": group_id,
+    }
+    resp = await async_client.post("/api/message-templates", json=payload)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["group_id"] == group_id
 
 
 @pytest.mark.asyncio

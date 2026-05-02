@@ -145,7 +145,13 @@ export default function FacebookPostPreview({
         ctx.fillText('...', textCenterX, ellipsisY);
       }
 
-      setPreviewUrl(canvas.toDataURL('image/jpeg', 0.92));
+      try {
+        setPreviewUrl(canvas.toDataURL('image/jpeg', 0.92));
+      } catch {
+        // Canvas tainted by cross-origin image — fall back gracefully
+        logger.error('Canvas toDataURL failed (CORS/tainted canvas)');
+        setPreviewUrl(null);
+      }
     };
 
     img.onerror = () => {
