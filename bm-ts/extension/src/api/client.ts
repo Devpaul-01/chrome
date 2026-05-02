@@ -80,7 +80,13 @@ async function request<T>(
     clearTimeout(timeoutId);
   }
   const text = await response.text();
-  const data = text ? JSON.parse(text) : undefined;
+  let data: unknown;
+  try {
+    data = text ? JSON.parse(text) : undefined;
+  } catch {
+    // Non-JSON body (e.g. rate-limit plain-text or proxy HTML error)
+    throw new ApiError(response.status, { detail: text || 'Unknown error' });
+  }
   if (!response.ok) {
     throw new ApiError(response.status, data);
   }

@@ -35,6 +35,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.api.deps import (
     get_current_token_payload,
@@ -935,7 +936,10 @@ async def update_profile(
         metadata["timezone"] = data.timezone
 
     if data.name is not None or data.timezone is not None:
-        current_user.metadata_payload = metadata
+        # Always assign a new dict so SQLAlchemy detects the change on the
+        # JSON column (re-assigning the same mutable object is not tracked).
+        current_user.metadata_payload = {**metadata}
+        flag_modified(current_user, "metadata_payload")
 
     await db.commit()
     await db.refresh(current_user)

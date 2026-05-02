@@ -44,6 +44,7 @@ import AccountManagement from './components/AccountManagement';
 import TemplateGallery from './components/TemplateGallery';
 import OnboardingWizard from './components/OnboardingWizard';
 import HelpPanel from './components/HelpPanel';
+import HelpTooltip from './components/HelpTooltip';
 import FeatureTip from './components/FeatureTip';
 import Spinner from './components/Spinner';
 import ScrollToTop from './components/ScrollToTop';
@@ -514,10 +515,16 @@ function AppShell() {
       const { editingTemplate } = msgTemplates;
       return (
         <div className="view-container">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-blueStrong">Message Templates</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-blueStrong">
+              Message Templates{' '}
+              <HelpTooltip label="Create personalised birthday message templates sent as private Facebook messages. Tip: create at least 3 templates per group — the extension randomises which one is sent, keeping messages varied and reducing the risk of Facebook flagging repetitive content." />
+            </h2>
             <div />
           </div>
+          <p className="text-xs text-gray-600 mb-3">
+            Write and manage your birthday message templates.
+          </p>
           <div className="mb-3">
             <div className="mb-2">
               <TemplateCreator
@@ -710,9 +717,9 @@ function AppShell() {
             />
             <HomeControls
               userName={user?.firstName || user?.email?.split('@')[0] || 'User'}
-              onViewAnalytics={() => setViewMode('analytics')}
               onViewUpcomingBirthdays={() => setViewMode('upcoming-birthdays')}
               onViewContacts={() => setViewMode('contacts')}
+              onOpenFacebookPopup={sendShowOverlayToFacebookTab}
               // onViewCalendar={() => setViewMode('birthday-calendar')} // Uncomment to re-enable
             />
           </>
@@ -936,14 +943,36 @@ function AppShell() {
 
       {isAuthenticated && (
         <footer role="contentinfo" className="mt-2">
-          <button
-            type="button"
-            onClick={sendShowOverlayToFacebookTab}
-            className="bm-btn-primary w-full mb-2"
-            aria-label="Show Facebook Overlay"
-          >
-            Show Facebook Overlay
-          </button>
+          {activeTab === 'home' && viewMode === 'main' && (
+            <button
+              type="button"
+              onClick={() => setViewMode('analytics')}
+              className="messages-hub-card messages-hub-card--orange w-full mb-2"
+              aria-label="Analytics"
+            >
+              <span className="messages-hub-icon">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                  <line x1="2" y1="20" x2="22" y2="20" />
+                </svg>
+              </span>
+              <span className="messages-hub-label">Analytics</span>
+              <span className="messages-hub-desc">View message stats</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setShowHelpPanel(true)}

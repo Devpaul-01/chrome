@@ -98,10 +98,38 @@ export default function HelpPanel({ open, onClose, onRestartTour }: HelpPanelPro
         <section>
           <h3 className="text-sm font-semibold text-textPrimary mb-2">Quick Start</h3>
           <ol className="text-xs text-textMuted space-y-1.5 list-decimal list-inside">
-            <li>Create a message template in the Templates tab</li>
-            <li>Set a schedule in Scheduling (e.g. &ldquo;On the birthday&rdquo;)</li>
+            <li>
+              Open Facebook and go to <strong>facebook.com/friends/birthdays</strong>
+            </li>
+            <li>
+              Click <strong>Facebook Popup</strong> on the Home tab to open the overlay on that page
+            </li>
+            <li>
+              Scroll to the bottom of the birthdays page, then click <strong>Refresh</strong> in the
+              overlay to import contacts
+            </li>
+            <li>
+              In the <strong>Create</strong> tab, create <strong>Groups</strong> first (e.g. Close
+              Friends, Colleagues) — groups let you send different messages to different sets of
+              people
+            </li>
+            <li>
+              Upload images in <strong>Image Library</strong> to use with the <code>[Image]</code>{' '}
+              keyword
+            </li>
+            <li>
+              Create <strong>Message Templates</strong> — assign each to a group and create{' '}
+              <strong>at least 3 per group</strong> for randomised sending (reduces Facebook ban
+              risk)
+            </li>
+            <li>
+              Set a schedule in <strong>Scheduling</strong> (e.g. &ldquo;On the birthday&rdquo;)
+            </li>
             <li>Configure automation settings (check interval, confirmation mode)</li>
-            <li>Enable automation on the Home tab and keep Chrome open</li>
+            <li>
+              Enable <strong>Automation Engine</strong> on the Home tab — keep Chrome open and stay
+              logged in to Facebook
+            </li>
           </ol>
         </section>
 
