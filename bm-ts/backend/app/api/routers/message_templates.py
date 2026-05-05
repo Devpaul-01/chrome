@@ -69,7 +69,7 @@ async def create_message_template(
     db.add(template)
     await db.commit()
     await db.refresh(template)
-    return template
+    return template  # type: ignore[return-value]
 
 
 @router.get("/message-templates", response_model=List[MessageTemplateOut])
@@ -89,7 +89,7 @@ async def list_message_templates(
 
     stmt = stmt.order_by(MessageTemplate.created_at.desc())
     result = await db.execute(stmt)
-    return list(result.scalars().all())
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.get("/message-templates/{template_id}", response_model=MessageTemplateOut)
@@ -111,7 +111,7 @@ async def get_message_template(
             status_code=status.HTTP_404_NOT_FOUND, detail="Message template not found"
         )
 
-    return template
+    return template  # type: ignore[return-value]
 
 
 @router.put("/message-templates/{template_id}", response_model=MessageTemplateOut)
@@ -181,7 +181,7 @@ async def update_message_template(
 
     await db.commit()
     await db.refresh(template)
-    return template
+    return template  # type: ignore[return-value]
 
 
 @router.delete(

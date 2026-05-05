@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import logging
 from typing import List
@@ -50,7 +51,7 @@ async def upload_image_from_url(
     db.add(user_image)
     await db.commit()
     await db.refresh(user_image)
-    return user_image
+    return user_image  # type: ignore[return-value]
 
 
 @router.post(
@@ -118,11 +119,11 @@ async def upload_image_file(
         db.add(user_image)
         await db.commit()
         await db.refresh(user_image)
-        return user_image
+        return user_image  # type: ignore[return-value]
 
     except HTTPException:
         raise
-    except base64.binascii.Error:
+    except binascii.Error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid base64 data"
         )
@@ -147,7 +148,7 @@ async def list_images(
     )
 
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.get("/images/{image_id}", response_model=UserImageOut)
@@ -169,7 +170,7 @@ async def get_image(
             status_code=status.HTTP_404_NOT_FOUND, detail="Image not found"
         )
 
-    return image
+    return image  # type: ignore[return-value]
 
 
 @router.delete(

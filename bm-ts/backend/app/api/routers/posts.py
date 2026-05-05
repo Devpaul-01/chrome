@@ -52,7 +52,7 @@ async def create_post(
     db.add(post)
     await db.commit()
     await db.refresh(post)
-    return post
+    return post  # type: ignore[return-value]
 
 
 @router.get("/posts", response_model=List[PostOut])
@@ -72,7 +72,7 @@ async def list_posts(
 
     stmt = stmt.order_by(Post.created_at.desc())
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.get("/posts/{post_id}", response_model=PostOut)
@@ -94,7 +94,7 @@ async def get_post(
             status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
         )
 
-    return post
+    return post  # type: ignore[return-value]
 
 
 @router.put("/posts/{post_id}", response_model=PostOut)
@@ -151,7 +151,7 @@ async def update_post(
     post.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(post)
-    return post
+    return post  # type: ignore[return-value]
 
 
 @router.delete(

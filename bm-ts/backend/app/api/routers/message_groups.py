@@ -50,7 +50,7 @@ async def create_message_group(
     db.add(message_group)
     await db.commit()
     await db.refresh(message_group)
-    return message_group
+    return message_group  # type: ignore[return-value]
 
 
 @router.get("/message-groups", response_model=List[MessageGroupOut])
@@ -65,7 +65,7 @@ async def list_message_groups(
         .order_by(MessageGroup.name)
     )
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.get("/message-groups/{group_id}", response_model=MessageGroupOut)
@@ -87,7 +87,7 @@ async def get_message_group(
             status_code=status.HTTP_404_NOT_FOUND, detail="Message group not found"
         )
 
-    return message_group
+    return message_group  # type: ignore[return-value]
 
 
 @router.put("/message-groups/{group_id}", response_model=MessageGroupOut)
@@ -118,7 +118,7 @@ async def update_message_group(
     message_group.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(message_group)
-    return message_group
+    return message_group  # type: ignore[return-value]
 
 
 @router.delete(

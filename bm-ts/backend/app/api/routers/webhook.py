@@ -25,7 +25,7 @@ operations are performed, so spoofed requests are rejected before touching data.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Mapping
+from typing import Any, Mapping
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from http import HTTPStatus
@@ -47,7 +47,7 @@ _SUBSCRIPTION_EVENTS = {
 
 async def _handle_payment_failed(
     db: AsyncSession,
-    event_data: dict,
+    event_data: Any,
 ) -> None:
     """
     Handle ``invoice.payment_failed`` by transitioning the related
@@ -75,7 +75,7 @@ async def _handle_payment_failed(
 
 async def _handle_payment_succeeded(
     db: AsyncSession,
-    event_data: dict,
+    event_data: Any,
 ) -> None:
     """
     Handle ``invoice.payment_succeeded`` by recovering a PAST_DUE subscription
@@ -148,5 +148,5 @@ async def stripe_webhook(
         return {"received": True}
 
     metadata = object_data.get("metadata") or {}
-    await sync_subscription_record(db, user.id, object_data, dict(metadata))
+    await sync_subscription_record(db, user.id, object_data, dict(metadata))  # type: ignore[arg-type]
     return {"received": True}

@@ -1,0 +1,109 @@
+name: Backend CI
+run-name: ${{ gitea.actor }} — backend CI (${{ gitea.ref_name }})
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "bm-ts/backend/**"
+  pull_request:
+    paths:
+      - "bm-ts/backend/**"
+
+jobs:
+  lint-and-test:
+    name: Ruff · Mypy · Pytest
+    runs-on: ubuntu-latest
+
+    env:
+      JWT_SECRET_KEY: ci-test-only-secret-not-for-production-minimum32chars
+      STRIPE_API_KEY: sk_test_ci_dummy_not_real
+      SMTP_ENCRYPTION_KEY: ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg=
+
+    defaults:
+      run:
+        working-directory: bm-ts/backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: bm-ts/backend/pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[test,lint]"
+          pip install ruff
+
+      - name: Ruff lint
+        run: ruff check app/
+
+      - name: Ruff format check
+        run: ruff format --check app/
+
+      - name: Mypy type check
+        run: mypy app/
+
+      - name: Run tests
+        run: python -m pytest --tb=short -q
+
+  alembic-migrations:
+    name: Alembic migrations (upgrade + downgrade)
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/harryzcy/ubuntu:24.04
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: bm_migrations_test
+          POSTGRES_PASSWORD: cipass
+        # Do NOT add a `ports` mapping here.
+        # Services on the same job network are reachable by their service-key
+        # hostname ("postgres") without binding to the host.  Binding to host
+        # port 5432 causes "port is already allocated" when concurrent jobs run
+        # on the same runner.
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bm_migrations_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:cipass@postgres:5432/bm_migrations_test
+      # Satisfy pydantic validators so the Settings object can be constructed
+      JWT_SECRET_KEY: ci-test-only-secret-not-for-production-minimum32chars
+      STRIPE_API_KEY: sk_test_ci_dummy_not_real
+      SMTP_ENCRYPTION_KEY: ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg=
+
+    defaults:
+      run:
+        working-directory: bm-ts/backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: bm-ts/backend/pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[db]"
+
+      - name: Alembic upgrade head
+        run: alembic upgrade head
+
+      - name: Alembic downgrade base
+        run: alembic downgrade base

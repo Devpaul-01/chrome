@@ -61,7 +61,7 @@ async def create_birthday_config(
     db.add(config)
     await db.commit()
     await db.refresh(config)
-    return config
+    return config  # type: ignore[return-value]
 
 
 @router.get("/birthday-configs", response_model=List[BirthdayConfigOut])
@@ -81,7 +81,7 @@ async def list_birthday_configs(
 
     stmt = stmt.order_by(BirthdayConfig.mode, BirthdayConfig.days_offset)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.get("/birthday-configs/{config_id}", response_model=BirthdayConfigOut)
@@ -104,7 +104,7 @@ async def get_birthday_config(
             detail="Birthday configuration not found",
         )
 
-    return config
+    return config  # type: ignore[return-value]
 
 
 @router.put("/birthday-configs/{config_id}", response_model=BirthdayConfigOut)
@@ -144,7 +144,7 @@ async def update_birthday_config(
     config.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(config)
-    return config
+    return config  # type: ignore[return-value]
 
 
 @router.patch("/birthday-configs/{config_id}/toggle", response_model=BirthdayConfigOut)
@@ -172,7 +172,7 @@ async def toggle_birthday_config(
     config.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(config)
-    return config
+    return config  # type: ignore[return-value]
 
 
 @router.delete(

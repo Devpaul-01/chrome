@@ -37,7 +37,7 @@ async def create_contact(
     db.add(contact)
     await db.commit()
     await db.refresh(contact)
-    return contact
+    return contact  # type: ignore[return-value]
 
 
 @router.post(
@@ -90,7 +90,7 @@ async def bulk_create_contacts(
     await db.commit()
     for contact in results:
         await db.refresh(contact)
-    return results
+    return results  # type: ignore[return-value]
 
 
 @router.get("/", response_model=List[ContactOut])
@@ -113,7 +113,7 @@ async def list_contacts(
             pass  # ignore malformed timestamp, return all
     stmt = stmt.order_by(Contact.name)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.get("/{contact_id}", response_model=ContactOut)
@@ -135,7 +135,7 @@ async def get_contact(
             status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found"
         )
 
-    return contact
+    return contact  # type: ignore[return-value]
 
 
 @router.put("/{contact_id}", response_model=ContactOut)
@@ -176,7 +176,7 @@ async def update_contact(
 
     await db.commit()
     await db.refresh(contact)
-    return contact
+    return contact  # type: ignore[return-value]
 
 
 @router.delete(

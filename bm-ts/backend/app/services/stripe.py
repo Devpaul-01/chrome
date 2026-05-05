@@ -107,7 +107,7 @@ async def create_checkout_session(
         success_url=success_url,
         cancel_url=cancel_url,
     )
-    return session.url
+    return session.url or ""
 
 
 async def cancel_subscription(stripe_subscription_id: str) -> dict:
@@ -123,7 +123,7 @@ async def cancel_subscription(stripe_subscription_id: str) -> dict:
         stripe_subscription_id,
         cancel_at_period_end=True,
     )
-    return dict(sub)
+    return dict(sub)  # type: ignore[call-overload]
 
 
 async def reactivate_subscription(stripe_subscription_id: str) -> dict:
@@ -133,7 +133,7 @@ async def reactivate_subscription(stripe_subscription_id: str) -> dict:
         stripe_subscription_id,
         cancel_at_period_end=False,
     )
-    return dict(sub)
+    return dict(sub)  # type: ignore[call-overload]
 
 
 async def change_subscription_plan(
@@ -151,7 +151,7 @@ async def change_subscription_plan(
         items=[{"id": item_id, "price": new_price_id}],
         proration_behavior="create_prorations",
     )
-    return dict(updated)
+    return dict(updated)  # type: ignore[call-overload]
 
 
 async def create_billing_portal_session(
