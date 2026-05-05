@@ -89,7 +89,9 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = Column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     email: Mapped[str] = Column(CITEXT(), nullable=False, unique=True)
     password_hash: Mapped[str] = Column(Text(), nullable=False)
     stripe_customer_id: Mapped[str | None] = Column(String())
@@ -145,7 +147,9 @@ class SubscriptionRecord(Base):
 
     __tablename__ = "subscription_records"
 
-    id: Mapped[uuid.UUID] = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = Column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -200,7 +204,9 @@ class TemplateSegment(Base):
 
     __tablename__ = "template_segments"
 
-    id: Mapped[uuid.UUID] = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = Column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -241,7 +247,9 @@ class BirthdaySchedule(Base):
 
     __tablename__ = "birthday_schedules"
 
-    id: Mapped[uuid.UUID] = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = Column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -275,7 +283,9 @@ class MessageQueue(Base):
 
     __tablename__ = "message_queue"
 
-    id: Mapped[uuid.UUID] = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = Column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -284,7 +294,9 @@ class MessageQueue(Base):
     friend_name = Column(Text(), nullable=False)
     friend_profile_url = Column(Text(), nullable=False)
     birthday_date: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
-    scheduled_send_time: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False)
+    scheduled_send_time: Mapped[datetime] = Column(
+        DateTime(timezone=True), nullable=False
+    )
     message_content = Column(Text(), nullable=False)
     status: Mapped[str] = Column(
         message_status_enum, nullable=False, server_default=text("'pending'")
@@ -314,7 +326,9 @@ class MessageHistory(Base):
 
     __tablename__ = "message_history"
 
-    id: Mapped[uuid.UUID] = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = Column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -327,7 +341,9 @@ class MessageHistory(Base):
     sent_at: Mapped[datetime] = Column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
-    status: Mapped[str] = Column(message_status_enum, nullable=False, server_default=text("'sent'"))
+    status: Mapped[str] = Column(
+        message_status_enum, nullable=False, server_default=text("'sent'")
+    )
     error_message = Column(Text())
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
@@ -346,7 +362,9 @@ class UserSession(Base):
 
     __tablename__ = "user_sessions"
 
-    id: Mapped[uuid.UUID] = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = Column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -385,7 +403,9 @@ class PasswordResetToken(Base):
 
     __tablename__ = "password_reset_tokens"
 
-    id: Mapped[uuid.UUID] = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = Column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -442,7 +462,9 @@ class EmailVerificationToken(Base):
 
     __tablename__ = "email_verification_tokens"
 
-    id: Mapped[uuid.UUID] = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = Column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -455,7 +477,9 @@ class EmailVerificationToken(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user: Mapped[User] = relationship("User", back_populates="email_verification_tokens")
+    user: Mapped[User] = relationship(
+        "User", back_populates="email_verification_tokens"
+    )
 
     __table_args__ = (
         Index("idx_email_verif_token_expires", "token", "expires_at"),
@@ -695,7 +719,9 @@ class BirthdayConfig(Base):
     message_group_id: Mapped[uuid.UUID | None] = Column(
         PG_UUID(as_uuid=True), ForeignKey("message_groups.id", ondelete="CASCADE")
     )
-    post_id: Mapped[uuid.UUID | None] = Column(PG_UUID(as_uuid=True), ForeignKey("posts.id", ondelete="SET NULL"))
+    post_id: Mapped[uuid.UUID | None] = Column(
+        PG_UUID(as_uuid=True), ForeignKey("posts.id", ondelete="SET NULL")
+    )
     gender_filter: Mapped[str] = Column(gender_enum, nullable=False)
     archive_enabled = Column(Boolean(), nullable=False, server_default=text("false"))
     enabled = Column(Boolean(), nullable=False, server_default=text("true"))
@@ -781,7 +807,9 @@ class MessageTemplate(Base):
     closing = Column(Text(), nullable=False)
     image_url = Column(Text())  # Optional image URL
     days_in_advance = Column(Integer, nullable=False, server_default=text("0"))
-    gender: Mapped[str] = Column(gender_enum, nullable=False, server_default=text("'ALL'"))
+    gender: Mapped[str] = Column(
+        gender_enum, nullable=False, server_default=text("'ALL'")
+    )
     group_id: Mapped[uuid.UUID | None] = Column(
         PG_UUID(as_uuid=True), ForeignKey("message_groups.id", ondelete="SET NULL")
     )
