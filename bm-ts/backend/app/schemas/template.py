@@ -42,7 +42,9 @@ class TemplateSegmentCreate(BaseModel):
 
 
 class TemplateSegmentUpdate(BaseModel):
-    content: Optional[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]] = None
+    content: Optional[
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    ] = None
     label: Optional[str] = Field(None, max_length=64)
 
     @field_validator("content", "label", mode="after")
