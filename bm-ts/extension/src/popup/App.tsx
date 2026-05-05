@@ -711,10 +711,6 @@ function AppShell() {
       case 'home':
         return (
           <>
-            <FeatureTip
-              tipId="home_automation"
-              message="Enable automation on this page to start sending birthday messages automatically."
-            />
             <HomeControls
               userName={user?.firstName || user?.email?.split('@')[0] || 'User'}
               onViewUpcomingBirthdays={() => setViewMode('upcoming-birthdays')}
@@ -728,10 +724,6 @@ function AppShell() {
       case 'messages':
         return (
           <>
-            <FeatureTip
-              tipId="messages_templates"
-              message="Create your first message template to start sending personalised birthday wishes."
-            />
             <MessagesHub onNavigate={setViewMode} />
           </>
         );
