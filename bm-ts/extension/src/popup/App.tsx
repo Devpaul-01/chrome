@@ -45,7 +45,6 @@ import TemplateGallery from './components/TemplateGallery';
 import OnboardingWizard from './components/OnboardingWizard';
 import HelpPanel from './components/HelpPanel';
 import HelpTooltip from './components/HelpTooltip';
-import FeatureTip from './components/FeatureTip';
 import Spinner from './components/Spinner';
 import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
