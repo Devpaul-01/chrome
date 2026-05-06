@@ -15,10 +15,10 @@ the days offset, and an optional message-group / post association.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
@@ -36,7 +36,7 @@ from app.schemas.birthday_config import (
 )
 from app.schemas.common import DeleteResponse, ErrorResponse
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
@@ -72,7 +72,7 @@ async def create_birthday_config(
     db.add(config)
     await db.commit()
     await db.refresh(config)
-    return config
+    return config  # type: ignore[return-value]
 
 
 @router.get("/birthday-configs", response_model=List[BirthdayConfigOut])
@@ -92,7 +92,7 @@ async def list_birthday_configs(
 
     stmt = stmt.order_by(BirthdayConfig.mode, BirthdayConfig.days_offset)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.get("/birthday-configs/{config_id}", response_model=BirthdayConfigOut)
@@ -116,7 +116,7 @@ async def get_birthday_config(
             "Birthday configuration not found",
         )
 
-    return config
+    return config  # type: ignore[return-value]
 
 
 @router.put("/birthday-configs/{config_id}", response_model=BirthdayConfigOut)
@@ -157,7 +157,7 @@ async def update_birthday_config(
     config.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(config)
-    return config
+    return config  # type: ignore[return-value]
 
 
 @router.patch("/birthday-configs/{config_id}/toggle", response_model=BirthdayConfigOut)
@@ -186,7 +186,7 @@ async def toggle_birthday_config(
     config.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(config)
-    return config
+    return config  # type: ignore[return-value]
 
 
 @router.delete(
@@ -217,3 +217,5 @@ async def delete_birthday_config(
     await db.delete(config)
     await db.commit()
     return DeleteResponse()
+
+

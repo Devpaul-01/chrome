@@ -107,7 +107,7 @@ async def create_checkout_session(
         success_url=success_url,
         cancel_url=cancel_url,
     )
-    return session.url
+    return session.url  # type: ignore[return-value]
 
 
 async def cancel_subscription(stripe_subscription_id: str) -> dict:

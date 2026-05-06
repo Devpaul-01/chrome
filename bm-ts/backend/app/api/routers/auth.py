@@ -31,7 +31,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, status, Request
 
 from app.core.errors import AppError, ErrorCodes
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -101,7 +101,7 @@ from slowapi.util import get_remote_address
 
 from app.schemas.common import ErrorResponse
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
@@ -1139,3 +1139,4 @@ async def export_user_data(
         media_type="application/json",
         headers={"Content-Disposition": 'attachment; filename="my-data.json"'},
     )
+

@@ -1,3 +1,4 @@
+from typing import Any
 """
 api/routers/subscription.py — Stripe subscription lifecycle endpoints.
 
@@ -19,7 +20,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.errors import AppError, ErrorCodes
 
@@ -46,7 +47,7 @@ from app.services.stripe import (
 )
 from app.schemas.common import ErrorResponse
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
@@ -253,3 +254,5 @@ async def billing_portal(
         return_url=f"https://{settings.stripe_redirect_allowed_domains[0]}",
     )
     return BillingPortalResponse(portal_url=portal_url)
+
+

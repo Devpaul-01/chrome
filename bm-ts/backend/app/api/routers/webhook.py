@@ -25,12 +25,11 @@ operations are performed, so spoofed requests are rejected before touching data.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Mapping
+from typing import Any, Mapping
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request, status
 
 from app.core.errors import AppError, ErrorCodes
-from http import HTTPStatus
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,7 +38,7 @@ from app.db.session import get_db
 from app.services.stripe import construct_event, sync_subscription_record
 from app.schemas.common import ErrorResponse
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     422: {"model": ErrorResponse},
     500: {"model": ErrorResponse},
@@ -161,3 +160,5 @@ async def stripe_webhook(
     metadata = object_data.get("metadata") or {}
     await sync_subscription_record(db, user.id, object_data, dict(metadata))
     return {"received": True}
+
+

@@ -1,3 +1,4 @@
+from typing import Any
 """
 routers/smtp.py — Endpoints for managing the user's SMTP configuration.
 
@@ -27,7 +28,7 @@ from app.schemas.smtp import SMTPConfigOut, SMTPConfigUpdate
 from app.core.encryption import encrypt_value
 from app.schemas.common import ErrorResponse
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
@@ -114,3 +115,5 @@ async def update_smtp_config(
         created_at=config.created_at,
         updated_at=config.updated_at,
     )
+
+

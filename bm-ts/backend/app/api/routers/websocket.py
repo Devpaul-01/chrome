@@ -83,7 +83,7 @@ async def get_current_user_from_token(token: str, db: AsyncSession) -> User:
     try:
         payload = decode_token(token)
         ensure_token_type(payload, TokenType.ACCESS)
-        user_id: str = payload.get("sub")
+        user_id = payload.get("sub")
         if user_id is None:
             raise credentials_exception
     except JWTError:
@@ -106,8 +106,8 @@ async def get_current_user_from_token(token: str, db: AsyncSession) -> User:
         ):
             raise credentials_exception
 
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
-    user = result.scalar_one_or_none()
+    user_result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    user = user_result.scalar_one_or_none()
     if user is None:
         raise credentials_exception
     return user
@@ -214,3 +214,4 @@ async def broadcast_dashboard_update(user_id: UUID, stats_data: dict):
 async def broadcast_notification(user_id: UUID, notification_data: dict):
     """Send a notification to user"""
     await manager.broadcast_to_user("notification", notification_data, user_id)
+

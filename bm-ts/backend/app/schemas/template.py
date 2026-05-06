@@ -14,10 +14,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Annotated, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, constr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from app.core.validators import sanitize_text
 
@@ -30,7 +30,7 @@ class SegmentTypeEnum(str, Enum):
 
 class TemplateSegmentCreate(BaseModel):
     segment_type: SegmentTypeEnum
-    content: constr(strip_whitespace=True, min_length=1)
+    content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     label: Optional[str] = Field(None, max_length=64)
 
     _sanitize_content = field_validator("content", mode="after")(sanitize_text)
@@ -42,7 +42,7 @@ class TemplateSegmentCreate(BaseModel):
 
 
 class TemplateSegmentUpdate(BaseModel):
-    content: Optional[constr(strip_whitespace=True, min_length=1)] = None
+    content: Optional[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]] = None
     label: Optional[str] = Field(None, max_length=64)
 
     @field_validator("content", "label", mode="after")

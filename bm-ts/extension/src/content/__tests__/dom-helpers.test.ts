@@ -224,7 +224,7 @@ describe('createStableMutationObserver', () => {
   it('accumulates mutations across rapid-fire calls and delivers them in one batch', async () => {
     vi.useRealTimers();
     const received: MutationRecord[][] = [];
-    const observer = createStableMutationObserver((mutations) => received.push(mutations), {
+    const observer = createStableMutationObserver((mutations) => { received.push(mutations); }, {
       debounceMs: 50,
     });
     const target = document.getElementById('target')!;

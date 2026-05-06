@@ -6,8 +6,10 @@ module before calling ``Base.metadata.create_all`` (or running Alembic
 migrations) ensures every mapped class is registered in the metadata.
 """
 
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 import app.db.models  # noqa: E402, F401 — registers ORM models in metadata

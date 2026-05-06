@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.errors import AppError, ErrorCodes
 from pydantic import BaseModel
@@ -162,3 +162,4 @@ async def record_send(
         daily=BucketInfo(used=daily, cap=DAILY_CAP),
         weekly=BucketInfo(used=weekly, cap=WEEKLY_CAP),
     )
+

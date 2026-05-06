@@ -209,7 +209,7 @@ export function createStableMutationObserver(
   let reconnectCount = 0;
   // Accumulate mutations across rapid-fire calls so the debounced callback
   // always receives the full set rather than only the latest batch.
-  let pendingMutations: MutationRecord[] = [];
+  const pendingMutations: MutationRecord[] = [];
 
   const wrappedCallback = (mutations: MutationRecord[]) => {
     if (disconnected) return;
@@ -254,9 +254,7 @@ export function createStableMutationObserver(
             observer?.disconnect();
 
             if (reconnectCount >= maxReconnects) {
-              logger.error(
-                `[BM Observer] Max reconnects (${maxReconnects}) reached — giving up`,
-              );
+              logger.error(`[BM Observer] Max reconnects (${maxReconnects}) reached — giving up`);
               const limitError = new Error(
                 `MutationObserver target detached ${maxReconnects} times`,
               );

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
@@ -16,7 +16,7 @@ from app.db.session import get_db
 from app.schemas.contact import ContactCreate, ContactOut, ContactUpdate
 from app.schemas.common import DeleteResponse, ErrorResponse
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
@@ -48,7 +48,7 @@ async def create_contact(
     db.add(contact)
     await db.commit()
     await db.refresh(contact)
-    return contact
+    return contact  # type: ignore[return-value]
 
 
 @router.post(
@@ -101,7 +101,7 @@ async def bulk_create_contacts(
     await db.commit()
     for contact in results:
         await db.refresh(contact)
-    return results
+    return results  # type: ignore[return-value]
 
 
 @router.get("/", response_model=List[ContactOut])
@@ -124,7 +124,7 @@ async def list_contacts(
             pass  # ignore malformed timestamp, return all
     stmt = stmt.order_by(Contact.name)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.get("/{contact_id}", response_model=ContactOut)
@@ -146,7 +146,7 @@ async def get_contact(
             status.HTTP_404_NOT_FOUND, ErrorCodes.CONTACT_NOT_FOUND, "Contact not found"
         )
 
-    return contact
+    return contact  # type: ignore[return-value]
 
 
 @router.put("/{contact_id}", response_model=ContactOut)
@@ -187,7 +187,7 @@ async def update_contact(
 
     await db.commit()
     await db.refresh(contact)
-    return contact
+    return contact  # type: ignore[return-value]
 
 
 @router.delete(
@@ -214,3 +214,5 @@ async def delete_contact(
     await db.delete(contact)
     await db.commit()
     return DeleteResponse()
+
+

@@ -1,9 +1,10 @@
+from typing import Any
 from datetime import datetime, timezone
 from io import StringIO
 import csv
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.core.errors import AppError, ErrorCodes
 from fastapi.responses import StreamingResponse
@@ -25,7 +26,7 @@ from app.api.routers.websocket import (
     broadcast_message_history_update,
 )
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
@@ -285,8 +286,7 @@ async def list_message_history(
 
     result = await db.execute(paged_query)
     items = result.scalars().all()
-
-    return MessageHistoryPage(items=items, total=total, page=page, page_size=page_size)
+    return MessageHistoryPage(items=items, total=total, page=page, page_size=page_size)  # type: ignore[arg-type]
 
 
 @router.delete(
@@ -373,3 +373,5 @@ async def export_message_history(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=message_history.csv"},
     )
+
+

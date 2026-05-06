@@ -42,8 +42,8 @@ from sqlalchemy.dialects import postgresql
 # --- SQLite compatibility for Postgres-specific types used in models ---
 # Remap Postgres-only types to SQLAlchemy Text when running tests with SQLite
 try:
-    postgresql.CITEXT = sa.Text
-    postgresql.ENUM = lambda *a, **k: sa.Text
+    postgresql.CITEXT = sa.Text  # type: ignore[misc,assignment]
+    postgresql.ENUM = lambda *a, **k: sa.Text  # type: ignore[misc,assignment]
 except Exception:
     pass
 

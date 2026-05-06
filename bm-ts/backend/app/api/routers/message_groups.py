@@ -11,10 +11,10 @@ routers/message_groups.py — CRUD endpoints for message groups (tags/labels).
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
@@ -30,7 +30,7 @@ from app.schemas.message_group import (
 )
 from app.schemas.common import DeleteResponse, ErrorResponse
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
@@ -62,7 +62,7 @@ async def create_message_group(
     db.add(message_group)
     await db.commit()
     await db.refresh(message_group)
-    return message_group
+    return message_group  # type: ignore[return-value]
 
 
 @router.get("/message-groups", response_model=List[MessageGroupOut])
@@ -77,7 +77,7 @@ async def list_message_groups(
         .order_by(MessageGroup.name)
     )
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.get("/message-groups/{group_id}", response_model=MessageGroupOut)
@@ -99,7 +99,7 @@ async def get_message_group(
             status.HTTP_404_NOT_FOUND, ErrorCodes.GROUP_NOT_FOUND, "Message group not found"
         )
 
-    return message_group
+    return message_group  # type: ignore[return-value]
 
 
 @router.put("/message-groups/{group_id}", response_model=MessageGroupOut)
@@ -130,7 +130,7 @@ async def update_message_group(
     message_group.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(message_group)
-    return message_group
+    return message_group  # type: ignore[return-value]
 
 
 @router.delete(
@@ -159,3 +159,5 @@ async def delete_message_group(
     await db.delete(message_group)
     await db.commit()
     return DeleteResponse()
+
+

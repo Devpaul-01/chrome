@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
@@ -16,7 +16,7 @@ from app.db.session import get_db
 from app.schemas.post import GenderEnum, PostCreate, PostOut, PostUpdate
 from app.schemas.common import DeleteResponse, ErrorResponse
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
@@ -64,7 +64,7 @@ async def create_post(
     db.add(post)
     await db.commit()
     await db.refresh(post)
-    return post
+    return post  # type: ignore[return-value]
 
 
 @router.get("/posts", response_model=List[PostOut])
@@ -84,7 +84,7 @@ async def list_posts(
 
     stmt = stmt.order_by(Post.created_at.desc())
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.get("/posts/{post_id}", response_model=PostOut)
@@ -106,7 +106,7 @@ async def get_post(
             status.HTTP_404_NOT_FOUND, ErrorCodes.POST_NOT_FOUND, "Post not found"
         )
 
-    return post
+    return post  # type: ignore[return-value]
 
 
 @router.put("/posts/{post_id}", response_model=PostOut)
@@ -164,7 +164,7 @@ async def update_post(
     post.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(post)
-    return post
+    return post  # type: ignore[return-value]
 
 
 @router.delete(
@@ -191,3 +191,5 @@ async def delete_post(
     await db.delete(post)
     await db.commit()
     return DeleteResponse()
+
+

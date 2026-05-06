@@ -13,10 +13,10 @@ Segments are the atomic building-blocks composed by
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
@@ -34,7 +34,7 @@ from app.schemas.template import (
 from app.schemas.common import DeleteResponse, ErrorResponse
 from app.services.templates import compose_message
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
@@ -64,7 +64,7 @@ async def create_template(
     db.add(segment)
     await db.commit()
     await db.refresh(segment)
-    return segment
+    return segment  # type: ignore[return-value]
 
 
 @router.get("/", response_model=List[TemplateSegmentOut])
@@ -81,7 +81,7 @@ async def list_templates(
     if segment_type:
         stmt = stmt.where(TemplateSegment.segment_type == segment_type.value)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.put("/{segment_id}", response_model=TemplateSegmentOut)
@@ -109,7 +109,7 @@ async def update_template(
     segment.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(segment)
-    return segment
+    return segment  # type: ignore[return-value]
 
 
 @router.delete(
@@ -172,3 +172,5 @@ async def preview_message(
         )
 
     return {"message": message}
+
+

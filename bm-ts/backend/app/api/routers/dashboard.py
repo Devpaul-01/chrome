@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, and_, func, extract, or_, literal
@@ -11,7 +11,7 @@ from app.db.session import get_db
 from app.schemas.dashboard import DashboardStats
 from app.schemas.common import ErrorResponse
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
     422: {"model": ErrorResponse},
@@ -161,3 +161,5 @@ async def get_dashboard_stats(
 
     _stats_cache[user_id] = _CacheEntry(stats=stats, expires_at=now + _STATS_TTL)
     return stats
+
+

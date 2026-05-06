@@ -13,17 +13,17 @@ overlay to a timeline post.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, constr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from app.core.validators import sanitize_text
 from app.schemas.enums import GenderEnum
 
 
 class PostCreate(BaseModel):
-    content: constr(strip_whitespace=True, min_length=1)
+    content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     gender: GenderEnum = GenderEnum.NEUTRAL
     image_url: Optional[str] = None
     label: Optional[str] = Field(None, max_length=255)
@@ -42,7 +42,7 @@ class PostCreate(BaseModel):
 
 
 class PostUpdate(BaseModel):
-    content: Optional[constr(strip_whitespace=True, min_length=1)] = None
+    content: Optional[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]] = None
     gender: Optional[GenderEnum] = None
     image_url: Optional[str] = None
     label: Optional[str] = None

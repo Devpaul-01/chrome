@@ -12,17 +12,17 @@ Schema hierarchy:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, constr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 
 
 class RegisterRequest(BaseModel):
     """Registration payload — email is validated as a proper address; password minimum 8 chars."""
 
     email: EmailStr
-    password: constr(min_length=8, max_length=128) = Field(
+    password: Annotated[str, StringConstraints(min_length=8, max_length=128)] = Field(
         ..., description="8–128 characters"
     )
 

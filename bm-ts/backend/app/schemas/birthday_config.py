@@ -15,7 +15,7 @@ from enum import Enum
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, FieldValidationInfo
+from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationInfo
 
 from app.schemas.enums import GenderEnum
 
@@ -37,7 +37,7 @@ class BirthdayConfigCreate(BaseModel):
 
     @field_validator("days_offset", mode="before")
     @classmethod
-    def validate_days_offset(cls, v: int, info: FieldValidationInfo) -> int:
+    def validate_days_offset(cls, v: int, info: ValidationInfo) -> int:
         mode = info.data.get("mode")
         if mode == BirthdayModeEnum.EARLY and not (-7 <= v <= -1):
             raise ValueError("For EARLY mode, days_offset must be between -7 and -1")

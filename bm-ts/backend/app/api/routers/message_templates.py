@@ -1,7 +1,7 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
@@ -17,7 +17,7 @@ from app.schemas.message_template import (
 )
 from app.schemas.common import DeleteResponse, ErrorResponse
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
@@ -83,7 +83,7 @@ async def create_message_template(
     db.add(template)
     await db.commit()
     await db.refresh(template)
-    return template
+    return template  # type: ignore[return-value]
 
 
 @router.get("/message-templates", response_model=List[MessageTemplateOut])
@@ -103,7 +103,7 @@ async def list_message_templates(
 
     stmt = stmt.order_by(MessageTemplate.created_at.desc())
     result = await db.execute(stmt)
-    return list(result.scalars().all())
+    return list(result.scalars().all())  # type: ignore[arg-type]
 
 
 @router.get("/message-templates/{template_id}", response_model=MessageTemplateOut)
@@ -125,7 +125,7 @@ async def get_message_template(
             status.HTTP_404_NOT_FOUND, ErrorCodes.TEMPLATE_NOT_FOUND, "Message template not found"
         )
 
-    return template
+    return template  # type: ignore[return-value]
 
 
 @router.put("/message-templates/{template_id}", response_model=MessageTemplateOut)
@@ -197,7 +197,7 @@ async def update_message_template(
 
     await db.commit()
     await db.refresh(template)
-    return template
+    return template  # type: ignore[return-value]
 
 
 @router.delete(
@@ -226,3 +226,5 @@ async def delete_message_template(
     await db.delete(template)
     await db.commit()
     return DeleteResponse()
+
+

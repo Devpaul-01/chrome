@@ -3,10 +3,10 @@ from __future__ import annotations
 import base64
 import hashlib
 import logging
-from typing import List
+from typing import Any, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
@@ -20,7 +20,7 @@ from app.schemas.common import DeleteResponse, ErrorResponse
 
 logger = logging.getLogger(__name__)
 
-_ERROR_RESPONSES = {
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
     403: {"model": ErrorResponse},
@@ -63,7 +63,7 @@ async def upload_image_from_url(
     db.add(user_image)
     await db.commit()
     await db.refresh(user_image)
-    return user_image
+    return user_image  # type: ignore[return-value]
 
 
 @router.post(
@@ -134,11 +134,11 @@ async def upload_image_file(
         db.add(user_image)
         await db.commit()
         await db.refresh(user_image)
-        return user_image
+        return user_image  # type: ignore[return-value]
 
     except AppError:
         raise
-    except base64.binascii.Error:
+    except base64.binascii.Error:  # type: ignore[attr-defined]
         raise AppError(
             status.HTTP_400_BAD_REQUEST, ErrorCodes.INVALID_IMAGE_DATA, "Invalid base64 data"
         )
@@ -164,7 +164,7 @@ async def list_images(
     )
 
     result = await db.execute(stmt)
-    return result.scalars().all()
+    return result.scalars().all()  # type: ignore[return-value]
 
 
 @router.get("/images/{image_id}", response_model=UserImageOut)
@@ -186,7 +186,7 @@ async def get_image(
             status.HTTP_404_NOT_FOUND, ErrorCodes.IMAGE_NOT_FOUND, "Image not found"
         )
 
-    return image
+    return image  # type: ignore[return-value]
 
 
 @router.delete(
@@ -214,3 +214,5 @@ async def delete_image(
     await db.delete(image)
     await db.commit()
     return DeleteResponse()
+
+
