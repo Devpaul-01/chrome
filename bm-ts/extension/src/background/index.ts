@@ -914,6 +914,27 @@ chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendRe
               data: error.data,
             },
           });
+        } else if (error instanceof TypeError) {
+          // TypeError is thrown by fetch() for network-level failures (no connection,
+          // SSL error, missing host_permissions, etc.)  Use status 0 so the popup
+          // can distinguish a connectivity problem from a server error.
+          sendResponse({
+            success: false,
+            error: {
+              status: 0,
+              message: error.message,
+            },
+          });
+        } else if (error instanceof Error && error.message.startsWith('Request timed out')) {
+          // AbortController fired inside client.ts after the 10 s fetch timeout.
+          // Reclassify as a network error (status 0) rather than a server error.
+          sendResponse({
+            success: false,
+            error: {
+              status: 0,
+              message: error.message,
+            },
+          });
         } else {
           sendResponse({
             success: false,
