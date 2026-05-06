@@ -161,5 +161,3 @@ async def get_dashboard_stats(
 
     _stats_cache[user_id] = _CacheEntry(stats=stats, expires_at=now + _STATS_TTL)
     return stats
-
-

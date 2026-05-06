@@ -191,5 +191,3 @@ async def delete_post(
     await db.delete(post)
     await db.commit()
     return DeleteResponse()
-
-

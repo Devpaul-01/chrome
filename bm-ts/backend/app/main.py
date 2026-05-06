@@ -148,13 +148,13 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
         "detail": exc.detail,
         "code": exc.code,
         "timestamp": _now_iso(),
-        "errors": (
-            [e.model_dump() for e in exc.errors] if exc.errors else None
-        ),
+        "errors": ([e.model_dump() for e in exc.errors] if exc.errors else None),
     }
     headers = dict(exc.headers) if exc.headers else {}
     headers.update(_cors_headers(request))
-    return JSONResponse(status_code=exc.status_code, content=content, headers=headers or None)
+    return JSONResponse(
+        status_code=exc.status_code, content=content, headers=headers or None
+    )
 
 
 @app.exception_handler(RequestValidationError)
@@ -166,8 +166,16 @@ async def validation_error_handler(
     for error in exc.errors():
         loc = error.get("loc", ())
         # Skip the first element ("body", "query", etc.) — use only the field name(s)
-        field_parts = [str(p) for p in loc[1:]] if len(loc) > 1 else [str(loc[0])] if loc else ["__root__"]
-        field_errors.append({"field": ".".join(field_parts), "message": error.get("msg", "")})
+        field_parts = (
+            [str(p) for p in loc[1:]]
+            if len(loc) > 1
+            else [str(loc[0])]
+            if loc
+            else ["__root__"]
+        )
+        field_errors.append(
+            {"field": ".".join(field_parts), "message": error.get("msg", "")}
+        )
 
     content = {
         "detail": "Validation error",

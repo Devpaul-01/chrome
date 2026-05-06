@@ -42,7 +42,9 @@ class PostCreate(BaseModel):
 
 
 class PostUpdate(BaseModel):
-    content: Optional[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]] = None
+    content: Optional[
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    ] = None
     gender: Optional[GenderEnum] = None
     image_url: Optional[str] = None
     label: Optional[str] = None

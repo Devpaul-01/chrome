@@ -115,5 +115,3 @@ async def update_smtp_config(
         created_at=config.created_at,
         updated_at=config.updated_at,
     )
-
-

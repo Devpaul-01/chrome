@@ -149,7 +149,9 @@ async def _get_active_record(user: User, db: AsyncSession) -> SubscriptionRecord
     record = result.scalar_one_or_none()
     if not record:
         raise AppError(
-            status.HTTP_404_NOT_FOUND, ErrorCodes.SUBSCRIPTION_NOT_FOUND, "No active subscription"
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.SUBSCRIPTION_NOT_FOUND,
+            "No active subscription",
         )
     return record
 
@@ -254,5 +256,3 @@ async def billing_portal(
         return_url=f"https://{settings.stripe_redirect_allowed_domains[0]}",
     )
     return BillingPortalResponse(portal_url=portal_url)
-
-

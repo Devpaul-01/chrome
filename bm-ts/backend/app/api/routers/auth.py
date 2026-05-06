@@ -229,7 +229,9 @@ async def register(
     result = await db.execute(stmt)
     if result.scalar_one_or_none():
         raise AppError(
-            status.HTTP_400_BAD_REQUEST, ErrorCodes.EMAIL_ALREADY_REGISTERED, "Email already registered"
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.EMAIL_ALREADY_REGISTERED,
+            "Email already registered",
         )
 
     user = User(
@@ -299,7 +301,9 @@ async def login(
                 )
             await db.commit()
         raise AppError(
-            status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_CREDENTIALS, "Invalid credentials"
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCodes.INVALID_CREDENTIALS,
+            "Invalid credentials",
         )
 
     if not user.email_verified:
@@ -335,7 +339,9 @@ async def refresh(
         exp = payload.get("exp")
     except Exception as exc:
         raise AppError(
-            status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCodes.INVALID_REFRESH_TOKEN,
+            "Invalid refresh token",
         ) from exc
 
     # Verify the user still exists (prevents deleted users from refreshing)
@@ -343,7 +349,9 @@ async def refresh(
     user = result.scalar_one_or_none()
     if not user:
         raise AppError(
-            status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "User no longer exists"
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCodes.INVALID_REFRESH_TOKEN,
+            "User no longer exists",
         )
 
     session: UserSession | None = None
@@ -352,7 +360,9 @@ async def refresh(
             session_uuid = UUID(str(session_id))
         except ValueError as exc:
             raise AppError(
-                status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
+                status.HTTP_401_UNAUTHORIZED,
+                ErrorCodes.INVALID_REFRESH_TOKEN,
+                "Invalid refresh token",
             ) from exc
 
         session_result = await db.execute(
@@ -363,11 +373,15 @@ async def refresh(
         session = session_result.scalar_one_or_none()
         if session is None or session.revoked_at is not None:
             raise AppError(
-                status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
+                status.HTTP_401_UNAUTHORIZED,
+                ErrorCodes.INVALID_REFRESH_TOKEN,
+                "Invalid refresh token",
             )
         if session.current_refresh_token_jti != jti:
             raise AppError(
-                status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
+                status.HTTP_401_UNAUTHORIZED,
+                ErrorCodes.INVALID_REFRESH_TOKEN,
+                "Invalid refresh token",
             )
 
     # If jti present, ensure it hasn't been revoked already
@@ -376,7 +390,9 @@ async def refresh(
         result = await db.execute(stmt)
         if result.scalar_one_or_none():
             raise AppError(
-                status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
+                status.HTTP_401_UNAUTHORIZED,
+                ErrorCodes.INVALID_REFRESH_TOKEN,
+                "Invalid refresh token",
             )
 
     expires_at = _coerce_expiry(exp)
@@ -387,7 +403,9 @@ async def refresh(
     except Exception as exc:
         await db.rollback()
         raise AppError(
-            status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCodes.INVALID_REFRESH_TOKEN,
+            "Invalid refresh token",
         ) from exc
 
     return response
@@ -407,7 +425,9 @@ async def revoke(
         exp = payload.get("exp")
     except Exception:
         raise AppError(
-            status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCodes.INVALID_REFRESH_TOKEN,
+            "Invalid refresh token",
         )
 
     expires_at = _coerce_expiry(exp)
@@ -1139,4 +1159,3 @@ async def export_user_data(
         media_type="application/json",
         headers={"Content-Disposition": 'attachment; filename="my-data.json"'},
     )
-

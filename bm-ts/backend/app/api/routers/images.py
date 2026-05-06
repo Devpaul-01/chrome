@@ -140,7 +140,9 @@ async def upload_image_file(
         raise
     except base64.binascii.Error:  # type: ignore[attr-defined]
         raise AppError(
-            status.HTTP_400_BAD_REQUEST, ErrorCodes.INVALID_IMAGE_DATA, "Invalid base64 data"
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_IMAGE_DATA,
+            "Invalid base64 data",
         )
     except Exception as e:
         logger.error("Failed to process image upload: %s", e)
@@ -214,5 +216,3 @@ async def delete_image(
     await db.delete(image)
     await db.commit()
     return DeleteResponse()
-
-

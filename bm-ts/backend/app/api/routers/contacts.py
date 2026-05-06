@@ -214,5 +214,3 @@ async def delete_contact(
     await db.delete(contact)
     await db.commit()
     return DeleteResponse()
-
-

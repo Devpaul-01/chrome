@@ -96,7 +96,9 @@ async def get_message_group(
 
     if not message_group:
         raise AppError(
-            status.HTTP_404_NOT_FOUND, ErrorCodes.GROUP_NOT_FOUND, "Message group not found"
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.GROUP_NOT_FOUND,
+            "Message group not found",
         )
 
     return message_group  # type: ignore[return-value]
@@ -119,7 +121,9 @@ async def update_message_group(
 
     if not message_group:
         raise AppError(
-            status.HTTP_404_NOT_FOUND, ErrorCodes.GROUP_NOT_FOUND, "Message group not found"
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.GROUP_NOT_FOUND,
+            "Message group not found",
         )
 
     if data.name is not None:
@@ -153,11 +157,11 @@ async def delete_message_group(
 
     if not message_group:
         raise AppError(
-            status.HTTP_404_NOT_FOUND, ErrorCodes.GROUP_NOT_FOUND, "Message group not found"
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.GROUP_NOT_FOUND,
+            "Message group not found",
         )
 
     await db.delete(message_group)
     await db.commit()
     return DeleteResponse()
-
-

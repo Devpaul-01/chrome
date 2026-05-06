@@ -24,14 +24,18 @@ from app.db.models import SendRateLimit, User
 from app.db.session import get_db
 from app.schemas.common import ErrorResponse
 
-router = APIRouter(prefix="/rate-limits", tags=["rate-limits"], responses={
-    400: {"model": ErrorResponse},
-    401: {"model": ErrorResponse},
-    403: {"model": ErrorResponse},
-    422: {"model": ErrorResponse},
-    429: {"model": ErrorResponse},
-    500: {"model": ErrorResponse},
-})
+router = APIRouter(
+    prefix="/rate-limits",
+    tags=["rate-limits"],
+    responses={
+        400: {"model": ErrorResponse},
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+        429: {"model": ErrorResponse},
+        500: {"model": ErrorResponse},
+    },
+)
 
 # ── Caps (must match extension-side constants) ──────────────────────────────
 HOURLY_CAP = 1
@@ -162,4 +166,3 @@ async def record_send(
         daily=BucketInfo(used=daily, cap=DAILY_CAP),
         weekly=BucketInfo(used=weekly, cap=WEEKLY_CAP),
     )
-

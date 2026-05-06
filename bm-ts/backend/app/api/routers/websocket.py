@@ -214,4 +214,3 @@ async def broadcast_dashboard_update(user_id: UUID, stats_data: dict):
 async def broadcast_notification(user_id: UUID, notification_data: dict):
     """Send a notification to user"""
     await manager.broadcast_to_user("notification", notification_data, user_id)
-

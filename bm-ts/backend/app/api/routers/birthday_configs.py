@@ -217,5 +217,3 @@ async def delete_birthday_config(
     await db.delete(config)
     await db.commit()
     return DeleteResponse()
-
-

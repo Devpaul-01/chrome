@@ -123,11 +123,15 @@ async def stripe_webhook(
         event = construct_event(payload, signature)
     except ValueError:
         raise AppError(
-            status.HTTP_400_BAD_REQUEST, ErrorCodes.INVALID_STRIPE_PAYLOAD, "Invalid payload"
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_STRIPE_PAYLOAD,
+            "Invalid payload",
         )
     except Exception:
         raise AppError(
-            status.HTTP_400_BAD_REQUEST, ErrorCodes.INVALID_STRIPE_SIGNATURE, "Invalid signature"
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_STRIPE_SIGNATURE,
+            "Invalid signature",
         )
 
     object_data = event.data.object
@@ -160,5 +164,3 @@ async def stripe_webhook(
     metadata = object_data.get("metadata") or {}
     await sync_subscription_record(db, user.id, object_data, dict(metadata))
     return {"received": True}
-
-

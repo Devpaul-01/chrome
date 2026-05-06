@@ -39,6 +39,7 @@ from app.schemas.common import FieldError
 # Error code constants
 # ---------------------------------------------------------------------------
 
+
 class ErrorCodes:
     # Authentication / session
     INVALID_CREDENTIALS = "invalid_credentials"
@@ -94,6 +95,7 @@ class ErrorCodes:
 # ---------------------------------------------------------------------------
 # AppError exception
 # ---------------------------------------------------------------------------
+
 
 class AppError(Exception):
     """Raise instead of HTTPException to produce a structured error response.

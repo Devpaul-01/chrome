@@ -123,7 +123,9 @@ async def get_message_template(
 
     if not template:
         raise AppError(
-            status.HTTP_404_NOT_FOUND, ErrorCodes.TEMPLATE_NOT_FOUND, "Message template not found"
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.TEMPLATE_NOT_FOUND,
+            "Message template not found",
         )
 
     return template  # type: ignore[return-value]
@@ -146,7 +148,9 @@ async def update_message_template(
 
     if not template:
         raise AppError(
-            status.HTTP_404_NOT_FOUND, ErrorCodes.TEMPLATE_NOT_FOUND, "Message template not found"
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.TEMPLATE_NOT_FOUND,
+            "Message template not found",
         )
 
     # Update fields — explicit allowlist to prevent mass assignment
@@ -221,12 +225,11 @@ async def delete_message_template(
 
     if not template:
         raise AppError(
-            status.HTTP_404_NOT_FOUND, ErrorCodes.TEMPLATE_NOT_FOUND, "Message template not found"
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.TEMPLATE_NOT_FOUND,
+            "Message template not found",
         )
 
     await db.delete(template)
     await db.commit()
     return DeleteResponse()
-
-
-

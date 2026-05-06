@@ -20,9 +20,13 @@ class RequestPasswordResetRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     token: str
-    new_password: Annotated[str, StringConstraints(min_length=8, max_length=128)] = Field(...)  # Enforce length bounds
+    new_password: Annotated[str, StringConstraints(min_length=8, max_length=128)] = (
+        Field(...)
+    )  # Enforce length bounds
 
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
-    new_password: Annotated[str, StringConstraints(min_length=8, max_length=128)] = Field(...)  # Enforce length bounds
+    new_password: Annotated[str, StringConstraints(min_length=8, max_length=128)] = (
+        Field(...)
+    )  # Enforce length bounds

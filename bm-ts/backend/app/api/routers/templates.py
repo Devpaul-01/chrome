@@ -100,7 +100,9 @@ async def update_template(
     segment = result.scalar_one_or_none()
     if not segment:
         raise AppError(
-            status.HTTP_404_NOT_FOUND, ErrorCodes.TEMPLATE_NOT_FOUND, "Template not found"
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.TEMPLATE_NOT_FOUND,
+            "Template not found",
         )
     if data.content is not None:
         segment.content = data.content
@@ -130,7 +132,9 @@ async def delete_template(
     segment = result.scalar_one_or_none()
     if not segment:
         raise AppError(
-            status.HTTP_404_NOT_FOUND, ErrorCodes.TEMPLATE_NOT_FOUND, "Template not found"
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.TEMPLATE_NOT_FOUND,
+            "Template not found",
         )
     segment.deleted_at = datetime.now(timezone.utc)
     await db.commit()
@@ -172,5 +176,3 @@ async def preview_message(
         )
 
     return {"message": message}
-
-

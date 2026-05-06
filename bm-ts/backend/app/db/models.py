@@ -117,7 +117,9 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     email: Mapped[str] = mapped_column(CITEXT(), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(Text(), nullable=False)
     stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(), nullable=True)
@@ -127,9 +129,15 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
-    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    failed_login_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
-    locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    failed_login_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    locked_until: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     metadata_payload: Mapped[Any] = mapped_column(
         "metadata", JSON(), nullable=False, server_default=text("'{}'::json")
     )
@@ -158,7 +166,9 @@ class User(Base):
     email_verification_tokens = relationship(
         "EmailVerificationToken", back_populates="user", cascade="all, delete-orphan"
     )
-    email_verified: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default=text("false"))
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=text("false")
+    )
 
 
 class SubscriptionRecord(Base):
@@ -173,7 +183,9 @@ class SubscriptionRecord(Base):
 
     __tablename__ = "subscription_records"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -183,17 +195,27 @@ class SubscriptionRecord(Base):
     price_id: Mapped[str] = mapped_column(String(), nullable=False)
     stripe_subscription_id: Mapped[str] = mapped_column(String(), nullable=False)
     stripe_customer_id: Mapped[str] = mapped_column(String(), nullable=False)
-    current_period_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    current_period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    current_period_start: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    current_period_end: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     cancel_at_period_end: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=text("false")
     )
-    canceled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    trial_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    canceled_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    trial_end: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
-    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -228,7 +250,9 @@ class TemplateSegment(Base):
 
     __tablename__ = "template_segments"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -243,7 +267,9 @@ class TemplateSegment(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     user = relationship("User", back_populates="template_segments")
 
@@ -269,14 +295,18 @@ class BirthdaySchedule(Base):
 
     __tablename__ = "birthday_schedules"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
     days_before: Mapped[int] = mapped_column(Integer, nullable=False)
-    enabled: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default=text("true"))
+    enabled: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=text("true")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -303,7 +333,9 @@ class MessageQueue(Base):
 
     __tablename__ = "message_queue"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -311,8 +343,12 @@ class MessageQueue(Base):
     )
     friend_name: Mapped[str] = mapped_column(Text(), nullable=False)
     friend_profile_url: Mapped[str] = mapped_column(Text(), nullable=False)
-    birthday_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    scheduled_send_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    birthday_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    scheduled_send_time: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     message_content: Mapped[str] = mapped_column(Text(), nullable=False)
     status: Mapped[str] = mapped_column(
         message_status_enum, nullable=False, server_default=text("'pending'")
@@ -342,7 +378,9 @@ class MessageHistory(Base):
 
     __tablename__ = "message_history"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -350,12 +388,16 @@ class MessageHistory(Base):
     )
     friend_name: Mapped[str] = mapped_column(Text(), nullable=False)
     friend_profile_url: Mapped[str] = mapped_column(Text(), nullable=False)
-    birthday_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    birthday_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     message_content: Mapped[str] = mapped_column(Text(), nullable=False)
     sent_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
-    status: Mapped[str] = mapped_column(message_status_enum, nullable=False, server_default=text("'sent'"))
+    status: Mapped[str] = mapped_column(
+        message_status_enum, nullable=False, server_default=text("'sent'")
+    )
     error_message: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
@@ -374,13 +416,17 @@ class UserSession(Base):
 
     __tablename__ = "user_sessions"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    current_refresh_token_jti: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    current_refresh_token_jti: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True
+    )
     ip_address: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     user_agent: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -389,8 +435,12 @@ class UserSession(Base):
     last_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     revoked_reason: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
     user = relationship("User", back_populates="sessions")
@@ -413,15 +463,21 @@ class PasswordResetToken(Base):
 
     __tablename__ = "password_reset_tokens"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
     token: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -443,14 +499,20 @@ class RevokedToken(Base):
 
     __tablename__ = "revoked_tokens"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    refresh_token_jti: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    refresh_token_jti: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     revoked_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -470,15 +532,21 @@ class EmailVerificationToken(Base):
 
     __tablename__ = "email_verification_tokens"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
     token: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -508,7 +576,9 @@ class Contact(Base):
 
     __tablename__ = "contacts"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -523,7 +593,9 @@ class Contact(Base):
     gender: Mapped[Optional[str]] = mapped_column(gender_enum, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     group_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("message_groups.id", ondelete="SET NULL"), nullable=True
+        PG_UUID(as_uuid=True),
+        ForeignKey("message_groups.id", ondelete="SET NULL"),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
@@ -559,14 +631,18 @@ class SendRateLimit(Base):
 
     __tablename__ = "send_rate_limits"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
     )
-    timestamps: Mapped[Any] = mapped_column(JSON(), nullable=False, server_default=text("'[]'::json"))
+    timestamps: Mapped[Any] = mapped_column(
+        JSON(), nullable=False, server_default=text("'[]'::json")
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -584,14 +660,18 @@ class MessageGroup(Base):
 
     __tablename__ = "message_groups"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
     name: Mapped[str] = mapped_column(Text(), nullable=False)
-    color: Mapped[str] = mapped_column(Text(), nullable=False, server_default=text("'#6b7280'"))
+    color: Mapped[str] = mapped_column(
+        Text(), nullable=False, server_default=text("'#6b7280'")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -616,7 +696,9 @@ class Post(Base):
 
     __tablename__ = "posts"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -625,14 +707,24 @@ class Post(Base):
     content: Mapped[str] = mapped_column(Text(), nullable=False)
     image_url: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     gender: Mapped[str] = mapped_column(gender_enum, nullable=False)
-    is_default: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default=text("false"))
+    is_default: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=text("false")
+    )
     label: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     group_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("message_groups.id", ondelete="SET NULL"), nullable=True
+        PG_UUID(as_uuid=True),
+        ForeignKey("message_groups.id", ondelete="SET NULL"),
+        nullable=True,
     )
-    font_family: Mapped[Optional[str]] = mapped_column(Text(), server_default=text("'Arial'"), nullable=True)
-    font_size: Mapped[Optional[int]] = mapped_column(Integer, server_default=text("48"), nullable=True)
-    font_color: Mapped[Optional[str]] = mapped_column(Text(), server_default=text("'#ffffff'"), nullable=True)
+    font_family: Mapped[Optional[str]] = mapped_column(
+        Text(), server_default=text("'Arial'"), nullable=True
+    )
+    font_size: Mapped[Optional[int]] = mapped_column(
+        Integer, server_default=text("48"), nullable=True
+    )
+    font_color: Mapped[Optional[str]] = mapped_column(
+        Text(), server_default=text("'#ffffff'"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -662,7 +754,9 @@ class UserImage(Base):
 
     __tablename__ = "user_images"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -671,7 +765,9 @@ class UserImage(Base):
     url: Mapped[str] = mapped_column(Text(), nullable=False)
     filename: Mapped[str] = mapped_column(Text(), nullable=False)
     size: Mapped[int] = mapped_column(Integer, nullable=False)
-    source: Mapped[str] = mapped_column(String(32), nullable=False, server_default="library")
+    source: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="library"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -695,7 +791,9 @@ class BirthdayConfig(Base):
 
     __tablename__ = "birthday_configs"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -704,12 +802,22 @@ class BirthdayConfig(Base):
     mode: Mapped[str] = mapped_column(birthday_mode_enum, nullable=False)
     days_offset: Mapped[int] = mapped_column(Integer, nullable=False)
     message_group_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("message_groups.id", ondelete="CASCADE"), nullable=True
+        PG_UUID(as_uuid=True),
+        ForeignKey("message_groups.id", ondelete="CASCADE"),
+        nullable=True,
     )
-    post_id: Mapped[Optional[uuid.UUID]] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("posts.id", ondelete="SET NULL"), nullable=True)
+    post_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("posts.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     gender_filter: Mapped[str] = mapped_column(gender_enum, nullable=False)
-    archive_enabled: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default=text("false"))
-    enabled: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default=text("true"))
+    archive_enabled: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=text("false")
+    )
+    enabled: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=text("true")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -747,7 +855,9 @@ class SMTPConfig(Base):
 
     __tablename__ = "smtp_configs"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -760,7 +870,9 @@ class SMTPConfig(Base):
     password: Mapped[str] = mapped_column(
         Text(), nullable=False
     )  # Fernet-encrypted at rest (see core/encryption.py)
-    use_tls: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default=text("true"))
+    use_tls: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=text("true")
+    )
     from_email: Mapped[str] = mapped_column(Text(), nullable=False)
     from_name: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -780,7 +892,9 @@ class MessageTemplate(Base):
 
     __tablename__ = "message_templates"
 
-    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -790,11 +904,19 @@ class MessageTemplate(Base):
     greeting: Mapped[str] = mapped_column(Text(), nullable=False)
     sentiment: Mapped[str] = mapped_column(Text(), nullable=False)  # Main body/message
     closing: Mapped[str] = mapped_column(Text(), nullable=False)
-    image_url: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)  # Optional image URL
-    days_in_advance: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
-    gender: Mapped[str] = mapped_column(gender_enum, nullable=False, server_default=text("'ALL'"))
+    image_url: Mapped[Optional[str]] = mapped_column(
+        Text(), nullable=True
+    )  # Optional image URL
+    days_in_advance: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    gender: Mapped[str] = mapped_column(
+        gender_enum, nullable=False, server_default=text("'ALL'")
+    )
     group_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("message_groups.id", ondelete="SET NULL"), nullable=True
+        PG_UUID(as_uuid=True),
+        ForeignKey("message_groups.id", ondelete="SET NULL"),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
