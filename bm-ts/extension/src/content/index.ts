@@ -607,7 +607,10 @@ function showProgressBar(current: number, total: number) {
 function showInlineConfirm(message: string): Promise<boolean> {
   return new Promise((resolve) => {
     // Remove any existing confirm bar
-    if (!overlay) return;
+    if (!overlay) {
+      resolve(false);
+      return;
+    }
     overlay.querySelector('#bm-confirm')?.remove();
 
     const bar = document.createElement('div');
@@ -641,7 +644,10 @@ function showInlineConfirm(message: string): Promise<boolean> {
     bar.appendChild(btnRow);
 
     // Insert before the send button
-    if (!overlay) return;
+    if (!overlay) {
+      resolve(false);
+      return;
+    }
     const sendBtn = overlay.querySelector('#bm-send');
     sendBtn?.parentNode?.insertBefore(bar, sendBtn);
   });
@@ -1914,17 +1920,6 @@ if (window.location.href.includes('/birthdays') || window.location.href.includes
   }, 3000);
 }
 
-// Run selector health-check on birthday pages to detect DOM changes early.
-if (window.location.href.includes('/birthdays') || window.location.href.includes('/messages')) {
-  // Delay slightly to let Facebook finish rendering
-  setTimeout(() => {
-    const report = runSelectorHealthCheck();
-    if (report.failed.length > 0) {
-      logger.warn('[BM] Selector health-check failures:', report.failed);
-    }
-  }, 3000);
-}
-
 // ============================================================
 // HUMAN-IN-THE-LOOP CONFIRMATION UI
 // ============================================================
@@ -2747,6 +2742,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     void refreshFriendList();
   }
   if (message?.type === 'automation.runFull') {
+    // Respond immediately so the background's awaited sendMessage resolves
+    // before the (potentially long-running) automation loop begins.
+    sendResponse({ success: true });
     void runFullAutomation(message.payload as AutomationRunPayload);
   }
   if (message?.type === 'contacts.scrapeFromPage') {

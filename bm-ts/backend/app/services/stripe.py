@@ -224,9 +224,7 @@ async def sync_subscription_record(
         "cancel_at_period_end": data.get("cancel_at_period_end", False),
         "canceled_at": _timestamp(data.get("canceled_at")),
         "trial_end": _timestamp(data.get("trial_end")),
-        "started_at": _timestamp(data.get("start_date"))
-        if data.get("start_date")
-        else None,
+        "started_at": _timestamp(data.get("start_date")) or datetime.now(timezone.utc),
         "ended_at": _timestamp(data.get("ended_at")),
         "metadata_payload": metadata,
     }

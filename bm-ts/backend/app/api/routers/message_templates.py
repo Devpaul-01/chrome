@@ -85,7 +85,6 @@ async def create_message_template(
     await db.commit()
     await db.refresh(template)
     return template  # type: ignore[return-value]
-    return template  # type: ignore[return-value]
 
 
 @router.get("/message-templates", response_model=List[MessageTemplateOut])
@@ -129,7 +128,6 @@ async def get_message_template(
             "Message template not found",
         )
 
-    return template  # type: ignore[return-value]
     return template  # type: ignore[return-value]
 
 
@@ -204,7 +202,6 @@ async def update_message_template(
 
     await db.commit()
     await db.refresh(template)
-    return template  # type: ignore[return-value]
     return template  # type: ignore[return-value]
 
 

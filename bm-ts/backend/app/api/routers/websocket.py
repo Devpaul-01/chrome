@@ -164,7 +164,7 @@ async def websocket_endpoint(
             {
                 "type": "connected",
                 "data": {"message": "WebSocket connected successfully"},
-                "timestamp": str(user.id),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
 
