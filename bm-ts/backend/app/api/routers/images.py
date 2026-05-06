@@ -7,6 +7,8 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,11 +16,22 @@ from app.api.deps import get_current_user
 from app.db.models import User, UserImage
 from app.db.session import get_db
 from app.schemas.user_image import UserImageOut, UserImageUploadFile, UserImageUploadUrl
-from app.schemas.common import DeleteResponse
+from app.schemas.common import DeleteResponse, ErrorResponse
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+_ERROR_RESPONSES = {
+    400: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+    413: {"model": ErrorResponse},
+    415: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(responses=_ERROR_RESPONSES)
 
 _ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 _MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
@@ -76,9 +89,10 @@ async def upload_image_file(
             if prefix.startswith("data:"):
                 mime_type = prefix[5:].split(";")[0].strip().lower()
                 if mime_type not in _ALLOWED_MIME_TYPES:
-                    raise HTTPException(
-                        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                        detail=f"Unsupported image type '{mime_type}'. Allowed: {', '.join(sorted(_ALLOWED_MIME_TYPES))}",
+                    raise AppError(
+                        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                        ErrorCodes.UNSUPPORTED_MEDIA_TYPE,
+                        f"Unsupported image type '{mime_type}'. Allowed: {', '.join(sorted(_ALLOWED_MIME_TYPES))}",
                     )
         else:
             base64_data = data.data
@@ -88,16 +102,18 @@ async def upload_image_file(
 
         # Enforce maximum file size
         if len(image_bytes) > _MAX_IMAGE_BYTES:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"Image too large: {len(image_bytes)} bytes. Maximum allowed is {_MAX_IMAGE_BYTES} bytes (10 MB).",
+            raise AppError(
+                status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                ErrorCodes.FILE_TOO_LARGE,
+                f"Image too large: {len(image_bytes)} bytes. Maximum allowed is {_MAX_IMAGE_BYTES} bytes (10 MB).",
             )
 
         # Verify size matches
         if len(image_bytes) != data.size:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Size mismatch: declared {data.size} bytes, actual {len(image_bytes)} bytes",
+            raise AppError(
+                status.HTTP_400_BAD_REQUEST,
+                ErrorCodes.IMAGE_SIZE_MISMATCH,
+                f"Size mismatch: declared {data.size} bytes, actual {len(image_bytes)} bytes",
             )
 
         # TODO: Upload to cloud storage (S3, GCS) instead of storing base64 in DB
@@ -120,17 +136,18 @@ async def upload_image_file(
         await db.refresh(user_image)
         return user_image
 
-    except HTTPException:
+    except AppError:
         raise
     except base64.binascii.Error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid base64 data"
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST, ErrorCodes.INVALID_IMAGE_DATA, "Invalid base64 data"
         )
     except Exception as e:
         logger.error("Failed to process image upload: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to process image. Please ensure the file is a valid image and try again.",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_IMAGE_DATA,
+            "Failed to process image. Please ensure the file is a valid image and try again.",
         )
 
 
@@ -165,8 +182,8 @@ async def get_image(
     image = result.scalar_one_or_none()
 
     if not image:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Image not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.IMAGE_NOT_FOUND, "Image not found"
         )
 
     return image
@@ -189,8 +206,8 @@ async def delete_image(
     image = result.scalar_one_or_none()
 
     if not image:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Image not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.IMAGE_NOT_FOUND, "Image not found"
         )
 
     # In production, you would also delete from cloud storage here

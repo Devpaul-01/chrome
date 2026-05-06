@@ -32,6 +32,8 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+
+from app.core.errors import AppError, ErrorCodes
 from fastapi.responses import HTMLResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -97,9 +99,21 @@ from app.services.email_verification import (
 from app.core.rate_limiter import limiter
 from slowapi.util import get_remote_address
 
+from app.schemas.common import ErrorResponse
+
+_ERROR_RESPONSES = {
+    400: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    429: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(responses=_ERROR_RESPONSES)
 
 
 def _coerce_expiry(expiry_value: Any) -> datetime:
@@ -214,8 +228,8 @@ async def register(
     stmt = select(User).where(User.email == data.email)
     result = await db.execute(stmt)
     if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST, ErrorCodes.EMAIL_ALREADY_REGISTERED, "Email already registered"
         )
 
     user = User(
@@ -261,9 +275,10 @@ async def login(
     user = result.scalar_one_or_none()
 
     if user and user.locked_until and user.locked_until > datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account temporarily locked due to too many failed login attempts. Try again later.",
+        raise AppError(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCodes.ACCOUNT_LOCKED,
+            "Account temporarily locked due to too many failed login attempts. Try again later.",
         )
 
     if not user or not verify_password(
@@ -283,14 +298,15 @@ async def login(
                     minutes=_LOCKOUT_MINUTES
                 )
             await db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        raise AppError(
+            status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_CREDENTIALS, "Invalid credentials"
         )
 
     if not user.email_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Please verify your email before logging in. Check your inbox for the verification link.",
+        raise AppError(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCodes.EMAIL_NOT_VERIFIED,
+            "Please verify your email before logging in. Check your inbox for the verification link.",
         )
 
     # Successful login — reset lockout state
@@ -318,16 +334,16 @@ async def refresh(
         session_id = payload.get("sid")
         exp = payload.get("exp")
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+        raise AppError(
+            status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
         ) from exc
 
     # Verify the user still exists (prevents deleted users from refreshing)
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists"
+        raise AppError(
+            status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "User no longer exists"
         )
 
     session: UserSession | None = None
@@ -335,8 +351,8 @@ async def refresh(
         try:
             session_uuid = UUID(str(session_id))
         except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            raise AppError(
+                status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
             ) from exc
 
         session_result = await db.execute(
@@ -346,12 +362,12 @@ async def refresh(
         )
         session = session_result.scalar_one_or_none()
         if session is None or session.revoked_at is not None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            raise AppError(
+                status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
             )
         if session.current_refresh_token_jti != jti:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            raise AppError(
+                status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
             )
 
     # If jti present, ensure it hasn't been revoked already
@@ -359,8 +375,8 @@ async def refresh(
         stmt = select(RevokedToken).where(RevokedToken.refresh_token_jti == jti)
         result = await db.execute(stmt)
         if result.scalar_one_or_none():
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            raise AppError(
+                status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
             )
 
     expires_at = _coerce_expiry(exp)
@@ -370,8 +386,8 @@ async def refresh(
         await db.commit()
     except Exception as exc:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+        raise AppError(
+            status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
         ) from exc
 
     return response
@@ -390,8 +406,8 @@ async def revoke(
         session_id = payload.get("sid")
         exp = payload.get("exp")
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+        raise AppError(
+            status.HTTP_401_UNAUTHORIZED, ErrorCodes.INVALID_REFRESH_TOKEN, "Invalid refresh token"
         )
 
     expires_at = _coerce_expiry(exp)
@@ -464,8 +480,8 @@ async def revoke_session(
     )
     session = result.scalar_one_or_none()
     if session is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.SESSION_NOT_FOUND, "Session not found"
         )
 
     await _revoke_session_record(session, db, reason="user_revoke")
@@ -544,9 +560,10 @@ async def verify_email(
     """Consume an email verification token and mark the user's email as verified."""
     user = await verify_verification_token(data.token, db)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired verification token",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_VERIFICATION_TOKEN,
+            "Invalid or expired verification token",
         )
 
     user.email_verified = True
@@ -692,9 +709,10 @@ async def reset_password(
     """Reset password using a token"""
     user = await verify_reset_token(data.token, db)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset token",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_RESET_TOKEN,
+            "Invalid or expired reset token",
         )
 
     # Update password
@@ -893,9 +911,10 @@ async def change_password(
     """Change password for authenticated user"""
     # Verify current password
     if not verify_password(data.current_password, current_user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_PASSWORD,
+            "Current password is incorrect",
         )
 
     # Update password

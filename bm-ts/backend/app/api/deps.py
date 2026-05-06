@@ -16,11 +16,12 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.core.errors import AppError, ErrorCodes
 from app.core.jwt import JWTError, TokenType, decode_token, ensure_token_type
 from app.db.models import User, UserSession
 from app.db.session import get_db
@@ -35,10 +36,11 @@ def _as_utc(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def _raise_credentials_error() -> HTTPException:
-    """Return a 401 HTTPException with a WWW-Authenticate header — used throughout the auth flow."""
-    return HTTPException(
+def _raise_credentials_error() -> AppError:
+    """Return a 401 AppError with a WWW-Authenticate header — used throughout the auth flow."""
+    raise AppError(
         status_code=status.HTTP_401_UNAUTHORIZED,
+        code=ErrorCodes.INVALID_CREDENTIALS,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
@@ -105,8 +107,9 @@ async def get_current_user(
 
     # Enforce email verification and account lockout
     if hasattr(user, "email_verified") and not user.email_verified:
-        raise HTTPException(
+        raise AppError(
             status_code=status.HTTP_403_FORBIDDEN,
+            code=ErrorCodes.EMAIL_NOT_VERIFIED,
             detail="Email not verified",
         )
     if hasattr(user, "locked_until") and user.locked_until is not None:
@@ -114,8 +117,9 @@ async def get_current_user(
         if locked.tzinfo is None:
             locked = locked.replace(tzinfo=timezone.utc)
         if locked > datetime.now(timezone.utc):
-            raise HTTPException(
+            raise AppError(
                 status_code=status.HTTP_403_FORBIDDEN,
+                code=ErrorCodes.ACCOUNT_LOCKED,
                 detail="Account is temporarily locked",
             )
 
@@ -139,8 +143,9 @@ async def get_current_user_allow_unverified(
         if locked.tzinfo is None:
             locked = locked.replace(tzinfo=timezone.utc)
         if locked > datetime.now(timezone.utc):
-            raise HTTPException(
+            raise AppError(
                 status_code=status.HTTP_403_FORBIDDEN,
+                code=ErrorCodes.ACCOUNT_LOCKED,
                 detail="Account is temporarily locked",
             )
 

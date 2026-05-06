@@ -5,6 +5,8 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,9 +14,18 @@ from app.api.deps import get_current_user
 from app.db.models import Contact, User
 from app.db.session import get_db
 from app.schemas.contact import ContactCreate, ContactOut, ContactUpdate
-from app.schemas.common import DeleteResponse
+from app.schemas.common import DeleteResponse, ErrorResponse
 
-router = APIRouter(prefix="/contacts", tags=["contacts"])
+_ERROR_RESPONSES = {
+    400: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(prefix="/contacts", tags=["contacts"], responses=_ERROR_RESPONSES)
 
 
 @router.post("/", response_model=ContactOut, status_code=status.HTTP_201_CREATED)
@@ -131,8 +142,8 @@ async def get_contact(
     contact = result.scalar_one_or_none()
 
     if not contact:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.CONTACT_NOT_FOUND, "Contact not found"
         )
 
     return contact
@@ -154,8 +165,8 @@ async def update_contact(
     contact = result.scalar_one_or_none()
 
     if not contact:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.CONTACT_NOT_FOUND, "Contact not found"
         )
 
     # Update fields if provided
@@ -196,8 +207,8 @@ async def delete_contact(
     contact = result.scalar_one_or_none()
 
     if not contact:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.CONTACT_NOT_FOUND, "Contact not found"
         )
 
     await db.delete(contact)

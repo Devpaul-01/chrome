@@ -1,12 +1,15 @@
 import logging
+from datetime import datetime, timezone
 
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,6 +37,7 @@ from app.core.rate_limiter import init_rate_limiter, limiter
 from app.core.request_logging import RequestLoggingMiddleware
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.api.deps import get_current_user
+from app.core.errors import AppError, ErrorCodes
 from app.db.models import User
 from app.db.session import get_db
 
@@ -106,19 +110,116 @@ app.add_middleware(RequestLoggingMiddleware)
 logger = logging.getLogger(__name__)
 
 
+def _cors_headers(request: Request) -> dict[str, str]:
+    """Return CORS headers for the request origin if it is allowed."""
+    origin = request.headers.get("origin", "")
+    if origin in settings.cors_origins:
+        return {
+            "access-control-allow-origin": origin,
+            "access-control-allow-credentials": "true",
+        }
+    return {}
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+# Status-code → default error code mapping used by the HTTPException handler.
+_HTTP_STATUS_TO_CODE: dict[int, str] = {
+    400: ErrorCodes.BAD_REQUEST,
+    401: ErrorCodes.UNAUTHORIZED,
+    403: ErrorCodes.FORBIDDEN,
+    404: ErrorCodes.NOT_FOUND,
+    409: ErrorCodes.CONFLICT,
+    413: ErrorCodes.FILE_TOO_LARGE,
+    415: ErrorCodes.UNSUPPORTED_MEDIA_TYPE,
+    422: ErrorCodes.VALIDATION_ERROR,
+    429: ErrorCodes.RATE_LIMIT_EXCEEDED,
+    500: ErrorCodes.INTERNAL_SERVER_ERROR,
+    501: ErrorCodes.NOT_IMPLEMENTED,
+}
+
+
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    """Convert AppError into a structured JSON error response."""
+    content: dict = {
+        "detail": exc.detail,
+        "code": exc.code,
+        "timestamp": _now_iso(),
+        "errors": (
+            [e.model_dump() for e in exc.errors] if exc.errors else None
+        ),
+    }
+    headers = dict(exc.headers) if exc.headers else {}
+    headers.update(_cors_headers(request))
+    return JSONResponse(status_code=exc.status_code, content=content, headers=headers or None)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Unify Pydantic 422 errors into the standard error shape."""
+    field_errors = []
+    for error in exc.errors():
+        loc = error.get("loc", ())
+        # Skip the first element ("body", "query", etc.) — use only the field name(s)
+        field_parts = [str(p) for p in loc[1:]] if len(loc) > 1 else [str(loc[0])] if loc else ["__root__"]
+        field_errors.append({"field": ".".join(field_parts), "message": error.get("msg", "")})
+
+    content = {
+        "detail": "Validation error",
+        "code": ErrorCodes.VALIDATION_ERROR,
+        "timestamp": _now_iso(),
+        "errors": field_errors,
+    }
+    return JSONResponse(
+        status_code=422,
+        content=content,
+        headers=_cors_headers(request) or None,
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(
+    request: Request, exc: StarletteHTTPException
+) -> JSONResponse:
+    """Normalize framework-raised HTTPExceptions (slowapi, OAuth2, etc.)."""
+    code = _HTTP_STATUS_TO_CODE.get(exc.status_code, ErrorCodes.BAD_REQUEST)
+    detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+    content = {
+        "detail": detail,
+        "code": code,
+        "timestamp": _now_iso(),
+        "errors": None,
+    }
+    headers: dict[str, str] = {}
+    if hasattr(exc, "headers") and exc.headers:
+        headers.update(exc.headers)
+    headers.update(_cors_headers(request))
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=content,
+        headers=headers or None,
+    )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Catch-all so that 500 responses still carry CORS headers."""
+    """Catch-all so that 500 responses still carry CORS headers and structured shape."""
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
-    origin = request.headers.get("origin", "")
-    headers: dict[str, str] = {}
-    if origin in settings.cors_origins:
-        headers["access-control-allow-origin"] = origin
-        headers["access-control-allow-credentials"] = "true"
+    content = {
+        "detail": "Internal server error",
+        "code": ErrorCodes.INTERNAL_SERVER_ERROR,
+        "timestamp": _now_iso(),
+        "errors": None,
+    }
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"},
-        headers=headers,
+        content=content,
+        headers=_cors_headers(request) or None,
     )
 
 

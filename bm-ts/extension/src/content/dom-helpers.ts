@@ -181,25 +181,45 @@ export function createStableMutationObserver(
     debounceMs?: number;
     onError?: (err: Error) => void;
     reconnectOnDetach?: boolean;
+    /** CSS selector used to find a replacement target when the current one is
+     *  detached from the DOM.  Defaults to '[role="log"], [role="main"]'. */
+    reconnectSelector?: string;
+    /** Maximum number of times to attempt reconnection before giving up.
+     *  Defaults to 3.  When the limit is reached `onError` is called and the
+     *  detach-check interval is cleared. */
+    maxReconnects?: number;
   } = {},
 ): {
   observe: (target: HTMLElement, config: MutationObserverInit) => void;
   disconnect: () => void;
 } {
-  const { debounceMs = 200, onError, reconnectOnDetach = false } = options;
+  const {
+    debounceMs = 200,
+    onError,
+    reconnectOnDetach = false,
+    reconnectSelector = '[role="log"], [role="main"]',
+    maxReconnects = 3,
+  } = options;
   let observer: MutationObserver | null = null;
   let currentTarget: HTMLElement | null = null;
   let currentConfig: MutationObserverInit | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
   let detachCheckInterval: ReturnType<typeof setInterval> | undefined;
   let disconnected = false;
+  let reconnectCount = 0;
+  // Accumulate mutations across rapid-fire calls so the debounced callback
+  // always receives the full set rather than only the latest batch.
+  let pendingMutations: MutationRecord[] = [];
 
   const wrappedCallback = (mutations: MutationRecord[]) => {
     if (disconnected) return;
+    pendingMutations.push(...mutations);
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
+      const toProcess = pendingMutations.splice(0);
+      if (toProcess.length === 0) return;
       try {
-        const result = callback(mutations);
+        const result = callback(toProcess);
         // Handle async callbacks
         if (result instanceof Promise) {
           result.catch((err) => {
@@ -232,11 +252,27 @@ export function createStableMutationObserver(
           if (currentTarget && !document.contains(currentTarget)) {
             logger.warn('[BM Observer] Target detached from DOM');
             observer?.disconnect();
+
+            if (reconnectCount >= maxReconnects) {
+              logger.error(
+                `[BM Observer] Max reconnects (${maxReconnects}) reached — giving up`,
+              );
+              const limitError = new Error(
+                `MutationObserver target detached ${maxReconnects} times`,
+              );
+              onError?.(limitError);
+              clearInterval(detachCheckInterval);
+              return;
+            }
+
             // Try to find a replacement target
             if (currentConfig) {
-              const newTarget = document.querySelector<HTMLElement>('[role="log"], [role="main"]');
+              const newTarget = document.querySelector<HTMLElement>(reconnectSelector);
               if (newTarget) {
-                logger.log('[BM Observer] Reconnecting to new target');
+                reconnectCount++;
+                logger.log(
+                  `[BM Observer] Reconnecting to new target (attempt ${reconnectCount}/${maxReconnects})`,
+                );
                 currentTarget = newTarget;
                 observer?.observe(newTarget, currentConfig);
               }

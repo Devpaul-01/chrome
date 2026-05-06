@@ -19,6 +19,8 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,9 +34,18 @@ from app.schemas.birthday_config import (
     BirthdayConfigUpdate,
     BirthdayModeEnum,
 )
-from app.schemas.common import DeleteResponse
+from app.schemas.common import DeleteResponse, ErrorResponse
 
-router = APIRouter()
+_ERROR_RESPONSES = {
+    400: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(responses=_ERROR_RESPONSES)
 
 
 @router.post(
@@ -99,9 +110,10 @@ async def get_birthday_config(
     config = result.scalar_one_or_none()
 
     if not config:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Birthday configuration not found",
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.BIRTHDAY_CONFIG_NOT_FOUND,
+            "Birthday configuration not found",
         )
 
     return config
@@ -123,9 +135,10 @@ async def update_birthday_config(
     config = result.scalar_one_or_none()
 
     if not config:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Birthday configuration not found",
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.BIRTHDAY_CONFIG_NOT_FOUND,
+            "Birthday configuration not found",
         )
 
     if data.days_offset is not None:
@@ -163,9 +176,10 @@ async def toggle_birthday_config(
     config = result.scalar_one_or_none()
 
     if not config:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Birthday configuration not found",
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.BIRTHDAY_CONFIG_NOT_FOUND,
+            "Birthday configuration not found",
         )
 
     config.enabled = data.enabled
@@ -194,9 +208,10 @@ async def delete_birthday_config(
     config = result.scalar_one_or_none()
 
     if not config:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Birthday configuration not found",
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.BIRTHDAY_CONFIG_NOT_FOUND,
+            "Birthday configuration not found",
         )
 
     await db.delete(config)

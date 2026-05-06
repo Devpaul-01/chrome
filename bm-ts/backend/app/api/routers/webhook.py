@@ -28,6 +28,8 @@ from datetime import datetime, timezone
 from typing import Mapping
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+
+from app.core.errors import AppError, ErrorCodes
 from http import HTTPStatus
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,8 +37,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import SubscriptionRecord, User
 from app.db.session import get_db
 from app.services.stripe import construct_event, sync_subscription_record
+from app.schemas.common import ErrorResponse
 
-router = APIRouter()
+_ERROR_RESPONSES = {
+    400: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(responses=_ERROR_RESPONSES)
 
 _SUBSCRIPTION_EVENTS = {
     "customer.subscription.created",
@@ -105,19 +114,21 @@ async def stripe_webhook(
     payload = await request.body()
     signature = request.headers.get("stripe-signature")
     if not signature:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Missing Stripe signature"
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.MISSING_STRIPE_SIGNATURE,
+            "Missing Stripe signature",
         )
 
     try:
         event = construct_event(payload, signature)
     except ValueError:
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST, detail="Invalid payload"
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST, ErrorCodes.INVALID_STRIPE_PAYLOAD, "Invalid payload"
         )
     except Exception:
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST, detail="Invalid signature"
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST, ErrorCodes.INVALID_STRIPE_SIGNATURE, "Invalid signature"
         )
 
     object_data = event.data.object

@@ -21,6 +21,8 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.core.errors import AppError, ErrorCodes
+
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.db.models import SubscriptionRecord, User
@@ -42,8 +44,18 @@ from app.services.stripe import (
     get_price_id,
     reactivate_subscription,
 )
+from app.schemas.common import ErrorResponse
 
-router = APIRouter()
+_ERROR_RESPONSES = {
+    400: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(responses=_ERROR_RESPONSES)
 
 
 def _infer_plan(price_id: str | None) -> str | None:
@@ -135,8 +147,8 @@ async def _get_active_record(user: User, db: AsyncSession) -> SubscriptionRecord
     result = await db.execute(stmt)
     record = result.scalar_one_or_none()
     if not record:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No active subscription"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.SUBSCRIPTION_NOT_FOUND, "No active subscription"
         )
     return record
 
@@ -172,9 +184,10 @@ async def reactivate(
     """Undo a pending cancellation so the subscription renews normally."""
     record = await _get_active_record(current_user, db)
     if not record.cancel_at_period_end:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Subscription is not pending cancellation",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.SUBSCRIPTION_NOT_PENDING_CANCELLATION,
+            "Subscription is not pending cancellation",
         )
     await reactivate_subscription(record.stripe_subscription_id)
     record.cancel_at_period_end = False
@@ -202,9 +215,10 @@ async def change_plan(
 
     current_plan = _infer_plan(record.price_id)
     if current_plan == data.new_plan:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Already on the {data.new_plan} plan",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.ALREADY_ON_PLAN,
+            f"Already on the {data.new_plan} plan",
         )
 
     new_price_id = get_price_id(data.new_plan)
@@ -229,9 +243,10 @@ async def billing_portal(
 ) -> BillingPortalResponse:
     """Create a Stripe Customer Portal session for managing payment methods."""
     if not current_user.stripe_customer_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No billing account found. Please set up a subscription first.",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.NO_BILLING_ACCOUNT,
+            "No billing account found. Please set up a subscription first.",
         )
     portal_url = await create_billing_portal_session(
         stripe_customer_id=current_user.stripe_customer_id,

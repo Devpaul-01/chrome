@@ -9,8 +9,16 @@ from app.api.deps import get_current_user
 from app.db.models import User, MessageHistory, MessageQueue, Contact
 from app.db.session import get_db
 from app.schemas.dashboard import DashboardStats
+from app.schemas.common import ErrorResponse
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+_ERROR_RESPONSES = {
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(prefix="/dashboard", tags=["dashboard"], responses=_ERROR_RESPONSES)
 
 # ---------------------------------------------------------------------------
 # Per-user TTL cache (30 s) — avoids redundant DB round-trips when the
