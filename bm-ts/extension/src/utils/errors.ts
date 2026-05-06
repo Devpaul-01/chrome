@@ -91,7 +91,7 @@ export function parseApiError(error: unknown): AppError {
       case 403:
         return new AuthenticationError(message);
       case 404:
-        return new AppError('Resource not found', 'NOT_FOUND', 404);
+        return new AppError(message || 'Resource not found', 'NOT_FOUND', 404);
       case 409:
         return new AppError(message || 'Conflict occurred', 'CONFLICT', 409);
       case 422:

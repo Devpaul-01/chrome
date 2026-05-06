@@ -62,11 +62,14 @@ export async function clearTokens(): Promise<void> {
  * Returns the configured backend base URL.
  * Falls back to `http://localhost:8000` when the user has not set a custom URL,
  * which covers local development without any extra configuration.
+ * Trailing slashes are stripped so that path concatenation in client.ts always
+ * produces a single `/` (e.g. avoids `//auth/login` if the stored value has a trailing slash).
  */
 export async function getBackendUrl(): Promise<string> {
   return new Promise((resolve) => {
     chrome.storage.local.get([STORAGE_KEYS.backendUrl], (data) => {
-      resolve(data[STORAGE_KEYS.backendUrl] || 'http://localhost:8000');
+      const raw: string = data[STORAGE_KEYS.backendUrl] || 'http://localhost:8000';
+      resolve(raw.replace(/\/+$/, ''));
     });
   });
 }
@@ -107,15 +110,17 @@ function isValidBackendUrl(url: string): boolean {
 }
 
 /** Persists a custom backend URL so the extension points to the right server instance.
- *  Validates the URL scheme first — only HTTPS or HTTP to localhost, 127.0.0.1, or *.sslip.io are accepted for development. */
+ *  Validates the URL scheme first — only HTTPS or HTTP to localhost, 127.0.0.1, or *.sslip.io are accepted for development.
+ *  Trailing slashes are stripped so that path concatenation in client.ts always produces a single `/`. */
 export async function setBackendUrl(url: string): Promise<void> {
-  if (!isValidBackendUrl(url)) {
+  const normalized = url.replace(/\/+$/, '');
+  if (!isValidBackendUrl(normalized)) {
     throw new Error(
       'Invalid backend URL: only https:// URLs (or http://localhost, http://127.0.0.1, and http://*.sslip.io for development) are allowed',
     );
   }
   return new Promise((resolve) => {
-    chrome.storage.local.set({ [STORAGE_KEYS.backendUrl]: url }, () => resolve());
+    chrome.storage.local.set({ [STORAGE_KEYS.backendUrl]: normalized }, () => resolve());
   });
 }
 
