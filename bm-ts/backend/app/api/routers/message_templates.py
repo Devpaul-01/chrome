@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, List, Optional
 from uuid import UUID
 
@@ -226,5 +227,6 @@ async def delete_message_template(
     await db.delete(template)
     await db.commit()
     return DeleteResponse()
+
 
 

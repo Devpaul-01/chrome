@@ -1,4 +1,3 @@
-from typing import Any
 """
 api/routers/subscription.py — Stripe subscription lifecycle endpoints.
 
@@ -15,6 +14,7 @@ POST /subscription/billing-portal           Open the Stripe Customer Portal.
 """
 
 from __future__ import annotations
+from typing import Any
 
 from datetime import datetime, timezone
 

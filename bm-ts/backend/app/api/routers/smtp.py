@@ -1,4 +1,3 @@
-from typing import Any
 """
 routers/smtp.py — Endpoints for managing the user's SMTP configuration.
 
@@ -16,6 +15,7 @@ cleartext password before connecting to the SMTP server.
 """
 
 from __future__ import annotations
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
