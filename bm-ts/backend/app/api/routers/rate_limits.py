@@ -12,7 +12,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
+
+from app.core.errors import AppError, ErrorCodes
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,8 +22,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.models import SendRateLimit, User
 from app.db.session import get_db
+from app.schemas.common import ErrorResponse
 
-router = APIRouter(prefix="/rate-limits", tags=["rate-limits"])
+router = APIRouter(
+    prefix="/rate-limits",
+    tags=["rate-limits"],
+    responses={
+        400: {"model": ErrorResponse},
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+        429: {"model": ErrorResponse},
+        500: {"model": ErrorResponse},
+    },
+)
 
 # ── Caps (must match extension-side constants) ──────────────────────────────
 HOURLY_CAP = 1
@@ -130,8 +144,8 @@ async def record_send(
             reason = f"Daily limit reached ({DAILY_CAP}/day)."
         else:
             reason = f"Weekly limit reached ({WEEKLY_CAP}/week)."
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=reason
+        raise AppError(
+            status.HTTP_429_TOO_MANY_REQUESTS, ErrorCodes.RATE_LIMIT_EXCEEDED, reason
         )
 
     # Append the new timestamp

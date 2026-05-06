@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from fastapi import HTTPException
+from app.core.errors import AppError
 from httpx import ASGITransport, AsyncClient
 import jwt
 from app.core.jwt import JWTError
@@ -138,7 +138,7 @@ async def test_refresh_token_rotation(db_session) -> None:
     assert len(session_rows) == 1
     assert str(session_rows[0].id) == payload_2["sid"]
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(AppError) as exc_info:
         await refresh(
             _make_request(), RefreshRequest(refresh_token=refresh_token_1), db_session
         )
@@ -160,7 +160,7 @@ async def test_revoke_endpoint(db_session) -> None:
     )
     assert revoked_token.scalar_one_or_none() is not None
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(AppError) as exc_info:
         await refresh(
             _make_request(), RefreshRequest(refresh_token=refresh_token), db_session
         )
@@ -177,7 +177,7 @@ async def test_concurrent_refresh_reuse_detection(db_session) -> None:
     )
     assert response_1.refresh_token
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(AppError) as exc_info:
         await refresh(
             _make_request(), RefreshRequest(refresh_token=refresh_token), db_session
         )

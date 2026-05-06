@@ -13,10 +13,12 @@ Segments are the atomic building-blocks composed by
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
+
+from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,10 +31,19 @@ from app.schemas.template import (
     TemplateSegmentOut,
     TemplateSegmentUpdate,
 )
-from app.schemas.common import DeleteResponse
+from app.schemas.common import DeleteResponse, ErrorResponse
 from app.services.templates import compose_message
 
-router = APIRouter()
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    400: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(responses=_ERROR_RESPONSES)
 
 
 @router.post(
@@ -88,8 +99,10 @@ async def update_template(
     result = await db.execute(stmt)
     segment = result.scalar_one_or_none()
     if not segment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.TEMPLATE_NOT_FOUND,
+            "Template not found",
         )
     if data.content is not None:
         segment.content = data.content
@@ -118,8 +131,10 @@ async def delete_template(
     result = await db.execute(stmt)
     segment = result.scalar_one_or_none()
     if not segment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.TEMPLATE_NOT_FOUND,
+            "Template not found",
         )
     segment.deleted_at = datetime.now(timezone.utc)
     await db.commit()
@@ -156,6 +171,8 @@ async def preview_message(
     try:
         message = compose_message(greetings, bodies, closings)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST, ErrorCodes.MISSING_SEGMENTS, str(exc)
+        )
 
     return {"message": message}

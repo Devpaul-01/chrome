@@ -45,7 +45,6 @@ import TemplateGallery from './components/TemplateGallery';
 import OnboardingWizard from './components/OnboardingWizard';
 import HelpPanel from './components/HelpPanel';
 import HelpTooltip from './components/HelpTooltip';
-import FeatureTip from './components/FeatureTip';
 import Spinner from './components/Spinner';
 import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -711,10 +710,6 @@ function AppShell() {
       case 'home':
         return (
           <>
-            <FeatureTip
-              tipId="home_automation"
-              message="Enable automation on this page to start sending birthday messages automatically."
-            />
             <HomeControls
               userName={user?.firstName || user?.email?.split('@')[0] || 'User'}
               onViewUpcomingBirthdays={() => setViewMode('upcoming-birthdays')}
@@ -728,10 +723,6 @@ function AppShell() {
       case 'messages':
         return (
           <>
-            <FeatureTip
-              tipId="messages_templates"
-              message="Create your first message template to start sending personalised birthday wishes."
-            />
             <MessagesHub onNavigate={setViewMode} />
           </>
         );

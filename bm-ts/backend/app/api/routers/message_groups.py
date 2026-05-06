@@ -11,10 +11,12 @@ routers/message_groups.py — CRUD endpoints for message groups (tags/labels).
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
+
+from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,9 +28,19 @@ from app.schemas.message_group import (
     MessageGroupOut,
     MessageGroupUpdate,
 )
-from app.schemas.common import DeleteResponse
+from app.schemas.common import DeleteResponse, ErrorResponse
 
-router = APIRouter()
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    400: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+    409: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(responses=_ERROR_RESPONSES)
 
 
 @router.post(
@@ -83,8 +95,10 @@ async def get_message_group(
     message_group = result.scalar_one_or_none()
 
     if not message_group:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Message group not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.GROUP_NOT_FOUND,
+            "Message group not found",
         )
 
     return message_group  # type: ignore[return-value]
@@ -106,8 +120,10 @@ async def update_message_group(
     message_group = result.scalar_one_or_none()
 
     if not message_group:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Message group not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.GROUP_NOT_FOUND,
+            "Message group not found",
         )
 
     if data.name is not None:
@@ -140,8 +156,10 @@ async def delete_message_group(
     message_group = result.scalar_one_or_none()
 
     if not message_group:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Message group not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.GROUP_NOT_FOUND,
+            "Message group not found",
         )
 
     await db.delete(message_group)

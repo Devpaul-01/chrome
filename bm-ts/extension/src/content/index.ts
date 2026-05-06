@@ -35,7 +35,12 @@ import type { TemplateSegment } from '../api/client';
 import type { AutomationRunPayload } from '../utils/messages';
 import { postToTimeline } from './timeline';
 import { archiveConversation } from './messenger';
-import { simulateClick, simulateBrowsing, runSelectorHealthCheck } from './dom-helpers';
+import {
+  simulateClick,
+  simulateBrowsing,
+  runSelectorHealthCheck,
+  retryOperation,
+} from './dom-helpers';
 import {
   checkRateLimit,
   recordMessageSent,
@@ -2297,7 +2302,16 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
       showAutomationOverlay(friend.name);
       try {
         if (flags.sendMessage) {
-          await sendComposedMessageToFriend(friend, dmText);
+          let sendAttempt = 0;
+          await retryOperation(
+            async () => {
+              sendAttempt++;
+              if (sendAttempt > 1) setStatus(`Retrying ${friend.name} (attempt ${sendAttempt}/3)…`);
+              await sendComposedMessageToFriend(friend, dmText);
+            },
+            2,
+            2000,
+          );
         }
 
         if (flags.makePost && posts.length > 0) {
@@ -2415,7 +2429,17 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
         showAutomationOverlay(friend.name);
         try {
           if (flags.sendMessage) {
-            await sendMessageFromProfile(friend.facebook_profile_url, dmText);
+            let sendAttempt = 0;
+            await retryOperation(
+              async () => {
+                sendAttempt++;
+                if (sendAttempt > 1)
+                  setStatus(`Retrying ${friend.name} (attempt ${sendAttempt}/3)…`);
+                await sendMessageFromProfile(friend.facebook_profile_url, dmText);
+              },
+              2,
+              2000,
+            );
           }
 
           if (flags.makePost && posts.length > 0) {

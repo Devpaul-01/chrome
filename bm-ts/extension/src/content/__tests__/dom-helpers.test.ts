@@ -220,4 +220,95 @@ describe('createStableMutationObserver', () => {
 
     expect(callback).not.toHaveBeenCalled();
   });
+
+  it('accumulates mutations across rapid-fire calls and delivers them in one batch', async () => {
+    vi.useRealTimers();
+    const received: MutationRecord[][] = [];
+    const observer = createStableMutationObserver(
+      (mutations) => {
+        received.push(mutations);
+      },
+      {
+        debounceMs: 50,
+      },
+    );
+    const target = document.getElementById('target')!;
+    observer.observe(target, { childList: true });
+
+    // Trigger 3 child additions in rapid succession
+    target.appendChild(document.createElement('span'));
+    target.appendChild(document.createElement('div'));
+    target.appendChild(document.createElement('p'));
+
+    // Wait for debounce window to close
+    await new Promise((r) => setTimeout(r, 150));
+
+    // Callback should have been invoked exactly once with all 3 mutations
+    expect(received).toHaveLength(1);
+    expect(received[0].length).toBe(3);
+
+    observer.disconnect();
+  });
+
+  it('stops reconnecting and calls onError after maxReconnects is exceeded', () => {
+    // beforeEach already applied vi.useFakeTimers()
+    const onError = vi.fn();
+    const target = document.getElementById('target')!;
+
+    const observer = createStableMutationObserver(vi.fn(), {
+      reconnectOnDetach: true,
+      reconnectSelector: '.log-container',
+      maxReconnects: 2,
+      onError,
+    });
+    observer.observe(target, { childList: true });
+
+    // Detach 1: remove original target, provide replacement → reconnects (count=1)
+    target.remove();
+    const r1 = document.createElement('div');
+    r1.className = 'log-container';
+    document.body.appendChild(r1);
+    vi.advanceTimersByTime(5000);
+
+    // Detach 2: remove r1, provide another replacement → reconnects (count=2)
+    r1.remove();
+    const r2 = document.createElement('div');
+    r2.className = 'log-container';
+    document.body.appendChild(r2);
+    vi.advanceTimersByTime(5000);
+
+    // Detach 3: remove r2 — count(2) >= maxReconnects(2) → onError called, interval cleared
+    r2.remove();
+    vi.advanceTimersByTime(5000);
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0][0].message).toMatch(/2/);
+
+    observer.disconnect();
+  });
+
+  it('uses a custom reconnectSelector when finding a replacement target', () => {
+    // beforeEach already applied vi.useFakeTimers()
+    document.body.innerHTML =
+      '<div id="target"></div><div id="custom-replacement" class="custom-log"></div>';
+    const target = document.getElementById('target')!;
+    const querySpy = vi.spyOn(document, 'querySelector');
+
+    const observer = createStableMutationObserver(vi.fn(), {
+      reconnectOnDetach: true,
+      reconnectSelector: '.custom-log',
+    });
+    observer.observe(target, { childList: true });
+
+    // Remove target to trigger reconnect attempt
+    target.remove();
+    vi.advanceTimersByTime(5000);
+
+    // The spy should have been called with the custom selector
+    const reconnectCalls = querySpy.mock.calls.filter(([sel]) => sel === '.custom-log');
+    expect(reconnectCalls.length).toBeGreaterThan(0);
+
+    querySpy.mockRestore();
+    observer.disconnect();
+  });
 });

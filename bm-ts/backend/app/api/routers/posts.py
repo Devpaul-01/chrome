@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
+
+from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,9 +14,19 @@ from app.api.deps import get_current_user
 from app.db.models import Post, User
 from app.db.session import get_db
 from app.schemas.post import GenderEnum, PostCreate, PostOut, PostUpdate
-from app.schemas.common import DeleteResponse
+from app.schemas.common import DeleteResponse, ErrorResponse
 
-router = APIRouter()
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    400: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+    409: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(responses=_ERROR_RESPONSES)
 
 
 @router.post("/posts", response_model=PostOut, status_code=status.HTTP_201_CREATED)
@@ -32,11 +44,11 @@ async def create_post(
         )
         dup_result = await db.execute(dup_stmt)
         if dup_result.scalar_one_or_none():
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A post with this label already exists",
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCodes.CONFLICT,
+                "A post with this label already exists",
             )
-
     post = Post(
         user_id=current_user.id,
         content=data.content,
@@ -90,8 +102,8 @@ async def get_post(
     post = result.scalar_one_or_none()
 
     if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.POST_NOT_FOUND, "Post not found"
         )
 
     return post  # type: ignore[return-value]
@@ -113,8 +125,8 @@ async def update_post(
     post = result.scalar_one_or_none()
 
     if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.POST_NOT_FOUND, "Post not found"
         )
 
     if data.content is not None:
@@ -141,9 +153,10 @@ async def update_post(
         )
         dup_result = await db.execute(dup_stmt)
         if dup_result.scalar_one_or_none():
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A post with this label already exists",
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCodes.CONFLICT,
+                "A post with this label already exists",
             )
     if data.label is not None:
         post.label = data.label
@@ -171,8 +184,8 @@ async def delete_post(
     post = result.scalar_one_or_none()
 
     if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.POST_NOT_FOUND, "Post not found"
         )
 
     await db.delete(post)

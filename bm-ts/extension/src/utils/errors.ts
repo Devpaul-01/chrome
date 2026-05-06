@@ -85,13 +85,16 @@ export function parseApiError(error: unknown): AppError {
     }
 
     switch (status) {
+      case 0:
+        // status 0 is sent by the background worker for TypeError (fetch network failure)
+        return new NetworkError();
       case 400:
         return new ValidationError(message);
       case 401:
       case 403:
         return new AuthenticationError(message);
       case 404:
-        return new AppError('Resource not found', 'NOT_FOUND', 404);
+        return new AppError(message || 'Resource not found', 'NOT_FOUND', 404);
       case 409:
         return new AppError(message || 'Conflict occurred', 'CONFLICT', 409);
       case 422:
@@ -110,7 +113,18 @@ export function parseApiError(error: unknown): AppError {
 
   // Generic errors
   if (error instanceof Error) {
-    return new AppError(error.message, 'UNKNOWN_ERROR');
+    const msg = error.message;
+    // Bridge/service-worker connectivity errors that never reach the network layer
+    if (
+      msg.includes('timed out') ||
+      msg.includes('did not respond') ||
+      msg.includes('Could not establish connection') ||
+      msg.includes('Receiving end does not exist') ||
+      msg.includes('Extension context invalidated')
+    ) {
+      return new NetworkError();
+    }
+    return new AppError(msg, 'UNKNOWN_ERROR');
   }
 
   // Unknown error type

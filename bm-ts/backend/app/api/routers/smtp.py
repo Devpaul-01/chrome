@@ -15,6 +15,7 @@ cleartext password before connecting to the SMTP server.
 """
 
 from __future__ import annotations
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -25,8 +26,17 @@ from app.db.models import SMTPConfig, User
 from app.db.session import get_db
 from app.schemas.smtp import SMTPConfigOut, SMTPConfigUpdate
 from app.core.encryption import encrypt_value
+from app.schemas.common import ErrorResponse
 
-router = APIRouter(prefix="/smtp", tags=["smtp"])
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    400: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(prefix="/smtp", tags=["smtp"], responses=_ERROR_RESPONSES)
 
 
 @router.get("/config", response_model=SMTPConfigOut | None)

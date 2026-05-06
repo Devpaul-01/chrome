@@ -1,9 +1,13 @@
+from __future__ import annotations
+from typing import Any
 from datetime import datetime, timezone
 from io import StringIO
 import csv
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
+
+from app.core.errors import AppError, ErrorCodes
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select, and_, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,13 +21,22 @@ from app.schemas.messages import (
     MessageQueueUpdate,
     MessageHistoryPage,
 )
-from app.schemas.common import DeleteResponse
+from app.schemas.common import DeleteResponse, ErrorResponse
 from app.api.routers.websocket import (
     broadcast_message_queue_update,
     broadcast_message_history_update,
 )
 
-router = APIRouter(prefix="/messages", tags=["messages"])
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    400: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(prefix="/messages", tags=["messages"], responses=_ERROR_RESPONSES)
 
 
 @router.get("/queue", response_model=list[MessageQueueSchema])
@@ -99,15 +112,15 @@ async def update_queued_message(
     )
     message = result.scalar_one_or_none()
     if not message:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Message not found",
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.MESSAGE_NOT_FOUND, "Message not found"
         )
 
     if message.status not in ["pending", "failed"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Can only update pending or failed messages",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_MESSAGE_STATE,
+            "Can only update pending or failed messages",
         )
 
     if message_data.message_content is not None:
@@ -155,15 +168,15 @@ async def cancel_queued_message(
     )
     message = result.scalar_one_or_none()
     if not message:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Message not found",
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.MESSAGE_NOT_FOUND, "Message not found"
         )
 
     if message.status not in ["pending", "failed"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Can only cancel pending or failed messages",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_MESSAGE_STATE,
+            "Can only cancel pending or failed messages",
         )
 
     message_id_str = str(message.id)
@@ -199,15 +212,15 @@ async def retry_failed_message(
     )
     message = result.scalar_one_or_none()
     if not message:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Message not found",
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.MESSAGE_NOT_FOUND, "Message not found"
         )
 
     if message.status != "failed":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Can only retry failed messages",
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_MESSAGE_STATE,
+            "Can only retry failed messages",
         )
 
     message.status = "pending"
@@ -274,8 +287,7 @@ async def list_message_history(
 
     result = await db.execute(paged_query)
     items = result.scalars().all()
-
-    return MessageHistoryPage(items=items, total=total, page=page, page_size=page_size)
+    return MessageHistoryPage(items=items, total=total, page=page, page_size=page_size)  # type: ignore[arg-type]
 
 
 @router.delete(
@@ -299,9 +311,8 @@ async def delete_message_history(
     )
     message = result.scalar_one_or_none()
     if not message:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Message not found",
+        raise AppError(
+            status.HTTP_404_NOT_FOUND, ErrorCodes.MESSAGE_NOT_FOUND, "Message not found"
         )
 
     message_id_str = str(message.id)
