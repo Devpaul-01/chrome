@@ -7,7 +7,7 @@ import logging
 from typing import Any, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
@@ -139,7 +139,7 @@ async def upload_image_file(
 
     except AppError:
         raise
-    except base64.binascii.Error:
+    except binascii.Error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid base64 data"
         )

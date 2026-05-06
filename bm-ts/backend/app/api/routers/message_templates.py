@@ -1,7 +1,10 @@
-from typing import List, Optional
+from __future__ import annotations
+from typing import Any, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
+
+from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,9 +16,19 @@ from app.schemas.message_template import (
     MessageTemplateOut,
     MessageTemplateUpdate,
 )
-from app.schemas.common import DeleteResponse
+from app.schemas.common import DeleteResponse, ErrorResponse
 
-router = APIRouter(tags=["message-templates"])
+_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    400: {"model": ErrorResponse},
+    401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+    409: {"model": ErrorResponse},
+    422: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
+
+router = APIRouter(tags=["message-templates"], responses=_ERROR_RESPONSES)
 
 
 @router.post(
@@ -38,9 +51,10 @@ async def create_message_template(
             )
         )
         if group_result.scalar_one_or_none() is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Message group not found",
+            raise AppError(
+                status.HTTP_404_NOT_FOUND,
+                ErrorCodes.GROUP_NOT_FOUND,
+                "Message group not found",
             )
 
     # Check unique title per user
@@ -50,9 +64,10 @@ async def create_message_template(
     )
     dup_result = await db.execute(dup_stmt)
     if dup_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="A template with this title already exists",
+        raise AppError(
+            status.HTTP_409_CONFLICT,
+            ErrorCodes.CONFLICT,
+            "A template with this title already exists",
         )
 
     template = MessageTemplate(
@@ -69,6 +84,7 @@ async def create_message_template(
     db.add(template)
     await db.commit()
     await db.refresh(template)
+    return template  # type: ignore[return-value]
     return template  # type: ignore[return-value]
 
 
@@ -107,10 +123,13 @@ async def get_message_template(
     template = result.scalar_one_or_none()
 
     if not template:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Message template not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.TEMPLATE_NOT_FOUND,
+            "Message template not found",
         )
 
+    return template  # type: ignore[return-value]
     return template  # type: ignore[return-value]
 
 
@@ -130,8 +149,10 @@ async def update_message_template(
     template = result.scalar_one_or_none()
 
     if not template:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Message template not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.TEMPLATE_NOT_FOUND,
+            "Message template not found",
         )
 
     # Update fields — explicit allowlist to prevent mass assignment
@@ -156,9 +177,10 @@ async def update_message_template(
         )
         dup_result = await db.execute(dup_stmt)
         if dup_result.scalar_one_or_none():
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A template with this title already exists",
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCodes.CONFLICT,
+                "A template with this title already exists",
             )
 
     # Validate group ownership if group_id is being changed
@@ -170,9 +192,10 @@ async def update_message_template(
             )
         )
         if group_result.scalar_one_or_none() is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Message group not found",
+            raise AppError(
+                status.HTTP_404_NOT_FOUND,
+                ErrorCodes.GROUP_NOT_FOUND,
+                "Message group not found",
             )
 
     for field, value in update_data.items():
@@ -181,6 +204,7 @@ async def update_message_template(
 
     await db.commit()
     await db.refresh(template)
+    return template  # type: ignore[return-value]
     return template  # type: ignore[return-value]
 
 
@@ -203,8 +227,10 @@ async def delete_message_template(
     template = result.scalar_one_or_none()
 
     if not template:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Message template not found"
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.TEMPLATE_NOT_FOUND,
+            "Message template not found",
         )
 
     await db.delete(template)
