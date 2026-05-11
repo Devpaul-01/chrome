@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import logging
 from typing import Any, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
@@ -138,11 +139,9 @@ async def upload_image_file(
 
     except AppError:
         raise
-    except base64.binascii.Error:  # type: ignore[attr-defined]
-        raise AppError(
-            status.HTTP_400_BAD_REQUEST,
-            ErrorCodes.INVALID_IMAGE_DATA,
-            "Invalid base64 data",
+    except binascii.Error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid base64 data"
         )
     except Exception as e:
         logger.error("Failed to process image upload: %s", e)

@@ -136,13 +136,25 @@ async def create_session(
 
 
 async def _get_active_record(user: User, db: AsyncSession) -> SubscriptionRecord:
-    """Return the user's active subscription record or raise 404."""
+    """Return the user's active subscription record or raise 404.
+
+    Includes PAST_DUE subscriptions still within their grace period so that
+    users can cancel, reactivate, or change plans even after a failed payment.
+    """
+    now = datetime.now(timezone.utc)
     stmt = (
         select(SubscriptionRecord)
         .where(
             SubscriptionRecord.user_id == user.id,
-            SubscriptionRecord.status.in_(["ACTIVE", "TRIALING"]),
+            (
+                SubscriptionRecord.status.in_(["ACTIVE", "TRIALING"])
+                | (
+                    (SubscriptionRecord.status == "PAST_DUE")
+                    & (SubscriptionRecord.current_period_end > now)
+                )
+            ),
         )
+        .order_by(desc(SubscriptionRecord.updated_at))
         .limit(1)
     )
     result = await db.execute(stmt)

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { sendBackgroundMessage } from '../api';
 import { getErrorMessage, logError } from '../../utils/errors';
 import { useAppContext } from '../context/AppContext';
-import type { SMTPConfig } from '../components/SMTPSettings';
+import type { SMTPConfig } from '../../api/client';
 
 export function useSMTPConfig() {
   const { user, showToast, setViewMode } = useAppContext();

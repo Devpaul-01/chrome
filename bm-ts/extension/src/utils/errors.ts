@@ -57,8 +57,11 @@ export function parseApiError(error: unknown): AppError {
   if (error && typeof error === 'object' && 'status' in error) {
     const status = (error as { status: number }).status;
     const data = 'data' in error ? (error as { data: unknown }).data : null;
+    // The bridge attaches the server's message as `err.message` — use it as
+    // the default before trying to dig into the data payload.
+    const errMessage = error instanceof Error ? error.message : undefined;
 
-    let message = 'An error occurred';
+    let message = errMessage || 'An error occurred';
     if (data && typeof data === 'object' && data !== null) {
       // FastAPI returns 422 with detail as an array of validation errors
       if ('detail' in data) {
@@ -118,6 +121,7 @@ export function parseApiError(error: unknown): AppError {
     if (
       msg.includes('timed out') ||
       msg.includes('did not respond') ||
+      msg.includes('No response from background') ||
       msg.includes('Could not establish connection') ||
       msg.includes('Receiving end does not exist') ||
       msg.includes('Extension context invalidated')

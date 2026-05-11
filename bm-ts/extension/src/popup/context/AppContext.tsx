@@ -126,6 +126,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       logError(error, 'refreshUser');
       setUser(null);
+      // Re-throw so callers (e.g. post-login flow) can surface the failure
+      // rather than silently leaving the user on the login screen.
+      throw error;
     }
   }, [connectWebSocket]);
 
@@ -145,7 +148,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Initialise once on mount
   useEffect(() => {
     setIsInitializing(true);
-    refreshUser().finally(() => setIsInitializing(false));
+    // On mount we swallow the error here — setUser(null) already happened
+    // inside refreshUser, so the login form will be shown. The re-throw is
+    // only useful for explicit callers such as the post-login flow in App.tsx.
+    refreshUser()
+      .catch(() => {})
+      .finally(() => setIsInitializing(false));
   }, [refreshUser]);
 
   // Global keyboard shortcuts

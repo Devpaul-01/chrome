@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -48,11 +48,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
-# ── Shared ENUM type objects ──────────────────────────────────────────────────
-# All ENUM types are created by Alembic migrations; ``create_type=False``
-# prevents duplicate-type errors on startup.
-
-_segment_type_enum_obj = ENUM(
+segment_type_enum = ENUM(
     "GREETING",
     "BODY",
     "CLOSING",
@@ -60,7 +56,7 @@ _segment_type_enum_obj = ENUM(
     create_type=False,
 )
 
-_message_status_enum_obj = ENUM(
+message_status_enum = ENUM(
     "pending",
     "processing",
     "sent",
@@ -70,7 +66,7 @@ _message_status_enum_obj = ENUM(
     create_type=False,
 )
 
-_subscription_status_enum_obj = ENUM(
+subscription_status_enum = ENUM(
     "ACTIVE",
     "TRIALING",
     "PAST_DUE",
@@ -81,30 +77,6 @@ _subscription_status_enum_obj = ENUM(
     name="subscription_status_enum",
     create_type=False,
 )
-
-_gender_enum_obj = ENUM(
-    "MALE",
-    "FEMALE",
-    "NEUTRAL",
-    "ALL",
-    name="gender_enum",
-    create_type=False,
-)
-
-_birthday_mode_enum_obj = ENUM(
-    "EARLY",
-    "ON_DAY",
-    "BELATED",
-    name="birthday_mode_enum",
-    create_type=False,
-)
-
-# Module-level aliases
-segment_type_enum = _segment_type_enum_obj
-message_status_enum = _message_status_enum_obj
-subscription_status_enum = _subscription_status_enum_obj
-gender_enum = _gender_enum_obj
-birthday_mode_enum = _birthday_mode_enum_obj
 
 
 class User(Base):
@@ -122,48 +94,48 @@ class User(Base):
     )
     email: Mapped[str] = mapped_column(CITEXT(), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(Text(), nullable=False)
-    stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(), nullable=True)
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
-    last_login_at: Mapped[Optional[datetime]] = mapped_column(
+    last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     failed_login_count: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("0")
     )
-    locked_until: Mapped[Optional[datetime]] = mapped_column(
+    locked_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    metadata_payload: Mapped[Any] = mapped_column(
+    metadata_payload: Mapped[dict[str, Any]] = mapped_column(
         "metadata", JSON(), nullable=False, server_default=text("'{}'::json")
     )
 
-    subscription_records = relationship(
+    subscription_records: Mapped[list[SubscriptionRecord]] = relationship(
         "SubscriptionRecord", back_populates="user", cascade="all, delete-orphan"
     )
-    template_segments = relationship(
+    template_segments: Mapped[list[TemplateSegment]] = relationship(
         "TemplateSegment", back_populates="user", cascade="all, delete-orphan"
     )
-    birthday_schedules = relationship(
+    birthday_schedules: Mapped[list[BirthdaySchedule]] = relationship(
         "BirthdaySchedule", back_populates="user", cascade="all, delete-orphan"
     )
-    message_queue = relationship(
+    message_queue: Mapped[list[MessageQueue]] = relationship(
         "MessageQueue", back_populates="user", cascade="all, delete-orphan"
     )
-    message_history = relationship(
+    message_history: Mapped[list[MessageHistory]] = relationship(
         "MessageHistory", back_populates="user", cascade="all, delete-orphan"
     )
-    sessions = relationship(
+    sessions: Mapped[list[UserSession]] = relationship(
         "UserSession", back_populates="user", cascade="all, delete-orphan"
     )
-    password_reset_tokens = relationship(
+    password_reset_tokens: Mapped[list[PasswordResetToken]] = relationship(
         "PasswordResetToken", back_populates="user", cascade="all, delete-orphan"
     )
-    email_verification_tokens = relationship(
+    email_verification_tokens: Mapped[list[EmailVerificationToken]] = relationship(
         "EmailVerificationToken", back_populates="user", cascade="all, delete-orphan"
     )
     email_verified: Mapped[bool] = mapped_column(
@@ -195,25 +167,25 @@ class SubscriptionRecord(Base):
     price_id: Mapped[str] = mapped_column(String(), nullable=False)
     stripe_subscription_id: Mapped[str] = mapped_column(String(), nullable=False)
     stripe_customer_id: Mapped[str] = mapped_column(String(), nullable=False)
-    current_period_start: Mapped[Optional[datetime]] = mapped_column(
+    current_period_start: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    current_period_end: Mapped[Optional[datetime]] = mapped_column(
+    current_period_end: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     cancel_at_period_end: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=text("false")
     )
-    canceled_at: Mapped[Optional[datetime]] = mapped_column(
+    canceled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    trial_end: Mapped[Optional[datetime]] = mapped_column(
+    trial_end: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
-    ended_at: Mapped[Optional[datetime]] = mapped_column(
+    ended_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
@@ -222,11 +194,11 @@ class SubscriptionRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
-    metadata_payload: Mapped[Any] = mapped_column(
+    metadata_payload: Mapped[dict[str, Any]] = mapped_column(
         "metadata", JSON(), nullable=False, server_default=text("'{}'::json")
     )
 
-    user = relationship("User", back_populates="subscription_records")
+    user: Mapped[User] = relationship("User", back_populates="subscription_records")
 
     __table_args__ = (
         Index("idx_subscription_user", "user_id"),
@@ -259,7 +231,7 @@ class TemplateSegment(Base):
         nullable=False,
     )
     segment_type: Mapped[str] = mapped_column(segment_type_enum, nullable=False)
-    label: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    label: Mapped[str | None] = mapped_column(Text(), nullable=True)
     content: Mapped[str] = mapped_column(Text(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
@@ -267,11 +239,11 @@ class TemplateSegment(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+    deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
-    user = relationship("User", back_populates="template_segments")
+    user: Mapped[User] = relationship("User", back_populates="template_segments")
 
     __table_args__ = (
         Index(
@@ -314,7 +286,7 @@ class BirthdaySchedule(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User", back_populates="birthday_schedules")
+    user: Mapped[User] = relationship("User", back_populates="birthday_schedules")
 
     __table_args__ = (
         Index("idx_schedule_user_enabled", "user_id", "enabled"),
@@ -353,7 +325,7 @@ class MessageQueue(Base):
     status: Mapped[str] = mapped_column(
         message_status_enum, nullable=False, server_default=text("'pending'")
     )
-    error_message: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -361,7 +333,7 @@ class MessageQueue(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User", back_populates="message_queue")
+    user: Mapped[User] = relationship("User", back_populates="message_queue")
 
     __table_args__ = (
         Index("idx_queue_user_status", "user_id", "status"),
@@ -398,12 +370,12 @@ class MessageHistory(Base):
     status: Mapped[str] = mapped_column(
         message_status_enum, nullable=False, server_default=text("'sent'")
     )
-    error_message: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User", back_populates="message_history")
+    user: Mapped[User] = relationship("User", back_populates="message_history")
 
     __table_args__ = (
         Index("idx_history_user_sent", "user_id", "sent_at"),
@@ -427,8 +399,8 @@ class UserSession(Base):
     current_refresh_token_jti: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True
     )
-    ip_address: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    user_agent: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -438,12 +410,12 @@ class UserSession(Base):
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    revoked_at: Mapped[Optional[datetime]] = mapped_column(
+    revoked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    revoked_reason: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    revoked_reason: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
-    user = relationship("User", back_populates="sessions")
+    user: Mapped[User] = relationship("User", back_populates="sessions")
 
     __table_args__ = (
         Index("idx_user_sessions_user_last_seen", "user_id", "last_seen_at"),
@@ -475,14 +447,14 @@ class PasswordResetToken(Base):
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    used_at: Mapped[Optional[datetime]] = mapped_column(
+    used_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User", back_populates="password_reset_tokens")
+    user: Mapped[User] = relationship("User", back_populates="password_reset_tokens")
 
     __table_args__ = (
         Index("idx_reset_token_expires", "token", "expires_at"),
@@ -544,14 +516,16 @@ class EmailVerificationToken(Base):
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    used_at: Mapped[Optional[datetime]] = mapped_column(
+    used_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User", back_populates="email_verification_tokens")
+    user: Mapped[User] = relationship(
+        "User", back_populates="email_verification_tokens"
+    )
 
     __table_args__ = (
         Index("idx_email_verif_token_expires", "token", "expires_at"),
@@ -563,6 +537,23 @@ class EmailVerificationToken(Base):
 # Models added in Phase 2 to support the full automation and contact-management
 # features.  They are created by Alembic migrations and share the same
 # declarative Base as the Phase 1 models above.
+
+gender_enum = ENUM(
+    "MALE",
+    "FEMALE",
+    "NEUTRAL",
+    "ALL",
+    name="gender_enum",
+    create_type=False,
+)
+
+birthday_mode_enum = ENUM(
+    "EARLY",
+    "ON_DAY",
+    "BELATED",
+    name="birthday_mode_enum",
+    create_type=False,
+)
 
 
 class Contact(Base):
@@ -590,9 +581,9 @@ class Contact(Base):
     birthday_month_only: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
-    gender: Mapped[Optional[str]] = mapped_column(gender_enum, nullable=True)
-    notes: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    group_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    gender: Mapped[str | None] = mapped_column(gender_enum, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    group_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("message_groups.id", ondelete="SET NULL"),
         nullable=True,
@@ -604,8 +595,8 @@ class Contact(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User")
-    group = relationship("MessageGroup")
+    user: Mapped[User] = relationship("User")
+    group: Mapped[MessageGroup | None] = relationship("MessageGroup")
 
     __table_args__ = (
         Index("idx_contact_user_birthday", "user_id", "birthday"),
@@ -640,14 +631,14 @@ class SendRateLimit(Base):
         nullable=False,
         unique=True,
     )
-    timestamps: Mapped[Any] = mapped_column(
+    timestamps: Mapped[list[str]] = mapped_column(
         JSON(), nullable=False, server_default=text("'[]'::json")
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User")
+    user: Mapped[User] = relationship("User")
 
     __table_args__ = (Index("idx_send_rate_limit_user", "user_id", unique=True),)
 
@@ -679,7 +670,7 @@ class MessageGroup(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User")
+    user: Mapped[User] = relationship("User")
 
     __table_args__ = (Index("idx_message_group_user", "user_id"),)
 
@@ -705,25 +696,25 @@ class Post(Base):
         nullable=False,
     )
     content: Mapped[str] = mapped_column(Text(), nullable=False)
-    image_url: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    image_url: Mapped[str | None] = mapped_column(Text(), nullable=True)
     gender: Mapped[str] = mapped_column(gender_enum, nullable=False)
     is_default: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, server_default=text("false")
     )
-    label: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    group_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    label: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    group_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("message_groups.id", ondelete="SET NULL"),
         nullable=True,
     )
-    font_family: Mapped[Optional[str]] = mapped_column(
-        Text(), server_default=text("'Arial'"), nullable=True
+    font_family: Mapped[str | None] = mapped_column(
+        Text(), nullable=True, server_default=text("'Arial'")
     )
-    font_size: Mapped[Optional[int]] = mapped_column(
-        Integer, server_default=text("48"), nullable=True
+    font_size: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, server_default=text("48")
     )
-    font_color: Mapped[Optional[str]] = mapped_column(
-        Text(), server_default=text("'#ffffff'"), nullable=True
+    font_color: Mapped[str | None] = mapped_column(
+        Text(), nullable=True, server_default=text("'#ffffff'")
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
@@ -732,8 +723,8 @@ class Post(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User")
-    group = relationship("MessageGroup")
+    user: Mapped[User] = relationship("User")
+    group: Mapped[MessageGroup | None] = relationship("MessageGroup")
 
     __table_args__ = (
         Index("idx_post_user_gender", "user_id", "gender"),
@@ -772,7 +763,7 @@ class UserImage(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User")
+    user: Mapped[User] = relationship("User")
 
     __table_args__ = (
         Index("idx_user_image_user_created", "user_id", "created_at"),
@@ -801,12 +792,12 @@ class BirthdayConfig(Base):
     )
     mode: Mapped[str] = mapped_column(birthday_mode_enum, nullable=False)
     days_offset: Mapped[int] = mapped_column(Integer, nullable=False)
-    message_group_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    message_group_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("message_groups.id", ondelete="CASCADE"),
         nullable=True,
     )
-    post_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    post_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("posts.id", ondelete="SET NULL"),
         nullable=True,
@@ -825,9 +816,9 @@ class BirthdayConfig(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User")
-    message_group = relationship("MessageGroup")
-    post = relationship("Post")
+    user: Mapped[User] = relationship("User")
+    message_group: Mapped[MessageGroup | None] = relationship("MessageGroup")
+    post: Mapped[Post | None] = relationship("Post")
 
     __table_args__ = (
         Index("idx_birthday_config_user_mode", "user_id", "mode"),
@@ -874,7 +865,7 @@ class SMTPConfig(Base):
         Boolean(), nullable=False, server_default=text("true")
     )
     from_email: Mapped[str] = mapped_column(Text(), nullable=False)
-    from_name: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    from_name: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
@@ -882,7 +873,7 @@ class SMTPConfig(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User")
+    user: Mapped[User] = relationship("User")
 
     __table_args__ = (Index("idx_smtp_config_user", "user_id", unique=True),)
 
@@ -904,7 +895,7 @@ class MessageTemplate(Base):
     greeting: Mapped[str] = mapped_column(Text(), nullable=False)
     sentiment: Mapped[str] = mapped_column(Text(), nullable=False)  # Main body/message
     closing: Mapped[str] = mapped_column(Text(), nullable=False)
-    image_url: Mapped[Optional[str]] = mapped_column(
+    image_url: Mapped[str | None] = mapped_column(
         Text(), nullable=True
     )  # Optional image URL
     days_in_advance: Mapped[int] = mapped_column(
@@ -913,7 +904,7 @@ class MessageTemplate(Base):
     gender: Mapped[str] = mapped_column(
         gender_enum, nullable=False, server_default=text("'ALL'")
     )
-    group_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    group_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("message_groups.id", ondelete="SET NULL"),
         nullable=True,
@@ -925,8 +916,8 @@ class MessageTemplate(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    user = relationship("User")
-    group = relationship("MessageGroup")
+    user: Mapped[User] = relationship("User")
+    group: Mapped[MessageGroup | None] = relationship("MessageGroup")
 
     __table_args__ = (
         Index("idx_message_template_user", "user_id"),

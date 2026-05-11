@@ -83,7 +83,7 @@ async def get_current_user_from_token(token: str, db: AsyncSession) -> User:
     try:
         payload = decode_token(token)
         ensure_token_type(payload, TokenType.ACCESS)
-        user_id = payload.get("sub")
+        user_id: str = payload.get("sub")  # type: ignore[assignment]
         if user_id is None:
             raise credentials_exception
     except JWTError:
@@ -164,7 +164,7 @@ async def websocket_endpoint(
             {
                 "type": "connected",
                 "data": {"message": "WebSocket connected successfully"},
-                "timestamp": str(user.id),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
 

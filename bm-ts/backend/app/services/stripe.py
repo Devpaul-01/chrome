@@ -107,7 +107,7 @@ async def create_checkout_session(
         success_url=success_url,
         cancel_url=cancel_url,
     )
-    return session.url  # type: ignore[return-value]
+    return session.url or ""
 
 
 async def cancel_subscription(stripe_subscription_id: str) -> dict:
@@ -123,7 +123,7 @@ async def cancel_subscription(stripe_subscription_id: str) -> dict:
         stripe_subscription_id,
         cancel_at_period_end=True,
     )
-    return dict(sub)
+    return dict(sub)  # type: ignore[call-overload]
 
 
 async def reactivate_subscription(stripe_subscription_id: str) -> dict:
@@ -133,7 +133,7 @@ async def reactivate_subscription(stripe_subscription_id: str) -> dict:
         stripe_subscription_id,
         cancel_at_period_end=False,
     )
-    return dict(sub)
+    return dict(sub)  # type: ignore[call-overload]
 
 
 async def change_subscription_plan(
@@ -151,7 +151,7 @@ async def change_subscription_plan(
         items=[{"id": item_id, "price": new_price_id}],
         proration_behavior="create_prorations",
     )
-    return dict(updated)
+    return dict(updated)  # type: ignore[call-overload]
 
 
 async def create_billing_portal_session(
@@ -224,9 +224,7 @@ async def sync_subscription_record(
         "cancel_at_period_end": data.get("cancel_at_period_end", False),
         "canceled_at": _timestamp(data.get("canceled_at")),
         "trial_end": _timestamp(data.get("trial_end")),
-        "started_at": _timestamp(data.get("start_date"))
-        if data.get("start_date")
-        else None,
+        "started_at": _timestamp(data.get("start_date")) or datetime.now(timezone.utc),
         "ended_at": _timestamp(data.get("ended_at")),
         "metadata_payload": metadata,
     }
