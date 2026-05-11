@@ -96,6 +96,7 @@ type SegmentGroups = {
 type BirthdayFriend = {
   id: string;
   name: string;
+  birthday?: string;
   profileUrl?: string;
   container: HTMLElement;
   messageButton?: HTMLElement;
@@ -235,19 +236,59 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
     });
   }
 
+  // Simple date patterns used to extract a birthday from container text nodes.
+  const reDateFwd =
+    /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan\.?|feb\.?|mar\.?|apr\.?|jun\.?|jul\.?|aug\.?|sep\.?|oct\.?|nov\.?|dec\.?)\s+(\d{1,2})\b/i;
+  const reDateRev =
+    /\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i;
+
+  /** Extract a human-readable birthday label from text nodes within a container. */
+  function extractBirthdayFromContainer(container: HTMLElement): string | undefined {
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const text = walker.currentNode.textContent?.trim() ?? '';
+      if (text.length < 3 || text.length > 80) continue;
+      if (/\btoday\b/i.test(text)) return 'Today';
+      if (/\btomorrow\b/i.test(text)) return 'Tomorrow';
+      const mFwd = reDateFwd.exec(text);
+      if (mFwd) return `${mFwd[1]} ${mFwd[2]}`;
+      const mRev = reDateRev.exec(text);
+      if (mRev) return `${mRev[2]} ${mRev[1]}`;
+    }
+    return undefined;
+  }
+
   containers.forEach((container, index) => {
-    // Try multiple name-extraction strategies
-    const nameElement =
-      container.querySelector('strong span') ??
-      container.querySelector('strong') ??
-      container.querySelector('h2 span, h3 span') ??
-      container.querySelector('[role="heading"] span') ??
-      container.querySelector('a[href*="facebook.com/"] span');
-    const name = nameElement?.textContent?.trim() || 'Unknown';
+    // Extract profile link first — its text content is the most reliable name source.
+    const profileLink =
+      container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/'][role='link']") ??
+      container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/']");
+
+    // Filter out system/navigation links (events, groups, etc.)
+    const isSystemUrl = (href: string) =>
+      /\/(birthdays|events|groups|pages|marketplace|watch|gaming|search|login|help|notifications|settings)\b/.test(
+        href,
+      );
+    const validProfileLink =
+      profileLink && !isSystemUrl(profileLink.href) ? profileLink : null;
+
+    // Name: prefer profile link text, then fall back to structural selectors.
+    const nameFromLink = validProfileLink?.textContent?.trim();
+    const nameFromDOM = !nameFromLink
+      ? (container.querySelector('strong span') ??
+          container.querySelector('strong') ??
+          container.querySelector('h2 span, h3 span') ??
+          container.querySelector('a[href*="facebook.com/"] span')
+        )?.textContent?.trim()
+      : undefined;
+    const name = nameFromLink || nameFromDOM || 'Unknown';
 
     // Deduplicate by name
     if (name !== 'Unknown' && seenNames.has(name)) return;
     if (name !== 'Unknown') seenNames.add(name);
+
+    // Try to extract a birthday label from text nodes in the container.
+    const birthday = extractBirthdayFromContainer(container);
 
     // Multiple selectors for the message button (language-agnostic first)
     const messageBtn =
@@ -257,14 +298,11 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
       container.querySelector<HTMLElement>("a[role='button'][aria-label*='message']") ??
       container.querySelector<HTMLElement>("[role='button'][data-testid*='message']");
 
-    const profileLink =
-      container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/'][role='link']") ??
-      container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/']");
-
     detected.push({
       id: `${name}-${index}`,
       name,
-      profileUrl: profileLink?.href,
+      birthday,
+      profileUrl: validProfileLink?.href,
       container: container as HTMLElement,
       messageButton: messageBtn ?? undefined,
     });
@@ -373,6 +411,13 @@ function renderFriendList() {
     nameEl.className = 'bm-friend-name';
     nameEl.textContent = friend.name;
     info.appendChild(nameEl);
+    if (friend.birthday) {
+      const bdayEl = document.createElement('div');
+      bdayEl.className = 'bm-friend-birthday';
+      bdayEl.textContent = `🎂 ${friend.birthday}`;
+      bdayEl.style.cssText = 'font-size:11px;color:#888;margin-top:1px;';
+      info.appendChild(bdayEl);
+    }
     if (friend.profileUrl) {
       const link = document.createElement('a');
       link.href = friend.profileUrl;
