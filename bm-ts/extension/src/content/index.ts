@@ -269,13 +269,13 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
       /\/(birthdays|events|groups|pages|marketplace|watch|gaming|search|login|help|notifications|settings)\b/.test(
         href,
       );
-    const validProfileLink =
-      profileLink && !isSystemUrl(profileLink.href) ? profileLink : null;
+    const validProfileLink = profileLink && !isSystemUrl(profileLink.href) ? profileLink : null;
 
     // Name: prefer profile link text, then fall back to structural selectors.
     const nameFromLink = validProfileLink?.textContent?.trim();
     const nameFromDOM = !nameFromLink
-      ? (container.querySelector('strong span') ??
+      ? (
+          container.querySelector('strong span') ??
           container.querySelector('strong') ??
           container.querySelector('h2 span, h3 span') ??
           container.querySelector('a[href*="facebook.com/"] span')
