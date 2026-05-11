@@ -87,11 +87,10 @@ function isValidIpv4Octet(value: string): boolean {
 }
 
 function isAllowedSslipIoHostname(hostname: string): boolean {
-  const match = hostname.match(/^((?:\d{1,3}-){3}\d{1,3})\.sslip\.io$/i);
-  if (!match) return false;
-
-  const octets = match[1].split('-');
-  return octets.length === 4 && octets.every(isValidIpv4Octet);
+  // Accept any valid hostname that ends with .sslip.io — covers both the
+  // standard NNN-NNN-NNN-NNN.sslip.io format (dashes) and multi-level
+  // subdomain formats like prefix.NNN.NNN.NNN.NNN.sslip.io (dots + prefix).
+  return /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?\.sslip\.io$/i.test(hostname);
 }
 
 function isAllowedDevHostname(hostname: string): boolean {
