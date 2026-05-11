@@ -79,13 +79,6 @@ export async function getBackendUrl(): Promise<string> {
  * HTTPS is always allowed; HTTP is only allowed for localhost (development).
  * Returns `true` if the URL is safe to use.
  */
-function isValidIpv4Octet(value: string): boolean {
-  if (!/^\d{1,3}$/.test(value)) return false;
-
-  const octet = Number(value);
-  return octet >= 0 && octet <= 255;
-}
-
 function isAllowedSslipIoHostname(hostname: string): boolean {
   // Accept any valid hostname that ends with .sslip.io — covers both the
   // standard NNN-NNN-NNN-NNN.sslip.io format (dashes) and multi-level
