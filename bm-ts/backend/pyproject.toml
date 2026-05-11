@@ -25,8 +25,7 @@ dependencies = [
     "cryptography>=46.0.7",
     "requests>=2.33.0",
     "werkzeug>=3.1.6",
-    "python-multipart>=0.0.27"
-    "sentry-sdk[fastapi]>=1.40",
+    "python-multipart>=0.0.27",
     "urllib3>=2.7.0"
 ]
 
