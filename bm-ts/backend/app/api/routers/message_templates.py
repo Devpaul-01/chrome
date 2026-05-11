@@ -232,4 +232,4 @@ async def delete_message_template(
 
     await db.delete(template)
     await db.commit()
-    return DeleteResponse()
+    return DeleteResponse()
