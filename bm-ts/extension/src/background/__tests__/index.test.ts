@@ -25,6 +25,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const mockLogin = vi.fn();
 const mockMe = vi.fn();
 const mockRefreshToken = vi.fn();
+const mockRevokeToken = vi.fn();
 const mockSaveTokens = vi.fn();
 const mockClearTokens = vi.fn();
 const mockGetTokens = vi.fn();
@@ -66,6 +67,7 @@ vi.mock('../../api/client', () => ({
   login: mockLogin,
   me: mockMe,
   refreshToken: mockRefreshToken,
+  revokeToken: mockRevokeToken,
   register: vi.fn(),
   subscriptionStatus: vi.fn(),
   listTemplates: vi.fn(),
@@ -248,17 +250,33 @@ describe('background/index — sender ID guard', () => {
 describe('background/index — auth.logout', () => {
   beforeEach(() => {
     mockClearTokens.mockClear();
-    mockGetBackendUrl.mockClear();
+    mockGetTokens.mockReset();
+    mockRevokeToken.mockClear();
+    mockGetBackendUrl.mockReset();
+    mockGetBackendUrl.mockResolvedValue('http://localhost:8000');
   });
 
-  it('clears tokens and returns logout message', async () => {
+  it('revokes the refresh token, clears tokens, and returns logout message', async () => {
+    mockGetTokens.mockResolvedValue({ accessToken: 'at1', refreshToken: 'rt1' });
+    mockRevokeToken.mockResolvedValue({ message: 'Token revoked' });
+    mockClearTokens.mockResolvedValue(undefined);
+
+    const result = await sendMessage('auth.logout');
+    expect(result.success).toBe(true);
+    expect(mockRevokeToken).toHaveBeenCalledWith('http://localhost:8000', 'rt1');
+    expect(mockClearTokens).toHaveBeenCalledTimes(1);
+    const data = result.data as { message: string };
+    expect(data.message).toBe('logged out');
+  });
+
+  it('still clears local tokens if server-side revocation fails', async () => {
+    mockGetTokens.mockResolvedValue({ accessToken: 'at1', refreshToken: 'rt1' });
+    mockRevokeToken.mockRejectedValue(new Error('network down'));
     mockClearTokens.mockResolvedValue(undefined);
 
     const result = await sendMessage('auth.logout');
     expect(result.success).toBe(true);
     expect(mockClearTokens).toHaveBeenCalledTimes(1);
-    const data = result.data as { message: string };
-    expect(data.message).toBe('logged out');
   });
 });
 

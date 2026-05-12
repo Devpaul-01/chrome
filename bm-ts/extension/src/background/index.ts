@@ -26,6 +26,7 @@ import {
   me,
   refreshToken as refreshTokenEndpoint,
   register,
+  revokeToken,
   subscriptionStatus,
   updateTemplate,
   requestPasswordReset,
@@ -492,6 +493,14 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return refreshTokensFlow(tokens.refreshToken, baseUrl);
     }
     case 'auth.logout': {
+      const tokens = await getTokens();
+      if (tokens.refreshToken) {
+        try {
+          await revokeToken(baseUrl, tokens.refreshToken);
+        } catch (error) {
+          logger.warn('Failed to revoke refresh token during logout', error);
+        }
+      }
       await clearTokens();
       return { message: 'logged out' };
     }

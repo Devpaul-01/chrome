@@ -192,6 +192,14 @@ export async function refreshToken(baseUrl: string, refresh_token: string): Prom
   return request<TokenResponse>(baseUrl, '/auth/refresh', 'POST', { refresh_token });
 }
 
+/** Revoke a refresh token so it can no longer be used after logout. */
+export async function revokeToken(
+  baseUrl: string,
+  refresh_token: string,
+): Promise<{ message: string }> {
+  return request<{ message: string }>(baseUrl, '/auth/revoke', 'POST', { refresh_token });
+}
+
 /** Return the currently-authenticated user's profile (‘/auth/me’). */
 export async function me(baseUrl: string, accessToken: string): Promise<UserProfile> {
   return request(baseUrl, '/auth/me', 'GET', undefined, accessToken);
