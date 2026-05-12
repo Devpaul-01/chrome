@@ -161,7 +161,7 @@ export type BackgroundMessage =
   | { type: 'rateLimit.record' }
   // Contact message types — kept for type-safety of restored UI files.
   // Runtime handlers for list/create/update/delete are commented out in background/index.ts.
-  | { type: 'contacts.list' }
+  | { type: 'contacts.list'; payload?: { updatedSince?: string } }
   | { type: 'contacts.create'; payload: CreateContactPayload }
   | { type: 'contacts.update'; payload: UpdateContactPayload & { id: string } }
   | { type: 'contacts.delete'; payload: { id: string } }

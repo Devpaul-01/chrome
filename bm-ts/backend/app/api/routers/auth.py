@@ -354,35 +354,41 @@ async def refresh(
             "User no longer exists",
         )
 
-    session: UserSession | None = None
-    if session_id is not None:
-        try:
-            session_uuid = UUID(str(session_id))
-        except ValueError as exc:
-            raise AppError(
-                status.HTTP_401_UNAUTHORIZED,
-                ErrorCodes.INVALID_REFRESH_TOKEN,
-                "Invalid refresh token",
-            ) from exc
-
-        session_result = await db.execute(
-            select(UserSession).where(
-                UserSession.id == session_uuid, UserSession.user_id == user_id
-            )
+    if session_id is None:
+        raise AppError(
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCodes.INVALID_REFRESH_TOKEN,
+            "Invalid refresh token",
         )
-        session = session_result.scalar_one_or_none()
-        if session is None or session.revoked_at is not None:
-            raise AppError(
-                status.HTTP_401_UNAUTHORIZED,
-                ErrorCodes.INVALID_REFRESH_TOKEN,
-                "Invalid refresh token",
-            )
-        if session.current_refresh_token_jti != jti:
-            raise AppError(
-                status.HTTP_401_UNAUTHORIZED,
-                ErrorCodes.INVALID_REFRESH_TOKEN,
-                "Invalid refresh token",
-            )
+
+    session: UserSession | None = None
+    try:
+        session_uuid = UUID(str(session_id))
+    except ValueError as exc:
+        raise AppError(
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCodes.INVALID_REFRESH_TOKEN,
+            "Invalid refresh token",
+        ) from exc
+
+    session_result = await db.execute(
+        select(UserSession).where(
+            UserSession.id == session_uuid, UserSession.user_id == user_id
+        )
+    )
+    session = session_result.scalar_one_or_none()
+    if session is None or session.revoked_at is not None:
+        raise AppError(
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCodes.INVALID_REFRESH_TOKEN,
+            "Invalid refresh token",
+        )
+    if session.current_refresh_token_jti != jti:
+        raise AppError(
+            status.HTTP_401_UNAUTHORIZED,
+            ErrorCodes.INVALID_REFRESH_TOKEN,
+            "Invalid refresh token",
+        )
 
     # If jti present, ensure it hasn't been revoked already
     if jti:

@@ -9,10 +9,15 @@ interface UpcomingBirthdaysProps {
   onClose: () => void;
 }
 
+function parseBirthdayLocal(birthday: string): Date {
+  const [year, month, day] = birthday.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function getDaysUntilBirthday(birthday: string): number {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const bday = new Date(birthday);
+  const bday = parseBirthdayLocal(birthday);
   const thisYear = today.getFullYear();
 
   const nextBirthday = new Date(thisYear, bday.getMonth(), bday.getDate());
@@ -135,7 +140,7 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
         <div className="space-y-2">
           {upcoming.map((contact) => {
             const days = getDaysUntilBirthday(contact.birthday);
-            const bday = new Date(contact.birthday);
+            const bday = parseBirthdayLocal(contact.birthday);
             const dateLabel = bday.toLocaleDateString('en-GB', {
               day: '2-digit',
               month: 'long',

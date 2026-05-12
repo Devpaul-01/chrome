@@ -40,10 +40,10 @@ export default function AuthForm({
   const emailTouched = email.length > 0;
 
   // Password validation
-  const passwordTooShort = password.length > 0 && password.length < 8;
+  const passwordTooShort = authMode === 'register' && password.length > 0 && password.length < 8;
   const passwordHasNumber = /\d/.test(password);
   const passwordHasLetter = /[a-zA-Z]/.test(password);
-  const passwordValid = password.length >= 8;
+  const passwordValid = authMode === 'login' ? password.length > 0 : password.length >= 8;
   const passwordTouched = password.length > 0;
 
   // Form validity
@@ -111,12 +111,12 @@ export default function AuthForm({
           aria-describedby={
             authMode === 'register' && passwordTouched
               ? `${passwordErrorId} password-requirements`
-              : passwordTooShort && authMode === 'login'
-              ? passwordErrorId
               : ''
           }
-          placeholder="Enter your password (min 8 characters)"
-          minLength={8}
+          placeholder={
+            authMode === 'login' ? 'Enter your password' : 'Enter your password (min 8 characters)'
+          }
+          minLength={authMode === 'register' ? 8 : undefined}
           className={`w-full p-1.5 mt-0.5 rounded input-styled ${
             passwordTouched && !passwordValid ? 'border-red-500!' : ''
           }`}
@@ -145,7 +145,7 @@ export default function AuthForm({
         </div>
       )}
 
-      {passwordTooShort && authMode === 'login' && (
+      {passwordTooShort && (
         <p id={passwordErrorId} className="text-sm text-red-600 mb-5" role="alert">
           Password must be at least 8 characters.
         </p>

@@ -111,10 +111,16 @@ def test_access_token_can_include_session_id() -> None:
 
 
 @pytest.mark.asyncio
-async def test_refresh_token_rotation(db_session) -> None:
+async def test_refresh_token_rotation(real_auth_client, db_session) -> None:
     user = await _create_user(db_session, "rotate@example.com")
 
-    refresh_token_1 = create_refresh_token(user.id)
+    login_response = await real_auth_client.post(
+        "/auth/login",
+        json={"email": user.email, "password": "testpass123"},
+        headers={"user-agent": "rotation-test"},
+    )
+    assert login_response.status_code == 200
+    refresh_token_1 = login_response.json()["refresh_token"]
     payload_1 = decode_token(refresh_token_1)
     jti_1 = payload_1["jti"]
 
@@ -168,10 +174,29 @@ async def test_revoke_endpoint(db_session) -> None:
 
 
 @pytest.mark.asyncio
-async def test_concurrent_refresh_reuse_detection(db_session) -> None:
-    user = await _create_user(db_session, "concurrent@example.com")
+async def test_sessionless_refresh_token_is_rejected(db_session) -> None:
+    user = await _create_user(db_session, "legacy-refresh@example.com")
 
     refresh_token = create_refresh_token(user.id)
+
+    with pytest.raises(AppError) as exc_info:
+        await refresh(
+            _make_request(), RefreshRequest(refresh_token=refresh_token), db_session
+        )
+    assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_concurrent_refresh_reuse_detection(real_auth_client, db_session) -> None:
+    user = await _create_user(db_session, "concurrent@example.com")
+
+    login_response = await real_auth_client.post(
+        "/auth/login",
+        json={"email": user.email, "password": "testpass123"},
+        headers={"user-agent": "concurrent-test"},
+    )
+    assert login_response.status_code == 200
+    refresh_token = login_response.json()["refresh_token"]
     response_1 = await refresh(
         _make_request(), RefreshRequest(refresh_token=refresh_token), db_session
     )

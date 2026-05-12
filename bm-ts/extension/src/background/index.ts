@@ -26,6 +26,7 @@ import {
   me,
   refreshToken as refreshTokenEndpoint,
   register,
+  revokeToken,
   subscriptionStatus,
   updateTemplate,
   requestPasswordReset,
@@ -130,6 +131,8 @@ import logger from '../utils/logger';
  */
 const AUTH_ERROR = new ApiError(401, { detail: 'Not authenticated' });
 
+let refreshInFlight: Promise<TokenResponse> | null = null;
+
 /**
  * Calls the refresh-token endpoint, persists the new token pair to storage,
  * and returns the raw `TokenResponse`.
@@ -141,9 +144,16 @@ async function refreshTokensFlow(
   existingRefreshToken: string,
   baseUrl: string,
 ): Promise<TokenResponse> {
-  const tokens = await refreshTokenEndpoint(baseUrl, existingRefreshToken);
-  await saveTokens({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
-  return tokens;
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const tokens = await refreshTokenEndpoint(baseUrl, existingRefreshToken);
+      await saveTokens({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
+      return tokens;
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
 }
 
 /**
@@ -492,6 +502,14 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return refreshTokensFlow(tokens.refreshToken, baseUrl);
     }
     case 'auth.logout': {
+      const tokens = await getTokens();
+      if (tokens.refreshToken) {
+        try {
+          await revokeToken(baseUrl, tokens.refreshToken);
+        } catch (error) {
+          logger.warn('Failed to revoke refresh token during logout', error);
+        }
+      }
       await clearTokens();
       return { message: 'logged out' };
     }
@@ -683,7 +701,9 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
 
     // Contact handlers — full CRUD enabled.
     case 'contacts.list': {
-      return runAuthAware((accessToken, url) => listContacts(url, accessToken));
+      return runAuthAware((accessToken, url) =>
+        listContacts(url, accessToken, message.payload?.updatedSince),
+      );
     }
 
     case 'contacts.create': {

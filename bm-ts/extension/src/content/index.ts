@@ -236,6 +236,30 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
     });
   }
 
+  // Known Facebook section headings that should never be treated as person names.
+  const SECTION_HEADINGS = new Set([
+    'upcoming birthdays',
+    'recent birthdays',
+    'this week',
+    'next week',
+    'today',
+    'yesterday',
+    'tomorrow',
+    'this month',
+    'january',
+    'february',
+    'march',
+    'april',
+    'may',
+    'june',
+    'july',
+    'august',
+    'september',
+    'october',
+    'november',
+    'december',
+  ]);
+
   // Simple date patterns used to extract a birthday from container text nodes.
   const reDateFwd =
     /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan\.?|feb\.?|mar\.?|apr\.?|jun\.?|jul\.?|aug\.?|sep\.?|oct\.?|nov\.?|dec\.?)\s+(\d{1,2})\b/i;
@@ -258,30 +282,63 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
     return undefined;
   }
 
+  // Filter out system/navigation links (events, groups, etc.)
+  const isContainerSystemUrl = (href: string) =>
+    /\/(birthdays|events|groups|pages|marketplace|watch|gaming|search|login|help|notifications|settings)\b/.test(
+      href,
+    );
+
   containers.forEach((container, index) => {
+    // Skip section-level containers (too many profile links = section, not a single person card).
+    const allProfileLinks = Array.from(
+      container.querySelectorAll<HTMLAnchorElement>('a[href]'),
+    ).filter((a) => a.href.includes('facebook.com') && !isContainerSystemUrl(a.href));
+    if (allProfileLinks.length > 3) return;
+
     // Extract profile link first — its text content is the most reliable name source.
     const profileLink =
       container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/'][role='link']") ??
       container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/']");
 
-    // Filter out system/navigation links (events, groups, etc.)
-    const isSystemUrl = (href: string) =>
-      /\/(birthdays|events|groups|pages|marketplace|watch|gaming|search|login|help|notifications|settings)\b/.test(
-        href,
-      );
-    const validProfileLink = profileLink && !isSystemUrl(profileLink.href) ? profileLink : null;
+    const validProfileLink =
+      profileLink && !isContainerSystemUrl(profileLink.href) ? profileLink : null;
 
-    // Name: prefer profile link text, then fall back to structural selectors.
-    const nameFromLink = validProfileLink?.textContent?.trim();
+    // Name: prefer a specific name span inside the link (avoids picking up all link text),
+    // then fall back to structural selectors. Explicitly exclude h2/h3 (section headings).
+    let nameFromLink: string | undefined;
+    if (validProfileLink) {
+      // Look for a concise text span inside the link that is not a date string
+      const spans = Array.from(validProfileLink.querySelectorAll('span'));
+      for (const span of spans) {
+        const text = span.textContent?.trim() ?? '';
+        if (
+          text.length >= 2 &&
+          text.length <= 60 &&
+          !reDateFwd.test(text) &&
+          !reDateRev.test(text)
+        ) {
+          nameFromLink = text;
+          break;
+        }
+      }
+      // Fall back to full link textContent only if it's concise enough to be a name
+      if (!nameFromLink) {
+        const full = validProfileLink.textContent?.trim() ?? '';
+        if (full.length >= 2 && full.length <= 60) nameFromLink = full;
+      }
+    }
     const nameFromDOM = !nameFromLink
       ? (
           container.querySelector('strong span') ??
           container.querySelector('strong') ??
-          container.querySelector('h2 span, h3 span') ??
+          // NOTE: h2/h3 intentionally excluded — they are Facebook section headings
           container.querySelector('a[href*="facebook.com/"] span')
         )?.textContent?.trim()
       : undefined;
     const name = nameFromLink || nameFromDOM || 'Unknown';
+
+    // Skip known Facebook section headings mistaken for person names
+    if (SECTION_HEADINGS.has(name.toLowerCase())) return;
 
     // Deduplicate by name
     if (name !== 'Unknown' && seenNames.has(name)) return;
@@ -2733,9 +2790,71 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
   const results: ScrapedContact[] = [];
   const seen = new Set<string>();
 
+  /**
+   * Strip invisible/zero-width Unicode characters Facebook injects into name
+   * text as an anti-scraping measure (e.g. U+200B zero-width space, U+200C/D,
+   * U+2060 word joiner, U+FEFF BOM, soft-hyphen U+00AD, etc.).
+   */
+  function cleanName(raw: string): string {
+    return raw
+      .replace(/[\u00AD\u200B-\u200F\u2028\u2029\u202A-\u202E\u2060-\u2064\uFEFF]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Attempt to resolve the real display name for a profile link.
+   * Priority order:
+   *   1. aria-label on the link itself (most reliable on modern FB)
+   *   2. alt text of an <img> inside the link
+   *   3. Cleaned textContent of the link — but only if it looks like a
+   *      real name (not a single-letter avatar initial).
+   *   4. aria-label / textContent of the nearest named sibling/ancestor span.
+   */
+  function extractNameFromLink(link: HTMLAnchorElement): string {
+    // 1. aria-label on the link
+    const ariaLabel = cleanName(link.getAttribute('aria-label') ?? '');
+    if (ariaLabel.length >= 2 && ariaLabel.length <= 100) return ariaLabel;
+
+    // 2. img alt text inside the link
+    const img = link.querySelector<HTMLImageElement>('img[alt]');
+    if (img) {
+      const alt = cleanName(img.getAttribute('alt') ?? '');
+      if (alt.length >= 2 && alt.length <= 100) return alt;
+    }
+
+    // 3. Cleaned textContent — accept only if it's a plausible full name
+    const linkText = cleanName(link.textContent ?? '');
+    if (linkText.length >= 2 && linkText.length <= 100) return linkText;
+
+    // 4. Walk up to find a sibling/parent span or div that contains the name
+    //    (for cases where name is rendered outside the <a> tag).
+    let cursor: HTMLElement | null = link.parentElement;
+    for (let depth = 0; depth < 5 && cursor; depth++) {
+      // Look for a short text node in an adjacent span that isn't a date
+      const spans = cursor.querySelectorAll<HTMLElement>('span, div');
+      for (const el of spans) {
+        if (el.contains(link)) continue; // skip ancestors of the link
+        const text = cleanName(el.textContent ?? '');
+        if (
+          text.length >= 2 &&
+          text.length <= 100 &&
+          !reFwd.test(text) &&
+          !reRev.test(text) &&
+          !/^\d/.test(text)
+        ) {
+          return text;
+        }
+      }
+      cursor = cursor.parentElement;
+    }
+
+    return '';
+  }
+
   function tryAddContact(link: HTMLAnchorElement) {
     if (!isProfileLink(link.href)) return;
-    const name = link.textContent?.trim() ?? '';
+    const name = extractNameFromLink(link);
     if (!name || name.length < 2 || name.length > 100) return;
     const profileUrl = normalizeProfileUrl(link.href);
     if (seen.has(profileUrl)) return;
