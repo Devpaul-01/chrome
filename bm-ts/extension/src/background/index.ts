@@ -131,6 +131,8 @@ import logger from '../utils/logger';
  */
 const AUTH_ERROR = new ApiError(401, { detail: 'Not authenticated' });
 
+let refreshInFlight: Promise<TokenResponse> | null = null;
+
 /**
  * Calls the refresh-token endpoint, persists the new token pair to storage,
  * and returns the raw `TokenResponse`.
@@ -142,9 +144,16 @@ async function refreshTokensFlow(
   existingRefreshToken: string,
   baseUrl: string,
 ): Promise<TokenResponse> {
-  const tokens = await refreshTokenEndpoint(baseUrl, existingRefreshToken);
-  await saveTokens({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
-  return tokens;
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const tokens = await refreshTokenEndpoint(baseUrl, existingRefreshToken);
+      await saveTokens({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
+      return tokens;
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
 }
 
 /**
