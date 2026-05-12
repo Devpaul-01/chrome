@@ -203,6 +203,20 @@ TestSessionLocal = async_sessionmaker(
 
 
 @pytest_asyncio.fixture(autouse=True)
+def reset_rate_limiter():
+    """Reset SlowAPI in-memory rate limit counters before each test.
+
+    All tests share the same IP (127.0.0.1) via the HTTPX test transport.
+    Without a reset, hit-counts accumulate across tests and endpoints that
+    carry tight limits (e.g. /auth/login: 5/minute) start returning 429
+    for tests that run later in the suite.
+    """
+    from app.core.rate_limiter import limiter
+
+    limiter._storage.reset()
+
+
+@pytest_asyncio.fixture(autouse=True)
 async def setup_db():
     """Create all tables before each test and drop them after."""
     async with engine.begin() as conn:
