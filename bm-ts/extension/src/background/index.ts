@@ -701,7 +701,9 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
 
     // Contact handlers — full CRUD enabled.
     case 'contacts.list': {
-      return runAuthAware((accessToken, url) => listContacts(url, accessToken));
+      return runAuthAware((accessToken, url) =>
+        listContacts(url, accessToken, message.payload?.updatedSince),
+      );
     }
 
     case 'contacts.create': {
