@@ -37,8 +37,6 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [groups, setGroups] = useState<MessageGroup[]>([]);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   // Generation counter: only the most recent loadContacts call may write state.
   // This prevents a slow in-flight fetch from overwriting a newer result.
   const loadGenRef = useRef(0);
@@ -51,7 +49,16 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
       const data = await sendBackgroundMessage<Contact[]>({ type: 'contacts.list' });
       if (gen !== loadGenRef.current) return; // stale — a newer call is in flight
       const withBirthdays = (data || [])
-        .filter((c) => c.birthday && !c.birthday_month_only && c.name && c.name.trim().length >= 2)
+        .filter((c) => {
+          if (!c.birthday || c.birthday_month_only) return false;
+          const name = c.name?.trim() ?? '';
+          if (name.length < 2) return false;
+          // Reject garbled names left over from old scraping runs
+          if (/profile\s*(picture|photo)/i.test(name)) return false;
+          if (/\d/.test(name)) return false;
+          if (/\b(message|send|follow)\b/i.test(name)) return false;
+          return true;
+        })
         .sort((a, b) => getDaysUntilBirthday(a.birthday) - getDaysUntilBirthday(b.birthday));
       setContacts(withBirthdays);
     } catch (err) {
@@ -83,33 +90,6 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
     }
   }
 
-  async function handleSyncFromFacebook() {
-    setIsSyncing(true);
-    setSyncMessage(null);
-    setError(null);
-    try {
-      const result = await sendBackgroundMessage<{
-        success: boolean;
-        count: number;
-        error?: string;
-      }>({
-        type: 'contacts.scrapeFromFacebook',
-      });
-      if (result?.success) {
-        setSyncMessage(
-          `Synced ${result.count} contact${result.count !== 1 ? 's' : ''} from Facebook.`,
-        );
-        await loadContacts();
-      } else {
-        setError(result?.error || 'Failed to sync contacts.');
-      }
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setIsSyncing(false);
-    }
-  }
-
   const upcoming = contacts.filter((c) => getDaysUntilBirthday(c.birthday) <= 30);
 
   return (
@@ -119,17 +99,6 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
         <HelpTooltip label="Shows friends with birthdays in the next 30 days, based on contacts synced from Facebook. Contacts marked 'Month only' are excluded since their exact date isn't known." />
       </h2>
       <p className="text-xs text-gray-600 mb-4">Friends with birthdays in the next 30 days.</p>
-
-      <div className="flex items-center gap-2 mb-4">
-        <button className="btn btn-sm" onClick={handleSyncFromFacebook} disabled={isSyncing}>
-          {isSyncing ? 'Syncing...' : '🔄 Sync from Facebook'}
-        </button>
-        <span className="text-xs text-gray-500">Open facebook.com/friends/birthdays first</span>
-      </div>
-
-      {syncMessage && (
-        <div className="text-xs text-green-600 bg-green-50 rounded p-2 mb-3">{syncMessage}</div>
-      )}
 
       {error && (
         <div className="error mb-4" role="alert">
