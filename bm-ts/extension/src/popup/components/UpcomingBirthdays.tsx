@@ -46,7 +46,7 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
     try {
       const data = await sendBackgroundMessage<Contact[]>({ type: 'contacts.list' });
       const withBirthdays = (data || [])
-        .filter((c) => c.birthday && !c.birthday_month_only)
+        .filter((c) => c.birthday && !c.birthday_month_only && c.name && c.name.trim().length >= 2)
         .sort((a, b) => getDaysUntilBirthday(a.birthday) - getDaysUntilBirthday(b.birthday));
       setContacts(withBirthdays);
     } catch (err) {

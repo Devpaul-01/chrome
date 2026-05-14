@@ -2925,9 +2925,12 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
    *   4. aria-label / textContent of the nearest named sibling/ancestor span.
    */
   function extractNameFromLink(link: HTMLAnchorElement): string {
-    // 1. aria-label on the link
-    const ariaLabel = cleanName(link.getAttribute('aria-label') ?? '');
-    if (ariaLabel.length >= 2 && ariaLabel.length <= 100) return ariaLabel;
+    // 1. aria-label on the link — strip FB suffixes like "'s profile picture" and
+    //    "View/Open" prefixes so we don't save the full sentence as the name.
+    let ariaLabel = cleanName(link.getAttribute('aria-label') ?? '');
+    ariaLabel = ariaLabel.replace(/[\u2018\u2019\u02bc's]s?\s+profile\s*(picture|photo)?$/i, '').trim();
+    ariaLabel = ariaLabel.replace(/^(?:view|open)\s+/i, '').trim();
+    if (ariaLabel.length >= 2 && ariaLabel.length <= 100 && !/\d/.test(ariaLabel)) return ariaLabel;
 
     // 2. img alt text inside the link
     const img = link.querySelector<HTMLImageElement>('img[alt]');
