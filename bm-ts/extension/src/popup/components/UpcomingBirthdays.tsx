@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { sendBackgroundMessage } from '../api';
 import Spinner from './Spinner';
 import type { Contact } from '../../api/client';
@@ -39,20 +39,26 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
   const [groups, setGroups] = useState<MessageGroup[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  // Generation counter: only the most recent loadContacts call may write state.
+  // This prevents a slow in-flight fetch from overwriting a newer result.
+  const loadGenRef = useRef(0);
 
   async function loadContacts() {
+    const gen = ++loadGenRef.current;
     setIsLoading(true);
     setError(null);
     try {
       const data = await sendBackgroundMessage<Contact[]>({ type: 'contacts.list' });
+      if (gen !== loadGenRef.current) return; // stale — a newer call is in flight
       const withBirthdays = (data || [])
         .filter((c) => c.birthday && !c.birthday_month_only && c.name && c.name.trim().length >= 2)
         .sort((a, b) => getDaysUntilBirthday(a.birthday) - getDaysUntilBirthday(b.birthday));
       setContacts(withBirthdays);
     } catch (err) {
+      if (gen !== loadGenRef.current) return;
       setError((err as Error).message);
     } finally {
-      setIsLoading(false);
+      if (gen === loadGenRef.current) setIsLoading(false);
     }
   }
 
