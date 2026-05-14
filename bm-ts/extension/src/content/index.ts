@@ -321,17 +321,32 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
     const alt = (img?.getAttribute('alt') ?? '').trim();
     if (alt.length >= 2 && alt.length <= 80) return alt;
 
-    // 3. First span whose text isn't a date and is plausibly a name.
+    // 3. First span whose text looks like a name (no digits, no action words, not a date).
     for (const span of Array.from(link.querySelectorAll('span'))) {
       const text = span.textContent?.trim() ?? '';
-      if (text.length >= 2 && text.length <= 60 && !reDateFwd.test(text) && !reDateRev.test(text)) {
+      if (
+        text.length >= 2 &&
+        text.length <= 60 &&
+        !/\d/.test(text) &&
+        !reDateFwd.test(text) &&
+        !reDateRev.test(text) &&
+        !/\b(message|send|friend|follow|add)\b/i.test(text)
+      ) {
         return text;
       }
     }
 
-    // 4. Full link textContent if concise enough.
+    // 4. Full link textContent — only if it's clean (no digits, no action words).
+    //    Reject strings like "Jeanine Bergh Poole20 MayMessage" that occur when
+    //    Facebook wraps the entire birthday card in a single <a> element.
     const full = link.textContent?.trim() ?? '';
-    if (full.length >= 2 && full.length <= 60) return full;
+    if (
+      full.length >= 2 &&
+      full.length <= 50 &&
+      !/\d/.test(full) &&
+      !/\b(message|send|friend|follow)\b/i.test(full)
+    )
+      return full;
 
     return '';
   }
@@ -400,6 +415,68 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
       messageButton: messageBtn ?? undefined,
     });
   });
+
+  // ── Fallback: anchor on Messenger links / Message buttons ───────────────
+  // When Facebook changes its DOM so none of the container selectors produce
+  // individual per-person cards (e.g. the entire birthday list lands in one
+  // large `role="article"` that fails the distinctProfiles guard), we pivot to
+  // finding Message buttons directly and walking up to the smallest card that
+  // holds exactly one profile URL.
+  if (detected.length === 0) {
+    const msgSeen = new Set<string>();
+    const msgBtnSelectors = [
+      "a[href*='/messages/t/']",
+      "a[href*='/messages/e2ee/']",
+      "[role='button'][aria-label*='essage']",
+    ];
+    const msgButtons: HTMLElement[] = [];
+    const btnSeen = new Set<HTMLElement>();
+    for (const sel of msgBtnSelectors) {
+      document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
+        if (!btnSeen.has(el)) {
+          btnSeen.add(el);
+          msgButtons.push(el);
+        }
+      });
+    }
+
+    for (const btn of msgButtons) {
+      let card: HTMLElement | null = btn.parentElement;
+      for (let depth = 0; depth < 10 && card; depth++) {
+        const profileLinks = Array.from(
+          card.querySelectorAll<HTMLAnchorElement>('a[href]'),
+        ).filter(
+          (a) =>
+            a.href.includes('facebook.com') &&
+            !isContainerSystemUrl(a.href) &&
+            !/\/messages\//.test(a.href),
+        );
+        const uniqueProfiles = new Set(profileLinks.map((a) => normaliseProfilePath(a.href)));
+        if (uniqueProfiles.size === 1) {
+          const link = profileLinks[0];
+          const canonicalUrl = normaliseProfilePath(link.href);
+          if (msgSeen.has(canonicalUrl)) break;
+          msgSeen.add(canonicalUrl);
+          const name = resolveNameFromLink(link);
+          if (!name || name.length < 2 || SECTION_HEADINGS.has(name.toLowerCase())) break;
+          if (seenNames.has(name)) break;
+          seenNames.add(name);
+          const birthday = extractBirthdayFromContainer(card);
+          detected.push({
+            id: `${name}-fb-${detected.length}`,
+            name,
+            birthday,
+            profileUrl: link.href,
+            container: card,
+            messageButton: btn,
+          });
+          break;
+        }
+        card = card.parentElement;
+      }
+    }
+  }
+
   return detected;
 }
 /** Fetches template segments from the backend and groups them by type into `segments`. */
@@ -2859,9 +2936,17 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
       if (alt.length >= 2 && alt.length <= 100) return alt;
     }
 
-    // 3. Cleaned textContent — accept only if it's a plausible full name
+    // 3. Cleaned textContent — only accept if it looks like a real name.
+    //    Reject strings like "Jeanine Bergh Poole20 MayMessage" that occur when
+    //    Facebook wraps the entire birthday card in a single <a> element.
     const linkText = cleanName(link.textContent ?? '');
-    if (linkText.length >= 2 && linkText.length <= 100) return linkText;
+    if (
+      linkText.length >= 2 &&
+      linkText.length <= 60 &&
+      !/\d/.test(linkText) &&
+      !/\b(message|send|friend|follow|add|like|comment)\b/i.test(linkText)
+    )
+      return linkText;
 
     // 4. Walk up to find a sibling/parent span or div that contains the name
     //    (for cases where name is rendered outside the <a> tag).
@@ -2874,10 +2959,11 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
         const text = cleanName(el.textContent ?? '');
         if (
           text.length >= 2 &&
-          text.length <= 100 &&
+          text.length <= 60 &&
           !reFwd.test(text) &&
           !reRev.test(text) &&
-          !/^\d/.test(text)
+          !/\d/.test(text) &&
+          !/\b(message|send|friend|follow|add)\b/i.test(text)
         ) {
           return text;
         }
