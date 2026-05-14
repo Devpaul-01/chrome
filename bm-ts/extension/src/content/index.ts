@@ -337,7 +337,7 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
     }
 
     // 4. Full link textContent — only if it's clean (no digits, no action words).
-    //    Reject strings like "Jeanine Bergh Poole20 MayMessage" that occur when
+    //    Reject strings like "Jane Smith20 MayMessage" that occur when
     //    Facebook wraps the entire birthday card in a single <a> element.
     const full = link.textContent?.trim() ?? '';
     if (
@@ -2941,9 +2941,7 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
       // Strip leading "Profile picture/photo of " prefix
       alt = alt.replace(/^profile\s*(picture|photo)?\s*(of\s+)?/i, '').trim();
       // Strip trailing "'s profile picture/photo" or "'s photo"
-      alt = alt
-        .replace(/[\u2018\u2019\u02bc's]s?\s+profile\s*(picture|photo)?$/i, '')
-        .trim();
+      alt = alt.replace(/[\u2018\u2019\u02bc's]s?\s+profile\s*(picture|photo)?$/i, '').trim();
       alt = alt.replace(/[\u2018\u2019\u02bc's]s?\s+photo$/i, '').trim();
       if (
         alt.length >= 2 &&
@@ -2955,7 +2953,7 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
     }
 
     // 3. Cleaned textContent — only accept if it looks like a real name.
-    //    Reject strings like "Jeanine Bergh Poole20 MayMessage" that occur when
+    //    Reject strings like "Jane Smith20 MayMessage" that occur when
     //    Facebook wraps the entire birthday card in a single <a> element.
     const linkText = cleanName(link.textContent ?? '');
     if (

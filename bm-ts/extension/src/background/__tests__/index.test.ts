@@ -56,10 +56,13 @@ const mockHandleInstallOrUpdate = vi.fn();
 
 vi.mock('../../api/client', () => ({
   ApiError: class ApiError extends Error {
-    constructor(public status: number, public data: unknown) {
+    constructor(
+      public status: number,
+      public data: unknown,
+    ) {
       super(
         typeof data === 'object' && data !== null && 'detail' in (data as object)
-          ? (data as { detail?: string }).detail ?? 'API error'
+          ? ((data as { detail?: string }).detail ?? 'API error')
           : 'API error',
       );
     }

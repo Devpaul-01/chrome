@@ -426,8 +426,8 @@ export default function ImportContactsModal({ onClose, onImport }: ImportContact
                       {monthOnlySet.has(i)
                         ? `📅 Birth month: ${MONTH_NAMES[c.birthday.split('-')[1]] ?? c.birthday}`
                         : c.birthday === todayISO() && missingDateCount > 0
-                        ? `⚠ Birthday: ${c.birthday}`
-                        : `Birthday: ${c.birthday}`}
+                          ? `⚠ Birthday: ${c.birthday}`
+                          : `Birthday: ${c.birthday}`}
                     </p>
                   </li>
                 ))}

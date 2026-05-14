@@ -3,7 +3,7 @@ db/models.py — SQLAlchemy ORM models for all database tables.
 
 Table / model mapping
 ---------------------
-Phase 1 (core auth & messaging):
+Core auth & messaging:
   users                   → User
   subscription_records    → SubscriptionRecord
   template_segments       → TemplateSegment     (legacy greeting/body/closing)
@@ -12,7 +12,7 @@ Phase 1 (core auth & messaging):
   message_history         → MessageHistory
   password_reset_tokens   → PasswordResetToken
 
-Phase 2 (contact & automation):
+Automation & contact management:
   contacts                → Contact
   message_groups          → MessageGroup
   posts                   → Post               (timeline posts)
@@ -533,10 +533,9 @@ class EmailVerificationToken(Base):
     )
 
 
-# ========== Phase 2 Models ==========
-# Models added in Phase 2 to support the full automation and contact-management
-# features.  They are created by Alembic migrations and share the same
-# declarative Base as the Phase 1 models above.
+# ========== Automation & Contact Management Models ==========
+# The following models support full automation and contact management.
+# They are created by Alembic migrations and share the same declarative Base.
 
 gender_enum = ENUM(
     "MALE",

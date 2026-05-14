@@ -71,7 +71,14 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
   }
 
   useEffect(() => {
-    void loadContacts();
+    // Silently remove garbled contacts that survived from old scraping runs,
+    // then load the now-clean list.  Errors are ignored so a network blip or
+    // unauthenticated state never blocks the view from rendering.
+    sendBackgroundMessage<{ deleted: number }>({ type: 'contacts.cleanup' })
+      .catch(() => {})
+      .finally(() => {
+        void loadContacts();
+      });
     sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' })
       .then(setGroups)
       .catch(() => {});

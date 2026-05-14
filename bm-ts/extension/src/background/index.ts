@@ -67,6 +67,7 @@ import {
   createContact,
   deleteContact,
   bulkCreateContacts,
+  cleanupGarbledContacts,
   Contact,
   updateContact,
   MessageGroup,
@@ -722,6 +723,9 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) =>
         bulkCreateContacts(url, accessToken, message.payload.contacts),
       );
+    }
+    case 'contacts.cleanup': {
+      return runAuthAware((accessToken, url) => cleanupGarbledContacts(url, accessToken));
     }
 
     case 'contacts.scrapeFromFacebook': {

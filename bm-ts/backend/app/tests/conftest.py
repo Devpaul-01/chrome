@@ -83,7 +83,7 @@ def _set_subscription_created_at(mapper, connection, target):
         target.started_at = now
 
 
-# Phase 2 models — set created_at/updated_at defaults for SQLite tests
+# Automation & contact management models — set created_at/updated_at defaults for SQLite tests
 from app.db.models import (  # noqa: E402
     BirthdayConfig,
     Contact,
