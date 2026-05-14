@@ -282,20 +282,78 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
     return undefined;
   }
 
-  // Filter out system/navigation links (events, groups, etc.)
+  /** Returns true for FB system/navigation URLs that are never personal profile links. */
   const isContainerSystemUrl = (href: string) =>
     /\/(birthdays|events|groups|pages|marketplace|watch|gaming|search|login|help|notifications|settings)\b/.test(
       href,
     );
 
-  containers.forEach((container, index) => {
-    // Skip section-level containers (too many profile links = section, not a single person card).
-    const allProfileLinks = Array.from(
-      container.querySelectorAll<HTMLAnchorElement>('a[href]'),
-    ).filter((a) => a.href.includes('facebook.com') && !isContainerSystemUrl(a.href));
-    if (allProfileLinks.length > 3) return;
+  /**
+   * Normalise a Facebook profile URL to its canonical path so that the photo
+   * link and name link (which share the same profile URL) are counted as one
+   * distinct person.  E.g. both "https://www.facebook.com/tom.jones" and
+   * "https://www.facebook.com/tom.jones?ref=birthdays" → "/tom.jones".
+   */
+  const normaliseProfilePath = (href: string): string => {
+    try {
+      const u = new URL(href);
+      const id = u.searchParams.get('id');
+      return id ? `profile:${id}` : u.pathname.replace(/\/$/, '').toLowerCase();
+    } catch {
+      return href;
+    }
+  };
 
-    // Extract profile link first — its text content is the most reliable name source.
+  /**
+   * Resolve the best available display name for a profile anchor element.
+   * Priority: aria-label on link → img[alt] inside link → span text → full textContent.
+   */
+  function resolveNameFromLink(link: HTMLAnchorElement): string {
+    // 1. aria-label — FB name links typically have just the person's name.
+    //    Photo links have "X's profile picture"; strip that suffix if present.
+    let ariaLabel = (link.getAttribute('aria-label') ?? '').trim();
+    ariaLabel = ariaLabel.replace(/[''']s\s+profile\s*(picture|photo)?$/i, '').trim();
+    ariaLabel = ariaLabel.replace(/^(?:view|open)\s+/i, '').trim();
+    if (ariaLabel.length >= 2 && ariaLabel.length <= 80) return ariaLabel;
+
+    // 2. img alt text inside the link (profile thumbnail alt = person's name).
+    const img = link.querySelector<HTMLImageElement>('img[alt]');
+    const alt = (img?.getAttribute('alt') ?? '').trim();
+    if (alt.length >= 2 && alt.length <= 80) return alt;
+
+    // 3. First span whose text isn't a date and is plausibly a name.
+    for (const span of Array.from(link.querySelectorAll('span'))) {
+      const text = span.textContent?.trim() ?? '';
+      if (text.length >= 2 && text.length <= 60 && !reDateFwd.test(text) && !reDateRev.test(text)) {
+        return text;
+      }
+    }
+
+    // 4. Full link textContent if concise enough.
+    const full = link.textContent?.trim() ?? '';
+    if (full.length >= 2 && full.length <= 60) return full;
+
+    return '';
+  }
+
+  containers.forEach((container, index) => {
+    // Skip section-level containers — they contain MULTIPLE distinct profile
+    // URLs (i.e. multiple people).  A single person's card reuses one profile
+    // URL across the photo link and the name link, so distinctProfiles === 1.
+    const distinctProfiles = new Set(
+      Array.from(container.querySelectorAll<HTMLAnchorElement>('a[href]'))
+        .map((a) => a.href)
+        .filter(
+          (href) =>
+            href.includes('facebook.com') &&
+            !isContainerSystemUrl(href) &&
+            !/\/messages\//.test(href),
+        )
+        .map(normaliseProfilePath),
+    );
+    if (distinctProfiles.size > 1) return;
+
+    // Extract profile link first — its content is the most reliable name source.
     const profileLink =
       container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/'][role='link']") ??
       container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/']");
@@ -303,30 +361,8 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
     const validProfileLink =
       profileLink && !isContainerSystemUrl(profileLink.href) ? profileLink : null;
 
-    // Name: prefer a specific name span inside the link (avoids picking up all link text),
-    // then fall back to structural selectors. Explicitly exclude h2/h3 (section headings).
-    let nameFromLink: string | undefined;
-    if (validProfileLink) {
-      // Look for a concise text span inside the link that is not a date string
-      const spans = Array.from(validProfileLink.querySelectorAll('span'));
-      for (const span of spans) {
-        const text = span.textContent?.trim() ?? '';
-        if (
-          text.length >= 2 &&
-          text.length <= 60 &&
-          !reDateFwd.test(text) &&
-          !reDateRev.test(text)
-        ) {
-          nameFromLink = text;
-          break;
-        }
-      }
-      // Fall back to full link textContent only if it's concise enough to be a name
-      if (!nameFromLink) {
-        const full = validProfileLink.textContent?.trim() ?? '';
-        if (full.length >= 2 && full.length <= 60) nameFromLink = full;
-      }
-    }
+    const nameFromLink = validProfileLink ? resolveNameFromLink(validProfileLink) : undefined;
+
     const nameFromDOM = !nameFromLink
       ? (
           container.querySelector('strong span') ??

@@ -10,7 +10,10 @@ interface UpcomingBirthdaysProps {
 }
 
 function parseBirthdayLocal(birthday: string): Date {
-  const [year, month, day] = birthday.split('-').map(Number);
+  // Slice to YYYY-MM-DD first — the API returns full ISO datetime strings
+  // (e.g. "2000-05-15T00:00:00+00:00") because the DB column is timezone-aware.
+  // Splitting the full string on '-' would produce NaN for the day component.
+  const [year, month, day] = birthday.slice(0, 10).split('-').map(Number);
   return new Date(year, month - 1, day);
 }
 
