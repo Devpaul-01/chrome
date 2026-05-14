@@ -443,9 +443,7 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
     for (const btn of msgButtons) {
       let card: HTMLElement | null = btn.parentElement;
       for (let depth = 0; depth < 10 && card; depth++) {
-        const profileLinks = Array.from(
-          card.querySelectorAll<HTMLAnchorElement>('a[href]'),
-        ).filter(
+        const profileLinks = Array.from(card.querySelectorAll<HTMLAnchorElement>('a[href]')).filter(
           (a) =>
             a.href.includes('facebook.com') &&
             !isContainerSystemUrl(a.href) &&
@@ -2928,7 +2926,9 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
     // 1. aria-label on the link — strip FB suffixes like "'s profile picture" and
     //    "View/Open" prefixes so we don't save the full sentence as the name.
     let ariaLabel = cleanName(link.getAttribute('aria-label') ?? '');
-    ariaLabel = ariaLabel.replace(/[\u2018\u2019\u02bc's]s?\s+profile\s*(picture|photo)?$/i, '').trim();
+    ariaLabel = ariaLabel
+      .replace(/[\u2018\u2019\u02bc's]s?\s+profile\s*(picture|photo)?$/i, '')
+      .trim();
     ariaLabel = ariaLabel.replace(/^(?:view|open)\s+/i, '').trim();
     if (ariaLabel.length >= 2 && ariaLabel.length <= 100 && !/\d/.test(ariaLabel)) return ariaLabel;
 
