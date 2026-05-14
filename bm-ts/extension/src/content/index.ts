@@ -2932,11 +2932,26 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
     ariaLabel = ariaLabel.replace(/^(?:view|open)\s+/i, '').trim();
     if (ariaLabel.length >= 2 && ariaLabel.length <= 100 && !/\d/.test(ariaLabel)) return ariaLabel;
 
-    // 2. img alt text inside the link
+    // 2. img alt text inside the link — apply the same suffix-stripping we use
+    //    for aria-label; Facebook img alt values are often "[Name]'s photo" or
+    //    "Profile picture of [Name]" and must be cleaned before use.
     const img = link.querySelector<HTMLImageElement>('img[alt]');
     if (img) {
-      const alt = cleanName(img.getAttribute('alt') ?? '');
-      if (alt.length >= 2 && alt.length <= 100) return alt;
+      let alt = cleanName(img.getAttribute('alt') ?? '');
+      // Strip leading "Profile picture/photo of " prefix
+      alt = alt.replace(/^profile\s*(picture|photo)?\s*(of\s+)?/i, '').trim();
+      // Strip trailing "'s profile picture/photo" or "'s photo"
+      alt = alt
+        .replace(/[\u2018\u2019\u02bc's]s?\s+profile\s*(picture|photo)?$/i, '')
+        .trim();
+      alt = alt.replace(/[\u2018\u2019\u02bc's]s?\s+photo$/i, '').trim();
+      if (
+        alt.length >= 2 &&
+        alt.length <= 100 &&
+        !/\d/.test(alt) &&
+        !/\b(message|send|friend|follow|add)\b/i.test(alt)
+      )
+        return alt;
     }
 
     // 3. Cleaned textContent — only accept if it looks like a real name.

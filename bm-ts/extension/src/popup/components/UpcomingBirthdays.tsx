@@ -55,8 +55,9 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
           if (name.length < 2) return false;
           // Reject garbled names left over from old scraping runs
           if (/profile\s*(picture|photo)/i.test(name)) return false;
+          if (/'s\s+(profile|photo)\b/i.test(name)) return false;
           if (/\d/.test(name)) return false;
-          if (/\b(message|send|follow)\b/i.test(name)) return false;
+          if (/\b(message|send|follow|view|write|poke)\b/i.test(name)) return false;
           return true;
         })
         .sort((a, b) => getDaysUntilBirthday(a.birthday) - getDaysUntilBirthday(b.birthday));
