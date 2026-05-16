@@ -114,6 +114,7 @@ import {
   getConfirmationMode,
   setConfirmationMode,
   setShouldAbort,
+  requestAlarmsPermission,
 } from '../utils/failsafe';
 import type { ConfirmationMode } from '../utils/failsafe';
 import {
@@ -616,6 +617,10 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return getAutomationConfig();
     }
     case 'automation.setEnabled': {
+      if (message.payload.enabled) {
+        // alarms is optional_permissions — request it before scheduling
+        await requestAlarmsPermission();
+      }
       return updateAutomationEnabled(message.payload.enabled);
     }
     case 'automation.setInterval': {
