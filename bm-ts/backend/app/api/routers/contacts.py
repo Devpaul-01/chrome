@@ -20,10 +20,10 @@ from app.schemas.common import DeleteResponse, ErrorResponse
 from pydantic import BaseModel
 
 _GARBLED_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r'profile\s*(picture|photo)', re.IGNORECASE),
+    re.compile(r"profile\s*(picture|photo)", re.IGNORECASE),
     re.compile(r"'s\s+(profile|photo)\b", re.IGNORECASE),
-    re.compile(r'\d'),
-    re.compile(r'\b(message|send|follow|view|write|poke)\b', re.IGNORECASE),
+    re.compile(r"\d"),
+    re.compile(r"\b(message|send|follow|view|write|poke)\b", re.IGNORECASE),
 ]
 
 
@@ -37,6 +37,7 @@ def _is_garbled_name(name: str | None) -> bool:
 class CleanupResponse(BaseModel):
     deleted: int
 
+
 _ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
     401: {"model": ErrorResponse},
@@ -45,6 +46,7 @@ _ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     422: {"model": ErrorResponse},
     500: {"model": ErrorResponse},
 }
+
 
 def _normalize_facebook_url(url: str) -> str:
     """Normalise a Facebook profile URL to a canonical form.
