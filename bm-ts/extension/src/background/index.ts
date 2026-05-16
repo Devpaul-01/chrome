@@ -449,6 +449,7 @@ type BackgroundResponse =
   | ServerRateLimitStatus
   | Contact
   | Contact[]
+  | { deleted: number }
   | MessageGroup
   | MessageGroup[]
   | null;
