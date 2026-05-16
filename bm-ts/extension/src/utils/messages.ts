@@ -166,4 +166,5 @@ export type BackgroundMessage =
   | { type: 'contacts.update'; payload: UpdateContactPayload & { id: string } }
   | { type: 'contacts.delete'; payload: { id: string } }
   | { type: 'contacts.bulkCreate'; payload: { contacts: CreateContactPayload[] } }
+  | { type: 'contacts.cleanup' }
   | { type: 'contacts.scrapeFromFacebook' };

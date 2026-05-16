@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 from uuid import UUID
@@ -7,14 +8,35 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.errors import AppError, ErrorCodes
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from urllib.parse import parse_qs, urlparse
 
 from app.api.deps import get_current_user
 from app.db.models import Contact, User
 from app.db.session import get_db
 from app.schemas.contact import ContactCreate, ContactOut, ContactUpdate
 from app.schemas.common import DeleteResponse, ErrorResponse
+from pydantic import BaseModel
+
+_GARBLED_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"profile\s*(picture|photo)", re.IGNORECASE),
+    re.compile(r"'s\s+(profile|photo)\b", re.IGNORECASE),
+    re.compile(r"\d"),
+    re.compile(r"\b(message|send|follow|view|write|poke)\b", re.IGNORECASE),
+]
+
+
+def _is_garbled_name(name: str | None) -> bool:
+    """Return True when a contact name looks like a scraping artefact."""
+    if not name or len(name.strip()) < 2:
+        return True
+    return any(p.search(name.strip()) for p in _GARBLED_PATTERNS)
+
+
+class CleanupResponse(BaseModel):
+    deleted: int
+
 
 _ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse},
@@ -24,6 +46,24 @@ _ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     422: {"model": ErrorResponse},
     500: {"model": ErrorResponse},
 }
+
+
+def _normalize_facebook_url(url: str) -> str:
+    """Normalise a Facebook profile URL to a canonical form.
+
+    * Vanity URLs: strip all query-params and trailing slash.
+    * Numeric profiles (profile.php?id=…): keep only the ``id`` param.
+    """
+    try:
+        parsed = urlparse(url)
+        params = parse_qs(parsed.query)
+        if "id" in params:
+            return f"https://www.facebook.com/profile.php?id={params['id'][0]}"
+        path = parsed.path.rstrip("/")
+        return f"https://www.facebook.com{path}"
+    except Exception:
+        return url
+
 
 router = APIRouter(prefix="/contacts", tags=["contacts"], responses=_ERROR_RESPONSES)
 
@@ -66,15 +106,25 @@ async def bulk_create_contacts(
     results: list[Contact] = []
     now = datetime.now(timezone.utc)
     for data in contacts_data:
+        normalized_url = _normalize_facebook_url(str(data.facebook_profile_url))
+        # Match by the normalised URL *or* by the old form that has query-params
+        # appended (e.g. "?ref=birthday").  This ensures contacts that were
+        # originally saved with extra query-params are overwritten rather than
+        # duplicated alongside the clean entry.
         stmt = select(Contact).where(
             Contact.user_id == current_user.id,
-            Contact.facebook_profile_url == data.facebook_profile_url,
+            or_(
+                Contact.facebook_profile_url == normalized_url,
+                Contact.facebook_profile_url.like(f"{normalized_url}?%"),
+            ),
         )
         result = await db.execute(stmt)
         contact = result.scalar_one_or_none()
 
         if contact:
             contact.name = data.name
+            # Migrate stored URL to the normalised form.
+            contact.facebook_profile_url = normalized_url
             # Never downgrade a known full date to month-only on rescan.
             # Only update birthday when the incoming data is an improvement
             # (month-only → full) or when both are full dates (possible correction).
@@ -88,7 +138,7 @@ async def bulk_create_contacts(
             contact = Contact(
                 user_id=current_user.id,
                 name=data.name,
-                facebook_profile_url=data.facebook_profile_url,
+                facebook_profile_url=normalized_url,
                 birthday=data.birthday,
                 birthday_month_only=data.birthday_month_only or False,
                 gender=data.gender.value if data.gender else None,
@@ -102,6 +152,33 @@ async def bulk_create_contacts(
     for contact in results:
         await db.refresh(contact)
     return results  # type: ignore[return-value]
+
+
+@router.delete(
+    "/cleanup", response_model=CleanupResponse, status_code=status.HTTP_200_OK
+)
+async def cleanup_garbled_contacts(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CleanupResponse:
+    """Delete contacts whose names look like scraping artefacts (garbled names).
+
+    This is a one-shot repair operation.  After calling this endpoint, the
+    next overlay Refresh will re-scrape and restore legitimate contacts from
+    the live Facebook birthday page.
+    """
+    stmt = select(Contact).where(Contact.user_id == current_user.id)
+    result = await db.execute(stmt)
+    all_contacts: list[Contact] = list(result.scalars().all())
+
+    deleted = 0
+    for contact in all_contacts:
+        if _is_garbled_name(contact.name):
+            await db.delete(contact)
+            deleted += 1
+
+    await db.commit()
+    return CleanupResponse(deleted=deleted)
 
 
 @router.get("/", response_model=List[ContactOut])

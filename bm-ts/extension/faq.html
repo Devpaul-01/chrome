@@ -207,8 +207,23 @@
         <p>
           BirthdayMessaging uses your existing logged-in Facebook session — it does not store your
           Facebook credentials. The extension mimics natural human interaction (random delays, one
-          message at a time) to minimise any risk of triggering Facebook's automation detection.
-          That said, use at your own discretion, and keep your
+          message at a time) and applies built-in rate limits (10 per hour, 20 per day, 50 per
+          week) to minimise the risk of triggering Facebook's automation detection.
+        </p>
+        <p>Your <strong>Send Confirmation</strong> mode also matters:</p>
+        <ul>
+          <li>
+            <strong>Each message</strong> — shows a preview before every send (safest, recommended)
+          </li>
+          <li><strong>Per session</strong> — asks once at the start of each automation run</li>
+          <li>
+            <strong>Auto</strong> — sends without any confirmation and carries the highest ban risk.
+            The extension displays a prominent warning when this mode is selected. Use only if you
+            have plenty of varied templates and fully understand the risk.
+          </li>
+        </ul>
+        <p>
+          Use at your own discretion, and keep
           <strong>Max Messages Per Run</strong> at a reasonable level.
         </p>
 

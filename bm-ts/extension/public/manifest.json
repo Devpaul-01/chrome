@@ -10,9 +10,9 @@
     "activeTab",
     "tabs",
     "notifications",
-    "alarms",
     "clipboardWrite"
   ],
+  "optional_permissions": ["alarms"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "BirthdayMessaging"
@@ -23,13 +23,19 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.facebook.com/*"],
+      "matches": [
+        "https://www.facebook.com/birthdays*",
+        "https://www.facebook.com/messages/*",
+        "https://www.facebook.com/profile.php*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
   ],
   "host_permissions": [
-    "https://www.facebook.com/*",
+    "https://www.facebook.com/birthdays*",
+    "https://www.facebook.com/messages/*",
+    "https://www.facebook.com/profile.php*",
     "http://localhost/*",
     "https://localhost/*",
     "http://*.sslip.io/*",

@@ -433,6 +433,17 @@ export default function AutomationSettings({ onClose, showClose = true }: Automa
                       </button>
                     ))}
                   </div>
+                  {confirmMode === 'auto' && (
+                    <div className="mt-2 flex items-start gap-2 rounded bg-red-50 border border-red-300 px-3 py-2 text-xs text-red-700">
+                      <span className="mt-0.5 shrink-0">⚠️</span>
+                      <span>
+                        <strong>High ban risk:</strong> Auto mode sends messages without any
+                        confirmation. Facebook may flag this as automated behaviour and restrict
+                        your account. Use &quot;Each message&quot; or &quot;Per session&quot; to
+                        keep a human in the loop.
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Clear Sent Today */}

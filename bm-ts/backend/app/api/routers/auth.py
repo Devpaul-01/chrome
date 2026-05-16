@@ -532,9 +532,9 @@ async def me(
 
 
 @router.post("/request-password-reset", response_model=MessageResponse)
-@limiter.limit("1/minute")  #
-@limiter.limit("5/hour")  # per IP address
-@limiter.limit("20/hour", key_func=get_remote_address)  #
+@limiter.limit("1/minute")
+@limiter.limit("5/hour")
+@limiter.limit("20/hour", key_func=get_remote_address)
 async def request_password_reset(
     request: Request,
     data: RequestPasswordResetRequest,
@@ -974,7 +974,7 @@ async def update_profile(
     metadata = current_user.metadata_payload or {}
 
     if data.name is not None:
-        # Store in metadata for now since User model doesn't have name field
+        # Name is stored in the metadata_payload JSON column (no dedicated column on User)
         metadata["name"] = data.name
 
     if data.timezone is not None:
@@ -1055,7 +1055,7 @@ async def export_user_data(
         for r in tpl_result.scalars().all()
     ]
 
-    # ── Message templates (Phase 2) ──────────────────────────────────────────
+    # ── Message templates ───────────────────────────────────────────────────
     mt_result = await db.execute(
         select(MessageTemplate)
         .where(MessageTemplate.user_id == current_user.id)

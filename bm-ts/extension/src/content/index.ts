@@ -282,20 +282,93 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
     return undefined;
   }
 
-  // Filter out system/navigation links (events, groups, etc.)
+  /** Returns true for FB system/navigation URLs that are never personal profile links. */
   const isContainerSystemUrl = (href: string) =>
     /\/(birthdays|events|groups|pages|marketplace|watch|gaming|search|login|help|notifications|settings)\b/.test(
       href,
     );
 
-  containers.forEach((container, index) => {
-    // Skip section-level containers (too many profile links = section, not a single person card).
-    const allProfileLinks = Array.from(
-      container.querySelectorAll<HTMLAnchorElement>('a[href]'),
-    ).filter((a) => a.href.includes('facebook.com') && !isContainerSystemUrl(a.href));
-    if (allProfileLinks.length > 3) return;
+  /**
+   * Normalise a Facebook profile URL to its canonical path so that the photo
+   * link and name link (which share the same profile URL) are counted as one
+   * distinct person.  E.g. both "https://www.facebook.com/tom.jones" and
+   * "https://www.facebook.com/tom.jones?ref=birthdays" → "/tom.jones".
+   */
+  const normaliseProfilePath = (href: string): string => {
+    try {
+      const u = new URL(href);
+      const id = u.searchParams.get('id');
+      return id ? `profile:${id}` : u.pathname.replace(/\/$/, '').toLowerCase();
+    } catch {
+      return href;
+    }
+  };
 
-    // Extract profile link first — its text content is the most reliable name source.
+  /**
+   * Resolve the best available display name for a profile anchor element.
+   * Priority: aria-label on link → img[alt] inside link → span text → full textContent.
+   */
+  function resolveNameFromLink(link: HTMLAnchorElement): string {
+    // 1. aria-label — FB name links typically have just the person's name.
+    //    Photo links have "X's profile picture"; strip that suffix if present.
+    let ariaLabel = (link.getAttribute('aria-label') ?? '').trim();
+    ariaLabel = ariaLabel.replace(/[''']s\s+profile\s*(picture|photo)?$/i, '').trim();
+    ariaLabel = ariaLabel.replace(/^(?:view|open)\s+/i, '').trim();
+    if (ariaLabel.length >= 2 && ariaLabel.length <= 80) return ariaLabel;
+
+    // 2. img alt text inside the link (profile thumbnail alt = person's name).
+    const img = link.querySelector<HTMLImageElement>('img[alt]');
+    const alt = (img?.getAttribute('alt') ?? '').trim();
+    if (alt.length >= 2 && alt.length <= 80) return alt;
+
+    // 3. First span whose text looks like a name (no digits, no action words, not a date).
+    for (const span of Array.from(link.querySelectorAll('span'))) {
+      const text = span.textContent?.trim() ?? '';
+      if (
+        text.length >= 2 &&
+        text.length <= 60 &&
+        !/\d/.test(text) &&
+        !reDateFwd.test(text) &&
+        !reDateRev.test(text) &&
+        !/\b(message|send|friend|follow|add)\b/i.test(text)
+      ) {
+        return text;
+      }
+    }
+
+    // 4. Full link textContent — only if it's clean (no digits, no action words).
+    //    Reject strings like "Jane Smith20 MayMessage" that occur when
+    //    Facebook wraps the entire birthday card in a single <a> element.
+    const full = link.textContent?.trim() ?? '';
+    if (
+      full.length >= 2 &&
+      full.length <= 50 &&
+      !/\d/.test(full) &&
+      !/\b(message|send|friend|follow)\b/i.test(full)
+    )
+      return full;
+
+    return '';
+  }
+
+  containers.forEach((container, index) => {
+    // Skip section-level containers — they contain MULTIPLE distinct profile
+    // URLs (i.e. multiple people).  A single person's card reuses one profile
+    // URL across the photo link and the name link, so distinctProfiles === 1.
+    const distinctProfiles = new Set(
+      Array.from(container.querySelectorAll<HTMLAnchorElement>('a[href]'))
+        .map((a) => a.href)
+        .filter(
+          (href) =>
+            href.includes('facebook.com') &&
+            !isContainerSystemUrl(href) &&
+            !/\/messages\//.test(href),
+        )
+        .map(normaliseProfilePath),
+    );
+    if (distinctProfiles.size > 1) return;
+
+    // Extract profile link first — its content is the most reliable name source.
     const profileLink =
       container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/'][role='link']") ??
       container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/']");
@@ -303,30 +376,8 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
     const validProfileLink =
       profileLink && !isContainerSystemUrl(profileLink.href) ? profileLink : null;
 
-    // Name: prefer a specific name span inside the link (avoids picking up all link text),
-    // then fall back to structural selectors. Explicitly exclude h2/h3 (section headings).
-    let nameFromLink: string | undefined;
-    if (validProfileLink) {
-      // Look for a concise text span inside the link that is not a date string
-      const spans = Array.from(validProfileLink.querySelectorAll('span'));
-      for (const span of spans) {
-        const text = span.textContent?.trim() ?? '';
-        if (
-          text.length >= 2 &&
-          text.length <= 60 &&
-          !reDateFwd.test(text) &&
-          !reDateRev.test(text)
-        ) {
-          nameFromLink = text;
-          break;
-        }
-      }
-      // Fall back to full link textContent only if it's concise enough to be a name
-      if (!nameFromLink) {
-        const full = validProfileLink.textContent?.trim() ?? '';
-        if (full.length >= 2 && full.length <= 60) nameFromLink = full;
-      }
-    }
+    const nameFromLink = validProfileLink ? resolveNameFromLink(validProfileLink) : undefined;
+
     const nameFromDOM = !nameFromLink
       ? (
           container.querySelector('strong span') ??
@@ -364,6 +415,66 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
       messageButton: messageBtn ?? undefined,
     });
   });
+
+  // ── Fallback: anchor on Messenger links / Message buttons ───────────────
+  // When Facebook changes its DOM so none of the container selectors produce
+  // individual per-person cards (e.g. the entire birthday list lands in one
+  // large `role="article"` that fails the distinctProfiles guard), we pivot to
+  // finding Message buttons directly and walking up to the smallest card that
+  // holds exactly one profile URL.
+  if (detected.length === 0) {
+    const msgSeen = new Set<string>();
+    const msgBtnSelectors = [
+      "a[href*='/messages/t/']",
+      "a[href*='/messages/e2ee/']",
+      "[role='button'][aria-label*='essage']",
+    ];
+    const msgButtons: HTMLElement[] = [];
+    const btnSeen = new Set<HTMLElement>();
+    for (const sel of msgBtnSelectors) {
+      document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
+        if (!btnSeen.has(el)) {
+          btnSeen.add(el);
+          msgButtons.push(el);
+        }
+      });
+    }
+
+    for (const btn of msgButtons) {
+      let card: HTMLElement | null = btn.parentElement;
+      for (let depth = 0; depth < 10 && card; depth++) {
+        const profileLinks = Array.from(card.querySelectorAll<HTMLAnchorElement>('a[href]')).filter(
+          (a) =>
+            a.href.includes('facebook.com') &&
+            !isContainerSystemUrl(a.href) &&
+            !/\/messages\//.test(a.href),
+        );
+        const uniqueProfiles = new Set(profileLinks.map((a) => normaliseProfilePath(a.href)));
+        if (uniqueProfiles.size === 1) {
+          const link = profileLinks[0];
+          const canonicalUrl = normaliseProfilePath(link.href);
+          if (msgSeen.has(canonicalUrl)) break;
+          msgSeen.add(canonicalUrl);
+          const name = resolveNameFromLink(link);
+          if (!name || name.length < 2 || SECTION_HEADINGS.has(name.toLowerCase())) break;
+          if (seenNames.has(name)) break;
+          seenNames.add(name);
+          const birthday = extractBirthdayFromContainer(card);
+          detected.push({
+            id: `${name}-fb-${detected.length}`,
+            name,
+            birthday,
+            profileUrl: link.href,
+            container: card,
+            messageButton: btn,
+          });
+          break;
+        }
+        card = card.parentElement;
+      }
+    }
+  }
+
   return detected;
 }
 /** Fetches template segments from the backend and groups them by type into `segments`. */
@@ -2812,20 +2923,46 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
    *   4. aria-label / textContent of the nearest named sibling/ancestor span.
    */
   function extractNameFromLink(link: HTMLAnchorElement): string {
-    // 1. aria-label on the link
-    const ariaLabel = cleanName(link.getAttribute('aria-label') ?? '');
-    if (ariaLabel.length >= 2 && ariaLabel.length <= 100) return ariaLabel;
+    // 1. aria-label on the link — strip FB suffixes like "'s profile picture" and
+    //    "View/Open" prefixes so we don't save the full sentence as the name.
+    let ariaLabel = cleanName(link.getAttribute('aria-label') ?? '');
+    ariaLabel = ariaLabel
+      .replace(/[\u2018\u2019\u02bc's]s?\s+profile\s*(picture|photo)?$/i, '')
+      .trim();
+    ariaLabel = ariaLabel.replace(/^(?:view|open)\s+/i, '').trim();
+    if (ariaLabel.length >= 2 && ariaLabel.length <= 100 && !/\d/.test(ariaLabel)) return ariaLabel;
 
-    // 2. img alt text inside the link
+    // 2. img alt text inside the link — apply the same suffix-stripping we use
+    //    for aria-label; Facebook img alt values are often "[Name]'s photo" or
+    //    "Profile picture of [Name]" and must be cleaned before use.
     const img = link.querySelector<HTMLImageElement>('img[alt]');
     if (img) {
-      const alt = cleanName(img.getAttribute('alt') ?? '');
-      if (alt.length >= 2 && alt.length <= 100) return alt;
+      let alt = cleanName(img.getAttribute('alt') ?? '');
+      // Strip leading "Profile picture/photo of " prefix
+      alt = alt.replace(/^profile\s*(picture|photo)?\s*(of\s+)?/i, '').trim();
+      // Strip trailing "'s profile picture/photo" or "'s photo"
+      alt = alt.replace(/[\u2018\u2019\u02bc's]s?\s+profile\s*(picture|photo)?$/i, '').trim();
+      alt = alt.replace(/[\u2018\u2019\u02bc's]s?\s+photo$/i, '').trim();
+      if (
+        alt.length >= 2 &&
+        alt.length <= 100 &&
+        !/\d/.test(alt) &&
+        !/\b(message|send|friend|follow|add)\b/i.test(alt)
+      )
+        return alt;
     }
 
-    // 3. Cleaned textContent — accept only if it's a plausible full name
+    // 3. Cleaned textContent — only accept if it looks like a real name.
+    //    Reject strings like "Jane Smith20 MayMessage" that occur when
+    //    Facebook wraps the entire birthday card in a single <a> element.
     const linkText = cleanName(link.textContent ?? '');
-    if (linkText.length >= 2 && linkText.length <= 100) return linkText;
+    if (
+      linkText.length >= 2 &&
+      linkText.length <= 60 &&
+      !/\d/.test(linkText) &&
+      !/\b(message|send|friend|follow|add|like|comment)\b/i.test(linkText)
+    )
+      return linkText;
 
     // 4. Walk up to find a sibling/parent span or div that contains the name
     //    (for cases where name is rendered outside the <a> tag).
@@ -2838,10 +2975,11 @@ function scrapeBirthdayContactsFromPage(): ScrapedContact[] {
         const text = cleanName(el.textContent ?? '');
         if (
           text.length >= 2 &&
-          text.length <= 100 &&
+          text.length <= 60 &&
           !reFwd.test(text) &&
           !reRev.test(text) &&
-          !/^\d/.test(text)
+          !/\d/.test(text) &&
+          !/\b(message|send|friend|follow|add)\b/i.test(text)
         ) {
           return text;
         }

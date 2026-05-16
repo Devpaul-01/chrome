@@ -67,6 +67,7 @@ import {
   createContact,
   deleteContact,
   bulkCreateContacts,
+  cleanupGarbledContacts,
   Contact,
   updateContact,
   MessageGroup,
@@ -113,6 +114,7 @@ import {
   getConfirmationMode,
   setConfirmationMode,
   setShouldAbort,
+  requestAlarmsPermission,
 } from '../utils/failsafe';
 import type { ConfirmationMode } from '../utils/failsafe';
 import {
@@ -447,6 +449,7 @@ type BackgroundResponse =
   | ServerRateLimitStatus
   | Contact
   | Contact[]
+  | { deleted: number }
   | MessageGroup
   | MessageGroup[]
   | null;
@@ -615,6 +618,10 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return getAutomationConfig();
     }
     case 'automation.setEnabled': {
+      if (message.payload.enabled) {
+        // alarms is optional_permissions — request it before scheduling
+        await requestAlarmsPermission();
+      }
       return updateAutomationEnabled(message.payload.enabled);
     }
     case 'automation.setInterval': {
@@ -722,6 +729,9 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) =>
         bulkCreateContacts(url, accessToken, message.payload.contacts),
       );
+    }
+    case 'contacts.cleanup': {
+      return runAuthAware((accessToken, url) => cleanupGarbledContacts(url, accessToken));
     }
 
     case 'contacts.scrapeFromFacebook': {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { sendBackgroundMessage } from '../api';
 import Spinner from './Spinner';
 import type { Contact } from '../../api/client';
@@ -10,7 +10,10 @@ interface UpcomingBirthdaysProps {
 }
 
 function parseBirthdayLocal(birthday: string): Date {
-  const [year, month, day] = birthday.split('-').map(Number);
+  // Slice to YYYY-MM-DD first — the API returns full ISO datetime strings
+  // (e.g. "2000-05-15T00:00:00+00:00") because the DB column is timezone-aware.
+  // Splitting the full string on '-' would produce NaN for the day component.
+  const [year, month, day] = birthday.slice(0, 10).split('-').map(Number);
   return new Date(year, month - 1, day);
 }
 
@@ -34,27 +37,48 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [groups, setGroups] = useState<MessageGroup[]>([]);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  // Generation counter: only the most recent loadContacts call may write state.
+  // This prevents a slow in-flight fetch from overwriting a newer result.
+  const loadGenRef = useRef(0);
 
   async function loadContacts() {
+    const gen = ++loadGenRef.current;
     setIsLoading(true);
     setError(null);
     try {
       const data = await sendBackgroundMessage<Contact[]>({ type: 'contacts.list' });
+      if (gen !== loadGenRef.current) return; // stale — a newer call is in flight
       const withBirthdays = (data || [])
-        .filter((c) => c.birthday && !c.birthday_month_only)
+        .filter((c) => {
+          if (!c.birthday || c.birthday_month_only) return false;
+          const name = c.name?.trim() ?? '';
+          if (name.length < 2) return false;
+          // Reject garbled names left over from old scraping runs
+          if (/profile\s*(picture|photo)/i.test(name)) return false;
+          if (/'s\s+(profile|photo)\b/i.test(name)) return false;
+          if (/\d/.test(name)) return false;
+          if (/\b(message|send|follow|view|write|poke)\b/i.test(name)) return false;
+          return true;
+        })
         .sort((a, b) => getDaysUntilBirthday(a.birthday) - getDaysUntilBirthday(b.birthday));
       setContacts(withBirthdays);
     } catch (err) {
+      if (gen !== loadGenRef.current) return;
       setError((err as Error).message);
     } finally {
-      setIsLoading(false);
+      if (gen === loadGenRef.current) setIsLoading(false);
     }
   }
 
   useEffect(() => {
-    void loadContacts();
+    // Silently remove garbled contacts that survived from old scraping runs,
+    // then load the now-clean list.  Errors are ignored so a network blip or
+    // unauthenticated state never blocks the view from rendering.
+    sendBackgroundMessage<{ deleted: number }>({ type: 'contacts.cleanup' })
+      .catch(() => {})
+      .finally(() => {
+        void loadContacts();
+      });
     sendBackgroundMessage<MessageGroup[]>({ type: 'messageGroups.list' })
       .then(setGroups)
       .catch(() => {});
@@ -74,33 +98,6 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
     }
   }
 
-  async function handleSyncFromFacebook() {
-    setIsSyncing(true);
-    setSyncMessage(null);
-    setError(null);
-    try {
-      const result = await sendBackgroundMessage<{
-        success: boolean;
-        count: number;
-        error?: string;
-      }>({
-        type: 'contacts.scrapeFromFacebook',
-      });
-      if (result?.success) {
-        setSyncMessage(
-          `Synced ${result.count} contact${result.count !== 1 ? 's' : ''} from Facebook.`,
-        );
-        await loadContacts();
-      } else {
-        setError(result?.error || 'Failed to sync contacts.');
-      }
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setIsSyncing(false);
-    }
-  }
-
   const upcoming = contacts.filter((c) => getDaysUntilBirthday(c.birthday) <= 30);
 
   return (
@@ -110,17 +107,6 @@ export default function UpcomingBirthdays({ onClose }: UpcomingBirthdaysProps) {
         <HelpTooltip label="Shows friends with birthdays in the next 30 days, based on contacts synced from Facebook. Contacts marked 'Month only' are excluded since their exact date isn't known." />
       </h2>
       <p className="text-xs text-gray-600 mb-4">Friends with birthdays in the next 30 days.</p>
-
-      <div className="flex items-center gap-2 mb-4">
-        <button className="btn btn-sm" onClick={handleSyncFromFacebook} disabled={isSyncing}>
-          {isSyncing ? 'Syncing...' : '🔄 Sync from Facebook'}
-        </button>
-        <span className="text-xs text-gray-500">Open facebook.com/friends/birthdays first</span>
-      </div>
-
-      {syncMessage && (
-        <div className="text-xs text-green-600 bg-green-50 rounded p-2 mb-3">{syncMessage}</div>
-      )}
 
       {error && (
         <div className="error mb-4" role="alert">

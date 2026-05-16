@@ -537,6 +537,13 @@ export async function bulkCreateContacts(
   return request(baseUrl, '/api/contacts/bulk', 'POST', contacts, accessToken);
 }
 
+export async function cleanupGarbledContacts(
+  baseUrl: string,
+  accessToken: string,
+): Promise<{ deleted: number }> {
+  return request(baseUrl, '/api/contacts/cleanup', 'DELETE', undefined, accessToken);
+}
+
 // ========== Message Groups ==========
 export interface MessageGroup {
   id: string;

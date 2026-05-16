@@ -238,26 +238,26 @@ app.include_router(templates.router, prefix="/templates", tags=["templates"])
 app.include_router(subscription.router, prefix="/subscription", tags=["subscription"])
 app.include_router(webhook.router, prefix="/stripe", tags=["stripe"])
 
-# Phase 1 - Registered routers
+# Core API routers
 app.include_router(messages.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(websocket.router)
 
-# Phase 2 - Contacts (populated automatically via scraping; UI currently disabled)
+# Contacts — auto-populated via Facebook scraping; add/edit UI is disabled (popup shows read-only list)
 app.include_router(contacts.router, prefix="/api", tags=["contacts"])
 
-# Phase 2 - Message management
+# Message management
 app.include_router(message_groups.router, prefix="/api", tags=["message-groups"])
 app.include_router(message_templates.router, prefix="/api", tags=["message-templates"])
 
-# Phase 2 - Posts and images
+# Posts and images
 app.include_router(posts.router, prefix="/api", tags=["posts"])
 app.include_router(images.router, prefix="/api", tags=["images"])
 
-# Phase 2 - Birthday configurations
+# Birthday configurations
 app.include_router(birthday_configs.router, prefix="/api", tags=["birthday-configs"])
 
-# Phase 2 - Rate limiting
+# Rate limiting
 app.include_router(rate_limits.router, prefix="/api", tags=["rate-limits"])
 
 

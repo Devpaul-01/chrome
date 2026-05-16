@@ -55,17 +55,25 @@ import { sendBackgroundMessage } from './api';
 // For sending messages to content scripts
 function sendShowOverlayToFacebookTab() {
   if (typeof chrome === 'undefined' || !chrome.tabs) return;
-  chrome.tabs.query(
-    { url: '*://*.facebook.com/*', active: true, currentWindow: true },
-    (tabs: chrome.tabs.Tab[]) => {
-      const tab = tabs && tabs[0];
-      if (tab && tab.id) {
-        chrome.tabs.sendMessage(tab.id, { type: 'show.overlay' });
-      } else {
-        alert('Please open Facebook in a tab and make sure it is active.');
-      }
-    },
-  );
+  // Query all Facebook tabs across all windows — `currentWindow: true` would
+  // refer to the extension popup window (which has no browseable tabs) and
+  // would always return an empty array when called from a popup.
+  chrome.tabs.query({ url: '*://*.facebook.com/*' }, (tabs: chrome.tabs.Tab[]) => {
+    // Prefer the active Facebook tab; fall back to the first available one.
+    const activeTab = tabs.find((t) => t.active);
+    const tab = activeTab ?? tabs[0];
+    if (tab?.id) {
+      chrome.tabs.sendMessage(tab.id, { type: 'show.overlay' }, () => {
+        if (chrome.runtime.lastError) {
+          alert(
+            'Could not connect to the Facebook tab. Please refresh the Facebook page and try again.',
+          );
+        }
+      });
+    } else {
+      alert('Please open Facebook in a tab and try again.');
+    }
+  });
 }
 import { getErrorMessage, logError } from '../utils/errors';
 import { getOnboardingComplete, setOnboardingComplete } from '../utils/storage';
