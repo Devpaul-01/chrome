@@ -5,7 +5,7 @@ description = "FastAPI backend for the BirthdayMessaging Chrome extension"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.110",
+    "fastapi>=0.136.3",
     "uvicorn[standard]>=0.22",
     "gunicorn>=22.0.0",
     "sqlalchemy>=2.0",
@@ -26,7 +26,9 @@ dependencies = [
     "requests>=2.33.0",
     "werkzeug>=3.1.6",
     "python-multipart>=0.0.27",
-    "urllib3>=2.7.0"
+    "urllib3>=2.7.0",
+    "starlette>=1.0.1",
+    "idna>=3.15"
 ]
 
 [project.optional-dependencies]
