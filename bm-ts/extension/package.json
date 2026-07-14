@@ -50,7 +50,7 @@
     "prettier": "^2.8.8",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.5.6",
-    "vite": "^7.3.1",
+    "vite": "^7.3.6",
     "vite-plugin-lightningcss": "^0.0.5",
     "vitest": "^4.1.0",
     "vitest-axe": "^0.1.0"

@@ -1,0 +1,44 @@
+/* Layout-only overrides for the welcome tab (full browser tab, not the
+   narrow popup). Component-level styling (.card, .btn-primary, .auth-toggle,
+   .input-field, etc.) is inherited from popup.css — intentionally not
+   redefined here so both pages stay visually consistent. */
+
+body {
+  min-height: 100vh;
+  width: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 48px 16px;
+  background: #ffb34c;
+}
+
+.welcome-shell {
+  width: 100%;
+  max-width: 420px;
+}
+
+.welcome-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.welcome-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  margin: 0 auto 12px;
+}
+
+.welcome-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #ca4f02;
+}
+
+.welcome-header p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #574232;
+}
