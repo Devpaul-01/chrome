@@ -87,6 +87,7 @@ export default defineConfig(async ({ mode }) => {
       rollupOptions: {
         input: {
           popup: resolve(__dirname, 'popup.html'),
+          welcome: resolve(__dirname, 'welcome.html'),
           background: resolve(__dirname, 'src/background/index.ts'),
           // content is NOT here — it is built separately as an IIFE by the
           // buildContentScriptIIFE plugin to avoid ES module import statements.

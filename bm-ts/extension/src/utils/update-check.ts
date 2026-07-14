@@ -101,6 +101,18 @@ export async function recordUpdateCheck(): Promise<void> {
  * notification when the extension is updated.
  */
 export function handleInstallOrUpdate(details: chrome.runtime.InstalledDetails): void {
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+    import('./notifications').then(({ showNotification }) => {
+      showNotification({
+        id: 'bm-welcome',
+        title: 'Welcome to BirthdayMessaging',
+        message: 'Sign in or create an account to get started.',
+      });
+    });
+    return;
+  }
+
   if (details.reason === 'update' && details.previousVersion) {
     const current = getCurrentVersion();
     if (compareVersions(current, details.previousVersion) > 0) {
