@@ -26,9 +26,29 @@ from app.db.models import MessageHistory, User
 async def test_health_returns_200(async_client: AsyncClient) -> None:
     resp = await async_client.get("/health")
     assert resp.status_code == 200
-    data = resp.json()
-    assert "status" in data
-    assert "database" in data
+    assert resp.json() == {"status": "ok", "database": "ok"}
+
+
+@pytest.mark.asyncio
+async def test_health_returns_503_when_database_is_unavailable(
+    async_client: AsyncClient,
+) -> None:
+    from app.db.session import get_db
+    from app.main import app
+
+    class UnavailableDatabase:
+        async def execute(self, _statement: object) -> None:
+            raise RuntimeError("database unavailable")
+
+    async def override_get_db():
+        yield UnavailableDatabase()
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    resp = await async_client.get("/health")
+
+    assert resp.status_code == 503
+    assert resp.json() == {"status": "unavailable", "database": "unavailable"}
 
 
 @pytest.mark.asyncio

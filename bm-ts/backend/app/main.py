@@ -5,7 +5,7 @@ import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -262,13 +262,15 @@ app.include_router(rate_limits.router, prefix="/api", tags=["rate-limits"])
 
 
 @app.get("/health", summary="Service health")
-async def health_check(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
+async def health_check(
+    response: Response, db: AsyncSession = Depends(get_db)
+) -> dict[str, str]:
     try:
         await db.execute(text("SELECT 1"))
-        db_status = "ok"
     except Exception:
-        db_status = "unavailable"
-    return {"status": "ok", "database": db_status}
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {"status": "unavailable", "database": "unavailable"}
+    return {"status": "ok", "database": "ok"}
 
 
 @app.post("/send-birthday-message", status_code=501)
