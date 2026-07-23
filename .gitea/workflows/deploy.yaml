@@ -28,21 +28,24 @@ jobs:
       - name: Install backend dependencies
         working-directory: bm-ts/backend
         run: |
-          python -m pip install --upgrade pip
-          pip install pip-audit
-          pip install -e ".[test]"
+          # Gitea runners are persistent, so audit an isolated environment
+          # instead of unrelated packages left behind by earlier jobs.
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install pip-audit
+          .venv/bin/python -m pip install -e ".[test]"
 
       - name: Audit dependencies for vulnerabilities
         working-directory: bm-ts/backend
         run: |
           # --skip-editable: birthdaymessaging-backend is a local package, not on PyPI
           # --ignore-vuln CVE-2026-3219: pip<26.1 archive polyglot issue; remove once pip>=26.1 ships
-          pip-audit --skip-editable --ignore-vuln CVE-2026-3219
+          .venv/bin/python -m pip_audit --skip-editable --ignore-vuln CVE-2026-3219
 
       - name: Run backend tests
         working-directory: bm-ts/backend
         run: |
-          python -m pytest --tb=short -q
+          .venv/bin/python -m pytest --tb=short -q
 
       # log into gitea registry so i can push images
       - name: Login to registry
