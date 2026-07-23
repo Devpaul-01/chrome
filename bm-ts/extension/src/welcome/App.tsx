@@ -57,7 +57,7 @@ export default function App() {
       <div className="welcome-shell">
         <div className="welcome-header">
           <img
-            src="./images/new-logo/Birthday_messaging-logo.png"
+            src="./images/Birthday_messaging-logo.png"
             alt="BirthdayMessaging"
             className="welcome-logo"
           />

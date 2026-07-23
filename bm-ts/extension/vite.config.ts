@@ -23,6 +23,9 @@ function buildContentScriptIIFE(outDir: string): Plugin {
       const { build } = await import('vite');
       await build({
         configFile: false,
+        // The main build already copied public/. Copying it again here would
+        // overwrite post-processed files such as the production manifest.
+        publicDir: false,
         build: {
           outDir,
           emptyOutDir: false, // main build already emptied dist/

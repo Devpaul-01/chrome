@@ -54,6 +54,7 @@ async function request<T>(
   method: HttpMethod,
   body?: JsonBody,
   accessToken?: string,
+  timeoutMs = 10_000,
 ): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -62,7 +63,7 @@ async function request<T>(
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10_000); // 10 s hard limit
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   let response: Response;
   try {
     response = await fetch(`${baseUrl}${path}`, {
@@ -184,7 +185,9 @@ export async function register(
 
 /** Authenticate with email + password and return a token pair. */
 export async function login(baseUrl: string, payload: RegisterPayload): Promise<TokenResponse> {
-  return request<TokenResponse>(baseUrl, '/auth/login', 'POST', payload);
+  // Password verification (especially the backend's timing-safe dummy hash for
+  // unknown accounts) can legitimately take longer than the general API limit.
+  return request<TokenResponse>(baseUrl, '/auth/login', 'POST', payload, undefined, 30_000);
 }
 
 /** Exchange a valid refresh token for a new access/refresh token pair. */

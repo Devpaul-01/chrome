@@ -97,6 +97,23 @@ describe('API request helpers (via login)', () => {
     expect(calledUrl).toBe(`${BASE}/auth/login`);
   });
 
+  it('allows extra time for password verification during login', async () => {
+    const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    const { login } = await import('../client');
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(JSON.stringify({ access_token: 'a', refresh_token: 'b' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await login(BASE, { email: 'user@example.com', password: 'Pass1234' });
+
+    expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 30_000);
+    timeoutSpy.mockRestore();
+  });
+
   it('includes Authorization header when access token is provided', async () => {
     const { getDashboardStats } = await import('../client');
 
