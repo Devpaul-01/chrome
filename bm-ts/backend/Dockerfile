@@ -17,9 +17,13 @@ RUN pip install "pip<26.0" && pip install --no-cache-dir ".[test]"
 # Copy the rest of the source code
 COPY . .
 
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app \
+    HOME=/home/appuser
 
-RUN adduser --system appuser
+# Gunicorn 26 creates its control socket below the current user's home.
+# Give the unprivileged runtime user a real, writable home instead of Debian's
+# default /nonexistent so the control server can start cleanly.
+RUN adduser --system --home "${HOME}" appuser
 USER appuser
 
 EXPOSE 80
