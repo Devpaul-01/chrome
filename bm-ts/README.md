@@ -41,8 +41,8 @@ bm-ts/
 ### Make Frontend Changes
 
 ```powershell
-cd extension
-npm run reload
+# From the bm-ts directory
+npm run build
 # Then reload extension in chrome://extensions/
 ```
 

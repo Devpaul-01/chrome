@@ -62,7 +62,22 @@ Write-Host "Backend is healthy" -ForegroundColor Green
 
 # Build extension
 Write-Host "Building extension..." -ForegroundColor Yellow
-Push-Location (Join-Path $PSScriptRoot "extension")
+$extensionDir = Join-Path $PSScriptRoot "extension"
+Push-Location $extensionDir
+
+# A fresh checkout does not contain node_modules, so install the locked
+# development dependencies (including Vite) before attempting the build.
+$viteCommand = Join-Path $extensionDir "node_modules\.bin\vite.cmd"
+if (-not (Test-Path $viteCommand)) {
+    Write-Host "Installing extension dependencies..." -ForegroundColor Yellow
+    npm ci --include=dev --no-audit --no-fund
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Failed to install extension dependencies" -ForegroundColor Red
+        Pop-Location
+        exit 1
+    }
+}
+
 npm run build
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Extension build failed" -ForegroundColor Red
