@@ -26,7 +26,8 @@
       "matches": [
         "https://www.facebook.com/birthdays*",
         "https://www.facebook.com/messages/*",
-        "https://www.facebook.com/profile.php*"
+        "https://www.facebook.com/profile.php*",
+        "https://www.facebook.com/friends/birthdays*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
@@ -36,6 +37,7 @@
     "https://www.facebook.com/birthdays*",
     "https://www.facebook.com/messages/*",
     "https://www.facebook.com/profile.php*",
+    "https://www.facebook.com/friends/birthdays*",
     "http://localhost/*",
     "https://localhost/*",
     "http://*.sslip.io/*",

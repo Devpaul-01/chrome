@@ -386,15 +386,23 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
           container.querySelector('a[href*="facebook.com/"] span')
         )?.textContent?.trim()
       : undefined;
-    const name = nameFromLink || nameFromDOM || 'Unknown';
+    const name = (nameFromLink || nameFromDOM)?.trim();
 
-    // Skip known Facebook section headings mistaken for person names
-    if (SECTION_HEADINGS.has(name.toLowerCase())) return;
+    // Never create a contact named "Unknown".
+    // Skipping an invalid card keeps `detected` empty and allows the
+    // Messenger-button fallback scanner below to try another method.
+    if (!name || name.length < 2 || SECTION_HEADINGS.has(name.toLowerCase())) {
+      console.warn('[BM] Skipping birthday card because no valid name was found', {
+        index,
+        profileUrl: validProfileLink?.href,
+        text: container.textContent?.trim().slice(0, 200),
+      });
+      return;
+    }
 
-    // Deduplicate by name
-    if (name !== 'Unknown' && seenNames.has(name)) return;
-    if (name !== 'Unknown') seenNames.add(name);
-
+    // Deduplicate valid contacts by name
+    if (seenNames.has(name)) return;
+    seenNames.add(name);
     // Try to extract a birthday label from text nodes in the container.
     const birthday = extractBirthdayFromContainer(container);
 
