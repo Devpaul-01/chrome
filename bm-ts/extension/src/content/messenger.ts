@@ -427,7 +427,7 @@ function isRecipientMessage(element: HTMLElement): boolean {
     const hasMessageIndicators =
       element.querySelector('[role="article"]') ||
       element.querySelector('[data-scope="messages_table"]') ||
-      element.textContent?.trim().length > 0;
+      (element.textContent?.trim().length ?? 0) > 0;
 
     return !!hasMessageIndicators;
   }

@@ -246,3 +246,18 @@ describe('assembleMessageFromTemplate', () => {
     expect(result).toBe('Hey Bye');
   });
 });
+
+describe('selectPost custom/default priority', () => {
+  it('prefers a custom non-default post over a seeded default post', () => {
+    const defaultPost = { ...makePost('default', 'NEUTRAL'), is_default: true };
+    const customPost = { ...makePost('custom', 'NEUTRAL'), is_default: false };
+
+    expect(selectPost([defaultPost, customPost], 'NEUTRAL')?.id).toBe('custom');
+  });
+
+  it('falls back to a default post when no custom post exists', () => {
+    const defaultPost = { ...makePost('default', 'NEUTRAL'), is_default: true };
+
+    expect(selectPost([defaultPost], 'NEUTRAL')?.id).toBe('default');
+  });
+});

@@ -241,6 +241,10 @@ let _cachedBackendData: {
   fetchedAt: number;
 } | null = null;
 
+function invalidateBackendDataCache(): void {
+  _cachedBackendData = null;
+}
+
 async function fetchBackendDataCached(): Promise<{
   templates: MessageTemplate[];
   posts: Post[];
@@ -766,14 +770,26 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) => listPosts(url, accessToken));
     }
     case 'posts.create': {
-      return runAuthAware((accessToken, url) => createPost(url, accessToken, message.payload));
+      const result = await runAuthAware((accessToken, url) =>
+        createPost(url, accessToken, message.payload),
+      );
+      invalidateBackendDataCache();
+      return result;
     }
     case 'posts.update': {
       const { id, ...payload } = message.payload;
-      return runAuthAware((accessToken, url) => updatePost(url, accessToken, id, payload));
+      const result = await runAuthAware((accessToken, url) =>
+        updatePost(url, accessToken, id, payload),
+      );
+      invalidateBackendDataCache();
+      return result;
     }
     case 'posts.delete': {
-      return runAuthAware((accessToken, url) => deletePost(url, accessToken, message.payload.id));
+      const result = await runAuthAware((accessToken, url) =>
+        deletePost(url, accessToken, message.payload.id),
+      );
+      invalidateBackendDataCache();
+      return result;
     }
     // Message Group handlers
     case 'messageGroups.list': {

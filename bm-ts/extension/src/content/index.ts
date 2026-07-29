@@ -35,12 +35,7 @@ import type { TemplateSegment } from '../api/client';
 import type { AutomationRunPayload } from '../utils/messages';
 import { postToTimeline } from './timeline';
 import { archiveConversation } from './messenger';
-import {
-  simulateClick,
-  simulateBrowsing,
-  runSelectorHealthCheck,
-  retryOperation,
-} from './dom-helpers';
+import { simulateClick, simulateBrowsing, runSelectorHealthCheck } from './dom-helpers';
 import {
   checkRateLimit,
   recordMessageSent,
@@ -62,6 +57,12 @@ import {
   isWithinPreferredHours,
 } from '../utils/automation';
 import { logger } from '../utils/logger';
+import {
+  isVisible,
+  readEditableText,
+  replaceFacebookEditorText,
+  waitForValue,
+} from './editor-helpers';
 
 /** Maximum messages the manual "Send to all" flow will send per session (safety cap). */
 const MAX_MESSAGES_PER_SESSION = 5;
@@ -101,6 +102,60 @@ type BirthdayFriend = {
   container: HTMLElement;
   messageButton?: HTMLElement;
 };
+
+/**
+ * Per-friend processing locks.
+ *
+ * A lock prevents a scheduled automation run, "Run Check Now", "Send to all",
+ * and a per-row send from processing the same Facebook friend concurrently.
+ */
+const processingFriendKeys = new Set<string>();
+
+/** Build a stable lock key for a live birthday-feed friend. */
+function getBirthdayFriendProcessingKey(friend: BirthdayFriend): string {
+  const normalizedProfileUrl = friend.profileUrl?.split('?')[0].replace(/\/+$/, '').toLowerCase();
+
+  return (
+    normalizedProfileUrl ?? `${friend.id}|${friend.name}|${friend.birthday ?? ''}`.toLowerCase()
+  );
+}
+
+/** Build a stable lock key for a scraped contact. */
+function getScrapedFriendProcessingKey(profileUrl: string, name: string): string {
+  const normalizedProfileUrl = profileUrl.split('?')[0].replace(/\/+$/, '').toLowerCase();
+  return normalizedProfileUrl || name.trim().toLowerCase();
+}
+
+/**
+ * Try to acquire a per-friend lock.
+ *
+ * Returns false when another workflow is already processing the same friend.
+ */
+function tryAcquireFriendLock(processingKey: string, friendName: string): boolean {
+  if (processingFriendKeys.has(processingKey)) {
+    logger.warn('[BM] Duplicate friend processing prevented', {
+      processingKey,
+      friendName,
+    });
+    return false;
+  }
+
+  processingFriendKeys.add(processingKey);
+  logger.log('[BM] Acquired friend-processing lock', {
+    processingKey,
+    friendName,
+  });
+  return true;
+}
+
+/** Always call this from a finally block after a lock was acquired. */
+function releaseFriendLock(processingKey: string, friendName: string): void {
+  processingFriendKeys.delete(processingKey);
+  logger.log('[BM] Released friend-processing lock', {
+    processingKey,
+    friendName,
+  });
+}
 
 let overlay: HTMLElement | null = null;
 let friends: BirthdayFriend[] = [];
@@ -193,7 +248,7 @@ async function refreshFriendList() {
  */
 function gatherBirthdayFriends(): BirthdayFriend[] {
   const detected: BirthdayFriend[] = [];
-  const seenNames = new Set<string>();
+  const seenPeople = new Set<string>();
 
   // Multiple selector strategies for birthday containers (ordered by reliability)
   const containerSelectors = [
@@ -400,9 +455,15 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
       return;
     }
 
-    // Deduplicate valid contacts by name
-    if (seenNames.has(name)) return;
-    seenNames.add(name);
+    // Deduplicate by canonical profile identity, not display name. Facebook may
+    // show multiple different friends with the same name on the birthday page.
+    // Name-only deduplication can keep the DM-only card and discard the separate
+    // timeline-composer card for another person with that same display name.
+    const personKey = validProfileLink
+      ? normaliseProfilePath(validProfileLink.href)
+      : `name:${name.toLowerCase()}`;
+    if (seenPeople.has(personKey)) return;
+    seenPeople.add(personKey);
     // Try to extract a birthday label from text nodes in the container.
     const birthday = extractBirthdayFromContainer(container);
 
@@ -465,8 +526,9 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
           msgSeen.add(canonicalUrl);
           const name = resolveNameFromLink(link);
           if (!name || name.length < 2 || SECTION_HEADINGS.has(name.toLowerCase())) break;
-          if (seenNames.has(name)) break;
-          seenNames.add(name);
+          const personKey = canonicalUrl || `name:${name.toLowerCase()}`;
+          if (seenPeople.has(personKey)) break;
+          seenPeople.add(personKey);
           const birthday = extractBirthdayFromContainer(card);
           detected.push({
             id: `${name}-fb-${detected.length}`,
@@ -678,12 +740,21 @@ async function handleSendOne(friend: BirthdayFriend) {
     setStatus('Add at least one segment of each type first');
     return;
   }
+
+  const processingKey = getBirthdayFriendProcessingKey(friend);
+  if (!tryAcquireFriendLock(processingKey, friend.name)) {
+    setStatus(`${friend.name} is already being processed`);
+    return;
+  }
+
   setStatus(`Sending to ${friend.name}…`);
   try {
     await sendMessageToFriend(friend);
     setStatus(`Message sent to ${friend.name}`);
   } catch (error) {
     setStatus(`Failed: ${(error as Error).message}`);
+  } finally {
+    releaseFriendLock(processingKey, friend.name);
   }
 }
 
@@ -761,6 +832,13 @@ async function handleSendAll() {
       setStatus(`Reached session cap (${MAX_MESSAGES_PER_SESSION})`);
       break;
     }
+
+    const processingKey = getBirthdayFriendProcessingKey(friend);
+    if (!tryAcquireFriendLock(processingKey, friend.name)) {
+      setStatus(`Skipped ${friend.name}: already being processed`);
+      continue;
+    }
+
     try {
       setStatus(`Sending to ${friend.name}…`);
       await sendMessageToFriend(friend);
@@ -774,6 +852,8 @@ async function handleSendAll() {
       logger.error(`[BM] Error sending to ${friend.name}:`, error);
       setStatus(`Skipped ${friend.name}: ${(error as Error).message}`);
       showProgressBar(sent, targets.length);
+    } finally {
+      releaseFriendLock(processingKey, friend.name);
     }
   }
 
@@ -885,7 +965,7 @@ async function sendMessageToFriend(friend: BirthdayFriend): Promise<void> {
     throw new Error(`Cannot open message for ${friend.name}`);
   }
   const message = composeMessage(segments.GREETING, segments.BODY, segments.CLOSING);
-  await fillMessageAndSend(message);
+  await fillMessageAndSend(message, friend.name);
 }
 
 function openMessageDialog(friend: BirthdayFriend): boolean {
@@ -900,64 +980,191 @@ function openMessageDialog(friend: BirthdayFriend): boolean {
   return true;
 }
 
-/**
- * Simulate realistic typing into a contenteditable element.
- * Types character-by-character with random inter-keystroke delays (40–180ms)
- * and occasional short pauses between words to mimic human behaviour.
- */
-async function simulateTyping(element: HTMLElement, text: string): Promise<void> {
-  element.focus();
-  element.textContent = '';
-  element.dispatchEvent(new InputEvent('input', { bubbles: true }));
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-
-    // Append character
-    element.textContent = text.slice(0, i + 1);
-    element.dispatchEvent(
-      new InputEvent('input', { bubbles: true, data: char, inputType: 'insertText' }),
-    );
-
-    // Inter-keystroke delay: 40–180ms base
-    let keystrokeDelay = 40 + Math.random() * 140;
-
-    // Longer pause after punctuation or spaces (word boundary)
-    if (char === ' ' || char === '.' || char === ',' || char === '!' || char === '?') {
-      keystrokeDelay += 80 + Math.random() * 200;
-    }
-
-    // Occasional micro-pause (5% chance, 200–500ms) to simulate thinking
-    if (Math.random() < 0.05) {
-      keystrokeDelay += 200 + Math.random() * 300;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, keystrokeDelay));
-  }
-
-  // Final input event to ensure React state is synced
-  element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+interface MessengerTarget {
+  composer: HTMLElement;
+  chatContainer: HTMLElement;
 }
 
-async function fillMessageAndSend(message: string): Promise<void> {
-  await waitForSelector("[role='textbox'], div[contenteditable='true']", 5000);
-  const textbox = document.querySelector<HTMLElement>(
-    "[role='textbox'], div[contenteditable='true']",
-  );
-  if (!textbox) {
-    throw new Error('Message textbox not found');
+function normalizeComparableName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+/**
+ * Walks upward from a composer and finds its small Messenger chat window.
+ */
+function findMessengerChatContainer(composer: HTMLElement): HTMLElement | null {
+  let current: HTMLElement | null = composer;
+
+  for (let depth = 0; depth < 18 && current; depth += 1) {
+    const labels = Array.from(current.querySelectorAll<HTMLElement>('[aria-label]')).map(
+      (element) => (element.getAttribute('aria-label') || '').toLowerCase(),
+    );
+
+    const hasMessengerControls = labels.some(
+      (label) =>
+        label.includes('conversation details') ||
+        label.includes('send a voice clip') ||
+        label.includes('send a like') ||
+        label.includes('press enter to send') ||
+        label.includes('new message'),
+    );
+
+    if (hasMessengerControls && current.contains(composer)) {
+      return current;
+    }
+
+    current = current.parentElement;
   }
 
-  // Use typing simulation for realistic input
-  await simulateTyping(textbox, message);
+  return null;
+}
 
-  const sendButton = document.querySelector<HTMLElement>(
-    "div[aria-label='Send'] button, button[aria-label='Send']",
+function findMessengerSendControl(chatContainer: HTMLElement): HTMLElement | null {
+  const controls = Array.from(
+    chatContainer.querySelectorAll<HTMLElement>('button, [role="button"]'),
+  ).filter(
+    (control) =>
+      isVisible(control) &&
+      control.getAttribute('contenteditable') !== 'true' &&
+      !control.matches('[role="textbox"]'),
   );
-  if (!sendButton) {
-    throw new Error('Send button not found');
+
+  return (
+    controls.find((control) => {
+      const label = (
+        control.getAttribute('aria-label') ||
+        control.getAttribute('title') ||
+        control.textContent ||
+        ''
+      )
+        .toLowerCase()
+        .trim();
+
+      return (
+        label === 'press enter to send' ||
+        label === 'send' ||
+        label.startsWith('send message') ||
+        label === 'send now'
+      );
+    }) ?? null
+  );
+}
+
+/**
+ * Finds the visible Messenger composer for the intended friend.  When several
+ * chat windows are open, the newest/right-most matching chat is preferred.
+ */
+function findVisibleMessengerTarget(expectedFriendName?: string): MessengerTarget | null {
+  const expected = expectedFriendName ? normalizeComparableName(expectedFriendName) : '';
+  const candidates: MessengerTarget[] = [];
+
+  const composers = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      [
+        '[role="textbox"][contenteditable="true"]',
+        '[contenteditable="true"][data-lexical-editor="true"]',
+      ].join(','),
+    ),
+  ).filter(isVisible);
+
+  for (const composer of composers) {
+    const chatContainer = findMessengerChatContainer(composer);
+    if (!chatContainer || !isVisible(chatContainer)) continue;
+
+    if (expected) {
+      const chatText = normalizeComparableName(
+        chatContainer.innerText || chatContainer.textContent || '',
+      );
+      if (!chatText.includes(expected)) continue;
+    }
+
+    candidates.push({ composer, chatContainer });
   }
-  await simulateClick(sendButton);
+
+  if (candidates.length === 0 && expected) {
+    return findVisibleMessengerTarget();
+  }
+
+  return candidates.at(-1) ?? null;
+}
+
+async function waitForMessengerSendConfirmation(
+  target: MessengerTarget,
+  expectedMessage: string,
+): Promise<void> {
+  const expected = expectedMessage.trim();
+
+  await waitForValue(
+    () => {
+      if (!target.composer.isConnected) return true;
+
+      const composerText = readEditableText(target.composer);
+      const sendControl = findMessengerSendControl(target.chatContainer);
+      const containerText =
+        target.chatContainer.innerText || target.chatContainer.textContent || '';
+
+      const composerCleared = composerText === '';
+      const messageAppearedInConversation =
+        containerText.includes(expected) && composerText !== expected;
+      const returnedToLikeButton = Array.from(
+        target.chatContainer.querySelectorAll<HTMLElement>('[aria-label]'),
+      ).some((element) =>
+        (element.getAttribute('aria-label') || '').toLowerCase().includes('send a like'),
+      );
+
+      if (
+        composerCleared ||
+        messageAppearedInConversation ||
+        (returnedToLikeButton && !sendControl)
+      ) {
+        return true;
+      }
+
+      return null;
+    },
+    6_000,
+    150,
+  );
+}
+
+/**
+ * Inserts one Unicode-safe custom message, clicks Facebook's current send
+ * control, and verifies that the composer was cleared or the message appeared.
+ */
+async function fillMessageAndSend(message: string, expectedFriendName?: string): Promise<void> {
+  console.log('[BM][Messenger] Waiting for Messenger composer', { expectedFriendName });
+
+  const target = await waitForValue(
+    () => findVisibleMessengerTarget(expectedFriendName),
+    10_000,
+    100,
+  );
+
+  await replaceFacebookEditorText(target.composer, message);
+
+  if (readEditableText(target.composer) !== message.trim()) {
+    throw new Error('Messenger composer does not contain the exact custom message');
+  }
+
+  const sendControl = await waitForValue(
+    () => findMessengerSendControl(target.chatContainer),
+    4_000,
+    100,
+  );
+
+  console.log('[BM][Messenger] Clicking send control', {
+    ariaLabel: sendControl.getAttribute('aria-label'),
+  });
+
+  await simulateClick(sendControl);
+  await waitForMessengerSendConfirmation(target, message).catch(() => {
+    throw new Error('Messenger send was not confirmed; the message remains in the composer');
+  });
+
+  console.log('[BM][Messenger] Message send confirmed');
 }
 
 /**
@@ -2277,14 +2484,18 @@ function hideAutomationOverlay(): void {
 async function sendComposedMessageToFriend(friend: BirthdayFriend, message: string): Promise<void> {
   const opened = openMessageDialog(friend);
   if (!opened) throw new Error(`Cannot open message dialog for ${friend.name}`);
-  await fillMessageAndSend(message);
+  await fillMessageAndSend(message, friend.name);
 }
 
 /**
  * Navigate to a Facebook profile, click the Message button, and send a DM.
  * Used for advance / follow-up contacts that are not in the live birthday feed.
  */
-async function sendMessageFromProfile(profileUrl: string, message: string): Promise<void> {
+async function sendMessageFromProfile(
+  profileUrl: string,
+  message: string,
+  friendName?: string,
+): Promise<void> {
   const profilePath = profileUrl.replace(/^https?:\/\/[^/]+/, '');
   if (!window.location.pathname.startsWith(profilePath)) {
     window.location.href = profileUrl;
@@ -2300,7 +2511,7 @@ async function sendMessageFromProfile(profileUrl: string, message: string): Prom
   await simulateClick(msgBtn);
   await waitForSelector("[role='textbox'], div[contenteditable='true']", 8000);
   await new Promise((r) => setTimeout(r, 800));
-  await fillMessageAndSend(message);
+  await fillMessageAndSend(message, friendName);
 }
 
 // ============================================================
@@ -2505,42 +2716,68 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
       if (sentToday.includes(dedupKey)) continue;
 
       const friendGroupId = friend.profileUrl ? contactGroupMap.get(friend.profileUrl) : undefined;
-      const template = selectTemplate(currentDayTemplates, 'NEUTRAL', friendGroupId);
-      if (!template) continue;
+      const template = flags.sendMessage
+        ? selectTemplate(currentDayTemplates, 'NEUTRAL', friendGroupId)
+        : null;
+      if (flags.sendMessage && !template) continue;
 
-      const dmText = assembleMessageFromTemplate(template, { name: friend.name });
+      const dmText = template ? assembleMessageFromTemplate(template, { name: friend.name }) : '';
 
-      // --- Fail-safe pre-send checks ---
-      const decision = await preSendChecks(friend.name, dmText);
-      if (decision === 'abort') break;
-      if (decision === 'skip') continue;
+      // DM fail-safe checks apply only when a direct message will actually be sent.
+      if (flags.sendMessage) {
+        const decision = await preSendChecks(friend.name, dmText);
+        if (decision === 'abort') break;
+        if (decision === 'skip') continue;
+      }
+
+      const processingKey = getBirthdayFriendProcessingKey(friend);
+      if (!tryAcquireFriendLock(processingKey, friend.name)) {
+        await addActivityLogEntry('info', `Skipped duplicate processing for ${friend.name}`);
+        continue;
+      }
 
       showAutomationOverlay(friend.name);
       try {
-        if (flags.sendMessage) {
-          let sendAttempt = 0;
-          await retryOperation(
-            async () => {
-              sendAttempt++;
-              if (sendAttempt > 1) setStatus(`Retrying ${friend.name} (attempt ${sendAttempt}/3)…`);
-              await sendComposedMessageToFriend(friend, dmText);
-            },
-            2,
-            2000,
-          );
-        }
-
+        // Post first while the exact birthday card is still live. Opening a
+        // Messenger chat can cause Facebook to replace the birthday-card DOM,
+        // which previously left timeline.ts holding a disconnected sourceCard.
         if (flags.makePost && posts.length > 0) {
           const post = selectPost(posts, 'NEUTRAL', friendGroupId);
           if (post) {
-            await postToTimeline({
+            const resolvedPostContent = resolveKeywords(post.content, { name: friend.name });
+            logger.log('[BM Timeline] Selected post template', {
+              friendName: friend.name,
+              postId: post.id,
+              label: post.label,
+              isDefault: post.is_default,
+              originalContent: post.content,
+              resolvedContent: resolvedPostContent,
+            });
+            const posted = await postToTimeline({
               friendName: friend.name,
               profileUrl: friend.profileUrl,
-              content: resolveKeywords(post.content, { name: friend.name }),
+              content: resolvedPostContent,
               imageUrl: post.image_url,
+              sourceCard: friend.container,
             });
-            await addActivityLogEntry('post', `Posted on ${friend.name}'s timeline`);
+            if (posted) {
+              await addActivityLogEntry('post', `Posted on ${friend.name}'s timeline`);
+            } else {
+              // A timeline DOM failure must not disable a working Messenger send.
+              // Record the independent failure and continue to the DM action.
+              await addActivityLogEntry(
+                'error',
+                `Timeline post failed for ${friend.name}; continuing with DM when enabled`,
+              );
+              logger.warn(
+                `[BM Timeline] Timeline post failed for ${friend.name}; continuing with DM`,
+              );
+            }
           }
+        }
+
+        if (flags.sendMessage) {
+          await sendComposedMessageToFriend(friend, dmText);
         }
 
         if (flags.archiveAfterSend) {
@@ -2552,13 +2789,21 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
           payload: { friendId: dedupKey, friendName: friend.name },
         });
 
-        // Record success for rate limiting and backoff reset
-        await recordMessageSent();
+        // Message rate limits apply only to an actual direct message.
+        if (flags.sendMessage) {
+          await recordMessageSent();
+          await addActivityLogEntry('send', `Sent DM to ${friend.name}`);
+        }
         await recordSendSuccess();
-        await addActivityLogEntry('send', `Sent DM to ${friend.name}`);
 
         sent++;
-        setStatus(`Sent ${sent} message(s) this run`);
+        const completedActions = [
+          flags.sendMessage ? 'DM' : null,
+          flags.makePost ? 'timeline post' : null,
+        ]
+          .filter(Boolean)
+          .join(' and ');
+        setStatus(`Completed ${completedActions} for ${sent} friend(s) this run`);
         // Simulate casual browsing before the inter-send delay to break
         // the "send-only" pattern that automation detection looks for.
         await simulateBrowsing();
@@ -2576,6 +2821,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
         }
       } finally {
         hideAutomationOverlay();
+        releaseFriendLock(processingKey, friend.name);
       }
     }
   }
@@ -2633,8 +2879,6 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
         const dedupKey = friend.facebook_profile_url;
         if (sentToday.includes(dedupKey)) continue;
 
-        const scrapedFriendGroupId = scrapedGroupMap.get(friend.facebook_profile_url);
-
         const dmText = assembleMessageFromTemplate(template, { name: friend.name });
 
         // --- Fail-safe pre-send checks ---
@@ -2642,33 +2886,29 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
         if (decision === 'abort') break;
         if (decision === 'skip') continue;
 
+        const processingKey = getScrapedFriendProcessingKey(
+          friend.facebook_profile_url,
+          friend.name,
+        );
+        if (!tryAcquireFriendLock(processingKey, friend.name)) {
+          await addActivityLogEntry('info', `Skipped duplicate processing for ${friend.name}`);
+          continue;
+        }
+
         showAutomationOverlay(friend.name);
         try {
           if (flags.sendMessage) {
-            let sendAttempt = 0;
-            await retryOperation(
-              async () => {
-                sendAttempt++;
-                if (sendAttempt > 1)
-                  setStatus(`Retrying ${friend.name} (attempt ${sendAttempt}/3)…`);
-                await sendMessageFromProfile(friend.facebook_profile_url, dmText);
-              },
-              2,
-              2000,
-            );
+            await sendMessageFromProfile(friend.facebook_profile_url, dmText, friend.name);
           }
 
           if (flags.makePost && posts.length > 0) {
-            const post = selectPost(posts, 'NEUTRAL', scrapedFriendGroupId);
-            if (post) {
-              await postToTimeline({
-                friendName: friend.name,
-                profileUrl: friend.facebook_profile_url,
-                content: resolveKeywords(post.content, { name: friend.name }),
-                imageUrl: post.image_url,
-              });
-              await addActivityLogEntry('post', `Posted on ${friend.name}'s timeline`);
-            }
+            // Advance/follow-up contacts do not have a live inline birthday card.
+            // Do not use a page-wide editor fallback because it can post into
+            // Messenger or another person's card.
+            await addActivityLogEntry(
+              'info',
+              `Skipped timeline post for ${friend.name}: no live birthday card is available`,
+            );
           }
 
           if (flags.archiveAfterSend) {
@@ -2680,10 +2920,12 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
             payload: { friendId: dedupKey, friendName: friend.name },
           });
 
-          // Record success for rate limiting and backoff reset
-          await recordMessageSent();
+          // Phase 2 currently performs direct messages only.
+          if (flags.sendMessage) {
+            await recordMessageSent();
+            await addActivityLogEntry('send', `Sent DM to ${friend.name}`);
+          }
           await recordSendSuccess();
-          await addActivityLogEntry('send', `Sent DM to ${friend.name}`);
 
           sent++;
           setStatus(`Sent ${sent} message(s) this run`);
@@ -2702,6 +2944,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
           }
         } finally {
           hideAutomationOverlay();
+          releaseFriendLock(processingKey, friend.name);
         }
       }
     }
