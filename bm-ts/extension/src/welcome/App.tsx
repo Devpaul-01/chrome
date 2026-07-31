@@ -69,16 +69,16 @@ export default function App() {
           <div className="card">
             <h2 className="text-lg font-semibold mb-3">You&apos;re logged in</h2>
             <p className="text-sm text-gray-600">
-              You can close this tab now and click the BirthdayMessaging icon in your toolbar to
-              get started.
+              You can close this tab now and click the BirthdayMessaging icon in your toolbar to get
+              started.
             </p>
           </div>
         ) : authMode === 'verify-email-pending' ? (
           <div className="card">
             <h2 className="text-lg font-semibold mb-3">Check your email</h2>
             <p className="text-sm text-gray-600 mb-4">
-              We sent a verification link to <strong>{email}</strong>. Verify your email, then
-              come back here and log in.
+              We sent a verification link to <strong>{email}</strong>. Verify your email, then come
+              back here and log in.
             </p>
             <ResendVerificationEmailButton email={email} />
             <button
