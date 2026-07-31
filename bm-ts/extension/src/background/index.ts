@@ -216,8 +216,12 @@ async function openOrFocusFacebookBirthdaysTab(): Promise<chrome.tabs.Tab> {
     chrome.tabs.query(
       { url: ['*://*.facebook.com/birthdays*', '*://*.facebook.com/friends/birthdays*'] },
       (tabs) => {
-        if (tabs.length > 0 && tabs[0].id !== undefined) {
-          resolve(tabs[0]);
+        const preferredTab =
+          tabs.find((tab) => tab.active && tab.id !== undefined) ??
+          tabs.find((tab) => tab.id !== undefined);
+
+        if (preferredTab?.id !== undefined) {
+          resolve(preferredTab);
         } else {
           // Do NOT auto-open a Facebook tab — requires user to have the page open
           reject(new Error('Facebook birthdays tab is not open; user action is required.'));
@@ -265,6 +269,40 @@ async function fetchBackendDataCached(): Promise<{
  * groups them by days_in_advance, opens the Facebook birthdays page, and
  * dispatches the full automation payload to the content script.
  */
+let automationScanInFlight: Promise<{ success: boolean }> | null = null;
+
+/**
+ * Starts one automation scan without keeping the popup's runtime message port
+ * open for the full scan. This prevents the popup from timing out while the
+ * background worker fetches backend data, waits for Facebook, and dispatches
+ * the content-script run.
+ *
+ * Repeated clicks while a scan is already running reuse the existing run
+ * instead of starting a second overlapping automation.
+ */
+function startAutomationScan(): void {
+  if (automationScanInFlight) {
+    logger.info('Automation scan request ignored because a scan is already running');
+    return;
+  }
+
+  automationScanInFlight = handleAutomationScan()
+    .catch(async (error) => {
+      logger.error('Unhandled automation scan failure', error);
+      await addActivityLogEntry(
+        'error',
+        `Automation scan failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      notifyAutomationFailed(
+        error instanceof Error ? error.message : 'Automation scan failed unexpectedly.',
+      );
+      return { success: false };
+    })
+    .finally(() => {
+      automationScanInFlight = null;
+    });
+}
+
 async function handleAutomationScan(): Promise<{ success: boolean }> {
   // Fail-safe checks before proceeding
   if (await isEmergencyStopActive()) {
@@ -701,7 +739,10 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return { success: true };
     }
     case 'automation.scanFacebook': {
-      return handleAutomationScan();
+      // Return immediately to the popup so Chrome does not close the message
+      // channel while the longer scan continues in the background.
+      startAutomationScan();
+      return { success: true };
     }
     case 'rateLimit.status': {
       return runAuthAware((accessToken, url) => getServerRateLimitStatus(url, accessToken));

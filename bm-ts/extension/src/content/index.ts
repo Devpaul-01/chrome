@@ -63,6 +63,7 @@ import {
   replaceFacebookEditorText,
   waitForValue,
 } from './editor-helpers';
+import { bmTrace, createTraceId, isTraceTarget, markTraceContainer, traceElement } from './trace';
 
 /** Maximum messages the manual "Send to all" flow will send per session (safety cap). */
 const MAX_MESSAGES_PER_SESSION = 5;
@@ -94,13 +95,23 @@ type SegmentGroups = {
  * Represents a person whose birthday is today as found in the Facebook birthday feed DOM.
  * `messageButton` and `container` are live DOM references used to open the Messenger dialog.
  */
+type BirthdayFriendAction = 'messenger' | 'timeline';
+
 type BirthdayFriend = {
   id: string;
+
+  /** Temporary diagnostic identifier used to follow one card through the flow. */
+  traceId?: string;
+
+  /** Every visible Facebook card is processed independently by its own action. */
+  actionType: BirthdayFriendAction;
+
   name: string;
   birthday?: string;
   profileUrl?: string;
   container: HTMLElement;
   messageButton?: HTMLElement;
+  timelineEditor?: HTMLElement;
 };
 
 /**
@@ -115,9 +126,9 @@ const processingFriendKeys = new Set<string>();
 function getBirthdayFriendProcessingKey(friend: BirthdayFriend): string {
   const normalizedProfileUrl = friend.profileUrl?.split('?')[0].replace(/\/+$/, '').toLowerCase();
 
-  return (
-    normalizedProfileUrl ?? `${friend.id}|${friend.name}|${friend.birthday ?? ''}`.toLowerCase()
-  );
+  // Include the action and card id so a Messenger card and a timeline card for
+  // the same person never block one another.
+  return `${normalizedProfileUrl ?? friend.id}|${friend.actionType}|${friend.id}`.toLowerCase();
 }
 
 /** Build a stable lock key for a scraped contact. */
@@ -248,58 +259,18 @@ async function refreshFriendList() {
  */
 function gatherBirthdayFriends(): BirthdayFriend[] {
   const detected: BirthdayFriend[] = [];
-  const seenPeople = new Set<string>();
+  const seenRows = new WeakSet<HTMLElement>();
+  const seenControls = new WeakSet<HTMLElement>();
 
-  // Multiple selector strategies for birthday containers (ordered by reliability)
-  const containerSelectors = [
-    "div[data-pagelet*='Birthday']",
-    "div[data-pagelet*='birthday']",
-    "[data-pagelet='BirthdayFeed']",
-    "[data-testid*='birthday']",
-    "[data-testid*='Birthday']",
-    // Fallback: the /birthdays page uses role="feed" for the birthday list
-    "div[role='feed'] div[role='article']",
-  ];
-
-  const containers: HTMLElement[] = [];
-  const seen = new Set<HTMLElement>();
-
-  for (const selector of containerSelectors) {
-    document.querySelectorAll<HTMLElement>(selector).forEach((el) => {
-      if (!seen.has(el)) {
-        seen.add(el);
-        containers.push(el);
-      }
-    });
-  }
-
-  // If no containers found, try broader structural fallback:
-  // look for sections that contain profile links + "Message" buttons together
-  if (containers.length === 0) {
-    const potentialContainers = document.querySelectorAll<HTMLElement>(
-      '[role="main"] [role="article"], [role="main"] > div > div > div',
-    );
-    potentialContainers.forEach((el) => {
-      const hasProfileLink = el.querySelector("a[href*='facebook.com/']");
-      const hasMessageAction = el.querySelector(
-        "[role='button'][aria-label*='Message'], [role='button'][aria-label*='message'], a[href*='/messages/']",
-      );
-      if (hasProfileLink && hasMessageAction && !seen.has(el)) {
-        seen.add(el);
-        containers.push(el);
-      }
-    });
-  }
-
-  // Known Facebook section headings that should never be treated as person names.
   const SECTION_HEADINGS = new Set([
     'upcoming birthdays',
     'recent birthdays',
-    'this week',
-    'next week',
+    "today's birthdays",
     'today',
     'yesterday',
     'tomorrow',
+    'this week',
+    'next week',
     'this month',
     'january',
     'february',
@@ -315,70 +286,55 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
     'december',
   ]);
 
-  // Simple date patterns used to extract a birthday from container text nodes.
   const reDateFwd =
     /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan\.?|feb\.?|mar\.?|apr\.?|jun\.?|jul\.?|aug\.?|sep\.?|oct\.?|nov\.?|dec\.?)\s+(\d{1,2})\b/i;
   const reDateRev =
     /\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/i;
 
-  /** Extract a human-readable birthday label from text nodes within a container. */
-  function extractBirthdayFromContainer(container: HTMLElement): string | undefined {
-    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-    while (walker.nextNode()) {
-      const text = walker.currentNode.textContent?.trim() ?? '';
-      if (text.length < 3 || text.length > 80) continue;
-      if (/\btoday\b/i.test(text)) return 'Today';
-      if (/\btomorrow\b/i.test(text)) return 'Tomorrow';
-      const mFwd = reDateFwd.exec(text);
-      if (mFwd) return `${mFwd[1]} ${mFwd[2]}`;
-      const mRev = reDateRev.exec(text);
-      if (mRev) return `${mRev[2]} ${mRev[1]}`;
-    }
-    return undefined;
-  }
+  const normalizeText = (value: string | null | undefined): string =>
+    (value ?? '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-  /** Returns true for FB system/navigation URLs that are never personal profile links. */
-  const isContainerSystemUrl = (href: string) =>
-    /\/(birthdays|events|groups|pages|marketplace|watch|gaming|search|login|help|notifications|settings)\b/.test(
+  const isContainerSystemUrl = (href: string): boolean =>
+    /\/(birthdays|events|groups|pages|marketplace|watch|gaming|search|login|help|notifications|settings)\b/i.test(
       href,
     );
 
-  /**
-   * Normalise a Facebook profile URL to its canonical path so that the photo
-   * link and name link (which share the same profile URL) are counted as one
-   * distinct person.  E.g. both "https://www.facebook.com/tom.jones" and
-   * "https://www.facebook.com/tom.jones?ref=birthdays" → "/tom.jones".
-   */
   const normaliseProfilePath = (href: string): string => {
     try {
-      const u = new URL(href);
-      const id = u.searchParams.get('id');
-      return id ? `profile:${id}` : u.pathname.replace(/\/$/, '').toLowerCase();
+      const url = new URL(href);
+      const id = url.searchParams.get('id');
+      return id ? `profile:${id}` : url.pathname.replace(/\/$/, '').toLowerCase();
     } catch {
       return href;
     }
   };
 
-  /**
-   * Resolve the best available display name for a profile anchor element.
-   * Priority: aria-label on link → img[alt] inside link → span text → full textContent.
-   */
+  const getProfileLinks = (container: HTMLElement): HTMLAnchorElement[] =>
+    Array.from(container.querySelectorAll<HTMLAnchorElement>('a[href]')).filter(
+      (anchor) =>
+        anchor.href.includes('facebook.com') &&
+        !isContainerSystemUrl(anchor.href) &&
+        !/\/messages\//i.test(anchor.href),
+    );
+
   function resolveNameFromLink(link: HTMLAnchorElement): string {
-    // 1. aria-label — FB name links typically have just the person's name.
-    //    Photo links have "X's profile picture"; strip that suffix if present.
-    let ariaLabel = (link.getAttribute('aria-label') ?? '').trim();
-    ariaLabel = ariaLabel.replace(/[''']s\s+profile\s*(picture|photo)?$/i, '').trim();
+    let ariaLabel = normalizeText(link.getAttribute('aria-label'));
+    ariaLabel = ariaLabel.replace(/['’]s\s+profile\s*(picture|photo)?$/i, '').trim();
     ariaLabel = ariaLabel.replace(/^(?:view|open)\s+/i, '').trim();
     if (ariaLabel.length >= 2 && ariaLabel.length <= 80) return ariaLabel;
 
-    // 2. img alt text inside the link (profile thumbnail alt = person's name).
-    const img = link.querySelector<HTMLImageElement>('img[alt]');
-    const alt = (img?.getAttribute('alt') ?? '').trim();
+    const image = link.querySelector<HTMLImageElement>('img[alt]');
+    const alt = normalizeText(image?.getAttribute('alt'))
+      .replace(/^profile\s*(picture|photo)?\s*(of\s+)?/i, '')
+      .replace(/['’]s\s+(profile\s*)?(picture|photo)$/i, '')
+      .trim();
     if (alt.length >= 2 && alt.length <= 80) return alt;
 
-    // 3. First span whose text looks like a name (no digits, no action words, not a date).
     for (const span of Array.from(link.querySelectorAll('span'))) {
-      const text = span.textContent?.trim() ?? '';
+      const text = normalizeText(span.textContent);
       if (
         text.length >= 2 &&
         text.length <= 60 &&
@@ -391,162 +347,336 @@ function gatherBirthdayFriends(): BirthdayFriend[] {
       }
     }
 
-    // 4. Full link textContent — only if it's clean (no digits, no action words).
-    //    Reject strings like "Jane Smith20 MayMessage" that occur when
-    //    Facebook wraps the entire birthday card in a single <a> element.
-    const full = link.textContent?.trim() ?? '';
+    const fullText = normalizeText(link.textContent);
     if (
-      full.length >= 2 &&
-      full.length <= 50 &&
-      !/\d/.test(full) &&
-      !/\b(message|send|friend|follow)\b/i.test(full)
-    )
-      return full;
+      fullText.length >= 2 &&
+      fullText.length <= 50 &&
+      !/\d/.test(fullText) &&
+      !/\b(message|send|friend|follow)\b/i.test(fullText)
+    ) {
+      return fullText;
+    }
 
     return '';
   }
 
-  containers.forEach((container, index) => {
-    // Skip section-level containers — they contain MULTIPLE distinct profile
-    // URLs (i.e. multiple people).  A single person's card reuses one profile
-    // URL across the photo link and the name link, so distinctProfiles === 1.
-    const distinctProfiles = new Set(
-      Array.from(container.querySelectorAll<HTMLAnchorElement>('a[href]'))
-        .map((a) => a.href)
-        .filter(
-          (href) =>
-            href.includes('facebook.com') &&
-            !isContainerSystemUrl(href) &&
-            !/\/messages\//.test(href),
-        )
-        .map(normaliseProfilePath),
-    );
-    if (distinctProfiles.size > 1) return;
+  function isPlausiblePersonName(value: string): boolean {
+    const text = normalizeText(value);
+    const lower = text.toLowerCase();
 
-    // Extract profile link first — its content is the most reliable name source.
-    const profileLink =
-      container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/'][role='link']") ??
-      container.querySelector<HTMLAnchorElement>("a[href*='facebook.com/']");
+    if (text.length < 2 || text.length > 80) return false;
+    if (SECTION_HEADINGS.has(lower)) return false;
+    if (
+      /\b(message|send|friend|follow|birthday|birthdays|years? old|view post|write on|profile)\b/i.test(
+        text,
+      )
+    ) {
+      return false;
+    }
+    if (/^(hbd|hb|bday)[!.?]*$/i.test(text)) return false;
+    if (/^(today|tomorrow|yesterday)$/i.test(text)) return false;
+    if (reDateFwd.test(text) || reDateRev.test(text)) return false;
+    if (/^\d+$/.test(text)) return false;
+    if (!/[\p{L}]/u.test(text)) return false;
 
-    const validProfileLink =
-      profileLink && !isContainerSystemUrl(profileLink.href) ? profileLink : null;
+    // Reject short message-template chips such as "HBD!" and emoji-heavy greetings.
+    const letters = Array.from(text.matchAll(/[\p{L}]/gu)).length;
+    const words = text.split(/\s+/).filter(Boolean);
+    if (letters < 2) return false;
+    if (words.length === 1 && text.length <= 5 && text === text.toUpperCase()) return false;
 
-    const nameFromLink = validProfileLink ? resolveNameFromLink(validProfileLink) : undefined;
+    return true;
+  }
 
-    const nameFromDOM = !nameFromLink
-      ? (
-          container.querySelector('strong span') ??
-          container.querySelector('strong') ??
-          // NOTE: h2/h3 intentionally excluded — they are Facebook section headings
-          container.querySelector('a[href*="facebook.com/"] span')
-        )?.textContent?.trim()
-      : undefined;
-    const name = (nameFromLink || nameFromDOM)?.trim();
-
-    // Never create a contact named "Unknown".
-    // Skipping an invalid card keeps `detected` empty and allows the
-    // Messenger-button fallback scanner below to try another method.
-    if (!name || name.length < 2 || SECTION_HEADINGS.has(name.toLowerCase())) {
-      console.warn('[BM] Skipping birthday card because no valid name was found', {
-        index,
-        profileUrl: validProfileLink?.href,
-        text: container.textContent?.trim().slice(0, 200),
-      });
-      return;
+  function resolveNameFromContainer(container: HTMLElement): string {
+    // 1. A real Facebook profile link is the strongest source.
+    for (const profileLink of getProfileLinks(container)) {
+      const linkedName = resolveNameFromLink(profileLink);
+      if (isPlausiblePersonName(linkedName)) return linkedName;
     }
 
-    // Deduplicate by canonical profile identity, not display name. Facebook may
-    // show multiple different friends with the same name on the birthday page.
-    // Name-only deduplication can keep the DM-only card and discard the separate
-    // timeline-composer card for another person with that same display name.
-    const personKey = validProfileLink
-      ? normaliseProfilePath(validProfileLink.href)
-      : `name:${name.toLowerCase()}`;
-    if (seenPeople.has(personKey)) return;
-    seenPeople.add(personKey);
-    // Try to extract a birthday label from text nodes in the container.
-    const birthday = extractBirthdayFromContainer(container);
+    // 2. Facebook often exposes the person's name through an avatar alt label.
+    for (const image of Array.from(container.querySelectorAll<HTMLImageElement>('img[alt]'))) {
+      const alt = normalizeText(image.alt)
+        .replace(/^profile\s*(picture|photo)?\s*(of\s+)?/i, '')
+        .replace(/['’]s\s+(profile\s*)?(picture|photo)$/i, '')
+        .trim();
+      if (isPlausiblePersonName(alt)) return alt;
+    }
 
-    // Multiple selectors for the message button (language-agnostic first)
-    const messageBtn =
-      container.querySelector<HTMLElement>("a[href*='/messages/t/']") ??
-      container.querySelector<HTMLElement>("a[role='button'][aria-label*='Message']") ??
-      container.querySelector<HTMLElement>("button[aria-label*='Message']") ??
-      container.querySelector<HTMLElement>("a[role='button'][aria-label*='message']") ??
-      container.querySelector<HTMLElement>("[role='button'][data-testid*='message']");
+    // 3. Prefer name-like text that is not inside the editor, a message button,
+    //    or Facebook's suggested birthday-message chips.
+    const candidates = Array.from(
+      container.querySelectorAll<HTMLElement>('h1,h2,h3,h4,[role="heading"],strong,a,span,div'),
+    )
+      .filter((element) => isVisible(element))
+      .filter(
+        (element) =>
+          !element.closest('[contenteditable="true"]') &&
+          !element.closest('[aria-label="Message"]') &&
+          !element.closest('button') &&
+          !element.closest('[role="button"]'),
+      )
+      .map((element) => ({
+        element,
+        text: normalizeText(element.innerText || element.textContent),
+      }))
+      .filter(({ text }) => isPlausiblePersonName(text))
+      .filter(({ text }) => !/[!?]{1,}|🎂|🎉|🎈|🎁|🥳|💐|🌟|☕|🥂/u.test(text))
+      .sort((left, right) => {
+        // Prefer compact labels, but never blindly choose the shortest string.
+        const leftWords = left.text.split(/\s+/).length;
+        const rightWords = right.text.split(/\s+/).length;
+        const leftScore = (leftWords >= 1 && leftWords <= 5 ? 0 : 100) + left.text.length;
+        const rightScore = (rightWords >= 1 && rightWords <= 5 ? 0 : 100) + right.text.length;
+        return leftScore - rightScore;
+      });
+
+    return candidates[0]?.text ?? '';
+  }
+
+  function extractBirthdayFromContainer(container: HTMLElement): string | undefined {
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+
+    while (walker.nextNode()) {
+      const text = normalizeText(walker.currentNode.textContent);
+      if (text.length < 3 || text.length > 80) continue;
+      if (/\btoday\b/i.test(text)) return 'Today';
+      if (/\btomorrow\b/i.test(text)) return 'Tomorrow';
+
+      const forwardMatch = reDateFwd.exec(text);
+      if (forwardMatch) return `${forwardMatch[1]} ${forwardMatch[2]}`;
+
+      const reverseMatch = reDateRev.exec(text);
+      if (reverseMatch) return `${reverseMatch[2]} ${reverseMatch[1]}`;
+    }
+
+    let current: HTMLElement | null = container.parentElement;
+    for (let depth = 0; depth < 8 && current; depth += 1) {
+      const headings = Array.from(
+        current.querySelectorAll<HTMLElement>('h1,h2,h3,h4,[role="heading"]'),
+      ).map((heading) => normalizeText(heading.innerText || heading.textContent).toLowerCase());
+
+      if (headings.some((heading) => heading === "today's birthdays" || heading === 'today')) {
+        return 'Today';
+      }
+      if (headings.some((heading) => heading === 'tomorrow')) return 'Tomorrow';
+
+      current = current.parentElement;
+    }
+
+    return undefined;
+  }
+
+  const isTimelineEditor = (element: HTMLElement): boolean => {
+    if (!isVisible(element)) return false;
+    const placeholder = normalizeText(
+      element.getAttribute('aria-placeholder') ?? element.getAttribute('data-placeholder'),
+    ).toLowerCase();
+    return (
+      element.matches('[contenteditable="true"][role="textbox"][data-lexical-editor="true"]') &&
+      (placeholder.includes('profile') || placeholder.includes('write on'))
+    );
+  };
+
+  const isInsideMessengerComposer = (element: HTMLElement): boolean => {
+    let current: HTMLElement | null = element;
+    for (let depth = 0; depth < 14 && current; depth += 1) {
+      const labels = Array.from(current.querySelectorAll<HTMLElement>('[aria-label]')).map((item) =>
+        normalizeText(item.getAttribute('aria-label')).toLowerCase(),
+      );
+      if (
+        labels.some((label) =>
+          ['press enter to send', 'send a like', 'send a voice clip', 'conversation details'].some(
+            (token) => label.includes(token),
+          ),
+        )
+      ) {
+        return true;
+      }
+      current = current.parentElement;
+    }
+    return false;
+  };
+
+  const isMessengerButton = (element: HTMLElement): boolean => {
+    if (!isVisible(element) || isInsideMessengerComposer(element)) return false;
+    const label = normalizeText(
+      element.getAttribute('aria-label') ?? element.getAttribute('title') ?? element.textContent,
+    ).toLowerCase();
+    return (
+      element.matches("a[href*='/messages/t/'], a[href*='/messages/e2ee/']") || label === 'message'
+    );
+  };
+
+  const countTimelineEditors = (container: HTMLElement): number =>
+    Array.from(
+      container.querySelectorAll<HTMLElement>(
+        '[contenteditable="true"][role="textbox"][data-lexical-editor="true"]',
+      ),
+    ).filter(isTimelineEditor).length;
+
+  const countMessengerButtons = (container: HTMLElement): number =>
+    Array.from(
+      container.querySelectorAll<HTMLElement>(
+        "a[href*='/messages/t/'], a[href*='/messages/e2ee/'], [role='button'][aria-label='Message'], button[aria-label='Message']",
+      ),
+    ).filter(isMessengerButton).length;
+
+  function resolveActionRow(
+    control: HTMLElement,
+    actionType: BirthdayFriendAction,
+  ): HTMLElement | null {
+    let current: HTMLElement | null = control;
+
+    for (let depth = 0; depth < 24 && current; depth += 1) {
+      const actionCount =
+        actionType === 'timeline' ? countTimelineEditors(current) : countMessengerButtons(current);
+      const text = normalizeText(current.innerText || current.textContent);
+      const name = resolveNameFromContainer(current);
+
+      /*
+       * Messenger birthday rows often keep the avatar in a sibling wrapper,
+       * outside the smallest ancestor that owns the Message button, name,
+       * birthday and age. Requiring an <img> therefore rejects valid rows.
+       */
+      if (
+        actionType === 'messenger' &&
+        current.contains(control) &&
+        actionCount === 1 &&
+        text.length >= 3 &&
+        text.length <= 500 &&
+        !/^message$/i.test(text) &&
+        isPlausiblePersonName(name)
+      ) {
+        return current;
+      }
+
+      /*
+       * Timeline cards are resolved independently around their own Lexical
+       * editor. Keep the single-editor and real-name requirements so an open
+       * Messenger composer can never be selected as a timeline target.
+       */
+      if (
+        actionType === 'timeline' &&
+        current.contains(control) &&
+        actionCount === 1 &&
+        text.length >= 3 &&
+        text.length <= 1_500 &&
+        isPlausiblePersonName(name)
+      ) {
+        return current;
+      }
+
+      current = current.parentElement;
+    }
+
+    return null;
+  }
+
+  function addDetectedCard(
+    actionType: BirthdayFriendAction,
+    control: HTMLElement,
+    container: HTMLElement,
+  ): void {
+    if (seenControls.has(control) || seenRows.has(container)) return;
+
+    const name = resolveNameFromContainer(container);
+    if (!isPlausiblePersonName(name)) return;
+
+    seenControls.add(control);
+    seenRows.add(container);
+
+    const profileLink = getProfileLinks(container)[0];
+    const profileUrl = profileLink?.href;
+    const birthday = extractBirthdayFromContainer(container);
+    const cardIdentity = profileUrl
+      ? normaliseProfilePath(profileUrl)
+      : `${name.toLowerCase().replace(/\s+/g, '-')}-${detected.length}`;
+    const friendId = `${actionType}-${cardIdentity}-${detected.length}`;
+    const messageButton = actionType === 'messenger' ? control : undefined;
+    const timelineEditor = actionType === 'timeline' ? control : undefined;
+
+    let traceId: string | undefined;
+    if (isTraceTarget(name)) {
+      traceId = createTraceId(name);
+      markTraceContainer(container, traceId);
+      bmTrace(`01 ${actionType.toUpperCase()} CARD DETECTED`, {
+        traceId,
+        friendId,
+        actionType,
+        name,
+        birthday,
+        profileUrl,
+        containerConnected: container.isConnected,
+        messageButtonFound: Boolean(messageButton),
+        messageButtonConnected: messageButton?.isConnected ?? false,
+        timelineEditorFound: Boolean(timelineEditor),
+        timelineEditorConnected: timelineEditor?.isConnected ?? false,
+        containerText: normalizeText(container.innerText || container.textContent).slice(0, 600),
+      });
+      traceElement(`01 ${actionType.toUpperCase()} CARD CONTAINER`, container, {
+        traceId,
+        name,
+      });
+      traceElement(`01 ${actionType.toUpperCase()} CONTROL`, control, {
+        traceId,
+        name,
+      });
+    }
 
     detected.push({
-      id: `${name}-${index}`,
+      id: friendId,
+      traceId,
+      actionType,
       name,
       birthday,
-      profileUrl: validProfileLink?.href,
-      container: container as HTMLElement,
-      messageButton: messageBtn ?? undefined,
+      profileUrl,
+      container,
+      messageButton,
+      timelineEditor,
     });
-  });
-
-  // ── Fallback: anchor on Messenger links / Message buttons ───────────────
-  // When Facebook changes its DOM so none of the container selectors produce
-  // individual per-person cards (e.g. the entire birthday list lands in one
-  // large `role="article"` that fails the distinctProfiles guard), we pivot to
-  // finding Message buttons directly and walking up to the smallest card that
-  // holds exactly one profile URL.
-  if (detected.length === 0) {
-    const msgSeen = new Set<string>();
-    const msgBtnSelectors = [
-      "a[href*='/messages/t/']",
-      "a[href*='/messages/e2ee/']",
-      "[role='button'][aria-label*='essage']",
-    ];
-    const msgButtons: HTMLElement[] = [];
-    const btnSeen = new Set<HTMLElement>();
-    for (const sel of msgBtnSelectors) {
-      document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
-        if (!btnSeen.has(el)) {
-          btnSeen.add(el);
-          msgButtons.push(el);
-        }
-      });
-    }
-
-    for (const btn of msgButtons) {
-      let card: HTMLElement | null = btn.parentElement;
-      for (let depth = 0; depth < 10 && card; depth++) {
-        const profileLinks = Array.from(card.querySelectorAll<HTMLAnchorElement>('a[href]')).filter(
-          (a) =>
-            a.href.includes('facebook.com') &&
-            !isContainerSystemUrl(a.href) &&
-            !/\/messages\//.test(a.href),
-        );
-        const uniqueProfiles = new Set(profileLinks.map((a) => normaliseProfilePath(a.href)));
-        if (uniqueProfiles.size === 1) {
-          const link = profileLinks[0];
-          const canonicalUrl = normaliseProfilePath(link.href);
-          if (msgSeen.has(canonicalUrl)) break;
-          msgSeen.add(canonicalUrl);
-          const name = resolveNameFromLink(link);
-          if (!name || name.length < 2 || SECTION_HEADINGS.has(name.toLowerCase())) break;
-          const personKey = canonicalUrl || `name:${name.toLowerCase()}`;
-          if (seenPeople.has(personKey)) break;
-          seenPeople.add(personKey);
-          const birthday = extractBirthdayFromContainer(card);
-          detected.push({
-            id: `${name}-fb-${detected.length}`,
-            name,
-            birthday,
-            profileUrl: link.href,
-            container: card,
-            messageButton: btn,
-          });
-          break;
-        }
-        card = card.parentElement;
-      }
-    }
   }
+
+  const timelineEditors = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      '[contenteditable="true"][role="textbox"][data-lexical-editor="true"]',
+    ),
+  ).filter(isTimelineEditor);
+
+  for (const editor of timelineEditors) {
+    const row = resolveActionRow(editor, 'timeline');
+    if (row) addDetectedCard('timeline', editor, row);
+  }
+
+  const messengerButtons = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      "a[href*='/messages/t/'], a[href*='/messages/e2ee/'], [role='button'][aria-label='Message'], button[aria-label='Message']",
+    ),
+  ).filter(isMessengerButton);
+
+  for (const button of messengerButtons) {
+    const row = resolveActionRow(button, 'messenger');
+    if (row) addDetectedCard('messenger', button, row);
+  }
+
+  console.log('[BM DETECTION] Birthday card inventory', {
+    timelineEditorsFound: timelineEditors.length,
+    messengerButtonsFound: messengerButtons.length,
+    detectedCount: detected.length,
+    detected: detected.map((friend) => ({
+      id: friend.id,
+      actionType: friend.actionType,
+      name: friend.name,
+      birthday: friend.birthday,
+      profileUrl: friend.profileUrl,
+      containerConnected: friend.container.isConnected,
+    })),
+  });
 
   return detected;
 }
+
 /** Fetches template segments from the backend and groups them by type into `segments`. */
 async function loadSegments() {
   try {
@@ -670,11 +800,19 @@ function renderFriendList() {
     // Per-friend send button
     const sendOneBtn = document.createElement('button');
     sendOneBtn.textContent = '▶';
-    sendOneBtn.title = `Send to ${friend.name}`;
+    sendOneBtn.title =
+      friend.actionType === 'messenger'
+        ? `Send a Messenger message to ${friend.name}`
+        : `Timeline cards are processed through Run Check Now`;
     sendOneBtn.className = 'bm-send-one-btn';
+    if (friend.actionType === 'timeline') {
+      sendOneBtn.textContent = 'Post';
+      sendOneBtn.disabled = true;
+      sendOneBtn.style.opacity = '0.55';
+    }
     sendOneBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      void handleSendOne(friend);
+      if (friend.actionType === 'messenger') void handleSendOne(friend);
     });
 
     // Clicking the row toggles checkbox
@@ -792,7 +930,7 @@ async function handleSendAll() {
     return;
   }
 
-  const targets = friends.filter((f) => selectedFriends.has(f.id));
+  const targets = friends.filter((f) => selectedFriends.has(f.id) && f.actionType === 'messenger');
   if (!targets.length) {
     setStatus('No friends selected');
     return;
@@ -960,6 +1098,9 @@ function showInlineConfirm(message: string): Promise<boolean> {
  * Used by the manual overlay's "send to all" path.
  */
 async function sendMessageToFriend(friend: BirthdayFriend): Promise<void> {
+  if (friend.actionType !== 'messenger') {
+    throw new Error(`${friend.name} is a timeline-only birthday card`);
+  }
   const dialogClicked = openMessageDialog(friend);
   if (!dialogClicked) {
     throw new Error(`Cannot open message for ${friend.name}`);
@@ -969,6 +1110,7 @@ async function sendMessageToFriend(friend: BirthdayFriend): Promise<void> {
 }
 
 function openMessageDialog(friend: BirthdayFriend): boolean {
+  if (friend.actionType !== 'messenger') return false;
   // Use the “Message” button or a quick link to the messenger thread. Clicking buttons
   // simulates normal user action instead of relying on private APIs.
   const target =
@@ -2712,23 +2854,76 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
 
     for (const friend of friends) {
       if (maxMessages > 0 && sent >= maxMessages) break;
-      const dedupKey = friend.profileUrl ?? friend.id;
+      const dedupKey = `${friend.profileUrl ?? friend.id}#${friend.actionType}`;
       if (sentToday.includes(dedupKey)) continue;
 
+      /*
+       * Phase 4 diagnostic: prove that the exact friend object and live DOM
+       * references created during detection reached the automation loop.
+       */
+      if (friend.traceId) {
+        bmTrace('02 FRIEND ENTERED AUTOMATION LOOP', {
+          traceId: friend.traceId,
+          friendId: friend.id,
+          dedupKey,
+          name: friend.name,
+          birthday: friend.birthday,
+          profileUrl: friend.profileUrl,
+          containerConnected: friend.container.isConnected,
+          messageButtonFound: Boolean(friend.messageButton),
+          messageButtonConnected: friend.messageButton?.isConnected ?? false,
+          actionType: friend.actionType,
+          timelineEditorFound: Boolean(friend.timelineEditor),
+          timelineEditorConnected: friend.timelineEditor?.isConnected ?? false,
+          containerText: (friend.container.innerText || friend.container.textContent || '').slice(
+            0,
+            600,
+          ),
+        });
+
+        traceElement('02A AUTOMATION LOOP CONTAINER', friend.container, {
+          traceId: friend.traceId,
+          friendId: friend.id,
+          name: friend.name,
+        });
+
+        traceElement('02B AUTOMATION LOOP MESSAGE BUTTON', friend.messageButton, {
+          traceId: friend.traceId,
+          friendId: friend.id,
+          name: friend.name,
+        });
+
+        traceElement('02C AUTOMATION LOOP TIMELINE EDITOR', friend.timelineEditor, {
+          traceId: friend.traceId,
+          friendId: friend.id,
+          name: friend.name,
+        });
+      }
+
       const friendGroupId = friend.profileUrl ? contactGroupMap.get(friend.profileUrl) : undefined;
-      const template = flags.sendMessage
+      const shouldSendMessage = friend.actionType === 'messenger' && flags.sendMessage;
+      const shouldPostTimeline = friend.actionType === 'timeline' && flags.makePost;
+
+      // This visible Facebook card does not support an enabled action.
+      if (!shouldSendMessage && !shouldPostTimeline) continue;
+
+      const template = shouldSendMessage
         ? selectTemplate(currentDayTemplates, 'NEUTRAL', friendGroupId)
         : null;
-      if (flags.sendMessage && !template) continue;
+      if (shouldSendMessage && !template) continue;
+
+      const selectedPost = shouldPostTimeline ? selectPost(posts, 'NEUTRAL', friendGroupId) : null;
+      if (shouldPostTimeline && !selectedPost) continue;
 
       const dmText = template ? assembleMessageFromTemplate(template, { name: friend.name }) : '';
+      const resolvedPostContent = selectedPost
+        ? resolveKeywords(selectedPost.content, { name: friend.name })
+        : '';
+      const confirmationPreview = shouldSendMessage ? dmText : resolvedPostContent;
 
-      // DM fail-safe checks apply only when a direct message will actually be sent.
-      if (flags.sendMessage) {
-        const decision = await preSendChecks(friend.name, dmText);
-        if (decision === 'abort') break;
-        if (decision === 'skip') continue;
-      }
+      const decision = await preSendChecks(friend.name, confirmationPreview);
+      if (decision === 'abort') break;
+      if (decision === 'skip') continue;
 
       const processingKey = getBirthdayFriendProcessingKey(friend);
       if (!tryAcquireFriendLock(processingKey, friend.name)) {
@@ -2738,49 +2933,46 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
 
       showAutomationOverlay(friend.name);
       try {
-        // Post first while the exact birthday card is still live. Opening a
-        // Messenger chat can cause Facebook to replace the birthday-card DOM,
-        // which previously left timeline.ts holding a disconnected sourceCard.
-        if (flags.makePost && posts.length > 0) {
-          const post = selectPost(posts, 'NEUTRAL', friendGroupId);
-          if (post) {
-            const resolvedPostContent = resolveKeywords(post.content, { name: friend.name });
-            logger.log('[BM Timeline] Selected post template', {
-              friendName: friend.name,
-              postId: post.id,
-              label: post.label,
-              isDefault: post.is_default,
-              originalContent: post.content,
-              resolvedContent: resolvedPostContent,
-            });
-            const posted = await postToTimeline({
-              friendName: friend.name,
-              profileUrl: friend.profileUrl,
-              content: resolvedPostContent,
-              imageUrl: post.image_url,
-              sourceCard: friend.container,
-            });
-            if (posted) {
-              await addActivityLogEntry('post', `Posted on ${friend.name}'s timeline`);
-            } else {
-              // A timeline DOM failure must not disable a working Messenger send.
-              // Record the independent failure and continue to the DM action.
-              await addActivityLogEntry(
-                'error',
-                `Timeline post failed for ${friend.name}; continuing with DM when enabled`,
-              );
-              logger.warn(
-                `[BM Timeline] Timeline post failed for ${friend.name}; continuing with DM`,
-              );
-            }
+        let actionSucceeded = false;
+
+        if (shouldPostTimeline && selectedPost) {
+          logger.log('[BM Timeline] Selected post template', {
+            friendName: friend.name,
+            cardId: friend.id,
+            actionType: friend.actionType,
+            postId: selectedPost.id,
+            label: selectedPost.label,
+            isDefault: selectedPost.is_default,
+            originalContent: selectedPost.content,
+            resolvedContent: resolvedPostContent,
+          });
+
+          const posted = await postToTimeline({
+            friendName: friend.name,
+            profileUrl: friend.profileUrl,
+            content: resolvedPostContent,
+            imageUrl: selectedPost.image_url,
+            sourceCard: friend.container,
+          });
+
+          if (!posted) {
+            throw new Error(`Failed to post customized timeline message for ${friend.name}`);
           }
+
+          actionSucceeded = true;
+          await addActivityLogEntry('post', `Posted on ${friend.name}'s timeline`);
         }
 
-        if (flags.sendMessage) {
+        if (shouldSendMessage) {
           await sendComposedMessageToFriend(friend, dmText);
+          actionSucceeded = true;
         }
 
-        if (flags.archiveAfterSend) {
+        if (!actionSucceeded) {
+          throw new Error(`No enabled action was completed for ${friend.name}`);
+        }
+
+        if (flags.archiveAfterSend && shouldSendMessage) {
           await archiveConversation(friend.name, friend.profileUrl);
         }
 
@@ -2790,7 +2982,7 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
         });
 
         // Message rate limits apply only to an actual direct message.
-        if (flags.sendMessage) {
+        if (shouldSendMessage) {
           await recordMessageSent();
           await addActivityLogEntry('send', `Sent DM to ${friend.name}`);
         }
@@ -2798,8 +2990,8 @@ async function runFullAutomation(payload: AutomationRunPayload): Promise<void> {
 
         sent++;
         const completedActions = [
-          flags.sendMessage ? 'DM' : null,
-          flags.makePost ? 'timeline post' : null,
+          shouldSendMessage ? 'DM' : null,
+          shouldPostTimeline ? 'timeline post' : null,
         ]
           .filter(Boolean)
           .join(' and ');

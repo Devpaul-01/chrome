@@ -11,6 +11,7 @@
 
 import { delay } from './dom-helpers';
 import { logger } from '../utils/logger';
+import { readEditableText, replaceFacebookEditorText } from './editor-helpers';
 
 const SHORT_DELAY = 400;
 const MEDIUM_DELAY = 1000;
@@ -45,6 +46,40 @@ function isVisible(element: HTMLElement): boolean {
 
 function readEditorText(editor: HTMLElement): string {
   return normalizeText(editor.innerText || editor.textContent || '');
+}
+
+interface SuspendedOverlay {
+  element: HTMLElement;
+  display: string;
+  pointerEvents: string;
+}
+
+function suspendBirthdayMessagingOverlays(): SuspendedOverlay[] {
+  const suspended: SuspendedOverlay[] = [];
+
+  for (const id of ['bm-auto-overlay', 'bm-confirm-modal']) {
+    const element = document.getElementById(id);
+    if (!(element instanceof HTMLElement)) continue;
+
+    suspended.push({
+      element,
+      display: element.style.display,
+      pointerEvents: element.style.pointerEvents,
+    });
+
+    element.style.display = 'none';
+    element.style.pointerEvents = 'none';
+  }
+
+  return suspended;
+}
+
+function restoreBirthdayMessagingOverlays(suspended: SuspendedOverlay[]): void {
+  for (const item of suspended) {
+    if (!item.element.isConnected) continue;
+    item.element.style.display = item.display;
+    item.element.style.pointerEvents = item.pointerEvents;
+  }
 }
 
 function isMessengerArea(element: HTMLElement): boolean {
@@ -206,47 +241,47 @@ async function replaceLexicalBirthdayText(editor: HTMLElement, message: string):
   }
 
   editor.scrollIntoView({ block: 'center', behavior: 'auto' });
-  editor.focus();
-  await delay(100);
+  editor.click();
+  editor.focus({ preventScroll: true });
+  await delay(200);
 
-  const selection = window.getSelection();
-  if (!selection) {
-    throw new Error('Browser selection API is unavailable');
-  }
+  logger.log('[BM Timeline] Replacing Facebook Lexical content', {
+    before: readEditorText(editor),
+    expected,
+    expectedLength: expected.length,
+  });
 
-  const range = document.createRange();
-  range.selectNodeContents(editor);
-  selection.removeAllRanges();
-  selection.addRange(range);
-
-  // This is the exact operation confirmed to work manually with Facebook's
-  // Lexical editor. execCommand emits the native beforeinput/input sequence.
-  // Do not dispatch a second synthetic InputEvent: that can reconcile Lexical
-  // back to its old/default value or duplicate the message.
-  const inserted = document.execCommand('insertText', false, expected);
-  selection.removeAllRanges();
-
-  if (!inserted) {
-    throw new Error('Facebook rejected the Lexical text insertion');
-  }
-
+  await replaceFacebookEditorText(editor, expected);
   await delay(SHORT_DELAY);
 
-  const actual = readEditorText(editor);
+  let actual = normalizeText(readEditableText(editor));
+
+  logger.log('[BM Timeline] Lexical replacement result', {
+    expected,
+    actual,
+    expectedLength: expected.length,
+    actualLength: actual.length,
+  });
+
   if (actual !== expected) {
     throw new Error(
-      `Timeline editor verification failed. Expected ${expected.length} characters, found ${actual.length}.`,
+      `Timeline editor verification failed. Expected ${expected.length} characters, found ${actual.length}. Actual text: "${actual}"`,
     );
   }
 
-  // Allow Facebook/Lexical to finish its React state update and verify that the
-  // custom content survives reconciliation and blur.
-  editor.blur();
-  await delay(SHORT_DELAY);
+  // Verify a second time after Facebook has had time to reconcile Lexical and
+  // React state. The post must never be submitted if the default text returns.
+  await delay(350);
+  actual = normalizeText(readEditableText(editor));
 
-  if (readEditorText(editor) !== expected) {
-    throw new Error('Facebook restored or changed the custom timeline message.');
+  if (actual !== expected) {
+    throw new Error(
+      `Facebook restored the default timeline text after insertion. Expected ${expected.length} characters, found ${actual.length}. Actual text: "${actual}"`,
+    );
   }
+
+  // Do not blur here. Facebook may restore the default birthday greeting when
+  // the inline Lexical editor loses focus before its form is submitted.
 }
 
 export async function insertPostContent(
@@ -350,6 +385,8 @@ function findBirthdaySubmitControl(card: HTMLElement, editor: HTMLElement): HTML
 export async function postToTimeline(post: TimelinePost): Promise<boolean> {
   logger.log(`[BM Timeline] Starting scoped birthday post for ${post.friendName}`);
 
+  const suspendedOverlays = suspendBirthdayMessagingOverlays();
+
   try {
     const card = findBirthdayCard(post);
     if (!card) {
@@ -396,12 +433,21 @@ export async function postToTimeline(post: TimelinePost): Promise<boolean> {
     // is normally "Post birthday message". Trigger that exact control so React
     // runs the same handler as a real user click. Fall back to the editor's own
     // form only when the dedicated control is unavailable.
-    if (submitControl) {
-      submitControl.click();
-    } else if (form instanceof HTMLFormElement) {
+    if (form instanceof HTMLFormElement) {
+      logger.log('[BM Timeline] Submitting editor form with requestSubmit()', {
+        friendName: post.friendName,
+        content: readEditorText(editor),
+      });
       form.requestSubmit();
+    } else if (submitControl) {
+      logger.log('[BM Timeline] Clicking birthday submit control', {
+        friendName: post.friendName,
+        ariaLabel: submitControl.getAttribute('aria-label'),
+        title: submitControl.getAttribute('title'),
+      });
+      submitControl.click();
     } else {
-      throw new Error('The birthday submit control and editor form could not be found');
+      throw new Error('The birthday editor has neither a form nor a usable submit control');
     }
     await delay(MEDIUM_DELAY);
 
@@ -421,6 +467,8 @@ export async function postToTimeline(post: TimelinePost): Promise<boolean> {
   } catch (error) {
     logger.error(`[BM Timeline] Customized timeline post failed for ${post.friendName}:`, error);
     return false;
+  } finally {
+    restoreBirthdayMessagingOverlays(suspendedOverlays);
   }
 }
 

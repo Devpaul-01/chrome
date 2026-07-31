@@ -42,21 +42,111 @@ export async function waitForValue<T>(
   throw new Error(`Timed out after ${timeout}ms waiting for Facebook element`);
 }
 
+function pause(milliseconds: number): Promise<void> {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
 function selectEditorContents(editor: HTMLElement): void {
   const selection = window.getSelection();
-  const range = document.createRange();
+  if (!selection) throw new Error('Browser selection API is unavailable');
 
+  const range = document.createRange();
   range.selectNodeContents(editor);
-  selection?.removeAllRanges();
-  selection?.addRange(range);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function clearSelection(): void {
+  window.getSelection()?.removeAllRanges();
+}
+
+function editorHasExactText(editor: HTMLElement, expected: string): boolean {
+  return readEditableText(editor) === expected;
+}
+
+async function tryExecCommandReplacement(editor: HTMLElement, expected: string): Promise<boolean> {
+  editor.focus({ preventScroll: true });
+  selectEditorContents(editor);
+
+  const inserted = document.execCommand('insertText', false, expected);
+  clearSelection();
+  await pause(300);
+
+  return inserted && editorHasExactText(editor, expected);
+}
+
+async function tryDeleteThenInsert(editor: HTMLElement, expected: string): Promise<boolean> {
+  editor.focus({ preventScroll: true });
+  selectEditorContents(editor);
+  document.execCommand('delete', false);
+  await pause(75);
+
+  selectEditorContents(editor);
+  const inserted = document.execCommand('insertText', false, expected);
+  clearSelection();
+  await pause(350);
+
+  return inserted && editorHasExactText(editor, expected);
+}
+
+async function tryPasteEventReplacement(editor: HTMLElement, expected: string): Promise<boolean> {
+  if (typeof DataTransfer === 'undefined' || typeof ClipboardEvent === 'undefined') return false;
+
+  editor.focus({ preventScroll: true });
+  selectEditorContents(editor);
+
+  const dataTransfer = new DataTransfer();
+  dataTransfer.setData('text/plain', expected);
+
+  const pasteEvent = new ClipboardEvent('paste', {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    clipboardData: dataTransfer,
+  });
+
+  editor.dispatchEvent(pasteEvent);
+  clearSelection();
+  await pause(400);
+
+  return editorHasExactText(editor, expected);
+}
+
+async function tryBeforeInputReplacement(editor: HTMLElement, expected: string): Promise<boolean> {
+  editor.focus({ preventScroll: true });
+  selectEditorContents(editor);
+
+  const beforeInput = new InputEvent('beforeinput', {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    inputType: 'insertText',
+    data: expected,
+  });
+
+  editor.dispatchEvent(beforeInput);
+  await pause(100);
+
+  // If Facebook did not perform the replacement itself, perform the browser
+  // editing command while the Lexical selection is still active.
+  if (!editorHasExactText(editor, expected)) {
+    document.execCommand('insertText', false, expected);
+  }
+
+  clearSelection();
+  await pause(400);
+
+  return editorHasExactText(editor, expected);
 }
 
 /**
  * Replaces a Facebook React/Lexical editor atomically.
  *
- * Important: execCommand('insertText') already generates the browser input
- * event that Facebook listens for. Dispatching a second InputEvent with the
- * same data causes Lexical to insert the message a second time.
+ * Facebook currently uses more than one Lexical configuration. Messenger and
+ * the inline birthday composer do not always accept the same insertion path.
+ * The strategies below are attempted one at a time and stop immediately once
+ * the exact desired text is retained. A second data-bearing input event is
+ * never dispatched after a successful insertion, preventing duplication.
  */
 export async function replaceFacebookEditorText(
   editor: HTMLElement,
@@ -68,46 +158,44 @@ export async function replaceFacebookEditorText(
     throw new Error('Cannot insert an empty Facebook message');
   }
 
-  const current = readEditableText(editor);
-  if (current === expected) {
+  if (!editor.isConnected) {
+    throw new Error('Facebook editor is no longer connected to the page');
+  }
+
+  if (editorHasExactText(editor, expected)) {
     console.log('[BM][Editor] Correct message already present; skipping insertion');
     return;
   }
 
-  editor.focus();
-  selectEditorContents(editor);
+  const strategies: Array<{
+    name: string;
+    run: () => Promise<boolean>;
+  }> = [
+    { name: 'execCommand-select-replace', run: () => tryExecCommandReplacement(editor, expected) },
+    { name: 'delete-then-insert', run: () => tryDeleteThenInsert(editor, expected) },
+    { name: 'paste-event', run: () => tryPasteEventReplacement(editor, expected) },
+    { name: 'beforeinput-then-insert', run: () => tryBeforeInputReplacement(editor, expected) },
+  ];
 
-  const inserted = document.execCommand('insertText', false, expected);
-  window.getSelection()?.removeAllRanges();
-
-  if (!inserted) {
-    throw new Error('Facebook rejected the custom text insertion');
+  for (const strategy of strategies) {
+    try {
+      if (await strategy.run()) {
+        console.log('[BM][Editor] Custom text inserted and verified', {
+          strategy: strategy.name,
+          length: expected.length,
+        });
+        return;
+      }
+    } catch (error) {
+      console.warn('[BM][Editor] Replacement strategy failed', {
+        strategy: strategy.name,
+        error,
+      });
+    }
   }
 
-  await new Promise<void>((resolve) => window.setTimeout(resolve, 250));
-
-  let actual = readEditableText(editor);
-
-  /*
-   * A previous broken build may have left duplicate text in the composer.
-   * Replace it one more time atomically instead of appending another copy.
-   */
-  if (actual !== expected) {
-    editor.focus();
-    selectEditorContents(editor);
-    document.execCommand('delete', false);
-    selectEditorContents(editor);
-    document.execCommand('insertText', false, expected);
-    window.getSelection()?.removeAllRanges();
-    await new Promise<void>((resolve) => window.setTimeout(resolve, 250));
-    actual = readEditableText(editor);
-  }
-
-  if (actual !== expected) {
-    throw new Error(
-      `Facebook editor verification failed. Expected ${expected.length} characters but found ${actual.length}.`,
-    );
-  }
-
-  console.log('[BM][Editor] Custom text inserted and verified');
+  const actual = readEditableText(editor);
+  throw new Error(
+    `Facebook editor verification failed. Expected ${expected.length} characters but found ${actual.length}. Actual text: "${actual}"`,
+  );
 }
