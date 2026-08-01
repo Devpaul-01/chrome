@@ -218,3 +218,18 @@ Thumbs.db
 legacy/.DS_Store
 legacy/backend/.DS_Store
 legacy/frontend/.DS_Store
+
+# BirthdayMessaging local database backups
+bm-ts/backend/backups/*.sql
+bm-ts/backend/backups/*.sql.gz
+
+# BirthdayMessaging temporary extension source backups
+bm-ts/extension/backups/
+bm-ts/extension/**/Back_Up/
+bm-ts/extension/**/*.fixed.ts
+bm-ts/extension/**/*.before-*.ts
+
+# Temporary debugging and extraction files
+bm-ts/extension/name-extraction-section.txt
+bm-ts/extension/*-diagnostic*.txt
+bm-ts/extension/*-debug*.txt
