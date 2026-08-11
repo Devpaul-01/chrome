@@ -6,6 +6,7 @@ Table / model mapping
 Core auth & messaging:
   users                   → User
   subscription_records    → SubscriptionRecord
+  payment_transactions    → PaymentTransaction
   template_segments       → TemplateSegment     (legacy greeting/body/closing)
   birthday_schedules      → BirthdaySchedule
   message_queue           → MessageQueue
@@ -39,6 +40,7 @@ from sqlalchemy import (
     Index,
     Integer,
     JSON,
+    Numeric,
     String,
     Text,
     text,
@@ -116,6 +118,9 @@ class User(Base):
 
     subscription_records: Mapped[list[SubscriptionRecord]] = relationship(
         "SubscriptionRecord", back_populates="user", cascade="all, delete-orphan"
+    )
+    payment_transactions: Mapped[list[PaymentTransaction]] = relationship(
+        "PaymentTransaction", back_populates="user", cascade="all, delete-orphan"
     )
     template_segments: Mapped[list[TemplateSegment]] = relationship(
         "TemplateSegment", back_populates="user", cascade="all, delete-orphan"
@@ -208,6 +213,71 @@ class SubscriptionRecord(Base):
             "user_id",
             unique=True,
             postgresql_where=text("status = 'ACTIVE'"),
+        ),
+    )
+
+
+class PaymentTransaction(Base):
+    """
+    Provider-neutral payment ledger for Stripe, BTCPay, Rapyd, and future providers.
+
+    A row is created when BirthdayMessaging creates or learns about a payment
+    attempt. ``provider_payment_id`` stores the provider's primary external
+    identifier (for BTCPay this is the invoice ID). Provider-specific response
+    data may be retained in ``metadata_payload`` without requiring a schema
+    change.
+
+    This model is intentionally additive and does not replace the existing
+    Stripe-specific ``SubscriptionRecord`` model.
+    """
+
+    __tablename__ = "payment_transactions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    provider_payment_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    provider_order_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(12), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    checkout_url: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    payment_method: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    plan_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    paid_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    metadata_payload: Mapped[dict[str, Any]] = mapped_column(
+        "metadata", JSON(), nullable=False, server_default=text("'{}'::json")
+    )
+
+    user: Mapped[User] = relationship("User", back_populates="payment_transactions")
+
+    __table_args__ = (
+        Index("idx_payment_transaction_user", "user_id"),
+        Index("idx_payment_transaction_user_status", "user_id", "status"),
+        Index("idx_payment_transaction_provider", "provider"),
+        Index("idx_payment_transaction_provider_order", "provider", "provider_order_id"),
+        Index(
+            "uq_payment_transaction_provider_payment",
+            "provider",
+            "provider_payment_id",
+            unique=True,
         ),
     )
 
