@@ -19,7 +19,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.db.models import PaymentTransaction, PaymentWebhookEvent, User
+from app.db.models import AccessEntitlement, PaymentTransaction, PaymentWebhookEvent, User
 
 
 _WEBHOOK_PATH = "/api/payments/btcpay/webhook"
@@ -52,6 +52,14 @@ async def _post_event(
     )
 
 
+
+def _as_utc(value: datetime) -> datetime:
+    """Normalize DB-returned datetimes for SQLite/PostgreSQL parity."""
+    if value.tzinfo is None or value.utcoffset() is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 async def _create_payment(
     db: AsyncSession,
     user: User,
@@ -77,7 +85,7 @@ async def _create_payment(
         expires_at=None,
         created_at=now,
         updated_at=now,
-        metadata_payload={"phase": "test"},
+        metadata_payload={"phase": "test", "billing_term_months": 1},
     )
     db.add(transaction)
     await db.commit()
@@ -550,4 +558,193 @@ async def test_partial_settlement_signal_cannot_revoke_prior_full_settlement(
 
     assert transaction.status == "Settled"
     assert transaction.paid_at == original_paid_at
+
+# ---------------------------------------------------------------------------
+# Payment -> access entitlement integration tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_partial_payment_never_creates_access_entitlement(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    test_user: User,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    transaction = await _create_payment(db_session, test_user)
+
+    resp = await _post_event(
+        async_client,
+        monkeypatch,
+        _event(
+            event_type="InvoiceSettled",
+            invoice_id=transaction.provider_payment_id or "",
+            status="Settled",
+            additionalStatus="PaidPartial",
+            partiallyPaid=True,
+        ),
+    )
+
+    assert resp.status_code == 200
+    count = await db_session.scalar(
+        select(func.count()).select_from(AccessEntitlement).where(
+            AccessEntitlement.source_transaction_id == transaction.id
+        )
+    )
+    assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_full_settlement_creates_one_access_entitlement(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    test_user: User,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    transaction = await _settle_payment(
+        async_client, db_session, test_user, monkeypatch
+    )
+
+    result = await db_session.execute(
+        select(AccessEntitlement).where(
+            AccessEntitlement.source_transaction_id == transaction.id
+        )
+    )
+    entitlement = result.scalar_one()
+
+    assert entitlement.user_id == test_user.id
+    assert entitlement.plan_code == transaction.plan_code
+    assert entitlement.status == "ACTIVE"
+    assert entitlement.source_provider == "btcpay"
+    assert entitlement.source_payment_id == transaction.provider_payment_id
+    assert entitlement.metadata_payload["billing_term_months"] == 1
+    assert entitlement.expires_at > entitlement.starts_at
+
+
+@pytest.mark.asyncio
+async def test_distinct_settlement_events_for_same_payment_create_one_entitlement(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    test_user: User,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    transaction = await _settle_payment(
+        async_client, db_session, test_user, monkeypatch
+    )
+
+    second = await _post_event(
+        async_client,
+        monkeypatch,
+        _event(
+            event_type="InvoiceSettled",
+            invoice_id=transaction.provider_payment_id or "",
+            status="Settled",
+            additionalStatus="None",
+            partiallyPaid=False,
+        ),
+    )
+    assert second.status_code == 200
+
+    count = await db_session.scalar(
+        select(func.count()).select_from(AccessEntitlement).where(
+            AccessEntitlement.source_transaction_id == transaction.id
+        )
+    )
+    assert count == 1
+
+
+@pytest.mark.asyncio
+async def test_early_renewal_starts_at_existing_expiration_without_losing_time(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    test_user: User,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    first_payment = await _settle_payment(
+        async_client, db_session, test_user, monkeypatch
+    )
+    first_result = await db_session.execute(
+        select(AccessEntitlement).where(
+            AccessEntitlement.source_transaction_id == first_payment.id
+        )
+    )
+    first_entitlement = first_result.scalar_one()
+    original_expiration = _as_utc(first_entitlement.expires_at)
+
+    second_payment = await _create_payment(db_session, test_user)
+    resp = await _post_event(
+        async_client,
+        monkeypatch,
+        _event(
+            event_type="InvoiceSettled",
+            invoice_id=second_payment.provider_payment_id or "",
+            status="Settled",
+            additionalStatus="None",
+            partiallyPaid=False,
+        ),
+    )
+    assert resp.status_code == 200
+
+    second_result = await db_session.execute(
+        select(AccessEntitlement).where(
+            AccessEntitlement.source_transaction_id == second_payment.id
+        )
+    )
+    second_entitlement = second_result.scalar_one()
+
+    assert _as_utc(second_entitlement.starts_at) == original_expiration
+    assert _as_utc(second_entitlement.expires_at) > original_expiration
+
+
+@pytest.mark.asyncio
+async def test_renewal_after_expiration_starts_from_renewal_time(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    test_user: User,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    first_payment = await _settle_payment(
+        async_client, db_session, test_user, monkeypatch
+    )
+    first_result = await db_session.execute(
+        select(AccessEntitlement).where(
+            AccessEntitlement.source_transaction_id == first_payment.id
+        )
+    )
+    first_entitlement = first_result.scalar_one()
+
+    # Simulate a previously purchased term that has already expired.
+    from datetime import timedelta
+
+    first_entitlement.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+    first_entitlement.status = "EXPIRED"
+    await db_session.commit()
+
+    before_renewal = datetime.now(timezone.utc)
+    second_payment = await _create_payment(db_session, test_user)
+    resp = await _post_event(
+        async_client,
+        monkeypatch,
+        _event(
+            event_type="InvoiceSettled",
+            invoice_id=second_payment.provider_payment_id or "",
+            status="Settled",
+            additionalStatus="None",
+            partiallyPaid=False,
+        ),
+    )
+    after_renewal = datetime.now(timezone.utc)
+    assert resp.status_code == 200
+
+    second_result = await db_session.execute(
+        select(AccessEntitlement).where(
+            AccessEntitlement.source_transaction_id == second_payment.id
+        )
+    )
+    second_entitlement = second_result.scalar_one()
+
+    second_starts_at = _as_utc(second_entitlement.starts_at)
+    second_expires_at = _as_utc(second_entitlement.expires_at)
+    assert before_renewal <= second_starts_at <= after_renewal
+    assert second_expires_at > second_starts_at
 

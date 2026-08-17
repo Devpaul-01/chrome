@@ -24,6 +24,7 @@ from app.db.models import PaymentTransaction, PaymentWebhookEvent, User
 from app.db.session import get_db
 from app.schemas.payment import BTCPayTestInvoiceResponse
 from app.services.btcpay import create_invoice
+from app.services.entitlements import grant_entitlement_for_settled_payment
 
 
 router = APIRouter()
@@ -32,6 +33,7 @@ router = APIRouter()
 _TEST_AMOUNT = Decimal("1.00")
 _TEST_CURRENCY = "USD"
 _TEST_PLAN_CODE = "btcpay-integration-test"
+_TEST_TERM_MONTHS = 1
 
 
 @router.post(
@@ -88,6 +90,7 @@ async def create_btcpay_test_invoice(
         metadata_payload={
             "btcpay_invoice_id": provider_payment_id,
             "phase": "integration-test",
+            "billing_term_months": _TEST_TERM_MONTHS,
         },
     )
 
@@ -352,6 +355,15 @@ async def btcpay_webhook(
             metadata["btcpay_additional_status"] = event["additionalStatus"]
 
         transaction.metadata_payload = metadata
+
+        # Access is a consequence of authoritative payment truth only.
+        # The entitlement service is provider-neutral, idempotent, and runs in
+        # this same database transaction so payment + access succeed together.
+        if is_full_settlement:
+            await grant_entitlement_for_settled_payment(
+                db=db,
+                transaction=transaction,
+            )
 
         webhook_event.processing_status = "processed"
         webhook_event.processed_at = now

@@ -8,6 +8,7 @@ Core auth & messaging:
   subscription_records    → SubscriptionRecord
   payment_transactions    → PaymentTransaction
   payment_webhook_events  → PaymentWebhookEvent
+  access_entitlements     → AccessEntitlement
   template_segments       → TemplateSegment     (legacy greeting/body/closing)
   birthday_schedules      → BirthdaySchedule
   message_queue           → MessageQueue
@@ -122,6 +123,9 @@ class User(Base):
     )
     payment_transactions: Mapped[list[PaymentTransaction]] = relationship(
         "PaymentTransaction", back_populates="user", cascade="all, delete-orphan"
+    )
+    access_entitlements: Mapped[list[AccessEntitlement]] = relationship(
+        "AccessEntitlement", back_populates="user", cascade="all, delete-orphan"
     )
     template_segments: Mapped[list[TemplateSegment]] = relationship(
         "TemplateSegment", back_populates="user", cascade="all, delete-orphan"
@@ -343,6 +347,62 @@ class PaymentWebhookEvent(Base):
         Index(
             "idx_payment_webhook_event_status",
             "processing_status",
+        ),
+    )
+
+
+class AccessEntitlement(Base):
+    """Provider-neutral application-access grant created from authoritative billing truth."""
+
+    __tablename__ = "access_entitlements"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    plan_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default=text("'ACTIVE'")
+    )
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_payment_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_transaction_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("payment_transactions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    metadata_payload: Mapped[dict[str, Any]] = mapped_column(
+        "metadata", JSON(), nullable=False, server_default=text("'{}'::json")
+    )
+
+    user: Mapped[User] = relationship("User", back_populates="access_entitlements")
+    source_transaction: Mapped[PaymentTransaction | None] = relationship("PaymentTransaction")
+
+    __table_args__ = (
+        Index("idx_access_entitlement_user", "user_id"),
+        Index("idx_access_entitlement_user_status_expiry", "user_id", "status", "expires_at"),
+        Index("idx_access_entitlement_expires", "expires_at"),
+        Index(
+            "uq_access_entitlement_provider_payment",
+            "source_provider",
+            "source_payment_id",
+            unique=True,
+        ),
+        Index(
+            "uq_access_entitlement_source_transaction",
+            "source_transaction_id",
+            unique=True,
+            postgresql_where=text("source_transaction_id IS NOT NULL"),
         ),
     )
 
