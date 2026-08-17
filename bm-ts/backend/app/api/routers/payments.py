@@ -295,13 +295,45 @@ async def btcpay_webhook(
         now = datetime.now(timezone.utc)
 
         new_status = _BTCPAY_EVENT_STATUS.get(event_type)
-        if new_status is not None:
-            transaction.status = new_status
 
-        # Only a fully settled INVOICE is authoritative for completed payment.
-        # Intermediate/partial-payment events do not set paid_at.
-        if event_type == "InvoiceSettled" and transaction.paid_at is None:
-            transaction.paid_at = now
+        # Full settlement is authoritative and monotonic:
+        # once a payment has been fully settled, delayed/reordered lifecycle
+        # events must never downgrade the local transaction back to
+        # New/Processing/Expired/Invalid.
+        #
+        # Expired/Invalid/etc. may still become Settled later if BTCPay sends
+        # a genuine InvoiceSettled event.
+        already_settled = (
+            transaction.status == "Settled" or transaction.paid_at is not None
+        )
+
+        # The user-facing business rule is full-payment-only. A payload that
+        # explicitly says it is partial must never establish payment, even if
+        # other provider fields are contradictory.
+        is_partial_payment = bool(event.get("partiallyPaid", False)) or (
+            str(event.get("additionalStatus") or "") == "PaidPartial"
+        )
+
+        is_full_settlement = (
+            event_type == "InvoiceSettled" and not is_partial_payment
+        )
+
+        if is_full_settlement:
+            transaction.status = "Settled"
+            if transaction.paid_at is None:
+                transaction.paid_at = now
+        elif already_settled:
+            # Preserve authoritative payment truth. The incoming event is still
+            # retained in PaymentWebhookEvent and transaction metadata for audit.
+            transaction.status = "Settled"
+        elif event_type == "InvoiceSettled" and is_partial_payment:
+            # Defensive contradiction handling:
+            # a payload must never become locally "Settled" when BTCPay also
+            # explicitly says the invoice is only partially paid. Keep it in a
+            # non-final state and retain the provider details in metadata/audit.
+            transaction.status = "Processing"
+        elif new_status is not None:
+            transaction.status = new_status
 
         transaction.updated_at = now
 
