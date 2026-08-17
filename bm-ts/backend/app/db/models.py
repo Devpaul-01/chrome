@@ -7,6 +7,7 @@ Core auth & messaging:
   users                   → User
   subscription_records    → SubscriptionRecord
   payment_transactions    → PaymentTransaction
+  payment_webhook_events  → PaymentWebhookEvent
   template_segments       → TemplateSegment     (legacy greeting/body/closing)
   birthday_schedules      → BirthdaySchedule
   message_queue           → MessageQueue
@@ -278,6 +279,70 @@ class PaymentTransaction(Base):
             "provider",
             "provider_payment_id",
             unique=True,
+        ),
+    )
+
+
+class PaymentWebhookEvent(Base):
+    """
+    Provider-neutral record of a logical payment webhook event.
+
+    For BTCPay:
+    - provider_event_id stores originalDeliveryId, which remains stable
+      across webhook redeliveries and acts as the idempotency key.
+    - provider_delivery_id stores deliveryId for the delivery attempt.
+    - provider_payment_id stores the BTCPay invoiceId.
+
+    The unique provider/event index prevents the same logical event from
+    executing payment or subscription side effects more than once.
+    """
+
+    __tablename__ = "payment_webhook_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    provider_event_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    provider_delivery_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    provider_payment_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    is_redelivery: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=text("false")
+    )
+    processing_status: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default=text("'received'")
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(
+        JSON(), nullable=False, server_default=text("'{}'::json")
+    )
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    processing_error: Mapped[str | None] = mapped_column(Text(), nullable=True)
+
+    __table_args__ = (
+        Index(
+            "uq_payment_webhook_event_provider_event",
+            "provider",
+            "provider_event_id",
+            unique=True,
+        ),
+        Index(
+            "idx_payment_webhook_event_provider_payment",
+            "provider",
+            "provider_payment_id",
+        ),
+        Index(
+            "idx_payment_webhook_event_status",
+            "processing_status",
         ),
     )
 

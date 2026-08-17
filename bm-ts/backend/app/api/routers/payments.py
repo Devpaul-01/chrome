@@ -15,11 +15,12 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.config import settings
-from app.db.models import PaymentTransaction, User
+from app.db.models import PaymentTransaction, PaymentWebhookEvent, User
 from app.db.session import get_db
 from app.schemas.payment import BTCPayTestInvoiceResponse
 from app.services.btcpay import create_invoice
@@ -144,11 +145,12 @@ async def btcpay_webhook(
     """
     Receive authenticated BTCPay Server webhook events.
 
-    Security rules:
+    Security and idempotency rules:
     - This route intentionally does NOT use end-user JWT authentication.
       BTCPay Server calls it directly.
     - Authenticity is established with BTCPAY-SIG over the exact raw body.
     - The frontend never decides whether a payment is settled.
+    - BTCPay originalDeliveryId is the logical event idempotency key.
     """
     if not settings.btcpay_webhook_secret:
         raise HTTPException(
@@ -181,65 +183,171 @@ async def btcpay_webhook(
 
     event_type = str(event.get("type") or "")
     invoice_id = str(event.get("invoiceId") or "")
+    delivery_id = str(event.get("deliveryId") or "")
+    original_delivery_id = str(event.get("originalDeliveryId") or delivery_id)
+    is_redelivery = bool(event.get("isRedelivery", False))
 
-    # BTCPay may send other store-level events if the webhook is configured
-    # broadly. Acknowledge events unrelated to an invoice.
-    if not invoice_id:
-        return {"received": True, "processed": False}
-
-    result = await db.execute(
-        select(PaymentTransaction).where(
-            PaymentTransaction.provider == "btcpay",
-            PaymentTransaction.provider_payment_id == invoice_id,
-        )
-    )
-    transaction = result.scalar_one_or_none()
-
-    # The same BTCPay store may contain invoices that were not created by
-    # BirthdayMessaging. Acknowledge those rather than causing endless retries.
-    if transaction is None:
+    # Store-level events that do not identify a logical delivery are acknowledged
+    # without entering the payment-event ledger.
+    if not original_delivery_id:
         return {
             "received": True,
             "processed": False,
-            "reason": "invoice_not_found",
+            "reason": "missing_event_id",
         }
 
-    now = datetime.now(timezone.utc)
-
-    new_status = _BTCPAY_EVENT_STATUS.get(event_type)
-    if new_status is not None:
-        transaction.status = new_status
-
-    # Only a fully settled INVOICE is authoritative for completed payment.
-    # InvoiceReceivedPayment / InvoicePaymentSettled can represent intermediate
-    # or partial-payment activity and therefore do not set paid_at here.
-    if event_type == "InvoiceSettled" and transaction.paid_at is None:
-        transaction.paid_at = now
-
-    transaction.updated_at = now
-
-    metadata = dict(transaction.metadata_payload or {})
-    metadata.update(
-        {
-            "btcpay_invoice_id": invoice_id,
-            "last_btcpay_event": event_type,
-            "last_btcpay_event_at": now.isoformat(),
-        }
+    # Claim the logical event first. The database UNIQUE(provider,
+    # provider_event_id) constraint is the concurrency-safe idempotency guard.
+    webhook_event = PaymentWebhookEvent(
+        provider="btcpay",
+        provider_event_id=original_delivery_id,
+        provider_delivery_id=delivery_id or None,
+        provider_payment_id=invoice_id or None,
+        event_type=event_type or "unknown",
+        is_redelivery=is_redelivery,
+        processing_status="received",
+        payload=event,
     )
-
-    # Keep useful BTCPay status detail without allowing payload data to
-    # overwrite trusted application fields.
-    if "status" in event:
-        metadata["btcpay_event_status"] = event["status"]
-    if "additionalStatus" in event:
-        metadata["btcpay_additional_status"] = event["additionalStatus"]
-
-    transaction.metadata_payload = metadata
+    db.add(webhook_event)
 
     try:
         await db.commit()
-    except Exception:
+        await db.refresh(webhook_event)
+    except IntegrityError:
         await db.rollback()
+
+        existing_result = await db.execute(
+            select(PaymentWebhookEvent).where(
+                PaymentWebhookEvent.provider == "btcpay",
+                PaymentWebhookEvent.provider_event_id == original_delivery_id,
+            )
+        )
+        existing_event = existing_result.scalar_one_or_none()
+
+        if existing_event is None:
+            raise
+
+        # A successfully handled or intentionally ignored event must never
+        # execute business side effects again. Failed events are retriable.
+        if existing_event.processing_status in {"processed", "ignored"}:
+            return {
+                "received": True,
+                "processed": False,
+                "reason": "duplicate_event",
+            }
+
+        if existing_event.processing_status == "received":
+            # Another request may currently own this event. Acknowledge this
+            # concurrent duplicate rather than processing it twice.
+            return {
+                "received": True,
+                "processed": False,
+                "reason": "duplicate_in_progress",
+            }
+
+        # A prior attempt failed. Reuse the same logical event row and retry.
+        webhook_event = existing_event
+        webhook_event.provider_delivery_id = delivery_id or webhook_event.provider_delivery_id
+        webhook_event.provider_payment_id = invoice_id or webhook_event.provider_payment_id
+        webhook_event.event_type = event_type or webhook_event.event_type
+        webhook_event.is_redelivery = is_redelivery
+        webhook_event.payload = event
+        webhook_event.processing_status = "received"
+        webhook_event.processed_at = None
+        webhook_event.processing_error = None
+        await db.commit()
+
+    # BTCPay may send other store-level events if the webhook is configured
+    # broadly. Persist and acknowledge events unrelated to an invoice.
+    if not invoice_id:
+        webhook_event.processing_status = "ignored"
+        webhook_event.processed_at = datetime.now(timezone.utc)
+        webhook_event.processing_error = None
+        await db.commit()
+        return {
+            "received": True,
+            "processed": False,
+            "reason": "no_invoice_id",
+        }
+
+    try:
+        result = await db.execute(
+            select(PaymentTransaction).where(
+                PaymentTransaction.provider == "btcpay",
+                PaymentTransaction.provider_payment_id == invoice_id,
+            )
+        )
+        transaction = result.scalar_one_or_none()
+
+        # The same BTCPay store may contain invoices that were not created by
+        # BirthdayMessaging. Record and acknowledge them to avoid endless retries.
+        if transaction is None:
+            webhook_event.processing_status = "ignored"
+            webhook_event.processed_at = datetime.now(timezone.utc)
+            webhook_event.processing_error = "invoice_not_found"
+            await db.commit()
+            return {
+                "received": True,
+                "processed": False,
+                "reason": "invoice_not_found",
+            }
+
+        now = datetime.now(timezone.utc)
+
+        new_status = _BTCPAY_EVENT_STATUS.get(event_type)
+        if new_status is not None:
+            transaction.status = new_status
+
+        # Only a fully settled INVOICE is authoritative for completed payment.
+        # Intermediate/partial-payment events do not set paid_at.
+        if event_type == "InvoiceSettled" and transaction.paid_at is None:
+            transaction.paid_at = now
+
+        transaction.updated_at = now
+
+        metadata = dict(transaction.metadata_payload or {})
+        metadata.update(
+            {
+                "btcpay_invoice_id": invoice_id,
+                "last_btcpay_event": event_type,
+                "last_btcpay_event_at": now.isoformat(),
+            }
+        )
+
+        if "status" in event:
+            metadata["btcpay_event_status"] = event["status"]
+        if "additionalStatus" in event:
+            metadata["btcpay_additional_status"] = event["additionalStatus"]
+
+        transaction.metadata_payload = metadata
+
+        webhook_event.processing_status = "processed"
+        webhook_event.processed_at = now
+        webhook_event.processing_error = None
+
+        # Commit the payment mutation and event completion together.
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+
+        # Best-effort failure recording in a fresh transaction so a later
+        # BTCPay redelivery can retry this logical event.
+        try:
+            failed_result = await db.execute(
+                select(PaymentWebhookEvent).where(
+                    PaymentWebhookEvent.provider == "btcpay",
+                    PaymentWebhookEvent.provider_event_id == original_delivery_id,
+                )
+            )
+            failed_event = failed_result.scalar_one_or_none()
+            if failed_event is not None:
+                failed_event.processing_status = "failed"
+                failed_event.processed_at = datetime.now(timezone.utc)
+                failed_event.processing_error = str(exc)[:4000]
+                await db.commit()
+        except Exception:
+            await db.rollback()
+
         raise
 
     return {
@@ -247,4 +355,3 @@ async def btcpay_webhook(
         "processed": True,
         "event": event_type or "unknown",
     }
-
