@@ -49,6 +49,24 @@ class Settings(BaseSettings):
         default="price_yearly_placeholder", alias="STRIPE_PRICE_YEARLY"
     )
 
+    # BTCPay Server
+    btcpay_url: str = Field(
+        default="https://btcpay.birthdaymessaging.io",
+        alias="BTCPAY_URL",
+    )
+    btcpay_store_id: str = Field(
+        default="",
+        alias="BTCPAY_STORE_ID",
+    )
+    btcpay_api_key: str = Field(
+        default="",
+        alias="BTCPAY_API_KEY",
+    )
+    btcpay_webhook_secret: str = Field(
+    default="",
+    alias="BTCPAY_WEBHOOK_SECRET",
+    )
+
     @field_validator("stripe_api_key", mode="after")
     @classmethod
     def validate_stripe_api_key(cls, v: str) -> str:

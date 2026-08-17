@@ -29,6 +29,7 @@ from app.api.routers import (
     birthday_configs,
     rate_limits,
     smtp,
+    payments,
 )
 from app.core.config import settings
 from app.core.app_logging import setup_logging
@@ -84,6 +85,10 @@ openapi_tags = [
         "description": "Stripe subscription management and billing",
     },
     {"name": "stripe", "description": "Stripe webhook handling"},
+    {
+        "name": "payments",
+        "description": "Provider-neutral payment flows including BTCPay invoice creation",
+    },
 ]
 
 app = FastAPI(
@@ -237,6 +242,7 @@ app.include_router(smtp.router)  # /smtp prefix defined in router
 app.include_router(templates.router, prefix="/templates", tags=["templates"])
 app.include_router(subscription.router, prefix="/subscription", tags=["subscription"])
 app.include_router(webhook.router, prefix="/stripe", tags=["stripe"])
+app.include_router(payments.router, prefix="/api/payments", tags=["payments"])
 
 # Core API routers
 app.include_router(messages.router, prefix="/api")
