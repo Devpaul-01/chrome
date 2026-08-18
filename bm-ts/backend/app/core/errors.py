@@ -68,6 +68,12 @@ class ErrorCodes:
     SMTP_CONFIG_NOT_FOUND = "smtp_config_not_found"
     SUBSCRIPTION_NOT_FOUND = "subscription_not_found"
 
+    # Paid access / entitlement authorization
+    SUBSCRIPTION_REQUIRED = "subscription_required"
+    SUBSCRIPTION_EXPIRED = "subscription_expired"
+    SUBSCRIPTION_NOT_YET_ACTIVE = "subscription_not_yet_active"
+    SUBSCRIPTION_INACTIVE = "subscription_inactive"
+
     # Request / input errors
     INVALID_IMAGE_DATA = "invalid_image_data"
     IMAGE_SIZE_MISMATCH = "image_size_mismatch"

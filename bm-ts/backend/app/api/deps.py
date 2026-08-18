@@ -23,10 +23,10 @@ from sqlalchemy import select
 
 from app.core.errors import AppError, ErrorCodes
 from app.core.jwt import JWTError, TokenType, decode_token, ensure_token_type
-from app.db.models import User, UserSession
+from app.db.models import AccessEntitlement, User, UserSession
 from app.db.session import get_db
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -160,3 +160,85 @@ async def _resolve_user(payload: dict[str, Any], db: AsyncSession) -> User:
     if user is None:
         raise _raise_credentials_error()
     return user
+
+async def require_active_entitlement(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> AccessEntitlement:
+    """Require currently effective paid application access for ``current_user``.
+
+    Authentication and paid authorization intentionally remain separate:
+    ``get_current_user`` proves who the caller is and enforces account safety;
+    this dependency proves that the authenticated account currently owns an
+    effective provider-neutral ``AccessEntitlement``.
+
+    Access is granted only when an entitlement is simultaneously:
+    - owned by the authenticated user;
+    - marked ``ACTIVE``;
+    - already started (``starts_at <= now``); and
+    - not expired (``expires_at > now``).
+
+    The timestamp check is authoritative even if a background expiration job
+    is delayed and has not yet changed an old row from ``ACTIVE`` to
+    ``EXPIRED``.  This dependency is read-only; lifecycle cleanup belongs in a
+    separate maintenance/service task.
+
+    Raises structured 403 ``AppError`` responses that let the client
+    distinguish purchase, renewal, future-start, and inactive-access states.
+    """
+    now = datetime.now(timezone.utc)
+
+    current_result = await db.execute(
+        select(AccessEntitlement)
+        .where(
+            AccessEntitlement.user_id == current_user.id,
+            AccessEntitlement.status == "ACTIVE",
+            AccessEntitlement.starts_at <= now,
+            AccessEntitlement.expires_at > now,
+        )
+        .order_by(AccessEntitlement.expires_at.desc())
+        .limit(1)
+    )
+    entitlement = current_result.scalar_one_or_none()
+    if entitlement is not None:
+        return entitlement
+
+    # No effective entitlement exists.  Inspect the account's latest access
+    # history only to choose a precise, stable client-facing error code.
+    latest_result = await db.execute(
+        select(AccessEntitlement)
+        .where(AccessEntitlement.user_id == current_user.id)
+        .order_by(AccessEntitlement.expires_at.desc())
+        .limit(1)
+    )
+    latest = latest_result.scalar_one_or_none()
+
+    if latest is None:
+        raise AppError(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code=ErrorCodes.SUBSCRIPTION_REQUIRED,
+            detail="An active subscription is required to use this feature.",
+        )
+
+    starts_at = _as_utc(latest.starts_at)
+    expires_at = _as_utc(latest.expires_at)
+
+    if expires_at <= now:
+        raise AppError(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code=ErrorCodes.SUBSCRIPTION_EXPIRED,
+            detail="Your subscription has expired. Renew your plan to continue.",
+        )
+
+    if starts_at > now:
+        raise AppError(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code=ErrorCodes.SUBSCRIPTION_NOT_YET_ACTIVE,
+            detail="Your subscription access has not started yet.",
+        )
+
+    raise AppError(
+        status_code=status.HTTP_403_FORBIDDEN,
+        code=ErrorCodes.SUBSCRIPTION_INACTIVE,
+        detail="Your subscription is not currently active.",
+    )

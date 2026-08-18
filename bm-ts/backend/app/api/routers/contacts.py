@@ -12,7 +12,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from urllib.parse import parse_qs, urlparse
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_active_entitlement
 from app.db.models import Contact, User
 from app.db.session import get_db
 from app.schemas.contact import ContactCreate, ContactOut, ContactUpdate
@@ -65,7 +65,7 @@ def _normalize_facebook_url(url: str) -> str:
         return url
 
 
-router = APIRouter(prefix="/contacts", tags=["contacts"], responses=_ERROR_RESPONSES)
+router = APIRouter(prefix="/contacts", tags=["contacts"], responses=_ERROR_RESPONSES, dependencies=[Depends(require_active_entitlement)])
 
 
 @router.post("/", response_model=ContactOut, status_code=status.HTTP_201_CREATED)

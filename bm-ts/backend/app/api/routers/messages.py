@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select, and_, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_active_entitlement
 from app.db.models import User, MessageQueue, MessageHistory
 from app.db.session import get_db
 from app.schemas.messages import (
@@ -36,7 +36,7 @@ _ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     500: {"model": ErrorResponse},
 }
 
-router = APIRouter(prefix="/messages", tags=["messages"], responses=_ERROR_RESPONSES)
+router = APIRouter(prefix="/messages", tags=["messages"], responses=_ERROR_RESPONSES, dependencies=[Depends(require_active_entitlement)])
 
 
 @router.get("/queue", response_model=list[MessageQueueSchema])

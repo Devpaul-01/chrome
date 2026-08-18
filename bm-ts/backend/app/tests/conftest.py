@@ -29,7 +29,7 @@ os.environ.setdefault(
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator
 
 import pytest_asyncio
@@ -48,7 +48,7 @@ except Exception:
     pass
 
 from app.db.base import Base
-from app.db.models import User
+from app.db.models import AccessEntitlement, User
 from app.core.security import hash_password
 
 # Ensure created_at defaults are set for token rows when using SQLite tests
@@ -69,7 +69,7 @@ def _set_reset_created_at(mapper, connection, target):
         target.created_at = datetime.now(timezone.utc)
 
 
-from app.db.models import SubscriptionRecord  # noqa: E402
+from app.db.models import SubscriptionRecord, PaymentWebhookEvent  # noqa: E402
 
 
 @sa_event.listens_for(SubscriptionRecord, "before_insert")
@@ -81,6 +81,13 @@ def _set_subscription_created_at(mapper, connection, target):
         target.updated_at = now
     if getattr(target, "started_at", None) is None:
         target.started_at = now
+
+
+@sa_event.listens_for(PaymentWebhookEvent, "before_insert")
+def _set_payment_webhook_event_defaults(mapper, connection, target):
+    """Populate server-default-backed fields when tests run on SQLite."""
+    if getattr(target, "received_at", None) is None:
+        target.received_at = datetime.now(timezone.utc)
 
 
 # Automation & contact management models — set created_at/updated_at defaults for SQLite tests
@@ -285,6 +292,29 @@ async def async_client(
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
+
+    # Most existing API tests exercise paid application features. Give the
+    # standard test client a real, currently-effective entitlement so those
+    # tests continue to validate feature behavior rather than being stopped
+    # at the authorization boundary. Dedicated authorization tests explicitly
+    # exercise the no-plan/expired/future/inactive cases.
+    now = datetime.now(timezone.utc)
+    entitlement = AccessEntitlement(
+        id=uuid.uuid4(),
+        user_id=test_user.id,
+        plan_code="test-personal-monthly",
+        status="ACTIVE",
+        starts_at=now - timedelta(minutes=1),
+        expires_at=now + timedelta(days=30),
+        source_provider="test",
+        source_payment_id=f"test-payment-{uuid.uuid4()}",
+        source_transaction_id=None,
+        created_at=now,
+        updated_at=now,
+        metadata_payload={"fixture": "async_client"},
+    )
+    db_session.add(entitlement)
+    await db_session.commit()
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

@@ -5,7 +5,7 @@ import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
-from fastapi import Depends, FastAPI, Request, Response, status
+from fastapi import APIRouter, Depends, FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -37,9 +37,8 @@ from app.core.audit_log import AuditLogMiddleware
 from app.core.rate_limiter import init_rate_limiter, limiter
 from app.core.request_logging import RequestLoggingMiddleware
 from app.core.security_headers import SecurityHeadersMiddleware
-from app.api.deps import get_current_user
+from app.api.deps import require_active_entitlement
 from app.core.errors import AppError, ErrorCodes
-from app.db.models import User
 from app.db.session import get_db
 
 setup_logging()
@@ -236,35 +235,89 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     )
 
 
-# Auth and core endpoints
+# ---------------------------------------------------------------------------
+# Router authorization boundaries
+# ---------------------------------------------------------------------------
+#
+# Keep account recovery, authentication, billing, payment-provider callbacks,
+# and service health outside the paid feature boundary.  Application features
+# are mounted under one parent router with a provider-neutral entitlement
+# dependency.  This makes authorization fail-closed at the router boundary: a
+# new endpoint added to any paid child router automatically inherits the check.
+#
+# FastAPI documents APIRouter-level dependencies as applying to every path
+# operation in that router (including included child routers).  We therefore do
+# not need to duplicate Depends(require_active_entitlement) on every endpoint.
+
+PAID_HTTP_ROUTER_SPECS = (
+    ("app.api.routers.smtp", smtp.router, {}),
+    (
+        "app.api.routers.templates",
+        templates.router,
+        {"prefix": "/templates", "tags": ["templates"]},
+    ),
+    ("app.api.routers.messages", messages.router, {"prefix": "/api"}),
+    ("app.api.routers.dashboard", dashboard.router, {"prefix": "/api"}),
+    (
+        "app.api.routers.contacts",
+        contacts.router,
+        {"prefix": "/api", "tags": ["contacts"]},
+    ),
+    (
+        "app.api.routers.message_groups",
+        message_groups.router,
+        {"prefix": "/api", "tags": ["message-groups"]},
+    ),
+    (
+        "app.api.routers.message_templates",
+        message_templates.router,
+        {"prefix": "/api", "tags": ["message-templates"]},
+    ),
+    (
+        "app.api.routers.posts",
+        posts.router,
+        {"prefix": "/api", "tags": ["posts"]},
+    ),
+    (
+        "app.api.routers.images",
+        images.router,
+        {"prefix": "/api", "tags": ["images"]},
+    ),
+    (
+        "app.api.routers.birthday_configs",
+        birthday_configs.router,
+        {"prefix": "/api", "tags": ["birthday-configs"]},
+    ),
+    (
+        "app.api.routers.rate_limits",
+        rate_limits.router,
+        {"prefix": "/api", "tags": ["rate-limits"]},
+    ),
+)
+
+PAID_HTTP_ROUTER_MODULES = frozenset(
+    module_name for module_name, _router, _options in PAID_HTTP_ROUTER_SPECS
+)
+
+paid_features_router = APIRouter(
+    dependencies=[Depends(require_active_entitlement)]
+)
+
+# Paid application feature routers. Every router in this registry is mounted
+# through the same authorization boundary; there is no per-endpoint opt-in.
+for _module_name, _router, _include_options in PAID_HTTP_ROUTER_SPECS:
+    paid_features_router.include_router(_router, **_include_options)
+
+# Unpaid control-plane routers must remain reachable so users can authenticate,
+# recover an account, purchase/renew access, and receive provider callbacks.
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(smtp.router)  # /smtp prefix defined in router
-app.include_router(templates.router, prefix="/templates", tags=["templates"])
 app.include_router(subscription.router, prefix="/subscription", tags=["subscription"])
 app.include_router(webhook.router, prefix="/stripe", tags=["stripe"])
 app.include_router(payments.router, prefix="/api/payments", tags=["payments"])
 
-# Core API routers
-app.include_router(messages.router, prefix="/api")
-app.include_router(dashboard.router, prefix="/api")
+# WebSocket authorization is intentionally handled separately because its
+# authentication handshake/token flow is not the same as HTTP OAuth2Bearer.
 app.include_router(websocket.router)
-
-# Contacts — auto-populated via Facebook scraping; add/edit UI is disabled (popup shows read-only list)
-app.include_router(contacts.router, prefix="/api", tags=["contacts"])
-
-# Message management
-app.include_router(message_groups.router, prefix="/api", tags=["message-groups"])
-app.include_router(message_templates.router, prefix="/api", tags=["message-templates"])
-
-# Posts and images
-app.include_router(posts.router, prefix="/api", tags=["posts"])
-app.include_router(images.router, prefix="/api", tags=["images"])
-
-# Birthday configurations
-app.include_router(birthday_configs.router, prefix="/api", tags=["birthday-configs"])
-
-# Rate limiting
-app.include_router(rate_limits.router, prefix="/api", tags=["rate-limits"])
 
 
 @app.get("/health", summary="Service health")
@@ -279,9 +332,9 @@ async def health_check(
     return {"status": "ok", "database": "ok"}
 
 
-@app.post("/send-birthday-message", status_code=501)
+@paid_features_router.post("/send-birthday-message", status_code=501)
 @limiter.limit("1/45seconds")
-async def send_message(request: Request, _user: User = Depends(get_current_user)):
+async def send_message(request: Request):
     """Birthday messages are sent client-side by the content script.
 
     This endpoint exists as a placeholder for potential future server-side
@@ -293,3 +346,7 @@ async def send_message(request: Request, _user: User = Depends(get_current_user)
             "detail": "Not implemented. Birthday messages are sent by the content script."
         },
     )
+
+
+# Mount the complete paid feature surface after all paid routes are declared.
+app.include_router(paid_features_router)
