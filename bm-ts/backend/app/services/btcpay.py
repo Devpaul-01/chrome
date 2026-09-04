@@ -110,3 +110,74 @@ async def create_invoice(
     }
 
     return await run_in_threadpool(_create_invoice_sync, payload)
+
+def _find_invoice_by_order_id_sync(order_id: str) -> dict[str, Any] | None:
+    """Find exactly one BTCPay invoice carrying our deterministic orderId.
+
+    The Greenfield invoice-list API supports textSearch. We still filter the
+    returned collection locally for an exact metadata.orderId match so a fuzzy
+    provider search cannot bind the wrong customer payment.
+    """
+    _require_config()
+
+    url = (
+        f"{settings.btcpay_url.rstrip('/')}/api/v1/stores/"
+        f"{settings.btcpay_store_id}/invoices"
+    )
+
+    try:
+        response = requests.get(
+            url,
+            headers={
+                "Authorization": f"token {settings.btcpay_api_key}",
+                "Accept": "application/json",
+            },
+            params={"textSearch": order_id, "take": 100},
+            timeout=30,
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="BirthdayMessaging could not reconcile the BTCPay invoice.",
+        ) from exc
+
+    if not response.ok:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"BTCPay invoice reconciliation failed with HTTP {response.status_code}.",
+        )
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="BTCPay Server returned invalid invoice reconciliation data.",
+        ) from exc
+
+    if not isinstance(data, list):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="BTCPay Server returned an unexpected invoice reconciliation response.",
+        )
+
+    exact = []
+    for invoice in data:
+        if not isinstance(invoice, dict):
+            continue
+        metadata = invoice.get("metadata")
+        if isinstance(metadata, dict) and str(metadata.get("orderId") or "") == order_id:
+            exact.append(invoice)
+
+    if len(exact) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="BTCPay invoice reconciliation found multiple invoices for one order.",
+        )
+
+    return exact[0] if exact else None
+
+
+async def find_invoice_by_order_id(order_id: str) -> dict[str, Any] | None:
+    """Async wrapper for deterministic BTCPay order reconciliation."""
+    return await run_in_threadpool(_find_invoice_by_order_id_sync, order_id)

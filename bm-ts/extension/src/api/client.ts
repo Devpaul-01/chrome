@@ -55,9 +55,11 @@ async function request<T>(
   body?: JsonBody,
   accessToken?: string,
   timeoutMs = 10_000,
+  extraHeaders: Record<string, string> = {},
 ): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...extraHeaders,
   };
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
@@ -152,6 +154,21 @@ export interface CheckoutSessionRequest {
 
 export interface CheckoutSessionResponse {
   checkout_url: string;
+}
+
+export interface BTCPayCheckoutResponse {
+  checkout_attempt_id: string;
+  payment_id: string;
+  provider: string;
+  provider_payment_id: string;
+  provider_order_id: string;
+  status: string;
+  checkout_url: string;
+  amount: string | number;
+  currency: string;
+  plan_code: string;
+  billing_term_months: number;
+  reused: boolean;
 }
 
 export interface CancelSubscriptionResponse {
@@ -258,12 +275,21 @@ export async function subscriptionStatus(
   return request(baseUrl, '/subscription/status', 'GET', undefined, accessToken);
 }
 
-export async function createCheckoutSession(
+export async function createBTCPayCheckout(
   baseUrl: string,
   accessToken: string,
-  payload: CheckoutSessionRequest,
-): Promise<CheckoutSessionResponse> {
-  return request(baseUrl, '/subscription/create-checkout-session', 'POST', payload, accessToken);
+  plan: 'monthly' | 'yearly',
+  idempotencyKey: string,
+): Promise<BTCPayCheckoutResponse> {
+  return request(
+    baseUrl,
+    '/api/payments/btcpay/checkout',
+    'POST',
+    { plan_code: plan },
+    accessToken,
+    30_000,
+    { 'Idempotency-Key': idempotencyKey },
+  );
 }
 
 export async function cancelSubscription(

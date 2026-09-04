@@ -1,9 +1,9 @@
 """
-conftest.py — Shared test fixtures for all backend tests.
+conftest.py Ã¢â‚¬â€ Shared test fixtures for all backend tests.
 
 Provides an ``async_client`` fixture that creates an ``httpx.AsyncClient``
 bound to the FastAPI app with dependency overrides for the database session
-and authenticated user.  No real database is required — all DB operations
+and authenticated user.  No real database is required Ã¢â‚¬â€ all DB operations
 are performed against an in-memory SQLite instance.
 """
 
@@ -69,7 +69,7 @@ def _set_reset_created_at(mapper, connection, target):
         target.created_at = datetime.now(timezone.utc)
 
 
-from app.db.models import SubscriptionRecord, PaymentWebhookEvent  # noqa: E402
+from app.db.models import SubscriptionRecord, PaymentWebhookEvent, NotificationOutbox  # noqa: E402
 
 
 @sa_event.listens_for(SubscriptionRecord, "before_insert")
@@ -90,7 +90,35 @@ def _set_payment_webhook_event_defaults(mapper, connection, target):
         target.received_at = datetime.now(timezone.utc)
 
 
-# Automation & contact management models — set created_at/updated_at defaults for SQLite tests
+
+
+@sa_event.listens_for(NotificationOutbox, "before_insert")
+def _set_notification_outbox_defaults(mapper, connection, target):
+    """Populate server-default-backed outbox fields for SQLite tests."""
+    now = datetime.now(timezone.utc)
+    if getattr(target, "channel", None) is None:
+        target.channel = "email"
+    if getattr(target, "status", None) is None:
+        target.status = "PENDING"
+    if getattr(target, "attempts", None) is None:
+        target.attempts = 0
+    if getattr(target, "max_attempts", None) is None:
+        target.max_attempts = 5
+    if getattr(target, "requeue_count", None) is None:
+        target.requeue_count = 0
+    if getattr(target, "scheduled_for", None) is None:
+        target.scheduled_for = now
+    if getattr(target, "next_attempt_at", None) is None:
+        target.next_attempt_at = target.scheduled_for
+    if getattr(target, "metadata_payload", None) is None:
+        target.metadata_payload = {}
+    if getattr(target, "created_at", None) is None:
+        target.created_at = now
+    if getattr(target, "updated_at", None) is None:
+        target.updated_at = now
+
+
+# Automation & contact management models Ã¢â‚¬â€ set created_at/updated_at defaults for SQLite tests
 from app.db.models import (  # noqa: E402
     BirthdayConfig,
     Contact,
@@ -277,8 +305,8 @@ async def async_client(
     """
     HTTP client bound to the FastAPI app with overridden dependencies.
 
-    - ``get_db`` → yields the test ``db_session``
-    - ``get_current_user`` → returns the ``test_user`` (no real JWT needed)
+    - ``get_db`` Ã¢â€ â€™ yields the test ``db_session``
+    - ``get_current_user`` Ã¢â€ â€™ returns the ``test_user`` (no real JWT needed)
     """
     from app.main import app
     from app.db.session import get_db
@@ -315,6 +343,34 @@ async def async_client(
     )
     db_session.add(entitlement)
     await db_session.commit()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+@pytest_asyncio.fixture
+async def subscription_client(
+    db_session: AsyncSession, test_user: User
+) -> AsyncGenerator[AsyncClient, None]:
+    """Authenticated HTTP client without an automatically injected entitlement.
+
+    Subscription-management tests need complete control over billing and
+    entitlement state, so this fixture intentionally does not grant access.
+    """
+    from app.main import app
+    from app.db.session import get_db
+    from app.api.deps import get_current_user
+
+    async def override_get_db():
+        yield db_session
+
+    async def override_get_current_user():
+        return test_user
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

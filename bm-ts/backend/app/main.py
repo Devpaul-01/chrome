@@ -32,6 +32,7 @@ from app.api.routers import (
     payments,
 )
 from app.core.config import settings
+from app.services.payment_production_validation import validate_payment_production_config
 from app.core.app_logging import setup_logging
 from app.core.audit_log import AuditLogMiddleware
 from app.core.rate_limiter import init_rate_limiter, limiter
@@ -90,6 +91,9 @@ openapi_tags = [
     },
 ]
 
+# Fail closed before serving traffic when explicitly running in production.
+validate_payment_production_config(settings)
+
 app = FastAPI(
     title="BirthdayMessaging API",
     version="0.1.0",
@@ -104,7 +108,7 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Idempotency-Key"],
 )
 
 app.add_middleware(SecurityHeadersMiddleware)

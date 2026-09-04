@@ -26,7 +26,7 @@ from app.core.errors import AppError, ErrorCodes
 
 from app.api.deps import get_current_user
 from app.core.config import settings
-from app.db.models import SubscriptionRecord, User
+from app.db.models import AccessEntitlement, SubscriptionRecord, User
 from app.db.session import get_db
 from app.schemas.subscription import (
     BillingPortalResponse,
@@ -75,7 +75,68 @@ async def get_status(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> SubscriptionStatusResponse:
-    """Return the most recent subscription record for the current user, or ``is_active=False`` if none exists."""
+    """Return provider-neutral paid access first, then fall back to legacy Stripe state.
+
+    ``AccessEntitlement`` is authoritative for application access regardless of
+    whether the payment originated from BTCPay, Rapyd, Stripe, Monero, or a future
+    provider. Legacy ``SubscriptionRecord`` rows remain supported during migration.
+    """
+    now = datetime.now(timezone.utc)
+    entitlement_stmt = (
+        select(AccessEntitlement)
+        .where(
+            AccessEntitlement.user_id == current_user.id,
+            AccessEntitlement.status == "ACTIVE",
+            AccessEntitlement.starts_at <= now,
+            AccessEntitlement.expires_at > now,
+        )
+        .order_by(desc(AccessEntitlement.expires_at))
+        .limit(1)
+    )
+    entitlement_result = await db.execute(entitlement_stmt)
+    entitlement = entitlement_result.scalar_one_or_none()
+    if entitlement is not None:
+        # Authorization is based only on the entitlement active right now.
+        # Subscription status additionally reports how far uninterrupted,
+        # already-paid ACTIVE coverage extends through future renewal rows.
+        paid_through = entitlement.expires_at
+        coverage_plan = entitlement.plan_code
+
+        future_result = await db.execute(
+            select(AccessEntitlement)
+            .where(
+                AccessEntitlement.user_id == current_user.id,
+                AccessEntitlement.status == "ACTIVE",
+                AccessEntitlement.starts_at >= entitlement.expires_at,
+            )
+            .order_by(
+                AccessEntitlement.starts_at.asc(),
+                AccessEntitlement.expires_at.asc(),
+            )
+        )
+        future_entitlements = future_result.scalars().all()
+
+        for future in future_entitlements:
+            future_starts = future.starts_at
+            if future_starts > paid_through:
+                # A real gap ends the customer's continuous paid-through chain.
+                break
+            if future.expires_at > paid_through:
+                paid_through = future.expires_at
+                coverage_plan = future.plan_code
+
+        return SubscriptionStatusResponse(
+            is_active=True,
+            plan=coverage_plan,
+            status="ACTIVE",
+            current_period_end=paid_through,
+            cancel_at_period_end=False,
+            canceled_at=None,
+            in_grace_period=False,
+            stripe_customer_id=None,
+            stripe_subscription_id=None,
+        )
+
     stmt = (
         select(SubscriptionRecord)
         .where(SubscriptionRecord.user_id == current_user.id)
@@ -95,7 +156,6 @@ async def get_status(
         )
 
     is_active = record.status in ("ACTIVE", "TRIALING")
-    now = datetime.now(timezone.utc)
     period_end = record.current_period_end
     if period_end is not None and period_end.tzinfo is None:
         period_end = period_end.replace(tzinfo=timezone.utc)

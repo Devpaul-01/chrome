@@ -9,25 +9,473 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.config import settings
-from app.db.models import PaymentTransaction, PaymentWebhookEvent, User
+from app.core.errors import AppError, ErrorCodes
+from app.db.models import PaymentCheckoutAttempt, PaymentTransaction, PaymentWebhookEvent, User
 from app.db.session import get_db
-from app.schemas.payment import BTCPayTestInvoiceResponse
-from app.services.btcpay import create_invoice
+from app.schemas.payment import BTCPayCheckoutRequest, BTCPayCheckoutResponse, BTCPayCheckoutStatusResponse, BTCPayTestInvoiceResponse
+from app.services.btcpay import create_invoice, find_invoice_by_order_id
 from app.services.entitlements import grant_entitlement_for_settled_payment
+from app.services.notifications import enqueue_payment_lifecycle_notifications
+from app.services.payment_plans import get_payment_plan
 
 
 router = APIRouter()
+
+_IDEMPOTENCY_MIN_LENGTH = 16
+_IDEMPOTENCY_MAX_LENGTH = 128
+_CHECKOUT_CLAIM_SECONDS = 120
+
+
+def _validate_idempotency_key(value: str | None) -> str:
+    if value is None or not value.strip():
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.PAYMENT_IDEMPOTENCY_REQUIRED,
+            "An Idempotency-Key header is required for payment checkout.",
+        )
+
+    key = value.strip()
+    if not (_IDEMPOTENCY_MIN_LENGTH <= len(key) <= _IDEMPOTENCY_MAX_LENGTH):
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.PAYMENT_IDEMPOTENCY_INVALID,
+            "The Idempotency-Key header has an invalid length.",
+        )
+
+    if not all(ch.isalnum() or ch in "._:-" for ch in key):
+        raise AppError(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.PAYMENT_IDEMPOTENCY_INVALID,
+            "The Idempotency-Key header contains unsupported characters.",
+        )
+
+    return key
+
+
+def _checkout_response(
+    attempt: PaymentCheckoutAttempt,
+    transaction: PaymentTransaction,
+    *,
+    reused: bool,
+) -> BTCPayCheckoutResponse:
+    metadata = transaction.metadata_payload or {}
+    return BTCPayCheckoutResponse(
+        checkout_attempt_id=str(attempt.id),
+        payment_id=str(transaction.id),
+        provider=transaction.provider,
+        provider_payment_id=transaction.provider_payment_id or "",
+        provider_order_id=transaction.provider_order_id or "",
+        status=transaction.status,
+        checkout_url=transaction.checkout_url or "",
+        amount=transaction.amount,
+        currency=transaction.currency,
+        plan_code=transaction.plan_code or attempt.plan_code,
+        billing_term_months=int(metadata.get("billing_term_months") or 0),
+        reused=reused,
+    )
+
+
+async def _existing_checkout_transaction(
+    db: AsyncSession,
+    attempt: PaymentCheckoutAttempt,
+) -> PaymentTransaction | None:
+    result = await db.execute(
+        select(PaymentTransaction).where(
+            PaymentTransaction.checkout_attempt_id == attempt.id
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def _finalize_checkout(
+    *,
+    db: AsyncSession,
+    attempt: PaymentCheckoutAttempt,
+    invoice: dict,
+    term_months: int,
+) -> PaymentTransaction:
+    provider_payment_id = str(invoice.get("id") or "")
+    checkout_url = str(invoice.get("checkoutLink") or "")
+    provider_status = str(invoice.get("status") or "New")
+
+    if not provider_payment_id or not checkout_url:
+        raise AppError(
+            status.HTTP_502_BAD_GATEWAY,
+            ErrorCodes.PAYMENT_CHECKOUT_INCONSISTENT,
+            "BTCPay returned incomplete checkout information.",
+        )
+
+    existing = await _existing_checkout_transaction(db, attempt)
+    if existing is not None:
+        return existing
+
+    now = datetime.now(timezone.utc)
+    transaction = PaymentTransaction(
+        id=uuid4(),
+        user_id=attempt.user_id,
+        provider="btcpay",
+        provider_payment_id=provider_payment_id,
+        provider_order_id=attempt.provider_order_id,
+        checkout_attempt_id=attempt.id,
+        amount=attempt.amount,
+        currency=attempt.currency,
+        status=provider_status,
+        checkout_url=checkout_url,
+        payment_method="bitcoin",
+        plan_code=attempt.plan_code,
+        paid_at=None,
+        expires_at=None,
+        created_at=now,
+        updated_at=now,
+        metadata_payload={
+            "btcpay_invoice_id": provider_payment_id,
+            "checkout_attempt_id": str(attempt.id),
+            "billing_term_months": term_months,
+            "phase": "production-checkout",
+        },
+    )
+    db.add(transaction)
+
+    attempt.provider_payment_id = provider_payment_id
+    attempt.checkout_url = checkout_url
+    attempt.status = "completed"
+    attempt.failure_code = None
+    attempt.claim_expires_at = None
+    attempt.completed_at = now
+    attempt.updated_at = now
+
+    await db.commit()
+    await db.refresh(attempt)
+    await db.refresh(transaction)
+    return transaction
+
+
+@router.post(
+    "/btcpay/checkout",
+    response_model=BTCPayCheckoutResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_btcpay_checkout(
+    payload: BTCPayCheckoutRequest,
+    response: Response,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> BTCPayCheckoutResponse:
+    """Create or safely reuse one production BTCPay checkout.
+
+    Security / consistency rules:
+    - client selects only plan_code; price and term come from the backend catalog;
+    - Idempotency-Key is scoped to provider + user;
+    - a durable checkout attempt is committed before the external provider call;
+    - deterministic orderId permits crash recovery through provider reconciliation;
+    - the same idempotency key may never be reused for a different plan;
+    - active duplicate requests never create another provider invoice.
+    """
+    key = _validate_idempotency_key(idempotency_key)
+    plan = get_payment_plan(payload.plan_code)
+    now = datetime.now(timezone.utc)
+
+    result = await db.execute(
+        select(PaymentCheckoutAttempt).where(
+            PaymentCheckoutAttempt.provider == "btcpay",
+            PaymentCheckoutAttempt.user_id == current_user.id,
+            PaymentCheckoutAttempt.idempotency_key == key,
+        )
+    )
+    attempt = result.scalar_one_or_none()
+
+    if attempt is not None:
+        if attempt.plan_code != plan.code:
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCodes.PAYMENT_IDEMPOTENCY_CONFLICT,
+                "This Idempotency-Key was already used for a different payment plan.",
+            )
+
+        existing_tx = await _existing_checkout_transaction(db, attempt)
+        if existing_tx is not None:
+            response.status_code = status.HTTP_200_OK
+            return _checkout_response(attempt, existing_tx, reused=True)
+
+        # Recovery path for a crash after BTCPay accepted the invoice but before
+        # our local PaymentTransaction was committed.
+        invoice = await find_invoice_by_order_id(attempt.provider_order_id)
+        if invoice is not None:
+            transaction = await _finalize_checkout(
+                db=db,
+                attempt=attempt,
+                invoice=invoice,
+                term_months=plan.term_months,
+            )
+            response.status_code = status.HTTP_200_OK
+            return _checkout_response(attempt, transaction, reused=True)
+
+        claim_expires_at = attempt.claim_expires_at
+        if claim_expires_at is not None:
+            if claim_expires_at.tzinfo is None:
+                claim_expires_at = claim_expires_at.replace(tzinfo=timezone.utc)
+            if claim_expires_at > now:
+                raise AppError(
+                    status.HTTP_409_CONFLICT,
+                    ErrorCodes.PAYMENT_CHECKOUT_IN_PROGRESS,
+                    "Payment checkout is already being created. Retry with the same Idempotency-Key.",
+                )
+
+        # A stale claim with no provider invoice can be safely reclaimed.
+        attempt.status = "claimed"
+        attempt.failure_code = None
+        attempt.claim_expires_at = now + timedelta(seconds=_CHECKOUT_CLAIM_SECONDS)
+        attempt.updated_at = now
+        await db.commit()
+    else:
+        attempt_id = uuid4()
+        attempt = PaymentCheckoutAttempt(
+            id=attempt_id,
+            user_id=current_user.id,
+            provider="btcpay",
+            idempotency_key=key,
+            plan_code=plan.code,
+            amount=plan.amount,
+            currency=plan.currency,
+            provider_order_id=f"BM-{attempt_id}",
+            provider_payment_id=None,
+            checkout_url=None,
+            status="claimed",
+            failure_code=None,
+            claim_expires_at=now + timedelta(seconds=_CHECKOUT_CLAIM_SECONDS),
+            completed_at=None,
+            created_at=now,
+            updated_at=now,
+            metadata_payload={
+                "billing_term_months": plan.term_months,
+                "catalog_price_env": plan.price_env_name,
+            },
+        )
+        db.add(attempt)
+
+        try:
+            await db.commit()
+            await db.refresh(attempt)
+        except IntegrityError:
+            await db.rollback()
+            result = await db.execute(
+                select(PaymentCheckoutAttempt).where(
+                    PaymentCheckoutAttempt.provider == "btcpay",
+                    PaymentCheckoutAttempt.user_id == current_user.id,
+                    PaymentCheckoutAttempt.idempotency_key == key,
+                )
+            )
+            attempt = result.scalar_one_or_none()
+            if attempt is None:
+                raise
+
+            if attempt.plan_code != plan.code:
+                raise AppError(
+                    status.HTTP_409_CONFLICT,
+                    ErrorCodes.PAYMENT_IDEMPOTENCY_CONFLICT,
+                    "This Idempotency-Key was already used for a different payment plan.",
+                )
+
+            existing_tx = await _existing_checkout_transaction(db, attempt)
+            if existing_tx is not None:
+                response.status_code = status.HTTP_200_OK
+                return _checkout_response(attempt, existing_tx, reused=True)
+
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCodes.PAYMENT_CHECKOUT_IN_PROGRESS,
+                "Payment checkout is already being created. Retry with the same Idempotency-Key.",
+            )
+
+    try:
+        invoice = await create_invoice(
+            amount=plan.amount,
+            currency=plan.currency,
+            order_id=attempt.provider_order_id,
+            description=plan.display_name,
+            user_id=str(current_user.id),
+            buyer_email=str(current_user.email),
+        )
+    except HTTPException as exc:
+        # Provider/network failures are treated as uncertain because the invoice
+        # may have been accepted before the response was lost. Do NOT immediately
+        # create a second invoice. A retry with the same key reconciles by orderId.
+        attempt.status = "uncertain"
+        attempt.failure_code = "provider_create_uncertain"
+        attempt.claim_expires_at = now + timedelta(minutes=10)
+        attempt.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        raise AppError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            ErrorCodes.PAYMENT_PROVIDER_UNCERTAIN,
+            "Payment provider status is uncertain. Retry with the same Idempotency-Key; do not start a second checkout.",
+        ) from exc
+
+    transaction = await _finalize_checkout(
+        db=db,
+        attempt=attempt,
+        invoice=invoice,
+        term_months=plan.term_months,
+    )
+
+    return _checkout_response(attempt, transaction, reused=False)
+
+def _checkout_status_response(
+    attempt: PaymentCheckoutAttempt,
+    transaction: PaymentTransaction | None,
+) -> BTCPayCheckoutStatusResponse:
+    metadata = attempt.metadata_payload or {}
+    payment_metadata = transaction.metadata_payload if transaction is not None else {}
+    term_months = int(
+        (payment_metadata or {}).get("billing_term_months")
+        or metadata.get("billing_term_months")
+        or 0
+    )
+
+    return BTCPayCheckoutStatusResponse(
+        checkout_attempt_id=str(attempt.id),
+        provider=attempt.provider,
+        provider_order_id=attempt.provider_order_id,
+        provider_payment_id=(
+            transaction.provider_payment_id
+            if transaction is not None
+            else attempt.provider_payment_id
+        ),
+        payment_id=str(transaction.id) if transaction is not None else None,
+        checkout_url=(
+            transaction.checkout_url
+            if transaction is not None
+            else attempt.checkout_url
+        ),
+        checkout_status=attempt.status,
+        payment_status=transaction.status if transaction is not None else None,
+        amount=attempt.amount,
+        currency=attempt.currency,
+        plan_code=attempt.plan_code,
+        billing_term_months=term_months,
+        created_at=attempt.created_at,
+        updated_at=attempt.updated_at,
+        completed_at=attempt.completed_at,
+        recoverable=(
+            transaction is None
+            and attempt.status in {"claimed", "uncertain"}
+        ),
+    )
+
+
+async def _owned_checkout_attempt(
+    *,
+    db: AsyncSession,
+    current_user: User,
+    checkout_attempt_id: str,
+) -> PaymentCheckoutAttempt:
+    try:
+        parsed_id = UUID(checkout_attempt_id)
+    except (TypeError, ValueError):
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.PAYMENT_CHECKOUT_NOT_FOUND,
+            "Payment checkout was not found.",
+        )
+
+    result = await db.execute(
+        select(PaymentCheckoutAttempt).where(
+            PaymentCheckoutAttempt.id == parsed_id,
+            PaymentCheckoutAttempt.user_id == current_user.id,
+            PaymentCheckoutAttempt.provider == "btcpay",
+        )
+    )
+    attempt = result.scalar_one_or_none()
+
+    if attempt is None:
+        # Do not reveal whether another user's checkout exists.
+        raise AppError(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCodes.PAYMENT_CHECKOUT_NOT_FOUND,
+            "Payment checkout was not found.",
+        )
+
+    return attempt
+
+
+@router.get(
+    "/btcpay/checkouts/{checkout_attempt_id}",
+    response_model=BTCPayCheckoutStatusResponse,
+)
+async def get_btcpay_checkout_status(
+    checkout_attempt_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> BTCPayCheckoutStatusResponse:
+    """Return the authenticated user's durable local checkout/payment state."""
+    attempt = await _owned_checkout_attempt(
+        db=db,
+        current_user=current_user,
+        checkout_attempt_id=checkout_attempt_id,
+    )
+    transaction = await _existing_checkout_transaction(db, attempt)
+    return _checkout_status_response(attempt, transaction)
+
+
+@router.post(
+    "/btcpay/checkouts/{checkout_attempt_id}/reconcile",
+    response_model=BTCPayCheckoutStatusResponse,
+)
+async def reconcile_btcpay_checkout(
+    checkout_attempt_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> BTCPayCheckoutStatusResponse:
+    """Recover a checkout whose provider outcome may be uncertain.
+
+    This endpoint never creates a new BTCPay invoice. It can only discover the
+    invoice with the attempt's deterministic provider_order_id and bind that
+    existing provider invoice to the local payment ledger.
+    """
+    attempt = await _owned_checkout_attempt(
+        db=db,
+        current_user=current_user,
+        checkout_attempt_id=checkout_attempt_id,
+    )
+
+    transaction = await _existing_checkout_transaction(db, attempt)
+    if transaction is not None:
+        return _checkout_status_response(attempt, transaction)
+
+    if attempt.status not in {"claimed", "uncertain"}:
+        raise AppError(
+            status.HTTP_409_CONFLICT,
+            ErrorCodes.PAYMENT_CHECKOUT_NOT_RECOVERABLE,
+            "This payment checkout is not in a recoverable state.",
+        )
+
+    invoice = await find_invoice_by_order_id(attempt.provider_order_id)
+    if invoice is None:
+        # Keep uncertain claims recoverable. We deliberately do not create a
+        # replacement provider invoice here because the provider outcome may
+        # still be delayed or unavailable.
+        return _checkout_status_response(attempt, None)
+
+    plan = get_payment_plan(attempt.plan_code)
+    transaction = await _finalize_checkout(
+        db=db,
+        attempt=attempt,
+        invoice=invoice,
+        term_months=plan.term_months,
+    )
+    return _checkout_status_response(attempt, transaction)
 
 # Server-controlled development amount. The browser cannot choose the price.
 _TEST_AMOUNT = Decimal("1.00")
@@ -360,9 +808,20 @@ async def btcpay_webhook(
         # The entitlement service is provider-neutral, idempotent, and runs in
         # this same database transaction so payment + access succeed together.
         if is_full_settlement:
-            await grant_entitlement_for_settled_payment(
+            entitlement = await grant_entitlement_for_settled_payment(
                 db=db,
                 transaction=transaction,
+            )
+            user_result = await db.execute(
+                select(User).where(User.id == transaction.user_id)
+            )
+            payment_user = user_result.scalar_one()
+            await enqueue_payment_lifecycle_notifications(
+                db=db,
+                user=payment_user,
+                transaction=transaction,
+                entitlement=entitlement,
+                now=now,
             )
 
         webhook_event.processing_status = "processed"

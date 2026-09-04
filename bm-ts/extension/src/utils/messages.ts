@@ -9,7 +9,7 @@
  * Naming conventions:
  *   auth.*             — authentication / account management
  *   templates.*        — legacy template segments (greeting / body / closing)
- *   subscription.*     — Stripe subscription status & checkout
+ *   subscription.*     — subscription status and provider-neutral checkout
  *   config.*           — extension configuration (backend URL, WS config)
  *   schedules.*        — per-contact birthday schedule CRUD
  *   automation.*       — automation engine control & state
@@ -24,7 +24,6 @@
  */
 
 import {
-  CheckoutSessionRequest,
   SegmentType,
   CreateMessageGroupPayload,
   UpdateMessageGroupPayload,
@@ -88,7 +87,7 @@ export type BackgroundMessage =
   | { type: 'templates.delete'; payload: { id: string } }
   // Subscription messages
   | { type: 'subscription.status' }
-  | { type: 'subscription.checkout'; payload: CheckoutSessionRequest }
+  | { type: 'subscription.checkout'; payload: { plan: 'monthly' | 'yearly'; idempotency_key: string } }
   | { type: 'subscription.cancel' }
   | { type: 'subscription.reactivate' }
   | { type: 'subscription.changePlan'; payload: { new_plan: 'monthly' | 'yearly' } }

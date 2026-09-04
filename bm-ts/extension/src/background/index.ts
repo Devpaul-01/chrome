@@ -14,7 +14,7 @@ import {
   UserImage,
   SMTPConfig,
   MessageTemplate,
-  createCheckoutSession as createCheckoutSessionRequest,
+  createBTCPayCheckout,
   cancelSubscription,
   reactivateSubscription,
   changeSubscriptionPlan,
@@ -620,7 +620,12 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
     }
     case 'subscription.checkout': {
       return runAuthAware((accessToken, url) =>
-        createCheckoutSessionRequest(url, accessToken, message.payload),
+        createBTCPayCheckout(
+          url,
+          accessToken,
+          message.payload.plan,
+          message.payload.idempotency_key,
+        ),
       );
     }
     case 'subscription.cancel': {

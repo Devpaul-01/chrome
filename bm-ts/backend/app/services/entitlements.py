@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import AccessEntitlement, PaymentTransaction, User
 
 
-_ALLOWED_TERM_MONTHS = frozenset({1, 6, 12})
+_ALLOWED_TERM_MONTHS = frozenset({1, 3, 6, 12})
 
 
 def _utc_now() -> datetime:
@@ -58,7 +58,7 @@ def _term_months(transaction: PaymentTransaction) -> int:
 
     if months not in _ALLOWED_TERM_MONTHS:
         raise ValueError(
-            f"Unsupported billing term {months!r}; allowed values are 1, 6, or 12 months."
+            f"Unsupported billing term {months!r}; allowed values are 1, 3, 6, or 12 months."
         )
     return months
 

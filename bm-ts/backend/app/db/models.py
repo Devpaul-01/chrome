@@ -1,28 +1,28 @@
 """
-db/models.py — SQLAlchemy ORM models for all database tables.
+db/models.py Ã¢â‚¬â€ SQLAlchemy ORM models for all database tables.
 
 Table / model mapping
 ---------------------
 Core auth & messaging:
-  users                   → User
-  subscription_records    → SubscriptionRecord
-  payment_transactions    → PaymentTransaction
-  payment_webhook_events  → PaymentWebhookEvent
-  access_entitlements     → AccessEntitlement
-  template_segments       → TemplateSegment     (legacy greeting/body/closing)
-  birthday_schedules      → BirthdaySchedule
-  message_queue           → MessageQueue
-  message_history         → MessageHistory
-  password_reset_tokens   → PasswordResetToken
+  users                   Ã¢â€ â€™ User
+  subscription_records    Ã¢â€ â€™ SubscriptionRecord
+  payment_transactions    Ã¢â€ â€™ PaymentTransaction
+  payment_webhook_events  Ã¢â€ â€™ PaymentWebhookEvent
+  access_entitlements     Ã¢â€ â€™ AccessEntitlement
+  template_segments       Ã¢â€ â€™ TemplateSegment     (legacy greeting/body/closing)
+  birthday_schedules      Ã¢â€ â€™ BirthdaySchedule
+  message_queue           Ã¢â€ â€™ MessageQueue
+  message_history         Ã¢â€ â€™ MessageHistory
+  password_reset_tokens   Ã¢â€ â€™ PasswordResetToken
 
 Automation & contact management:
-  contacts                → Contact
-  message_groups          → MessageGroup
-  posts                   → Post               (timeline posts)
-  user_images             → UserImage
-  birthday_configs        → BirthdayConfig
-  smtp_configs            → SMTPConfig
-  message_templates       → MessageTemplate    (full greeting+sentiment+closing template)
+  contacts                Ã¢â€ â€™ Contact
+  message_groups          Ã¢â€ â€™ MessageGroup
+  posts                   Ã¢â€ â€™ Post               (timeline posts)
+  user_images             Ã¢â€ â€™ UserImage
+  birthday_configs        Ã¢â€ â€™ BirthdayConfig
+  smtp_configs            Ã¢â€ â€™ SMTPConfig
+  message_templates       Ã¢â€ â€™ MessageTemplate    (full greeting+sentiment+closing template)
 
 All UUID primary keys use PostgreSQL's native ``UUID`` type.
 Database-managed ENUMs (created by Alembic migrations) are referenced with
@@ -222,6 +222,71 @@ class SubscriptionRecord(Base):
     )
 
 
+class PaymentCheckoutAttempt(Base):
+    """Durable server-owned idempotency record for external payment checkout.
+
+    The row is committed before BirthdayMessaging calls BTCPay. A deterministic
+    provider_order_id lets a later request reconcile a provider invoice if the
+    application crashes after BTCPay creates it but before the local transaction
+    is finalized.
+    """
+
+    __tablename__ = "payment_checkout_attempts"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    plan_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(12), nullable=False)
+    provider_order_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    provider_payment_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    checkout_url: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default=text("'claimed'")
+    )
+    failure_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    claim_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    metadata_payload: Mapped[dict[str, Any]] = mapped_column(
+        "metadata", JSON(), nullable=False, server_default=text("'{}'::json")
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_payment_checkout_provider_user_key",
+            "provider",
+            "user_id",
+            "idempotency_key",
+            unique=True,
+        ),
+        Index(
+            "uq_payment_checkout_provider_order",
+            "provider",
+            "provider_order_id",
+            unique=True,
+        ),
+        Index("idx_payment_checkout_status", "status"),
+        Index("idx_payment_checkout_claim_expiry", "status", "claim_expires_at"),
+    )
+
 class PaymentTransaction(Base):
     """
     Provider-neutral payment ledger for Stripe, BTCPay, Rapyd, and future providers.
@@ -249,6 +314,12 @@ class PaymentTransaction(Base):
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     provider_payment_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     provider_order_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    checkout_attempt_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("payment_checkout_attempts.id", ondelete="SET NULL"),
+        nullable=True,
+        unique=True,
+    )
     amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(12), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -493,7 +564,7 @@ class MessageQueue(Base):
     """
     Pending outbound message waiting to be sent by the Chrome extension.
 
-    Status lifecycle: ``pending`` → ``processing`` → ``sent`` | ``failed``.
+    Status lifecycle: ``pending`` Ã¢â€ â€™ ``processing`` Ã¢â€ â€™ ``sent`` | ``failed``.
     Failed messages may be retried (status reset to ``pending``) by the
     extension's retry endpoint.
     """
@@ -1118,4 +1189,91 @@ class MessageTemplate(Base):
         Index("idx_message_template_user_gender", "user_id", "gender"),
         Index("idx_message_template_group", "group_id"),
         Index("uq_message_template_user_title", "user_id", "title", unique=True),
+    )
+
+class NotificationOutbox(Base):
+    """Durable transactional outbox for subscription and access notifications."""
+
+    __tablename__ = "notification_outbox"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    entitlement_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("access_entitlements.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    source_transaction_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("payment_transactions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    notification_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    channel: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default=text("'email'")
+    )
+    recipient: Mapped[str] = mapped_column(Text(), nullable=False)
+    subject: Mapped[str] = mapped_column(Text(), nullable=False)
+    body_text: Mapped[str] = mapped_column(Text(), nullable=False, server_default=text("''"))
+    body_html: Mapped[str] = mapped_column(Text(), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default=text("'PENDING'")
+    )
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    max_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("5")
+    )
+    scheduled_for: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    next_attempt_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    last_attempt_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    cancelled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_error: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    provider_message_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    delivery_attempt_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    last_error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_delivery_latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    claim_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dead_lettered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    requeue_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    last_requeued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    metadata_payload: Mapped[dict[str, Any]] = mapped_column(
+        "metadata", JSON(), nullable=False, server_default=text("'{}'::json")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+    user: Mapped[User] = relationship("User")
+    entitlement: Mapped[AccessEntitlement | None] = relationship("AccessEntitlement")
+    source_transaction: Mapped[PaymentTransaction | None] = relationship("PaymentTransaction")
+
+    __table_args__ = (
+        Index("idx_notification_outbox_status_due", "status", "scheduled_for", "next_attempt_at"),
+        Index("idx_notification_outbox_user_created", "user_id", "created_at"),
+        Index("idx_notification_outbox_user_type", "user_id", "notification_type"),
+        Index("idx_notification_outbox_entitlement", "entitlement_id"),
+        Index("idx_notification_outbox_transaction", "source_transaction_id"),
+        Index("idx_notification_outbox_processing_lease", "status", "claim_expires_at"),
+        Index("idx_notification_outbox_dead_lettered", "status", "dead_lettered_at"),
     )

@@ -1,5 +1,5 @@
 """
-test_subscription.py — Tests for subscription management endpoints.
+test_subscription.py â€” Tests for subscription management endpoints.
 
 Covers:
   - GET  /subscription/status          (no sub, active, grace period, canceled)
@@ -66,8 +66,8 @@ async def _create_subscription(
 
 
 @pytest.mark.asyncio
-async def test_status_no_subscription(async_client: AsyncClient):
-    resp = await async_client.get("/subscription/status")
+async def test_status_no_subscription(subscription_client: AsyncClient):
+    resp = await subscription_client.get("/subscription/status")
     assert resp.status_code == 200
     body = resp.json()
     assert body["is_active"] is False
@@ -78,10 +78,10 @@ async def test_status_no_subscription(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_status_active_subscription(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: User
+    subscription_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
     await _create_subscription(db_session, test_user)
-    resp = await async_client.get("/subscription/status")
+    resp = await subscription_client.get("/subscription/status")
     assert resp.status_code == 200
     body = resp.json()
     assert body["is_active"] is True
@@ -93,9 +93,9 @@ async def test_status_active_subscription(
 
 @pytest.mark.asyncio
 async def test_status_grace_period(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: User
+    subscription_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
-    """PAST_DUE with current_period_end in the future → grace period."""
+    """PAST_DUE with current_period_end in the future â†’ grace period."""
     future = datetime.now(timezone.utc) + timedelta(days=5)
     await _create_subscription(
         db_session,
@@ -103,7 +103,7 @@ async def test_status_grace_period(
         status="PAST_DUE",
         current_period_end=future,
     )
-    resp = await async_client.get("/subscription/status")
+    resp = await subscription_client.get("/subscription/status")
     body = resp.json()
     assert body["is_active"] is True
     assert body["in_grace_period"] is True
@@ -112,9 +112,9 @@ async def test_status_grace_period(
 
 @pytest.mark.asyncio
 async def test_status_past_due_expired(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: User
+    subscription_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
-    """PAST_DUE with current_period_end in the past → no longer active."""
+    """PAST_DUE with current_period_end in the past â†’ no longer active."""
     past = datetime.now(timezone.utc) - timedelta(days=5)
     await _create_subscription(
         db_session,
@@ -122,7 +122,7 @@ async def test_status_past_due_expired(
         status="PAST_DUE",
         current_period_end=past,
     )
-    resp = await async_client.get("/subscription/status")
+    resp = await subscription_client.get("/subscription/status")
     body = resp.json()
     assert body["is_active"] is False
     assert body["in_grace_period"] is False
@@ -135,7 +135,7 @@ async def test_status_past_due_expired(
 
 @pytest.mark.asyncio
 async def test_cancel_success(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: User
+    subscription_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
     record = await _create_subscription(db_session, test_user)  # noqa: F841
     with patch(
@@ -143,7 +143,7 @@ async def test_cancel_success(
         new_callable=AsyncMock,
         return_value={"cancel_at_period_end": True},
     ):
-        resp = await async_client.post("/subscription/cancel")
+        resp = await subscription_client.post("/subscription/cancel")
     assert resp.status_code == 200
     body = resp.json()
     assert body["cancel_at_period_end"] is True
@@ -151,8 +151,8 @@ async def test_cancel_success(
 
 
 @pytest.mark.asyncio
-async def test_cancel_no_active_sub(async_client: AsyncClient):
-    resp = await async_client.post("/subscription/cancel")
+async def test_cancel_no_active_sub(subscription_client: AsyncClient):
+    resp = await subscription_client.post("/subscription/cancel")
     assert resp.status_code == 404
 
 
@@ -163,7 +163,7 @@ async def test_cancel_no_active_sub(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_reactivate_success(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: User
+    subscription_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
     await _create_subscription(db_session, test_user, cancel_at_period_end=True)
     with patch(
@@ -171,7 +171,7 @@ async def test_reactivate_success(
         new_callable=AsyncMock,
         return_value={"cancel_at_period_end": False},
     ):
-        resp = await async_client.post("/subscription/reactivate")
+        resp = await subscription_client.post("/subscription/reactivate")
     assert resp.status_code == 200
     body = resp.json()
     assert body["cancel_at_period_end"] is False
@@ -180,10 +180,10 @@ async def test_reactivate_success(
 
 @pytest.mark.asyncio
 async def test_reactivate_not_pending(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: User
+    subscription_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
     await _create_subscription(db_session, test_user, cancel_at_period_end=False)
-    resp = await async_client.post("/subscription/reactivate")
+    resp = await subscription_client.post("/subscription/reactivate")
     assert resp.status_code == 400
     assert "not pending" in resp.json()["detail"].lower()
 
@@ -195,7 +195,7 @@ async def test_reactivate_not_pending(
 
 @pytest.mark.asyncio
 async def test_change_plan_upgrade(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: User
+    subscription_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
     await _create_subscription(
         db_session,
@@ -207,7 +207,7 @@ async def test_change_plan_upgrade(
         new_callable=AsyncMock,
         return_value={"status": "active"},
     ):
-        resp = await async_client.post(
+        resp = await subscription_client.post(
             "/subscription/change-plan", json={"new_plan": "yearly"}
         )
     assert resp.status_code == 200
@@ -218,14 +218,14 @@ async def test_change_plan_upgrade(
 
 @pytest.mark.asyncio
 async def test_change_plan_same_plan(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: User
+    subscription_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
     await _create_subscription(
         db_session,
         test_user,
         price_id=settings.stripe_price_monthly,
     )
-    resp = await async_client.post(
+    resp = await subscription_client.post(
         "/subscription/change-plan", json={"new_plan": "monthly"}
     )
     assert resp.status_code == 400
@@ -233,8 +233,8 @@ async def test_change_plan_same_plan(
 
 
 @pytest.mark.asyncio
-async def test_change_plan_no_active_sub(async_client: AsyncClient):
-    resp = await async_client.post(
+async def test_change_plan_no_active_sub(subscription_client: AsyncClient):
+    resp = await subscription_client.post(
         "/subscription/change-plan", json={"new_plan": "yearly"}
     )
     assert resp.status_code == 404
@@ -247,7 +247,7 @@ async def test_change_plan_no_active_sub(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_billing_portal_success(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: User
+    subscription_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
     test_user.stripe_customer_id = "cus_test123"
     await db_session.commit()
@@ -256,17 +256,17 @@ async def test_billing_portal_success(
         new_callable=AsyncMock,
         return_value="https://billing.stripe.com/session/test",
     ):
-        resp = await async_client.post("/subscription/billing-portal")
+        resp = await subscription_client.post("/subscription/billing-portal")
     assert resp.status_code == 200
     assert resp.json()["portal_url"].startswith("https://")
 
 
 @pytest.mark.asyncio
 async def test_billing_portal_no_customer(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: User
+    subscription_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
     test_user.stripe_customer_id = None
     await db_session.commit()
-    resp = await async_client.post("/subscription/billing-portal")
+    resp = await subscription_client.post("/subscription/billing-portal")
     assert resp.status_code == 400
     assert "no billing account found" in resp.json()["detail"].lower()

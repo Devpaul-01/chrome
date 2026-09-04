@@ -3,7 +3,6 @@ import type {
   BillingPortalResponse,
   CancelSubscriptionResponse,
   ChangePlanResponse,
-  CheckoutSessionRequest,
   SubscriptionStatus,
 } from '../../api/client';
 import { sendBackgroundMessage } from '../api';
@@ -11,10 +10,10 @@ import Spinner from './Spinner';
 import HelpTooltip from './HelpTooltip';
 import FeatureTip from './FeatureTip';
 
-/* ─── plan pricing constants (update when Stripe prices change) ─────────── */
+/* ─── plan display constants; backend remains authoritative for pricing ─── */
 const PLANS = {
-  monthly: { label: 'Monthly', price: '$4.99', cycle: 'per month', yearlyEquiv: '$59.88/yr' },
-  yearly: { label: 'Yearly', price: '$39.99', cycle: 'per year', savings: 'Save 33%' },
+  monthly: { label: 'Monthly', price: '$9.70', cycle: 'per month', yearlyEquiv: '$116.40/yr' },
+  yearly: { label: 'Yearly', price: '$97.00', cycle: 'per year', savings: 'Save 17%' },
 } as const;
 
 /* ─── helpers ───────────────────────────────────────────────────────────── */
@@ -67,6 +66,10 @@ export default function SubscriptionPanel() {
   // Change-plan modal
   const [showChangePlanModal, setShowChangePlanModal] = useState(false);
   const [targetPlan, setTargetPlan] = useState<'monthly' | 'yearly'>('monthly');
+  // Preserve one idempotency key per plan until a checkout is successfully created.
+  // If the provider result is uncertain, retrying the same plan must reuse the same key
+  // so the backend can reconcile the original provider invoice instead of creating a duplicate.
+  const checkoutKeysRef = useRef<Partial<Record<'monthly' | 'yearly', string>>>({});
 
   /* ── data fetching ─────────────────────────────────────────────────────── */
   const fetchStatus = useCallback(async () => {
@@ -107,21 +110,34 @@ export default function SubscriptionPanel() {
 
   /* ── actions ───────────────────────────────────────────────────────────── */
   async function handleCheckout(plan: 'monthly' | 'yearly') {
-    setActionLoading('checkout');
+    setActionLoading(`checkout:${plan}`);
     setError(null);
+
+    let idempotencyKey = checkoutKeysRef.current[plan];
+    if (!idempotencyKey) {
+      idempotencyKey = crypto.randomUUID();
+      checkoutKeysRef.current[plan] = idempotencyKey;
+    }
+
     try {
-      const payload: CheckoutSessionRequest = {
-        plan,
-        success_url: 'https://example.com/success',
-        cancel_url: 'https://example.com/cancel',
-      };
       const result = await sendBackgroundMessage<{ checkout_url: string }>({
         type: 'subscription.checkout',
-        payload,
+        payload: {
+          plan,
+          idempotency_key: idempotencyKey,
+        },
       });
-      chrome.tabs.create({ url: result.checkout_url });
-    } catch {
-      setError('Failed to start checkout. Please try again.');
+
+      // Checkout creation is now durable in the backend, so a later click should
+      // intentionally create a new purchase attempt rather than reusing this one.
+      delete checkoutKeysRef.current[plan];
+
+      await chrome.tabs.create({ url: result.checkout_url });
+    } catch (err) {
+      // Keep the same idempotency key for retries. The backend can safely
+      // reconcile an uncertain BTCPay create operation by deterministic order ID.
+      console.error('Subscription checkout failed', err);
+      setError('Failed to start checkout. Please try again. A retry will safely resume the same payment attempt.');
     } finally {
       setActionLoading(null);
       void fetchStatus();
@@ -250,7 +266,7 @@ export default function SubscriptionPanel() {
 
         <FeatureTip
           tipId="subscription_overview"
-          message="Choose a plan to unlock all features. You can switch between monthly and yearly plans anytime — charges are prorated."
+          message="Your remaining prepaid time is preserved when you renew early. Renewing the same plan extends access from your current expiration date."
         />
         <div className="flex items-center gap-3 mb-3">
           <span
@@ -334,9 +350,25 @@ export default function SubscriptionPanel() {
                 )}
 
                 {isCurrent ? (
-                  <span className="inline-block text-xs text-blue-600 font-medium">
-                    ✓ Your plan
-                  </span>
+                  <div className="space-y-2">
+                    <span className="inline-block text-xs text-blue-600 font-medium">
+                      ✓ Your plan
+                    </span>
+                    {isActive && (
+                      <button
+                        onClick={() => handleCheckout(key)}
+                        className="btn-orange text-xs w-full"
+                        disabled={!!actionLoading}
+                        title={`Renew early without losing remaining prepaid time. Your new ${plan.label.toLowerCase()} period begins after your current access expires.`}
+                      >
+                        {actionLoading === `checkout:${key}` ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          `Renew ${plan.label} Early`
+                        )}
+                      </button>
+                    )}
+                  </div>
                 ) : isActive ? (
                   <button
                     onClick={() => {
@@ -354,7 +386,7 @@ export default function SubscriptionPanel() {
                     className="btn-orange text-xs w-full"
                     disabled={!!actionLoading}
                   >
-                    {actionLoading === 'checkout' ? (
+                    {actionLoading === `checkout:${key}` ? (
                       <Spinner size="sm" />
                     ) : (
                       `Subscribe ${plan.label}`
