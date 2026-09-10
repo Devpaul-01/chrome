@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timezone
 
 import sentry_sdk
@@ -41,6 +42,7 @@ from app.core.security_headers import SecurityHeadersMiddleware
 from app.api.deps import require_active_entitlement
 from app.core.errors import AppError, ErrorCodes
 from app.db.session import get_db
+from app.db.models import WorkerHeartbeat
 
 setup_logging()
 
@@ -324,6 +326,31 @@ app.include_router(payments.router, prefix="/api/payments", tags=["payments"])
 app.include_router(websocket.router)
 
 
+@app.get("/livez", summary="Process liveness")
+async def liveness_check() -> dict[str, str]:
+    """Report whether the API process itself is alive."""
+    return {"status": "ok"}
+
+
+@app.get("/readyz", summary="Service readiness")
+async def readiness_check(
+    response: Response, db: AsyncSession = Depends(get_db)
+) -> dict[str, str]:
+    """Require both PostgreSQL connectivity and the expected operational schema."""
+    try:
+        await db.execute(text("SELECT 1"))
+        await db.execute(text("SELECT 1 FROM worker_heartbeats LIMIT 1"))
+    except Exception:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {
+            "status": "unavailable",
+            "database": "unavailable",
+            "schema": "unavailable",
+        }
+
+    return {"status": "ok", "database": "ok", "schema": "ok"}
+
+
 @app.get("/health", summary="Service health")
 async def health_check(
     response: Response, db: AsyncSession = Depends(get_db)
@@ -334,6 +361,96 @@ async def health_check(
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {"status": "unavailable", "database": "unavailable"}
     return {"status": "ok", "database": "ok"}
+
+
+def _worker_health_payload(
+    row: WorkerHeartbeat | None,
+    *,
+    worker_name: str,
+    stale_after_seconds: int,
+    now: datetime,
+) -> dict:
+    if row is None:
+        return {
+            "worker": worker_name,
+            "status": "missing",
+            "stale_after_seconds": stale_after_seconds,
+        }
+
+    heartbeat = row.last_heartbeat_at
+    if heartbeat.tzinfo is None:
+        heartbeat = heartbeat.replace(tzinfo=timezone.utc)
+
+    age_seconds = max(0, int((now - heartbeat).total_seconds()))
+
+    if age_seconds > stale_after_seconds:
+        worker_status = "stale"
+    elif row.consecutive_failures > 0:
+        worker_status = "failing"
+    else:
+        worker_status = "healthy"
+
+    return {
+        "worker": worker_name,
+        "status": worker_status,
+        "heartbeat_age_seconds": age_seconds,
+        "stale_after_seconds": stale_after_seconds,
+        "consecutive_failures": row.consecutive_failures,
+        "started_at": row.started_at.isoformat() if row.started_at else None,
+        "last_heartbeat_at": row.last_heartbeat_at.isoformat()
+        if row.last_heartbeat_at
+        else None,
+        "last_success_at": row.last_success_at.isoformat()
+        if row.last_success_at
+        else None,
+        "last_failure_at": row.last_failure_at.isoformat()
+        if row.last_failure_at
+        else None,
+        "last_batch_summary": row.last_batch_summary or {},
+    }
+
+
+@app.get("/health/workers", summary="Background worker health")
+async def worker_health_check(
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Report independently running worker heartbeat and batch health."""
+    notification = await db.get(WorkerHeartbeat, "notification-worker")
+    payment = await db.get(WorkerHeartbeat, "payment-recovery-worker")
+
+    notification_interval = max(1, settings.notification_worker_interval_seconds)
+    payment_interval = max(
+        1, int(os.getenv("PAYMENT_CHECKOUT_RECOVERY_INTERVAL_SECONDS", "60"))
+    )
+
+    # Allow several normal iterations plus scheduling/database jitter before
+    # declaring a worker stale.
+    notification_stale = max(120, notification_interval * 4)
+    payment_stale = max(180, payment_interval * 4)
+
+    now = datetime.now(timezone.utc)
+    workers = {
+        "notification-worker": _worker_health_payload(
+            notification,
+            worker_name="notification-worker",
+            stale_after_seconds=notification_stale,
+            now=now,
+        ),
+        "payment-recovery-worker": _worker_health_payload(
+            payment,
+            worker_name="payment-recovery-worker",
+            stale_after_seconds=payment_stale,
+            now=now,
+        ),
+    }
+
+    overall = (
+        "healthy"
+        if all(item["status"] == "healthy" for item in workers.values())
+        else "degraded"
+    )
+
+    return {"status": overall, "workers": workers}
 
 
 @paid_features_router.post("/send-birthday-message", status_code=501)

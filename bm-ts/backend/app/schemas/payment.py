@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
+from typing import Literal
 
 
 class BTCPayTestInvoiceResponse(BaseModel):
@@ -24,6 +25,7 @@ class BTCPayCheckoutRequest(BaseModel):
     """Client selects a plan code only; the backend owns all pricing."""
 
     plan_code: str
+    payment_method: Literal["bitcoin", "monero"] = "bitcoin"
 
 
 class BTCPayCheckoutResponse(BaseModel):

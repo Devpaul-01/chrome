@@ -233,3 +233,6 @@ bm-ts/extension/**/*.before-*.ts
 bm-ts/extension/name-extraction-section.txt
 bm-ts/extension/*-diagnostic*.txt
 bm-ts/extension/*-debug*.txt
+*.before-step*.bak
+*.before-*.bak
+.xmr-phase1-backup-*

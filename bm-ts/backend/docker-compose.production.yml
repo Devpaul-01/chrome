@@ -1,0 +1,87 @@
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-birthdaymessaging}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+    image: birthdaymessaging-v2:${BM_V2_IMAGE_TAG:-local}
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-birthdaymessaging}
+      APP_ENVIRONMENT: production
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/readyz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  notification-worker:
+    image: birthdaymessaging-v2:${BM_V2_IMAGE_TAG:-local}
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-birthdaymessaging}
+      APP_ENVIRONMENT: production
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    command: ["python", "-m", "app.services.notification_worker"]
+    stop_grace_period: 30s
+
+  payment-recovery-worker:
+    image: birthdaymessaging-v2:${BM_V2_IMAGE_TAG:-local}
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-birthdaymessaging}
+      APP_ENVIRONMENT: production
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    command: ["python", "-m", "app.services.payment_checkout_recovery_worker"]
+    stop_grace_period: 30s
+
+  db-backup:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB:-birthdaymessaging}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backups:/backups
+    command: ["sh", "-c", "while true; do pg_dump -h db -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\" --format=custom --no-owner --no-privileges -f \"/backups/birthdaymessaging_$$(date -u +%Y%m%d_%H%M%S).dump\" && find /backups -type f -name 'birthdaymessaging_*.dump' -mtime +7 -delete; sleep 86400; done"]
+
+volumes:
+  postgres_data:

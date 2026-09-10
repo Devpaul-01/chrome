@@ -1,4 +1,4 @@
-"""BirthdayMessaging payment endpoints.
+﻿"""BirthdayMessaging payment endpoints.
 
 Phase 2 intentionally exposes only a controlled BTCPay test-invoice endpoint.
 Production plan pricing and subscription activation are added in later phases.
@@ -132,7 +132,7 @@ async def _finalize_checkout(
         currency=attempt.currency,
         status=provider_status,
         checkout_url=checkout_url,
-        payment_method="bitcoin",
+        payment_method=str((attempt.metadata_payload or {}).get("payment_method") or "bitcoin"),
         plan_code=attempt.plan_code,
         paid_at=None,
         expires_at=None,
@@ -142,6 +142,7 @@ async def _finalize_checkout(
             "btcpay_invoice_id": provider_payment_id,
             "checkout_attempt_id": str(attempt.id),
             "billing_term_months": term_months,
+            "payment_method": str((attempt.metadata_payload or {}).get("payment_method") or "bitcoin"),
             "phase": "production-checkout",
         },
     )
@@ -185,6 +186,7 @@ async def create_btcpay_checkout(
     """
     key = _validate_idempotency_key(idempotency_key)
     plan = get_payment_plan(payload.plan_code)
+    requested_payment_method = payload.payment_method
     now = datetime.now(timezone.utc)
 
     result = await db.execute(
@@ -197,11 +199,12 @@ async def create_btcpay_checkout(
     attempt = result.scalar_one_or_none()
 
     if attempt is not None:
-        if attempt.plan_code != plan.code:
+        stored_method = str((attempt.metadata_payload or {}).get("payment_method") or "bitcoin")
+        if attempt.plan_code != plan.code or stored_method != requested_payment_method:
             raise AppError(
                 status.HTTP_409_CONFLICT,
                 ErrorCodes.PAYMENT_IDEMPOTENCY_CONFLICT,
-                "This Idempotency-Key was already used for a different payment plan.",
+                "This Idempotency-Key was already used for a different payment plan or payment method.",
             )
 
         existing_tx = await _existing_checkout_transaction(db, attempt)
@@ -261,6 +264,7 @@ async def create_btcpay_checkout(
             metadata_payload={
                 "billing_term_months": plan.term_months,
                 "catalog_price_env": plan.price_env_name,
+                "payment_method": requested_payment_method,
             },
         )
         db.add(attempt)
@@ -281,11 +285,12 @@ async def create_btcpay_checkout(
             if attempt is None:
                 raise
 
-            if attempt.plan_code != plan.code:
+            stored_method = str((attempt.metadata_payload or {}).get("payment_method") or "bitcoin")
+            if attempt.plan_code != plan.code or stored_method != requested_payment_method:
                 raise AppError(
                     status.HTTP_409_CONFLICT,
                     ErrorCodes.PAYMENT_IDEMPOTENCY_CONFLICT,
-                    "This Idempotency-Key was already used for a different payment plan.",
+                    "This Idempotency-Key was already used for a different payment plan or payment method.",
                 )
 
             existing_tx = await _existing_checkout_transaction(db, attempt)
@@ -307,6 +312,7 @@ async def create_btcpay_checkout(
             description=plan.display_name,
             user_id=str(current_user.id),
             buyer_email=str(current_user.email),
+            payment_method=requested_payment_method,
         )
     except HTTPException as exc:
         # Provider/network failures are treated as uncertain because the invoice

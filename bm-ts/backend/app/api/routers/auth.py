@@ -52,7 +52,7 @@ from app.core.jwt import (
     decode_token,
     ensure_token_type,
 )
-from app.core.security import hash_password, verify_password
+from app.core.security import hash_password, password_needs_rehash, verify_password
 from app.db.models import (
     User,
     RevokedToken,
@@ -313,6 +313,10 @@ async def login(
             ErrorCodes.EMAIL_NOT_VERIFIED,
             "Please verify your email before logging in. Check your inbox for the verification link.",
         )
+
+    # Upgrade a successfully authenticated legacy bcrypt hash only after account-state checks pass.
+    if password_needs_rehash(user.password_hash):
+        user.password_hash = hash_password(data.password)
 
     # Successful login — reset lockout state
     user.failed_login_count = 0

@@ -1,16 +1,21 @@
 /**
- * storage.ts — Chrome extension storage helpers.
+ * storage.ts â€” Chrome extension storage helpers.
  *
  * Abstracts all `chrome.storage.local` interactions into typed async functions so
  * that the rest of the codebase never has to deal with the raw callback API directly.
  *
  * Stored keys:
- *   bm_access_token   — JWT access token returned by the backend
- *   bm_refresh_token  — JWT refresh token (long-lived)
- *   bm_backend_url    — user-configurable backend URL (defaults to localhost:8000)
+ *   bm_access_token   â€” JWT access token returned by the backend
+ *   bm_refresh_token  â€” JWT refresh token (long-lived)
+ *   bm_backend_url    â€” user-configurable backend URL (defaults to localhost:8000)
  */
 
 /** Centralised map of `chrome.storage.local` key names used by this extension. */
+const IS_PRODUCTION = import.meta.env.PROD;
+const PRODUCTION_BACKEND_URL = 'https://api-v2.birthdaymessaging.io';
+const DEVELOPMENT_BACKEND_URL = 'http://localhost:8000';
+const DEFAULT_BACKEND_URL = (import.meta.env.VITE_API_BASE_URL || (IS_PRODUCTION ? PRODUCTION_BACKEND_URL : DEVELOPMENT_BACKEND_URL)).replace(/\/+$/, '');
+
 export const STORAGE_KEYS = {
   accessToken: 'bm_access_token',
   refreshToken: 'bm_refresh_token',
@@ -68,7 +73,8 @@ export async function clearTokens(): Promise<void> {
 export async function getBackendUrl(): Promise<string> {
   return new Promise((resolve) => {
     chrome.storage.local.get([STORAGE_KEYS.backendUrl], (data) => {
-      const raw: string = data[STORAGE_KEYS.backendUrl] || 'http://localhost:8000';
+      const stored = data[STORAGE_KEYS.backendUrl] as string | undefined;
+      const raw = IS_PRODUCTION && stored && isAllowedDevUrl(stored) ? DEFAULT_BACKEND_URL : stored || DEFAULT_BACKEND_URL;
       resolve(raw.replace(/\/+$/, ''));
     });
   });
@@ -80,7 +86,7 @@ export async function getBackendUrl(): Promise<string> {
  * Returns `true` if the URL is safe to use.
  */
 function isAllowedSslipIoHostname(hostname: string): boolean {
-  // Accept any valid hostname that ends with .sslip.io — covers both the
+  // Accept any valid hostname that ends with .sslip.io â€” covers both the
   // standard NNN-NNN-NNN-NNN.sslip.io format (dashes) and multi-level
   // subdomain formats like prefix.NNN.NNN.NNN.NNN.sslip.io (dots + prefix).
   return /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?\.sslip\.io$/i.test(hostname);
@@ -90,11 +96,20 @@ function isAllowedDevHostname(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1' || isAllowedSslipIoHostname(hostname);
 }
 
+function isAllowedDevUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' && isAllowedDevHostname(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function isValidBackendUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     if (parsed.protocol === 'https:') return true;
-    if (parsed.protocol === 'http:' && isAllowedDevHostname(parsed.hostname)) return true;
+    if (!IS_PRODUCTION && parsed.protocol === 'http:' && isAllowedDevHostname(parsed.hostname)) return true;
     return false;
   } catch {
     return false;
@@ -102,7 +117,7 @@ function isValidBackendUrl(url: string): boolean {
 }
 
 /** Persists a custom backend URL so the extension points to the right server instance.
- *  Validates the URL scheme first — only HTTPS or HTTP to localhost, 127.0.0.1, or *.sslip.io are accepted for development.
+ *  Validates the URL scheme first â€” only HTTPS or HTTP to localhost, 127.0.0.1, or *.sslip.io are accepted for development.
  *  Trailing slashes are stripped so that path concatenation in client.ts always produces a single `/`. */
 export async function setBackendUrl(url: string): Promise<void> {
   const normalized = url.replace(/\/+$/, '');

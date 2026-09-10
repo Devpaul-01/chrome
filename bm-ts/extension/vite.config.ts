@@ -42,9 +42,9 @@ function buildContentScriptIIFE(outDir: string): Plugin {
 }
 
 /**
- * In production builds, strip localhost entries from host_permissions in
+ * In production builds, strip development-only localhost / loopback / sslip.io entries from host_permissions in
  * the output manifest.json.  Dev builds keep them for local API testing.
- * Chrome Web Store will reject extensions that request localhost access.
+ * Production builds must not request development-only backend hosts.
  */
 function stripLocalhostInProduction(outDir: string, mode: string): Plugin {
   return {
@@ -58,7 +58,7 @@ function stripLocalhostInProduction(outDir: string, mode: string): Plugin {
 
       if (Array.isArray(manifest.host_permissions)) {
         manifest.host_permissions = manifest.host_permissions.filter(
-          (p: string) => !p.includes('localhost'),
+          (p: string) => !p.includes('localhost') && !p.includes('127.0.0.1') && !p.includes('sslip.io'),
         );
       }
 
@@ -92,7 +92,7 @@ export default defineConfig(async ({ mode }) => {
           popup: resolve(__dirname, 'popup.html'),
           welcome: resolve(__dirname, 'welcome.html'),
           background: resolve(__dirname, 'src/background/index.ts'),
-          // content is NOT here — it is built separately as an IIFE by the
+          // content is NOT here â€” it is built separately as an IIFE by the
           // buildContentScriptIIFE plugin to avoid ES module import statements.
           // Documentation pages (opened in new tab from the Help panel)
           faq: resolve(__dirname, 'faq.html'),

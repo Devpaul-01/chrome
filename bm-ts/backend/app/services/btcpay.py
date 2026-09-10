@@ -92,6 +92,7 @@ async def create_invoice(
     description: str,
     user_id: str,
     buyer_email: str | None = None,
+    payment_method: str = "bitcoin",
 ) -> dict[str, Any]:
     """Create a BTCPay invoice without blocking FastAPI's event loop."""
     metadata: dict[str, Any] = {
@@ -103,10 +104,27 @@ async def create_invoice(
     if buyer_email:
         metadata["buyerEmail"] = buyer_email
 
+    normalized_method = payment_method.strip().lower()
+    if normalized_method not in {"bitcoin", "monero"}:
+        raise ValueError("Unsupported BTCPay payment method.")
+
     payload: dict[str, Any] = {
         "amount": format(amount, "f"),
         "currency": currency.upper(),
         "metadata": metadata,
+    }
+
+    payment_rail = {
+        "bitcoin": "BTC-CHAIN",
+        "monero": "XMR-CHAIN",
+    }[normalized_method]
+
+    # PAYMENT_RAIL_ISOLATION_HARDENING
+    # Always constrain BTCPay to the rail explicitly selected by the user.
+    # Never silently fall back from BTC to XMR (or vice versa).
+    payload["checkout"] = {
+        "paymentMethods": [payment_rail],
+        "defaultPaymentMethod": payment_rail,
     }
 
     return await run_in_threadpool(_create_invoice_sync, payload)

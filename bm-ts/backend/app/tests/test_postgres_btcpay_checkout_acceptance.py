@@ -144,6 +144,7 @@ class FakeBTCPay:
         description,
         user_id,
         buyer_email,
+        payment_method="bitcoin",
     ):
         self.create_calls += 1
 

@@ -12,6 +12,7 @@ dependencies = [
     "asyncpg>=0.28",
     "pyjwt[crypto]>=2.13.0",
     "passlib[argon2]>=1.7",
+    "bcrypt>=3.2,<4",
     "python-dotenv>=1.2.2",
     "stripe>=5.0",
     "pydantic>=2",

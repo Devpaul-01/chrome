@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.services.notification_providers import validate_notification_runtime_config
 from app.services.notifications import process_notification_batch, requeue_failed_notification
+from app.services.worker_heartbeat import record_worker_failure, record_worker_started, record_worker_success
 
 logger = logging.getLogger(__name__)
 
@@ -60,15 +61,25 @@ async def run_forever(limit: int, interval: int) -> None:
             signal.signal(sig, lambda *_args, s=sig: request_shutdown(s.name))
 
     logger.info("notification_worker_started", extra={"event": "notification_worker_started", "batch_size": limit, "interval_seconds": interval})
+    async with AsyncSessionLocal() as db:
+        await record_worker_started(db, "notification-worker")
+
     while not stop_event.is_set():
         try:
-            await run_once(limit)
+            result = await run_once(limit)
+            async with AsyncSessionLocal() as db:
+                await record_worker_success(db, "notification-worker", result)
         except asyncio.CancelledError:
             raise
         except Exception:
-            # Do not log exception text here; logger.exception may expose secrets
-            # from lower-level provider/client exceptions.
+            # Do not log exception text here; lower-level provider/client
+            # exceptions may contain sensitive values.
             logger.error("notification_worker_batch_failed", extra={"event": "notification_worker_batch_failed"})
+            try:
+                async with AsyncSessionLocal() as db:
+                    await record_worker_failure(db, "notification-worker")
+            except Exception:
+                logger.error("notification_worker_heartbeat_failed", extra={"event": "notification_worker_heartbeat_failed"})
 
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval)

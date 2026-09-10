@@ -1191,6 +1191,34 @@ class MessageTemplate(Base):
         Index("uq_message_template_user_title", "user_id", "title", unique=True),
     )
 
+class WorkerHeartbeat(Base):
+    """Operational heartbeat for independently running background workers."""
+
+    __tablename__ = "worker_heartbeats"
+
+    worker_name: Mapped[str] = mapped_column(String(64), primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    last_heartbeat_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    last_success_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_failure_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    consecutive_failures: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    last_batch_summary: Mapped[dict[str, Any]] = mapped_column(
+        JSON(), nullable=False, server_default=text("'{}'::json")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
 class NotificationOutbox(Base):
     """Durable transactional outbox for subscription and access notifications."""
 
