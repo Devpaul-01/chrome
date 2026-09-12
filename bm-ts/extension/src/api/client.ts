@@ -1,5 +1,5 @@
 /**
- * api/client.ts — HTTP client layer for the BirthdayMessaging backend API.
+ * api/client.ts â€” HTTP client layer for the BirthdayMessaging backend API.
  *
  * All requests are proxied through the background service worker
  * (`background/index.ts`) rather than being made directly from the popup or
@@ -8,11 +8,11 @@
  * is imported exclusively by `background/index.ts`.
  *
  * Architecture:
- *   popup / content  ──chrome.runtime.sendMessage──►  background
- *   background       ──fetch()──►  backend API
+ *   popup / content  â”€â”€chrome.runtime.sendMessageâ”€â”€â–º  background
+ *   background       â”€â”€fetch()â”€â”€â–º  backend API
  *
  * Every exported function follows the same signature convention:
- *   (baseUrl: string, accessToken?: string, ...args) ⇒ Promise<ResponseType>
+ *   (baseUrl: string, accessToken?: string, ...args) â‡’ Promise<ResponseType>
  */
 
 /**
@@ -43,7 +43,7 @@ type JsonBody = object | unknown[] | string | number | boolean | null | undefine
  * a consistent error type regardless of which endpoint failed.
  *
  * @param baseUrl - Backend base URL (e.g. `http://localhost:8000`).
- * @param path    - API path starting with `/` (e.g. `/auth/login`).
+ * @param path    - API path starting with `/` (e.g. `/api/login`).
  * @param method  - HTTP verb.
  * @param body    - Optional request body; will be JSON-stringified.
  * @param accessToken - If provided, attached as `Authorization: Bearer <token>`.
@@ -55,9 +55,11 @@ async function request<T>(
   body?: JsonBody,
   accessToken?: string,
   timeoutMs = 10_000,
+  extraHeaders: Record<string, string> = {},
 ): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...extraHeaders,
   };
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
@@ -154,6 +156,21 @@ export interface CheckoutSessionResponse {
   checkout_url: string;
 }
 
+export interface BTCPayCheckoutResponse {
+  checkout_attempt_id: string;
+  payment_id: string;
+  provider: string;
+  provider_payment_id: string;
+  provider_order_id: string;
+  status: string;
+  checkout_url: string;
+  amount: string | number;
+  currency: string;
+  plan_code: string;
+  billing_term_months: number;
+  reused: boolean;
+}
+
 export interface CancelSubscriptionResponse {
   status: string;
   cancel_at_period_end: boolean;
@@ -187,7 +204,7 @@ export async function register(
 export async function login(baseUrl: string, payload: RegisterPayload): Promise<TokenResponse> {
   // Password verification (especially the backend's timing-safe dummy hash for
   // unknown accounts) can legitimately take longer than the general API limit.
-  return request<TokenResponse>(baseUrl, '/auth/login', 'POST', payload, undefined, 30_000);
+  return request<TokenResponse>(baseUrl, '/api/login', 'POST', payload, undefined, 30_000);
 }
 
 /** Exchange a valid refresh token for a new access/refresh token pair. */
@@ -203,7 +220,7 @@ export async function revokeToken(
   return request<{ message: string }>(baseUrl, '/auth/revoke', 'POST', { refresh_token });
 }
 
-/** Return the currently-authenticated user's profile (‘/auth/me’). */
+/** Return the currently-authenticated user's profile (â€˜/auth/meâ€™). */
 export async function me(baseUrl: string, accessToken: string): Promise<UserProfile> {
   return request(baseUrl, '/auth/me', 'GET', undefined, accessToken);
 }
@@ -258,12 +275,22 @@ export async function subscriptionStatus(
   return request(baseUrl, '/subscription/status', 'GET', undefined, accessToken);
 }
 
-export async function createCheckoutSession(
+export async function createBTCPayCheckout(
   baseUrl: string,
   accessToken: string,
-  payload: CheckoutSessionRequest,
-): Promise<CheckoutSessionResponse> {
-  return request(baseUrl, '/subscription/create-checkout-session', 'POST', payload, accessToken);
+  plan: 'monthly' | 'yearly',
+  paymentMethod: 'bitcoin' | 'monero',
+  idempotencyKey: string,
+): Promise<BTCPayCheckoutResponse> {
+  return request(
+    baseUrl,
+    '/api/payments/btcpay/checkout',
+    'POST',
+    { plan_code: plan, payment_method: paymentMethod },
+    accessToken,
+    30_000,
+    { 'Idempotency-Key': idempotencyKey },
+  );
 }
 
 export async function cancelSubscription(

@@ -276,7 +276,7 @@ async def test_webhook_subscription_deleted(
 async def test_webhook_payment_failed(
     async_client: AsyncClient, db_session: AsyncSession, test_user: User
 ):
-    """payment_failed should transition the subscription to PAST_DUE (grace period)."""
+    """payment_failed transitions billing to PAST_DUE without granting access."""
     test_user.stripe_customer_id = "cus_test_456"
     await db_session.commit()
     record = await _create_subscription(db_session, test_user)

@@ -1,66 +1,105 @@
-# BirthdayMessaging Chrome Extension
+# BirthdayMessaging Chrome Extension - V2
 
-This Manifest V3 extension provides the Chrome UI and Facebook automation layer for BirthdayMessaging. It proxies all API calls through the background service worker to conform with the frozen backend contract and keeps tokens in `chrome.storage.local` per the security guidance.
+BirthdayMessaging V2 is a Manifest V3 Chrome extension providing the browser UI and Facebook automation layer for BirthdayMessaging.
 
-## Architecture at a Glance
+## Architecture
 
-| Layer                       | Files                             | Lines              |
-| --------------------------- | --------------------------------- | ------------------ |
-| React popup (34 components) | `src/popup/`                      | ~4,000             |
-| Background service worker   | `src/background/index.ts`         | 780                |
-| API client                  | `src/api/client.ts`               | 825 (52 functions) |
-| Content scripts             | `src/content/` (5 files)          | 1,839              |
-| Hooks                       | `src/popup/hooks/` (7 files)      | 1,013              |
-| Utilities                   | `src/utils/` (9 files)            | 1,086              |
-| WebSocket client            | `src/api/websocket.ts`            | 225                |
-| Tests                       | `src/popup/__tests__/` (11 files) | 214 tests          |
+The extension includes:
 
-**Total:** ~75 TypeScript/TSX files, ~15,000 lines.
+- React and TypeScript popup application
+- Manifest V3 background service worker
+- Facebook Messenger and Timeline automation content scripts
+- Birthday detection and message/post composition
+- Contacts, templates, scheduling, images, SMTP, dashboard, and account management
+- WebSocket and API integration with the BirthdayMessaging V2 backend
+- Payment and entitlement integration with the production BirthdayMessaging API
+- Local Quick Start, FAQ, Troubleshooting, Privacy Policy, and Terms pages
 
-## Build
+Production API: `https://api-v2.birthdaymessaging.io`
 
-```bash
-npm install
-npm run build
-```
+Production builds remove localhost, loopback, and sslip.io development host permissions.
 
-The build command runs Vite and emits `dist/{popup.html,background.js,content.js,...}` plus copies `public/manifest.json` into `dist`. Load the resulting `dist` folder as an unpacked extension via Chrome: go to `chrome://extensions`, enable Developer Mode, and point to `extension/dist`.
+## Development environment
 
-## Development
+The currently validated dependency graph uses Node.js 22 and npm 12.
 
-During development use `npm run dev` (starts Vite dev server, but Chrome extensions must still be loaded as unpacked and configured to point to the dev server). Typically you work in `popup.html` via `vite` and copy the built files into the extension directory.
+Install dependencies:
 
-## Testing
+    npm ci
 
-```bash
-npm test            # Run all 214 tests
-npm run test:watch  # Watch mode
-```
+## Unit tests
 
-Tests use Vitest 4.0 + @testing-library/react + jsdom. Coverage spans utilities, components, hooks, and API integration. See [FRONTEND_TEST_RESULTS.md](../Developer%20docs/FRONTEND_TEST_RESULTS.md) for breakdown.
+    npm test -- --run
 
-## Key Features
+The accepted V2 baseline currently passes 430 extension tests.
 
-- **64 background message types** (47 calling backend, 17 local-only)
-- **Real-time WebSocket updates** — queue, history, dashboard, notifications
-- **WCAG 2.1 AA accessibility** — keyboard navigation, ARIA labels, focus management, screen reader support
-- **Facebook automation** — birthday detection, message/post composition, deduplication, advance/belated scheduling
-- **Stripe subscription** — checkout session, webhook status updates
+## TypeScript
 
-## Backend configuration
+    npx tsc --noEmit
 
-The default backend URL is `http://localhost:8000`. Open the popup, go to the “Backend URL” field, update the host (for example to a tunnel address), and click “Save backend URL”. The extension will persist the value and retry the session.
+## Lint
 
-## Usage
+    npm run lint
 
-1. Login or register via the popup to obtain access/refresh tokens.
-2. Create or manage greeting/body/closing segments in the Templates area.
-3. Check subscription status and hit “Upgrade / Renew” to launch the Stripe checkout session when necessary.
-4. Open Facebook, use the overlay to scan birthday notifications, and confirm sends to avoid automation abuse.
+## Formatting
 
-## Known limitations
+    npm run format
 
-- The content script relies on Facebook DOM heuristics (`div[data-pagelet*="Birthday"]`, buttons with aria-labels containing "Message"); layout changes may require selector updates.
-- Message insertion targets `div[role=\"textbox\"]` or `div[contenteditable='true']`; more complex editors could break the automation.
-- Anti-ban precautions (delays, max per session, confirmation) are basic; monitor for rate-limiting and pause if Facebook complains.
-- There is no Facebook Graph API usage or official automation API; the extension simulates button clicks and may fail if Facebook tightens automation detection.
+Formatting rules are defined in `.prettierrc`.
+
+## Production build
+
+    npm run build
+
+The production build is emitted to `dist/` and includes `manifest.json`, `popup.html`, `welcome.html`, `background.js`, `content.js`, and the local documentation pages.
+
+## End-to-end testing
+
+Playwright configuration and a popup-shell smoke test are included.
+
+    npm run test:e2e:list
+    npm run test:e2e
+
+A compatible Playwright browser runtime must be installed before browser execution.
+
+## Facebook automation
+
+The content-script layer includes Messenger and Timeline automation, DOM helpers, editor helpers, tracing, API bridging, failsafes, and scheduling-related behavior.
+
+Facebook DOM changes may require selector maintenance.
+
+## Payments
+
+The V2 backend supports BTCPay-based Bitcoin and Monero payment flows and entitlement handling. Payment processing is implemented by the backend rather than directly in the extension.
+
+Card, debit-card, and bank-payment integration is handled separately from the current BTC/XMR baseline.
+
+## Documentation
+
+Local documentation pages include:
+
+- `quick-start.html`
+- `faq.html`
+- `troubleshooting.html`
+- `privacy-policy.html`
+- `terms-of-service.html`
+
+These recovered documents originated from the earlier BirthdayMessaging extension baseline. Payment and legal language should be reviewed whenever payment providers or billing behavior change.
+
+## Security
+
+Never commit production secrets, `.env` files, private keys, API tokens, database backups, database dumps, or production credentials.
+
+The V2 release process includes dependency auditing, secret scanning, tests, build validation, linting, and TypeScript validation.
+
+## Accepted V2 baseline
+
+The current release candidate has been validated with:
+
+- 430 passing extension tests
+- 424 passing backend tests
+- successful production extension build
+- successful TypeScript validation
+- successful ESLint validation
+- zero npm audit vulnerabilities
+- production-only manifest host permissions

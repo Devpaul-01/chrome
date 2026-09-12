@@ -3,7 +3,6 @@ import type {
   BillingPortalResponse,
   CancelSubscriptionResponse,
   ChangePlanResponse,
-  CheckoutSessionRequest,
   SubscriptionStatus,
 } from '../../api/client';
 import { sendBackgroundMessage } from '../api';
@@ -11,13 +10,13 @@ import Spinner from './Spinner';
 import HelpTooltip from './HelpTooltip';
 import FeatureTip from './FeatureTip';
 
-/* ─── plan pricing constants (update when Stripe prices change) ─────────── */
+/* â”€â”€â”€ plan display constants; backend remains authoritative for pricing â”€â”€â”€ */
 const PLANS = {
-  monthly: { label: 'Monthly', price: '$4.99', cycle: 'per month', yearlyEquiv: '$59.88/yr' },
-  yearly: { label: 'Yearly', price: '$39.99', cycle: 'per year', savings: 'Save 33%' },
+  monthly: { label: 'Monthly', price: '$9.70', cycle: 'per month', yearlyEquiv: '$116.40/yr' },
+  yearly: { label: 'Yearly', price: '$97.00', cycle: 'per year', savings: 'Save 17%' },
 } as const;
 
-/* ─── helpers ───────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function formatDate(iso?: string): string {
   if (!iso) return 'n/a';
   return new Date(iso).toLocaleDateString(undefined, {
@@ -49,10 +48,10 @@ function getStatusBadge(sub: SubscriptionStatus | null): StatusBadge {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 export default function SubscriptionPanel() {
-  /* ── state ─────────────────────────────────────────────────────────────── */
+  /* â”€â”€ state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -67,8 +66,15 @@ export default function SubscriptionPanel() {
   // Change-plan modal
   const [showChangePlanModal, setShowChangePlanModal] = useState(false);
   const [targetPlan, setTargetPlan] = useState<'monthly' | 'yearly'>('monthly');
+  // Preserve one idempotency key per plan until a checkout is successfully created.
+  // If the provider result is uncertain, retrying the same plan must reuse the same key
+  // so the backend can reconcile the original provider invoice instead of creating a duplicate.
+  const [paymentMethod, setPaymentMethod] = useState<'bitcoin' | 'monero'>('bitcoin');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<'monthly' | 'yearly' | null>(null);
+  const checkoutKeysRef = useRef<Partial<Record<string, string>>>({});
 
-  /* ── data fetching ─────────────────────────────────────────────────────── */
+  /* â”€â”€ data fetching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const fetchStatus = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -85,6 +91,35 @@ export default function SubscriptionPanel() {
 
   useEffect(() => {
     void fetchStatus();
+  }, [fetchStatus]);
+  // PAYMENT_STATE_REFRESH_HARDENING
+  // Checkout completes in an external provider tab. Refresh subscription state
+  // whenever the popup becomes active again, and periodically while visible.
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchStatus();
+      }
+    };
+
+    const handleFocus = () => {
+      void fetchStatus();
+    };
+
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    window.addEventListener('focus', handleFocus);
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchStatus();
+      }
+    }, 15000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+      window.removeEventListener('focus', handleFocus);
+      window.clearInterval(intervalId);
+    };
   }, [fetchStatus]);
 
   // Auto-dismiss success messages
@@ -105,23 +140,48 @@ export default function SubscriptionPanel() {
     return () => document.removeEventListener('keydown', handler);
   }, [showCancelModal]);
 
-  /* ── actions ───────────────────────────────────────────────────────────── */
-  async function handleCheckout(plan: 'monthly' | 'yearly') {
-    setActionLoading('checkout');
+  /* â”€â”€ actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  function openPaymentModal(plan: 'monthly' | 'yearly') {
+    setCheckoutPlan(plan);
+    setPaymentMethod('bitcoin');
     setError(null);
+    setShowPaymentModal(true);
+  }
+
+  async function handleCheckout(plan: 'monthly' | 'yearly') {
+    setActionLoading(`checkout:${plan}`);
+    setError(null);
+
+    const checkoutKey = `${plan}:${paymentMethod}`;
+    let idempotencyKey = checkoutKeysRef.current[checkoutKey];
+    if (!idempotencyKey) {
+      idempotencyKey = crypto.randomUUID();
+      checkoutKeysRef.current[checkoutKey] = idempotencyKey;
+    }
+
     try {
-      const payload: CheckoutSessionRequest = {
-        plan,
-        success_url: 'https://example.com/success',
-        cancel_url: 'https://example.com/cancel',
-      };
       const result = await sendBackgroundMessage<{ checkout_url: string }>({
         type: 'subscription.checkout',
-        payload,
+        payload: {
+          plan,
+          payment_method: paymentMethod,
+          idempotency_key: idempotencyKey,
+        },
       });
-      chrome.tabs.create({ url: result.checkout_url });
-    } catch {
-      setError('Failed to start checkout. Please try again.');
+
+      // Checkout creation is now durable in the backend, so a later click should
+      // intentionally create a new purchase attempt rather than reusing this one.
+      delete checkoutKeysRef.current[checkoutKey];
+      setShowPaymentModal(false);
+      setCheckoutPlan(null);
+      await chrome.tabs.create({ url: result.checkout_url });
+    } catch (err) {
+      // Keep the same idempotency key for retries. The backend can safely
+      // reconcile an uncertain BTCPay create operation by deterministic order ID.
+      console.error('Subscription checkout failed', err);
+      setError(
+        'Failed to start checkout. Please try again. A retry will safely resume the same payment attempt.',
+      );
     } finally {
       setActionLoading(null);
       void fetchStatus();
@@ -195,14 +255,14 @@ export default function SubscriptionPanel() {
     }
   }
 
-  /* ── derived ───────────────────────────────────────────────────────────── */
+  /* â”€â”€ derived â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const isActive = subscription?.is_active ?? false;
   const currentPlan = subscription?.plan;
   const badge = getStatusBadge(subscription);
   const isPendingCancel = subscription?.cancel_at_period_end ?? false;
   const hasStripeCustomer = !!subscription?.stripe_customer_id;
 
-  /* ── render ────────────────────────────────────────────────────────────── */
+  /* â”€â”€ render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   if (isLoading) {
     return (
       <section className="card">
@@ -216,7 +276,7 @@ export default function SubscriptionPanel() {
 
   return (
     <section className="space-y-4">
-      {/* ─── Alerts ──────────────────────────────────────────────────────── */}
+      {/* â”€â”€â”€ Alerts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {error && (
         <div
           className="bg-red-100 border-l-4 border-red-400 text-red-800 px-4 py-3 rounded-lg text-sm"
@@ -228,7 +288,7 @@ export default function SubscriptionPanel() {
             onClick={() => setError(null)}
             aria-label="Dismiss error"
           >
-            ×
+            Ã—
           </button>
         </div>
       )}
@@ -241,7 +301,7 @@ export default function SubscriptionPanel() {
         </div>
       )}
 
-      {/* ─── Section 1: Current Status ───────────────────────────────────── */}
+      {/* â”€â”€â”€ Section 1: Current Status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">
           Subscription Status{' '}
@@ -250,7 +310,7 @@ export default function SubscriptionPanel() {
 
         <FeatureTip
           tipId="subscription_overview"
-          message="Choose a plan to unlock all features. You can switch between monthly and yearly plans anytime — charges are prorated."
+          message=""
         />
         <div className="flex items-center gap-3 mb-3">
           <span
@@ -290,17 +350,18 @@ export default function SubscriptionPanel() {
         {subscription?.in_grace_period && (
           <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
             <p className="text-sm text-orange-800">
-              ⚠️ Your last payment failed. Please update your payment method to avoid losing access.
+              âš ï¸ Your last payment failed. Please update your payment method to avoid losing
+              access.
             </p>
           </div>
         )}
       </div>
 
-      {/* ─── Section 2: Plan Comparison ──────────────────────────────────── */}
+      {/* â”€â”€â”€ Section 2: Plan Comparison â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="card">
         <h3 className="text-base font-semibold mb-4">
           Plans{' '}
-          <HelpTooltip label="Monthly is flexible with no commitment. Yearly saves 33% and is billed once per year. You can switch plans anytime — the difference is prorated on your next invoice." />
+          <HelpTooltip label="Monthly is flexible with no commitment. Yearly saves 33% and is billed once per year. You can switch plans anytime â€” the difference is prorated on your next invoice." />
         </h3>
         <div className="grid grid-cols-2 gap-3">
           {(
@@ -334,9 +395,25 @@ export default function SubscriptionPanel() {
                 )}
 
                 {isCurrent ? (
-                  <span className="inline-block text-xs text-blue-600 font-medium">
-                    ✓ Your plan
-                  </span>
+                  <div className="space-y-2">
+                    <span className="inline-block text-xs text-blue-600 font-medium">
+                      âœ“ Your plan
+                    </span>
+                    {isActive && (
+                      <button
+                        onClick={() => openPaymentModal(key)}
+                        className="btn-orange text-xs w-full"
+                        disabled={!!actionLoading}
+                        title={`Renew early without losing remaining prepaid time. Your new ${plan.label.toLowerCase()} period begins after your current access expires.`}
+                      >
+                        {actionLoading === `checkout:${key}` ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          `Renew ${plan.label} Early`
+                        )}
+                      </button>
+                    )}
+                  </div>
                 ) : isActive ? (
                   <button
                     onClick={() => {
@@ -350,11 +427,11 @@ export default function SubscriptionPanel() {
                   </button>
                 ) : (
                   <button
-                    onClick={() => handleCheckout(key)}
+                    onClick={() => openPaymentModal(key)}
                     className="btn-orange text-xs w-full"
                     disabled={!!actionLoading}
                   >
-                    {actionLoading === 'checkout' ? (
+                    {actionLoading === `checkout:${key}` ? (
                       <Spinner size="sm" />
                     ) : (
                       `Subscribe ${plan.label}`
@@ -367,7 +444,7 @@ export default function SubscriptionPanel() {
         </div>
       </div>
 
-      {/* ─── Section 3: Billing & Payment ────────────────────────────────── */}
+      {/* â”€â”€â”€ Section 3: Billing & Payment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {hasStripeCustomer && (
         <div className="card">
           <h3 className="text-base font-semibold mb-3">
@@ -398,7 +475,7 @@ export default function SubscriptionPanel() {
         </div>
       )}
 
-      {/* ─── Section 4: Cancel ───────────────────────────────────────────── */}
+      {/* â”€â”€â”€ Section 4: Cancel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {isActive && !isPendingCancel && (
         <div className="card">
           <h3 className="text-base font-semibold mb-2">Cancel Subscription</h3>
@@ -416,7 +493,7 @@ export default function SubscriptionPanel() {
         </div>
       )}
 
-      {/* ─── Cancel Confirmation Modal ───────────────────────────────────── */}
+      {/* â”€â”€â”€ Cancel Confirmation Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div
@@ -436,7 +513,7 @@ export default function SubscriptionPanel() {
                 className="text-gray-400 hover:text-gray-600 text-xl leading-none"
                 aria-label="Close"
               >
-                ×
+                Ã—
               </button>
             </div>
 
@@ -490,7 +567,113 @@ export default function SubscriptionPanel() {
         </div>
       )}
 
-      {/* ─── Change Plan Confirmation Modal ──────────────────────────────── */}
+      {/* Payment Method Modal */}
+      {showPaymentModal && checkoutPlan && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="payment-method-modal-title"
+            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden"
+          >
+            <div className="flex justify-between items-center p-4 border-b border-gray-200">
+              <div>
+                <h3 id="payment-method-modal-title" className="text-lg font-semibold text-gray-900">
+                  Select Payment Method
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">Choose how you would like to pay.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setCheckoutPlan(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 text-lg font-semibold leading-none px-2 py-1"
+                aria-label="Close"
+                disabled={!!actionLoading}
+              >
+                X
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <p className="text-sm font-medium text-gray-900">
+                  {isActive && currentPlan === checkoutPlan ? 'Early renewal' : 'Subscription'}:{' '}
+                  {PLANS[checkoutPlan].label}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {PLANS[checkoutPlan].price} {PLANS[checkoutPlan].cycle}
+                </p>
+              </div>
+
+              <fieldset className="space-y-3">
+                <legend className="text-sm font-medium text-gray-700 mb-2">
+                  Choose a payment method
+                </legend>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentMethod('bitcoin');
+                    void handleCheckout(checkoutPlan);
+                  }}
+                  className="w-full flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3 text-left hover:border-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-60"
+                  disabled={!!actionLoading}
+                >
+                  <span className="h-4 w-4 rounded-full border-2 border-gray-400 flex items-center justify-center">
+                    {actionLoading === `checkout:${checkoutPlan}` &&
+                      paymentMethod === 'bitcoin' && (
+                        <span className="h-2 w-2 rounded-full bg-orange-500" />
+                      )}
+                  </span>
+                  <span className="flex-1">
+                    <span className="block font-semibold text-gray-900">Bitcoin (BTC)</span>
+                  </span>
+                  {actionLoading === `checkout:${checkoutPlan}` && paymentMethod === 'bitcoin' && (
+                    <Spinner size="sm" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentMethod('monero');
+                    void handleCheckout(checkoutPlan);
+                  }}
+                  className="w-full flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3 text-left hover:border-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-60"
+                  disabled={!!actionLoading}
+                >
+                  <span className="h-4 w-4 rounded-full border-2 border-gray-400 flex items-center justify-center">
+                    {actionLoading === `checkout:${checkoutPlan}` && paymentMethod === 'monero' && (
+                      <span className="h-2 w-2 rounded-full bg-orange-500" />
+                    )}
+                  </span>
+                  <span className="flex-1">
+                    <span className="block font-semibold text-gray-900">Monero (XMR)</span>
+                  </span>
+                  {actionLoading === `checkout:${checkoutPlan}` && paymentMethod === 'monero' && (
+                    <Spinner size="sm" />
+                  )}
+                </button>
+
+                <div
+                  className="w-full flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-left opacity-70"
+                  aria-disabled="true"
+                >
+                  <span className="h-4 w-4 rounded-full border-2 border-gray-300" />
+                  <span className="flex-1">
+                    <span className="block font-semibold text-gray-700">Rapyd - Card / Bank</span>
+                    <span className="block text-xs text-gray-500">Coming soon</span>
+                  </span>
+                </div>
+              </fieldset>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* â”€â”€â”€ Change Plan Confirmation Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showChangePlanModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div
@@ -508,7 +691,7 @@ export default function SubscriptionPanel() {
                 className="text-gray-400 hover:text-gray-600 text-xl leading-none"
                 aria-label="Close"
               >
-                ×
+                Ã—
               </button>
             </div>
 

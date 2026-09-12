@@ -59,10 +59,10 @@ async def _handle_payment_failed(
 ) -> None:
     """
     Handle ``invoice.payment_failed`` by transitioning the related
-    subscription to ``PAST_DUE``.  This begins the grace period — the
-    user retains access until ``current_period_end`` passes.
+    subscription to ``PAST_DUE``. PAST_DUE is a billing state only and does not
+    grant BirthdayMessaging access.
 
-    Stripe's Smart Retries will continue attempting payment automatically;
+    Stripe's Smart Retries may continue attempting payment automatically;
     a later ``customer.subscription.updated`` event with status ``active``
     would transition the record back if a retry succeeds.
     """

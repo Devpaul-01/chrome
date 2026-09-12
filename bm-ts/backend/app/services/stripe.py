@@ -139,17 +139,47 @@ async def reactivate_subscription(stripe_subscription_id: str) -> dict:
 async def change_subscription_plan(
     stripe_subscription_id: str, new_price_id: str
 ) -> dict:
-    """
-    Upgrade or downgrade a subscription by swapping the price on
-    the first subscription item.  Stripe prorates the charge automatically.
-    """
+    """Schedule a no-proration plan change at the end of the paid period."""
     sub = await run_in_threadpool(stripe.Subscription.retrieve, stripe_subscription_id)
-    item_id = sub["items"]["data"][0]["id"]
+    existing_schedule = sub.get("schedule")
+    if existing_schedule:
+        schedule_id = existing_schedule.get("id") if hasattr(existing_schedule, "get") else existing_schedule
+        await run_in_threadpool(stripe.SubscriptionSchedule.release, schedule_id)
+
+    schedule = await run_in_threadpool(
+        stripe.SubscriptionSchedule.create,
+        from_subscription=stripe_subscription_id,
+    )
+    current_phase = schedule["phases"][0]
+    current_items = [
+        {"price": item["price"], "quantity": item.get("quantity") or 1}
+        for item in current_phase["items"]
+    ]
+    if new_price_id == settings.stripe_price_yearly:
+        future_duration = {"interval": "year", "interval_count": 1}
+    elif new_price_id == settings.stripe_price_monthly:
+        future_duration = {"interval": "month", "interval_count": 1}
+    else:
+        raise ValueError("new_price_id is not a configured BirthdayMessaging plan")
+
     updated = await run_in_threadpool(
-        stripe.Subscription.modify,
-        stripe_subscription_id,
-        items=[{"id": item_id, "price": new_price_id}],
-        proration_behavior="create_prorations",
+        stripe.SubscriptionSchedule.modify,
+        schedule["id"],
+        end_behavior="release",
+        proration_behavior="none",
+        phases=[
+            {
+                "items": current_items,
+                "start_date": current_phase["start_date"],
+                "end_date": current_phase["end_date"],
+                "proration_behavior": "none",
+            },
+            {
+                "items": [{"price": new_price_id, "quantity": 1}],
+                "duration": future_duration,
+                "proration_behavior": "none",
+            },
+        ],
     )
     return dict(updated)  # type: ignore[call-overload]
 

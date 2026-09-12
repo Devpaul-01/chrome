@@ -108,29 +108,53 @@ class TestReactivateSubscription:
 
 class TestChangeSubscriptionPlan:
     @pytest.mark.asyncio
-    async def test_swaps_price(self):
-        existing_sub = MagicMock()
-        existing_sub.__getitem__ = lambda s, k: {"items": {"data": [{"id": "si_1"}]}}[k]
-        updated_sub = {
-            "id": "sub_123",
-            "items": {"data": [{"id": "si_1", "price": {"id": "price_new"}}]},
+    async def test_schedules_yearly_change_at_period_end_without_proration(self):
+        existing_sub = {"id": "sub_123", "schedule": None}
+        schedule = {
+            "id": "sub_sched_123",
+            "phases": [{
+                "start_date": 1000,
+                "end_date": 2000,
+                "items": [{"price": "price_current", "quantity": 1}],
+            }],
         }
-
-        async def side_effect(*args, **kwargs):
-            # First call = retrieve, second call = modify
-            if args[0] == "stripe.Subscription.retrieve" or "retrieve" in str(args[0]):
-                return existing_sub
-            return updated_sub
-
-        with patch(
-            "app.services.stripe.run_in_threadpool", new_callable=AsyncMock
-        ) as mock_pool:
-            mock_pool.side_effect = [existing_sub, updated_sub]
+        updated_schedule = {"id": "sub_sched_123", "status": "active"}
+        with patch("app.services.stripe.run_in_threadpool", new_callable=AsyncMock) as mock_pool:
+            mock_pool.side_effect = [existing_sub, schedule, updated_schedule]
+            from app.core.config import settings
             from app.services.stripe import change_subscription_plan
+            result = await change_subscription_plan("sub_123", settings.stripe_price_yearly)
+            assert result["id"] == "sub_sched_123"
+            modify_call = mock_pool.await_args_list[2]
+            assert modify_call.kwargs["proration_behavior"] == "none"
+            phases = modify_call.kwargs["phases"]
+            assert phases[0]["start_date"] == 1000
+            assert phases[0]["end_date"] == 2000
+            assert phases[1]["duration"] == {"interval": "year", "interval_count": 1}
+            assert phases[1]["proration_behavior"] == "none"
 
-            result = await change_subscription_plan("sub_123", "price_new")
-            assert result["id"] == "sub_123"
-            assert mock_pool.call_count == 2
+    @pytest.mark.asyncio
+    async def test_existing_schedule_is_released_before_replacing_pending_change(self):
+        schedule = {
+            "id": "sub_sched_new",
+            "phases": [{
+                "start_date": 1000,
+                "end_date": 2000,
+                "items": [{"price": "price_current", "quantity": 1}],
+            }],
+        }
+        with patch("app.services.stripe.run_in_threadpool", new_callable=AsyncMock) as mock_pool:
+            mock_pool.side_effect = [
+                {"id": "sub_123", "schedule": "sub_sched_old"},
+                {"id": "sub_sched_old"},
+                schedule,
+                {"id": "sub_sched_new", "status": "active"},
+            ]
+            from app.core.config import settings
+            from app.services.stripe import change_subscription_plan
+            result = await change_subscription_plan("sub_123", settings.stripe_price_monthly)
+            assert result["id"] == "sub_sched_new"
+            assert mock_pool.call_count == 4
 
 
 class TestCreateCheckoutSession:

@@ -1,5 +1,5 @@
-/**
- * messages.ts — Discriminated-union message types for the Chrome MV3 message bus.
+﻿/**
+ * messages.ts â€” Discriminated-union message types for the Chrome MV3 message bus.
  *
  * Every message passed between the popup, content script, and background service
  * worker must be listed here.  Using a discriminated union (tagged by `type`)
@@ -7,24 +7,23 @@
  * and at every `sendContentMessage` / `sendExtensionMessage` call site.
  *
  * Naming conventions:
- *   auth.*             — authentication / account management
- *   templates.*        — legacy template segments (greeting / body / closing)
- *   subscription.*     — Stripe subscription status & checkout
- *   config.*           — extension configuration (backend URL, WS config)
- *   schedules.*        — per-contact birthday schedule CRUD
- *   automation.*       — automation engine control & state
- *   messages.*         — queued-message & history management
- *   dashboard.*        — dashboard stats & birthday config
- *   contacts.*         — contact CRUD + Facebook scraper
- *   messageGroups.*    — message group CRUD
- *   posts.*            — timeline post CRUD
- *   images.*           — user image library CRUD + upload
- *   smtp.*             — SMTP send config
- *   messageTemplates.* — full message templates with days_in_advance support
+ *   auth.*             â€” authentication / account management
+ *   templates.*        â€” legacy template segments (greeting / body / closing)
+ *   subscription.*     â€” subscription status and provider-neutral checkout
+ *   config.*           â€” extension configuration (backend URL, WS config)
+ *   schedules.*        â€” per-contact birthday schedule CRUD
+ *   automation.*       â€” automation engine control & state
+ *   messages.*         â€” queued-message & history management
+ *   dashboard.*        â€” dashboard stats & birthday config
+ *   contacts.*         â€” contact CRUD + Facebook scraper
+ *   messageGroups.*    â€” message group CRUD
+ *   posts.*            â€” timeline post CRUD
+ *   images.*           â€” user image library CRUD + upload
+ *   smtp.*             â€” SMTP send config
+ *   messageTemplates.* â€” full message templates with days_in_advance support
  */
 
 import {
-  CheckoutSessionRequest,
   SegmentType,
   CreateMessageGroupPayload,
   UpdateMessageGroupPayload,
@@ -43,7 +42,7 @@ import {
 } from '../api/client';
 
 /**
- * Payload dispatched from background → content script to run the full automation loop.
+ * Payload dispatched from background â†’ content script to run the full automation loop.
  * currentDayTemplates: templates for days_in_advance === 0 (birthday today).
  * advanceTemplates: templates for days_in_advance > 0 (sent before birthday).
  * followUpTemplates: templates for days_in_advance < 0 (sent after birthday).
@@ -60,7 +59,7 @@ export interface AutomationRunPayload {
   maxMessages: number;
 }
 
-/** Messages sent from background service worker → content script. */
+/** Messages sent from background service worker â†’ content script. */
 export type ContentScriptMessage =
   | { type: 'automation.scan' }
   | { type: 'automation.runFull'; payload: AutomationRunPayload };
@@ -88,7 +87,14 @@ export type BackgroundMessage =
   | { type: 'templates.delete'; payload: { id: string } }
   // Subscription messages
   | { type: 'subscription.status' }
-  | { type: 'subscription.checkout'; payload: CheckoutSessionRequest }
+  | {
+      type: 'subscription.checkout';
+      payload: {
+        plan: 'monthly' | 'yearly';
+        payment_method: 'bitcoin' | 'monero';
+        idempotency_key: string;
+      };
+    }
   | { type: 'subscription.cancel' }
   | { type: 'subscription.reactivate' }
   | { type: 'subscription.changePlan'; payload: { new_plan: 'monthly' | 'yearly' } }
@@ -159,7 +165,7 @@ export type BackgroundMessage =
   | { type: 'failsafe.setConfirmationMode'; payload: { mode: string } }
   | { type: 'rateLimit.status' }
   | { type: 'rateLimit.record' }
-  // Contact message types — kept for type-safety of restored UI files.
+  // Contact message types â€” kept for type-safety of restored UI files.
   // Runtime handlers for list/create/update/delete are commented out in background/index.ts.
   | { type: 'contacts.list'; payload?: { updatedSince?: string } }
   | { type: 'contacts.create'; payload: CreateContactPayload }

@@ -32,6 +32,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status, Request
+from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.errors import AppError, ErrorCodes
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -51,7 +52,7 @@ from app.core.jwt import (
     decode_token,
     ensure_token_type,
 )
-from app.core.security import hash_password, verify_password
+from app.core.security import hash_password, password_needs_rehash, verify_password
 from app.db.models import (
     User,
     RevokedToken,
@@ -313,6 +314,10 @@ async def login(
             "Please verify your email before logging in. Check your inbox for the verification link.",
         )
 
+    # Upgrade a successfully authenticated legacy bcrypt hash only after account-state checks pass.
+    if password_needs_rehash(user.password_hash):
+        user.password_hash = hash_password(data.password)
+
     # Successful login — reset lockout state
     user.failed_login_count = 0
     user.locked_until = None
@@ -320,6 +325,32 @@ async def login(
     response, _ = await _issue_session_tokens(user, db, request)
     await db.commit()
     return response
+
+
+
+@router.post("/token", response_model=TokenResponse)
+async def oauth2_token(
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    """
+    OAuth2 password-flow adapter for Swagger/OpenAPI.
+
+    Swagger sends username/password as form data. BirthdayMessaging's normal
+    /auth/login endpoint accepts JSON, so this adapter maps username -> email
+    and reuses the existing login flow without changing the application's
+    normal login contract.
+    """
+    login_data = LoginRequest(
+        email=form_data.username,
+        password=form_data.password,
+    )
+    return await login(
+        request=request,
+        data=login_data,
+        db=db,
+    )
 
 
 @router.post("/refresh", response_model=TokenResponse)

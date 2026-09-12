@@ -1,41 +1,45 @@
 module.exports = {
-  globals: {
-    chrome: 'readonly',
-  },
   root: true,
   env: {
     browser: true,
-    es2021: true,
+    es2022: true,
     node: true,
   },
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    ecmaVersion: 2021,
+    ecmaVersion: 'latest',
     sourceType: 'module',
     ecmaFeatures: { jsx: true },
   },
-  plugins: ['@typescript-eslint', 'react', 'react-hooks', 'prettier', 'jsx-a11y'],
+  plugins: [
+    '@typescript-eslint',
+    'react',
+    'react-hooks',
+    'jsx-a11y',
+  ],
   extends: [
     'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
     'plugin:jsx-a11y/recommended',
-    'plugin:prettier/recommended',
+    'plugin:@typescript-eslint/recommended',
     'prettier',
   ],
   settings: {
     react: { version: 'detect' },
   },
+  ignorePatterns: [
+    'dist/',
+    'node_modules/',
+  ],
   rules: {
     'react/react-in-jsx-scope': 'off',
-    'prettier/prettier': 'warn',
     '@typescript-eslint/no-unused-vars': [
       'error',
       {
-        varsIgnorePattern: '^_',
         argsIgnorePattern: '^_',
-        destructuredArrayIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
       },
     ],
   },

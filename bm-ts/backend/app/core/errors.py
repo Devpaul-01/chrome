@@ -1,5 +1,5 @@
 """
-core/errors.py — Structured application error infrastructure.
+core/errors.py â€” Structured application error infrastructure.
 
 Usage in routers
 ----------------
@@ -68,6 +68,12 @@ class ErrorCodes:
     SMTP_CONFIG_NOT_FOUND = "smtp_config_not_found"
     SUBSCRIPTION_NOT_FOUND = "subscription_not_found"
 
+    # Paid access / entitlement authorization
+    SUBSCRIPTION_REQUIRED = "subscription_required"
+    SUBSCRIPTION_EXPIRED = "subscription_expired"
+    SUBSCRIPTION_NOT_YET_ACTIVE = "subscription_not_yet_active"
+    SUBSCRIPTION_INACTIVE = "subscription_inactive"
+
     # Request / input errors
     INVALID_IMAGE_DATA = "invalid_image_data"
     IMAGE_SIZE_MISMATCH = "image_size_mismatch"
@@ -77,6 +83,14 @@ class ErrorCodes:
     SUBSCRIPTION_NOT_PENDING_CANCELLATION = "subscription_not_pending_cancellation"
     ALREADY_ON_PLAN = "already_on_plan"
     NO_BILLING_ACCOUNT = "no_billing_account"
+    PAYMENT_IDEMPOTENCY_REQUIRED = "payment_idempotency_required"
+    PAYMENT_IDEMPOTENCY_INVALID = "payment_idempotency_invalid"
+    PAYMENT_IDEMPOTENCY_CONFLICT = "payment_idempotency_conflict"
+    PAYMENT_CHECKOUT_IN_PROGRESS = "payment_checkout_in_progress"
+    PAYMENT_PROVIDER_UNCERTAIN = "payment_provider_uncertain"
+    PAYMENT_CHECKOUT_INCONSISTENT = "payment_checkout_inconsistent"
+    PAYMENT_CHECKOUT_NOT_FOUND = "payment_checkout_not_found"
+    PAYMENT_CHECKOUT_NOT_RECOVERABLE = "payment_checkout_not_recoverable"
     MISSING_STRIPE_SIGNATURE = "missing_stripe_signature"
     INVALID_STRIPE_PAYLOAD = "invalid_stripe_payload"
     INVALID_STRIPE_SIGNATURE = "invalid_stripe_signature"

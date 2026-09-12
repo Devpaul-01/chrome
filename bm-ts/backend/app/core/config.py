@@ -49,6 +49,28 @@ class Settings(BaseSettings):
         default="price_yearly_placeholder", alias="STRIPE_PRICE_YEARLY"
     )
 
+    # BTCPay Server
+    btcpay_url: str = Field(
+        default="https://btcpay.birthdaymessaging.io",
+        alias="BTCPAY_URL",
+    )
+    btcpay_public_url: str = Field(
+        default="https://btcpay.birthdaymessaging.io",
+        alias="BTCPAY_PUBLIC_URL",
+    )
+    btcpay_store_id: str = Field(
+        default="",
+        alias="BTCPAY_STORE_ID",
+    )
+    btcpay_api_key: str = Field(
+        default="",
+        alias="BTCPAY_API_KEY",
+    )
+    btcpay_webhook_secret: str = Field(
+    default="",
+    alias="BTCPAY_WEBHOOK_SECRET",
+    )
+
     @field_validator("stripe_api_key", mode="after")
     @classmethod
     def validate_stripe_api_key(cls, v: str) -> str:
@@ -71,6 +93,20 @@ class Settings(BaseSettings):
         default="generate-with-fernet", alias="SMTP_ENCRYPTION_KEY"
     )
     sendgrid_api_key: str = Field(default="", alias="SENDGRID_API_KEY")
+    notification_provider: str = Field(default="cloudflare_smtp", alias="NOTIFICATION_PROVIDER")
+    email_from_name: str = Field(default="BirthdayMessaging", alias="EMAIL_FROM_NAME")
+    cloudflare_smtp_host: str = Field(default="smtp.mx.cloudflare.net", alias="CLOUDFLARE_SMTP_HOST")
+    cloudflare_smtp_port: int = Field(default=465, alias="CLOUDFLARE_SMTP_PORT")
+    cloudflare_smtp_username: str = Field(default="api_token", alias="CLOUDFLARE_SMTP_USERNAME")
+    cloudflare_email_api_token: str = Field(default="", alias="CLOUDFLARE_EMAIL_API_TOKEN")
+    cloudflare_smtp_timeout_seconds: int = Field(default=30, ge=5, le=120, alias="CLOUDFLARE_SMTP_TIMEOUT_SECONDS")
+    account_url: str = Field(default="https://birthdaymessaging.com", alias="ACCOUNT_URL")
+    support_email: str = Field(default="support@birthdaymessaging.com", alias="SUPPORT_EMAIL")
+    notification_worker_batch_size: int = Field(default=50, ge=1, le=500, alias="NOTIFICATION_WORKER_BATCH_SIZE")
+    notification_worker_interval_seconds: int = Field(default=30, ge=1, le=3600, alias="NOTIFICATION_WORKER_INTERVAL_SECONDS")
+    notification_processing_lease_seconds: int = Field(default=900, ge=30, le=86400, alias="NOTIFICATION_PROCESSING_LEASE_SECONDS")
+    notification_max_attempts: int = Field(default=5, ge=1, le=50, alias="NOTIFICATION_MAX_ATTEMPTS")
+    notification_shutdown_grace_seconds: int = Field(default=30, ge=1, le=300, alias="NOTIFICATION_SHUTDOWN_GRACE_SECONDS")
     sentry_dsn: str = Field(default="", alias="SENTRY_DSN")
     sentry_environment: str = Field(default="production", alias="SENTRY_ENVIRONMENT")
     email_from_address: str = Field(default="", alias="EMAIL_FROM_ADDRESS")
