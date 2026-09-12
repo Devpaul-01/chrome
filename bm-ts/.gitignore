@@ -28,3 +28,7 @@ wallet/
 wallets/
 secrets/
 credentials/
+
+# Safe deployment templates
+!.env.example
+!.env.production.example
