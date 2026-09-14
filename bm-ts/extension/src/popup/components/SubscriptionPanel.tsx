@@ -148,11 +148,14 @@ export default function SubscriptionPanel() {
     setShowPaymentModal(true);
   }
 
-  async function handleCheckout(plan: 'monthly' | 'yearly') {
+  async function handleCheckout(
+    plan: 'monthly' | 'yearly',
+    selectedPaymentMethod: 'bitcoin' | 'monero',
+  ) {
     setActionLoading(`checkout:${plan}`);
     setError(null);
 
-    const checkoutKey = `${plan}:${paymentMethod}`;
+    const checkoutKey = `${plan}:${selectedPaymentMethod}`;
     let idempotencyKey = checkoutKeysRef.current[checkoutKey];
     if (!idempotencyKey) {
       idempotencyKey = crypto.randomUUID();
@@ -164,7 +167,7 @@ export default function SubscriptionPanel() {
         type: 'subscription.checkout',
         payload: {
           plan,
-          payment_method: paymentMethod,
+          payment_method: selectedPaymentMethod,
           idempotency_key: idempotencyKey,
         },
       });
@@ -617,7 +620,7 @@ export default function SubscriptionPanel() {
                   type="button"
                   onClick={() => {
                     setPaymentMethod('bitcoin');
-                    void handleCheckout(checkoutPlan);
+                    void handleCheckout(checkoutPlan, 'bitcoin');
                   }}
                   className="w-full flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3 text-left hover:border-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-60"
                   disabled={!!actionLoading}
@@ -640,7 +643,7 @@ export default function SubscriptionPanel() {
                   type="button"
                   onClick={() => {
                     setPaymentMethod('monero');
-                    void handleCheckout(checkoutPlan);
+                    void handleCheckout(checkoutPlan, 'monero');
                   }}
                   className="w-full flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3 text-left hover:border-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-60"
                   disabled={!!actionLoading}
