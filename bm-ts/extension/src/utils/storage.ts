@@ -68,7 +68,7 @@ export async function clearTokens(): Promise<void> {
  * Falls back to `http://localhost:8000` when the user has not set a custom URL,
  * which covers local development without any extra configuration.
  * Trailing slashes are stripped so that path concatenation in client.ts always
- * produces a single `/` (e.g. avoids `//api/login` if the stored value has a trailing slash).
+ * produces a single `/` (e.g. avoids `//auth/login` if the stored value has a trailing slash).
  */
 export async function getBackendUrl(): Promise<string> {
   return new Promise((resolve) => {

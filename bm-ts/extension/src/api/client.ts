@@ -43,7 +43,7 @@ type JsonBody = object | unknown[] | string | number | boolean | null | undefine
  * a consistent error type regardless of which endpoint failed.
  *
  * @param baseUrl - Backend base URL (e.g. `http://localhost:8000`).
- * @param path    - API path starting with `/` (e.g. `/api/login`).
+ * @param path    - API path starting with `/` (e.g. `/auth/login`).
  * @param method  - HTTP verb.
  * @param body    - Optional request body; will be JSON-stringified.
  * @param accessToken - If provided, attached as `Authorization: Bearer <token>`.
@@ -204,7 +204,7 @@ export async function register(
 export async function login(baseUrl: string, payload: RegisterPayload): Promise<TokenResponse> {
   // Password verification (especially the backend's timing-safe dummy hash for
   // unknown accounts) can legitimately take longer than the general API limit.
-  return request<TokenResponse>(baseUrl, '/api/login', 'POST', payload, undefined, 30_000);
+  return request<TokenResponse>(baseUrl, '/auth/login', 'POST', payload, undefined, 30_000);
 }
 
 /** Exchange a valid refresh token for a new access/refresh token pair. */

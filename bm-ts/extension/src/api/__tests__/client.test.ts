@@ -94,7 +94,7 @@ describe('API request helpers (via login)', () => {
     await login(BASE, { email: 'user@example.com', password: 'Pass1234' });
 
     const [calledUrl] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(calledUrl).toBe(`${BASE}/api/login`);
+    expect(calledUrl).toBe(`${BASE}/auth/login`);
   });
 
   it('allows extra time for password verification during login', async () => {

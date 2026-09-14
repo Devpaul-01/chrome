@@ -94,10 +94,27 @@ export function parseApiError(error: unknown): AppError {
       case 400:
         return new ValidationError(message);
       case 401:
+        return new AuthenticationError('The email or password you entered is incorrect.');
       case 403:
-        return new AuthenticationError(message);
+        if (
+          message.toLowerCase().includes('verify your email') ||
+          message.toLowerCase().includes('check your inbox')
+        ) {
+          return new AuthenticationError(message);
+        }
+        if (message.toLowerCase().includes('locked')) {
+          return new AuthenticationError(
+            'Your account is temporarily locked after too many failed sign-in attempts. Please try again later.',
+          );
+        }
+        return new AuthenticationError('We could not sign you in. Please try again.');
       case 404:
-        return new AppError(message || 'Resource not found', 'NOT_FOUND', 404);
+        return new AppError(
+          'We could not reach the BirthdayMessaging sign-in service. Please try again.',
+          'NOT_FOUND',
+          404,
+          true,
+        );
       case 409:
         return new AppError(message || 'Conflict occurred', 'CONFLICT', 409);
       case 422:
@@ -108,7 +125,9 @@ export function parseApiError(error: unknown): AppError {
       case 502:
       case 503:
       case 504:
-        return new ServerError(message);
+        return new ServerError(
+          'BirthdayMessaging is temporarily unavailable. Please try again shortly.',
+        );
       default:
         return new AppError(message, 'UNKNOWN_ERROR', status);
     }

@@ -4,6 +4,7 @@ import AuthForm from '../popup/components/AuthForm';
 import ForgotPassword from '../popup/components/ForgotPassword';
 import ResendVerificationEmailButton from '../popup/components/ResendVerificationEmailButton';
 import { sendBackgroundMessage } from '../popup/api';
+import { getErrorMessage } from '../utils/errors';
 
 type AuthMode = 'login' | 'register' | 'forgot-password' | 'verify-email-pending';
 
@@ -38,7 +39,7 @@ export default function App() {
         setAuthMode('verify-email-pending');
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      const msg = getErrorMessage(err);
       // Backend returns a 403 EMAIL_NOT_VERIFIED message on login for
       // unverified accounts — route those into the same pending-verification
       // screen used after registration instead of showing a raw error.
