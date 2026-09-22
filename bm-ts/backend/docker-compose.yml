@@ -1,5 +1,6 @@
 services:
   db:
+    restart: unless-stopped
     image: postgres:15
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -10,7 +11,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-birthdaymessaging}"]
       interval: 5s
       timeout: 5s
       retries: 5
