@@ -8,7 +8,6 @@ import type {
 import { sendBackgroundMessage } from '../api';
 import Spinner from './Spinner';
 import HelpTooltip from './HelpTooltip';
-import FeatureTip from './FeatureTip';
 
 /* â”€â”€â”€ plan display constants; backend remains authoritative for pricing â”€â”€â”€ */
 const PLANS = {
@@ -291,7 +290,7 @@ export default function SubscriptionPanel() {
             onClick={() => setError(null)}
             aria-label="Dismiss error"
           >
-            Ã—
+            ×
           </button>
         </div>
       )}
@@ -311,10 +310,6 @@ export default function SubscriptionPanel() {
           <HelpTooltip label="Your subscription status determines access to premium features. Active and Trialing subscriptions have full access. If your payment fails, you'll enter a grace period before losing access." />
         </h2>
 
-        <FeatureTip
-          tipId="subscription_overview"
-          message=""
-        />
         <div className="flex items-center gap-3 mb-3">
           <span
             className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${badge.className}`}
@@ -516,7 +511,7 @@ export default function SubscriptionPanel() {
                 className="text-gray-400 hover:text-gray-600 text-xl leading-none"
                 aria-label="Close"
               >
-                Ã—
+                ×
               </button>
             </div>
 
@@ -694,7 +689,7 @@ export default function SubscriptionPanel() {
                 className="text-gray-400 hover:text-gray-600 text-xl leading-none"
                 aria-label="Close"
               >
-                Ã—
+                ×
               </button>
             </div>
 
