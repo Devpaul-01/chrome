@@ -265,3 +265,25 @@ async def request(
         raise RapydResponseError("Rapyd response is missing the data object.")
 
     return response_data
+async def create_hosted_checkout(
+    *,
+    amount: Any,
+    currency: str,
+    merchant_reference_id: str,
+    idempotency_key: str,
+    description: str | None = None,
+) -> dict[str, Any]:
+    """Create one Hosted Checkout without automatic financial retries."""
+    payload: dict[str, Any] = {
+        "amount": float(amount),
+        "currency": str(currency).upper(),
+        "merchant_reference_id": merchant_reference_id,
+    }
+    if description:
+        payload["description"] = description
+    return await request(
+        method="POST",
+        path="/v1/checkout",
+        payload=payload,
+        idempotency_key=idempotency_key,
+    )

@@ -63,3 +63,7 @@ class BTCPayCheckoutStatusResponse(BaseModel):
     updated_at: datetime
     completed_at: datetime | None = None
     recoverable: bool
+
+class RapydCheckoutRequest(BaseModel):
+    # Client selects only a plan; BirthdayMessaging owns price and currency.
+    plan_code: str

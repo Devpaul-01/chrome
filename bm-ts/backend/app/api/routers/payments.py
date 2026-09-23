@@ -23,8 +23,16 @@ from app.core.config import settings
 from app.core.errors import AppError, ErrorCodes
 from app.db.models import PaymentCheckoutAttempt, PaymentTransaction, PaymentWebhookEvent, User
 from app.db.session import get_db
-from app.schemas.payment import BTCPayCheckoutRequest, BTCPayCheckoutResponse, BTCPayCheckoutStatusResponse, BTCPayTestInvoiceResponse
+from app.schemas.payment import BTCPayCheckoutRequest, BTCPayCheckoutResponse, BTCPayCheckoutStatusResponse, BTCPayTestInvoiceResponse, RapydCheckoutRequest
 from app.services.btcpay import create_invoice, public_checkout_url, find_invoice_by_order_id
+from app.services.rapyd import (
+    RapydConfigurationError,
+    RapydProviderError,
+    RapydRateLimitError,
+    RapydResponseError,
+    RapydTransportError,
+    create_hosted_checkout,
+)
 from app.services.entitlements import grant_entitlement_for_settled_payment
 from app.services.notifications import enqueue_payment_lifecycle_notifications
 from app.services.payment_plans import get_payment_plan
@@ -336,6 +344,217 @@ async def create_btcpay_checkout(
         term_months=plan.term_months,
     )
 
+    return _checkout_response(attempt, transaction, reused=False)
+
+async def _finalize_rapyd_checkout(
+    *,
+    db: AsyncSession,
+    attempt: PaymentCheckoutAttempt,
+    checkout: dict,
+    term_months: int,
+) -> PaymentTransaction:
+    provider_payment_id = str(checkout.get("id") or "")
+    checkout_url = str(checkout.get("redirect_url") or "")
+    provider_status = str(checkout.get("status") or "NEW")
+    if not provider_payment_id or not checkout_url or not checkout_url.startswith("https://"):
+        raise AppError(
+            status.HTTP_502_BAD_GATEWAY,
+            ErrorCodes.PAYMENT_CHECKOUT_INCONSISTENT,
+            "Rapyd returned incomplete checkout information.",
+        )
+    existing = await _existing_checkout_transaction(db, attempt)
+    if existing is not None:
+        return existing
+    now = datetime.now(timezone.utc)
+    transaction = PaymentTransaction(
+        id=uuid4(), user_id=attempt.user_id, provider="rapyd",
+        provider_payment_id=provider_payment_id,
+        provider_order_id=attempt.provider_order_id,
+        checkout_attempt_id=attempt.id, amount=attempt.amount,
+        currency=attempt.currency, status=provider_status,
+        checkout_url=checkout_url, payment_method="rapyd_hosted_checkout",
+        plan_code=attempt.plan_code, paid_at=None, expires_at=None,
+        created_at=now, updated_at=now,
+        metadata_payload={
+            "rapyd_checkout_id": provider_payment_id,
+            "checkout_attempt_id": str(attempt.id),
+            "billing_term_months": term_months,
+            "payment_method": "rapyd_hosted_checkout",
+            "phase": "production-checkout",
+        },
+    )
+    db.add(transaction)
+    attempt.provider_payment_id = provider_payment_id
+    attempt.checkout_url = checkout_url
+    attempt.status = "completed"
+    attempt.failure_code = None
+    attempt.claim_expires_at = None
+    attempt.completed_at = now
+    attempt.updated_at = now
+    await db.commit()
+    await db.refresh(attempt)
+    await db.refresh(transaction)
+    return transaction
+
+
+@router.post(
+    "/rapyd/checkout",
+    response_model=BTCPayCheckoutResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_rapyd_checkout(
+    payload: RapydCheckoutRequest,
+    response: Response,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> BTCPayCheckoutResponse:
+    """Create one durable Rapyd checkout; never duplicate ambiguous attempts."""
+    key = _validate_idempotency_key(idempotency_key)
+    plan = get_payment_plan(payload.plan_code)
+    now = datetime.now(timezone.utc)
+    result = await db.execute(
+        select(PaymentCheckoutAttempt).where(
+            PaymentCheckoutAttempt.provider == "rapyd",
+            PaymentCheckoutAttempt.user_id == current_user.id,
+            PaymentCheckoutAttempt.idempotency_key == key,
+        )
+    )
+    attempt = result.scalar_one_or_none()
+    if attempt is not None:
+        if attempt.plan_code != plan.code:
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCodes.PAYMENT_IDEMPOTENCY_CONFLICT,
+                "This Idempotency-Key was already used for a different payment plan.",
+            )
+        existing_tx = await _existing_checkout_transaction(db, attempt)
+        if existing_tx is not None:
+            response.status_code = status.HTTP_200_OK
+            return _checkout_response(attempt, existing_tx, reused=True)
+        if attempt.status in {"claimed", "uncertain"}:
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCodes.PAYMENT_CHECKOUT_IN_PROGRESS,
+                "Payment checkout is awaiting provider reconciliation. Retry with the same Idempotency-Key; do not start a second checkout.",
+            )
+        raise AppError(
+            status.HTTP_409_CONFLICT,
+            ErrorCodes.PAYMENT_CHECKOUT_NOT_RECOVERABLE,
+            "This payment checkout cannot be reused.",
+        )
+
+    attempt_id = uuid4()
+    attempt = PaymentCheckoutAttempt(
+        id=attempt_id, user_id=current_user.id, provider="rapyd",
+        idempotency_key=key, plan_code=plan.code, amount=plan.amount,
+        currency=plan.currency, provider_order_id=f"BM-RAPYD-{attempt_id}",
+        provider_payment_id=None, checkout_url=None, status="claimed",
+        failure_code=None,
+        claim_expires_at=now + timedelta(seconds=_CHECKOUT_CLAIM_SECONDS),
+        completed_at=None, created_at=now, updated_at=now,
+        metadata_payload={
+            "billing_term_months": plan.term_months,
+            "catalog_price_env": plan.price_env_name,
+            "payment_method": "rapyd_hosted_checkout",
+        },
+    )
+    db.add(attempt)
+    try:
+        await db.commit()
+        await db.refresh(attempt)
+    except IntegrityError:
+        await db.rollback()
+        result = await db.execute(
+            select(PaymentCheckoutAttempt).where(
+                PaymentCheckoutAttempt.provider == "rapyd",
+                PaymentCheckoutAttempt.user_id == current_user.id,
+                PaymentCheckoutAttempt.idempotency_key == key,
+            )
+        )
+        attempt = result.scalar_one_or_none()
+        if attempt is None:
+            raise
+        if attempt.plan_code != plan.code:
+            raise AppError(
+                status.HTTP_409_CONFLICT,
+                ErrorCodes.PAYMENT_IDEMPOTENCY_CONFLICT,
+                "This Idempotency-Key was already used for a different payment plan.",
+            )
+        existing_tx = await _existing_checkout_transaction(db, attempt)
+        if existing_tx is not None:
+            response.status_code = status.HTTP_200_OK
+            return _checkout_response(attempt, existing_tx, reused=True)
+        raise AppError(
+            status.HTTP_409_CONFLICT,
+            ErrorCodes.PAYMENT_CHECKOUT_IN_PROGRESS,
+            "Payment checkout is already being created. Retry with the same Idempotency-Key.",
+        )
+
+    try:
+        checkout = await create_hosted_checkout(
+            amount=plan.amount, currency=plan.currency,
+            merchant_reference_id=attempt.provider_order_id,
+            idempotency_key=key, description=plan.display_name,
+        )
+    except RapydRateLimitError as exc:
+        attempt.status = "uncertain"
+        attempt.failure_code = "provider_rate_limited"
+        attempt.claim_expires_at = now + timedelta(minutes=10)
+        attempt.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        headers = {"Retry-After": str(int(exc.retry_after))} if exc.retry_after is not None else None
+        raise AppError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            ErrorCodes.PAYMENT_PROVIDER_UNCERTAIN,
+            "Payment provider is temporarily busy. Retry with the same Idempotency-Key; do not start a second checkout.",
+            headers=headers,
+        ) from exc
+    except (RapydTransportError, RapydResponseError) as exc:
+        attempt.status = "uncertain"
+        attempt.failure_code = "provider_create_uncertain"
+        attempt.claim_expires_at = now + timedelta(minutes=10)
+        attempt.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        raise AppError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            ErrorCodes.PAYMENT_PROVIDER_UNCERTAIN,
+            "Payment provider status is uncertain. Retry with the same Idempotency-Key; do not start a second checkout.",
+        ) from exc
+    except RapydConfigurationError as exc:
+        attempt.status = "failed"
+        attempt.failure_code = "provider_configuration"
+        attempt.claim_expires_at = None
+        attempt.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        raise AppError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            ErrorCodes.INTERNAL_SERVER_ERROR,
+            "Card payments are temporarily unavailable.",
+        ) from exc
+    except RapydProviderError as exc:
+        attempt.status = "failed"
+        attempt.failure_code = "provider_rejected"
+        attempt.claim_expires_at = None
+        attempt.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        raise AppError(
+            status.HTTP_502_BAD_GATEWAY,
+            ErrorCodes.BAD_REQUEST,
+            "The payment provider could not create this checkout.",
+        ) from exc
+
+    try:
+        transaction = await _finalize_rapyd_checkout(
+            db=db, attempt=attempt, checkout=checkout, term_months=plan.term_months
+        )
+    except AppError:
+        attempt.status = "uncertain"
+        attempt.failure_code = "provider_response_inconsistent"
+        attempt.claim_expires_at = now + timedelta(minutes=10)
+        attempt.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        raise
     return _checkout_response(attempt, transaction, reused=False)
 
 def _checkout_status_response(
