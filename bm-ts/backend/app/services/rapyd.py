@@ -1,0 +1,267 @@
+"""Rapyd REST API provider foundation.
+
+This module owns provider-specific transport concerns only:
+- deterministic canonical JSON request serialization;
+- Rapyd request authentication/signing;
+- explicit connect/read timeout boundaries;
+- provider response-envelope validation;
+- safe provider failure classification.
+
+Business checkout idempotency, durable checkout attempts, reconciliation,
+settlement, entitlements, and user-facing errors remain in BirthdayMessaging.
+"""
+
+from __future__ import annotations
+
+import base64
+import hashlib
+import hmac
+import json
+import logging
+import secrets
+import time
+from dataclasses import dataclass
+from typing import Any, Mapping
+
+import httpx
+
+from app.core.config import settings
+
+
+logger = logging.getLogger(__name__)
+
+
+class RapydError(Exception):
+    """Base exception for Rapyd provider failures."""
+
+
+class RapydConfigurationError(RapydError):
+    """Rapyd is not safely configured."""
+
+
+class RapydTransportError(RapydError):
+    """Rapyd could not be reached or the response could not be read."""
+
+
+class RapydRateLimitError(RapydError):
+    """Rapyd throttled the request."""
+
+    def __init__(self, *, retry_after: float | None = None) -> None:
+        super().__init__("Rapyd temporarily rate-limited the request.")
+        self.retry_after = retry_after
+
+
+class RapydProviderError(RapydError):
+    """Rapyd returned an authenticated application/provider error."""
+
+    def __init__(self, *, status_code: int, provider_code: str | None = None) -> None:
+        super().__init__("Rapyd rejected the provider request.")
+        self.status_code = status_code
+        self.provider_code = provider_code
+
+
+class RapydResponseError(RapydError):
+    """Rapyd returned a malformed or inconsistent response."""
+
+
+@dataclass(frozen=True)
+class RapydRequest:
+    method: str
+    path: str
+    body: str
+    salt: str
+    timestamp: str
+    signature: str
+
+
+def _require_config() -> None:
+    base_url = settings.rapyd_base_url.strip()
+    access_key = settings.rapyd_access_key.strip()
+    secret_key = settings.rapyd_secret_key.strip()
+
+    if not base_url.startswith("https://"):
+        raise RapydConfigurationError("Rapyd API URL must use HTTPS.")
+    if not access_key or not secret_key:
+        raise RapydConfigurationError("Rapyd credentials are not configured.")
+
+
+def canonical_json(payload: Mapping[str, Any] | None) -> str:
+    """Serialize exactly the representation that will be signed and transmitted."""
+    if payload is None:
+        return ""
+    return json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
+
+def sign_request(
+    *,
+    method: str,
+    path: str,
+    body: str,
+    salt: str,
+    timestamp: str,
+    access_key: str,
+    secret_key: str,
+) -> str:
+    """Create Rapyd's base64-encoded HMAC-SHA256 request signature."""
+    to_sign = (
+        method.lower()
+        + path
+        + salt
+        + timestamp
+        + access_key
+        + secret_key
+        + body
+    )
+    digest = hmac.new(
+        secret_key.encode("utf-8"),
+        to_sign.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return base64.b64encode(digest.encode("ascii")).decode("ascii")
+
+
+def build_request(
+    *,
+    method: str,
+    path: str,
+    payload: Mapping[str, Any] | None = None,
+    salt: str | None = None,
+    timestamp: int | None = None,
+) -> RapydRequest:
+    _require_config()
+
+    if not path.startswith("/"):
+        raise ValueError("Rapyd request path must begin with '/'.")
+
+    body = canonical_json(payload)
+    request_salt = salt or secrets.token_hex(8)
+    request_timestamp = str(timestamp if timestamp is not None else int(time.time()))
+
+    signature = sign_request(
+        method=method,
+        path=path,
+        body=body,
+        salt=request_salt,
+        timestamp=request_timestamp,
+        access_key=settings.rapyd_access_key,
+        secret_key=settings.rapyd_secret_key,
+    )
+
+    return RapydRequest(
+        method=method.upper(),
+        path=path,
+        body=body,
+        salt=request_salt,
+        timestamp=request_timestamp,
+        signature=signature,
+    )
+
+
+def _retry_after(headers: httpx.Headers) -> float | None:
+    value = headers.get("Retry-After")
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except ValueError:
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def _provider_code(payload: Any) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+    status = payload.get("status")
+    if not isinstance(status, dict):
+        return None
+    code = status.get("error_code")
+    return str(code) if code else None
+
+
+async def request(
+    *,
+    method: str,
+    path: str,
+    payload: Mapping[str, Any] | None = None,
+    idempotency_key: str | None = None,
+) -> dict[str, Any]:
+    """Execute one signed Rapyd request.
+
+    This function intentionally performs no automatic retries. For financial
+    POSTs a timeout or 5xx may represent an accepted-but-unobserved operation.
+    The checkout orchestration/reconciliation layer decides what is safe.
+    """
+    signed = build_request(method=method, path=path, payload=payload)
+
+    headers = {
+        "access_key": settings.rapyd_access_key,
+        "salt": signed.salt,
+        "timestamp": signed.timestamp,
+        "signature": signed.signature,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    if idempotency_key:
+        headers["idempotency"] = idempotency_key
+
+    timeout = httpx.Timeout(
+        connect=settings.rapyd_connect_timeout_seconds,
+        read=settings.rapyd_read_timeout_seconds,
+        write=settings.rapyd_read_timeout_seconds,
+        pool=settings.rapyd_connect_timeout_seconds,
+    )
+
+    try:
+        async with httpx.AsyncClient(
+            base_url=settings.rapyd_base_url.rstrip("/"),
+            timeout=timeout,
+        ) as client:
+            response = await client.request(
+                signed.method,
+                signed.path,
+                content=signed.body.encode("utf-8") if signed.body else None,
+                headers=headers,
+            )
+    except (httpx.TimeoutException, httpx.NetworkError) as exc:
+        logger.warning(
+            "rapyd_transport_uncertain",
+            extra={"event": "rapyd_transport_uncertain", "path": path},
+        )
+        raise RapydTransportError("Rapyd request outcome is uncertain.") from exc
+
+    if response.status_code == 429:
+        raise RapydRateLimitError(retry_after=_retry_after(response.headers))
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise RapydResponseError("Rapyd returned invalid JSON.") from exc
+
+    if not isinstance(data, dict):
+        raise RapydResponseError("Rapyd returned an invalid response envelope.")
+
+    if response.status_code >= 500:
+        raise RapydTransportError("Rapyd returned a temporary provider failure.")
+
+    provider_status = data.get("status")
+    provider_success = (
+        isinstance(provider_status, dict)
+        and str(provider_status.get("status") or "").upper() == "SUCCESS"
+    )
+
+    if response.status_code >= 400 or not provider_success:
+        raise RapydProviderError(
+            status_code=response.status_code,
+            provider_code=_provider_code(data),
+        )
+
+    response_data = data.get("data")
+    if not isinstance(response_data, dict):
+        raise RapydResponseError("Rapyd response is missing the data object.")
+
+    return response_data

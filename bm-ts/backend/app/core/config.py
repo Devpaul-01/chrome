@@ -49,6 +49,20 @@ class Settings(BaseSettings):
         default="price_yearly_placeholder", alias="STRIPE_PRICE_YEARLY"
     )
 
+    # Rapyd Payments - credentials remain server-side only.
+    rapyd_base_url: str = Field(
+        default="https://sandboxapi.rapyd.net",
+        alias="RAPYD_BASE_URL",
+    )
+    rapyd_access_key: str = Field(default="", alias="RAPYD_ACCESS_KEY")
+    rapyd_secret_key: str = Field(default="", alias="RAPYD_SECRET_KEY")
+    rapyd_connect_timeout_seconds: float = Field(
+        default=5.0, ge=1.0, le=30.0, alias="RAPYD_CONNECT_TIMEOUT_SECONDS"
+    )
+    rapyd_read_timeout_seconds: float = Field(
+        default=20.0, ge=1.0, le=120.0, alias="RAPYD_READ_TIMEOUT_SECONDS"
+    )
+
     # BTCPay Server
     btcpay_url: str = Field(
         default="https://btcpay.birthdaymessaging.io",
