@@ -62,6 +62,16 @@ class Settings(BaseSettings):
     rapyd_read_timeout_seconds: float = Field(
         default=20.0, ge=1.0, le=120.0, alias="RAPYD_READ_TIMEOUT_SECONDS"
     )
+    rapyd_webhook_url: str = Field(default="", alias="RAPYD_WEBHOOK_URL")
+    rapyd_webhook_max_age_seconds: int = Field(
+        default=60, ge=30, le=300, alias="RAPYD_WEBHOOK_MAX_AGE_SECONDS"
+    )
+    rapyd_webhook_max_future_seconds: int = Field(
+        default=5, ge=0, le=30, alias="RAPYD_WEBHOOK_MAX_FUTURE_SECONDS"
+    )
+    rapyd_webhook_max_body_bytes: int = Field(
+        default=262144, ge=16384, le=1048576, alias="RAPYD_WEBHOOK_MAX_BODY_BYTES"
+    )
 
     # BTCPay Server
     btcpay_url: str = Field(

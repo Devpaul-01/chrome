@@ -13,6 +13,10 @@ def _settings():
         btcpay_store_id="store-123",
         btcpay_api_key="api-key-12345678901234567890",
         btcpay_webhook_secret="webhook-secret-123456789012345",
+        rapyd_base_url="https://sandboxapi.rapyd.net",
+        rapyd_access_key="rapyd-access-key-test",
+        rapyd_secret_key="rapyd-secret-key-test-123456789",
+        rapyd_webhook_url="https://api.example.test/api/payments/rapyd/webhook",
     )
 
 
@@ -90,3 +94,29 @@ def test_internal_public_checkout_url_is_rejected(monkeypatch):
         assert "BTCPAY_PUBLIC_URL" in str(exc)
     else:
         raise AssertionError("unsafe BTCPAY_PUBLIC_URL was accepted")
+
+
+def test_production_config_fails_closed_when_rapyd_config_is_incomplete(monkeypatch):
+    _production_env(monkeypatch)
+    bad = _settings()
+    bad.rapyd_base_url = "http://localhost:8080"
+    bad.rapyd_access_key = ""
+    bad.rapyd_secret_key = ""
+    bad.rapyd_webhook_url = ""
+
+    with pytest.raises(RuntimeError) as exc:
+        validate_payment_production_config(bad)
+
+    message = str(exc.value)
+    assert "RAPYD_BASE_URL" in message
+    assert "RAPYD_ACCESS_KEY" in message
+    assert "RAPYD_SECRET_KEY" in message
+    assert "RAPYD_WEBHOOK_URL" in message
+
+
+def test_production_config_rejects_non_https_rapyd_webhook(monkeypatch):
+    _production_env(monkeypatch)
+    bad = _settings()
+    bad.rapyd_webhook_url = "http://api.example.test/api/payments/rapyd/webhook"
+    with pytest.raises(RuntimeError, match="RAPYD_WEBHOOK_URL"):
+        validate_payment_production_config(bad)

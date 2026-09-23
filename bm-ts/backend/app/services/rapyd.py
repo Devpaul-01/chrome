@@ -287,3 +287,83 @@ async def create_hosted_checkout(
         payload=payload,
         idempotency_key=idempotency_key,
     )
+class RapydWebhookAuthenticationError(RapydError):
+    """Raised when a Rapyd webhook cannot be authenticated safely."""
+
+
+class RapydWebhookPayloadError(RapydError):
+    """Raised when a Rapyd webhook body is not a valid JSON object."""
+
+
+def _webhook_body_candidates(raw_body: bytes) -> tuple[dict[str, Any], tuple[str, ...]]:
+    try:
+        raw_text = raw_body.decode("utf-8")
+        parsed = json.loads(raw_text)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RapydWebhookPayloadError("Invalid Rapyd webhook JSON.") from exc
+    if not isinstance(parsed, dict):
+        raise RapydWebhookPayloadError("Rapyd webhook body must be a JSON object.")
+    compact = json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
+    candidates = (raw_text,) if compact == raw_text else (raw_text, compact)
+    return parsed, candidates
+
+
+def _rapyd_webhook_signature(
+    *,
+    body_string: str,
+    salt: str,
+    timestamp: str,
+    webhook_url: str,
+    access_key: str,
+    secret_key: str,
+) -> str:
+    to_sign = webhook_url + salt + timestamp + access_key + secret_key + body_string
+    digest_hex = hmac.new(
+        secret_key.encode("utf-8"),
+        to_sign.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return base64.urlsafe_b64encode(digest_hex.encode("utf-8")).decode("ascii")
+
+
+def verify_webhook_signature(
+    *,
+    raw_body: bytes,
+    salt: str,
+    timestamp: str,
+    signature: str,
+    now: int | None = None,
+) -> dict[str, Any]:
+    """Authenticate one Rapyd webhook before any DB or business operation."""
+    webhook_url = settings.rapyd_webhook_url.strip()
+    access_key = settings.rapyd_access_key.strip()
+    secret_key = settings.rapyd_secret_key.strip()
+    if not webhook_url or not access_key or not secret_key:
+        raise RapydConfigurationError("Rapyd webhook authentication is not configured.")
+    if not webhook_url.startswith("https://"):
+        raise RapydConfigurationError("RAPYD_WEBHOOK_URL must use HTTPS.")
+    if not salt or not timestamp or not signature:
+        raise RapydWebhookAuthenticationError("Missing Rapyd webhook authentication headers.")
+    try:
+        sent_at = int(timestamp)
+    except (TypeError, ValueError) as exc:
+        raise RapydWebhookAuthenticationError("Invalid Rapyd webhook timestamp.") from exc
+    current = int(time.time()) if now is None else int(now)
+    age = current - sent_at
+    if age > settings.rapyd_webhook_max_age_seconds:
+        raise RapydWebhookAuthenticationError("Rapyd webhook timestamp is stale.")
+    if age < -settings.rapyd_webhook_max_future_seconds:
+        raise RapydWebhookAuthenticationError("Rapyd webhook timestamp is in the future.")
+    event, candidates = _webhook_body_candidates(raw_body)
+    for body_string in candidates:
+        expected = _rapyd_webhook_signature(
+            body_string=body_string,
+            salt=salt,
+            timestamp=timestamp,
+            webhook_url=webhook_url,
+            access_key=access_key,
+            secret_key=secret_key,
+        )
+        if hmac.compare_digest(expected, signature):
+            return event
+    raise RapydWebhookAuthenticationError("Invalid Rapyd webhook signature.")

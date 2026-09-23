@@ -17,6 +17,7 @@ from app.db.models import AccessEntitlement, PaymentTransaction, User
 
 
 _ALLOWED_TERM_MONTHS = frozenset({1, 3, 6, 12})
+_SETTLEMENT_ENTITLEMENT_PROVIDERS = frozenset({"btcpay", "rapyd"})
 
 
 def _utc_now() -> datetime:
@@ -83,8 +84,10 @@ async def grant_entitlement_for_settled_payment(
     transaction so payment truth, entitlement creation, and webhook completion
     can be committed atomically.
     """
-    if transaction.provider != "btcpay":
-        raise ValueError("Entitlement grant received a non-BTCPay transaction.")
+    if transaction.provider not in _SETTLEMENT_ENTITLEMENT_PROVIDERS:
+        raise ValueError(
+            f"Entitlement grant received unsupported payment provider {transaction.provider!r}."
+        )
     if transaction.status != "Settled" or transaction.paid_at is None:
         raise ValueError("Only a fully settled payment may grant access.")
     if not transaction.provider_payment_id:
@@ -103,8 +106,8 @@ async def grant_entitlement_for_settled_payment(
     if user_lock.scalar_one_or_none() is None:
         raise ValueError("Payment owner no longer exists.")
 
-    # A distinct BTCPay settlement event for the same invoice must not create a
-    # second grant.  Check both natural source identifiers.
+    # Distinct settlement events for the same provider payment must not create a
+    # second grant. Check both provider-scoped natural source identifiers.
     existing_result = await db.execute(
         select(AccessEntitlement).where(
             or_(

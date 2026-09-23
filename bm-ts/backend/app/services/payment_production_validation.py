@@ -1,4 +1,4 @@
-"""Fail-closed production validation for the BTCPay payment subsystem."""
+"""Fail-closed production validation for payment providers."""
 
 from __future__ import annotations
 
@@ -84,6 +84,39 @@ def validate_payment_production_config(settings: Any) -> None:
     webhook_secret = _text(settings, "btcpay_webhook_secret", "BTCPAY_WEBHOOK_SECRET")
     if len(webhook_secret) < 16:
         errors.append("BTCPAY_WEBHOOK_SECRET is missing or implausibly short.")
+
+    rapyd_base_url = _text(settings, "rapyd_base_url", "RAPYD_BASE_URL")
+    rapyd_base = urlparse(rapyd_base_url) if rapyd_base_url else None
+    rapyd_host = (rapyd_base.hostname or "").lower() if rapyd_base else ""
+    if (
+        rapyd_base is None
+        or rapyd_base.scheme.lower() != "https"
+        or not rapyd_host
+        or rapyd_host in {"localhost", "127.0.0.1", "::1"}
+        or rapyd_host.endswith(".local")
+    ):
+        errors.append("RAPYD_BASE_URL must be a valid HTTPS provider URL.")
+
+    rapyd_access_key = _text(settings, "rapyd_access_key", "RAPYD_ACCESS_KEY")
+    if len(rapyd_access_key) < 8:
+        errors.append("RAPYD_ACCESS_KEY is missing or implausibly short.")
+
+    rapyd_secret_key = _text(settings, "rapyd_secret_key", "RAPYD_SECRET_KEY")
+    if len(rapyd_secret_key) < 16:
+        errors.append("RAPYD_SECRET_KEY is missing or implausibly short.")
+
+    rapyd_webhook_url = _text(settings, "rapyd_webhook_url", "RAPYD_WEBHOOK_URL")
+    rapyd_webhook = urlparse(rapyd_webhook_url) if rapyd_webhook_url else None
+    webhook_host = (rapyd_webhook.hostname or "").lower() if rapyd_webhook else ""
+    if (
+        rapyd_webhook is None
+        or rapyd_webhook.scheme.lower() != "https"
+        or not webhook_host
+        or webhook_host in {"localhost", "127.0.0.1", "::1"}
+        or webhook_host.endswith(".local")
+        or webhook_host.startswith("host.docker.")
+    ):
+        errors.append("RAPYD_WEBHOOK_URL must be a public HTTPS URL.")
 
     for name in _REQUIRED_PRICE_VARS:
         value = os.getenv(name, "").strip()
