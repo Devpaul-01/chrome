@@ -34,6 +34,7 @@ describe('SubscriptionPanel payment-method selection', () => {
   it.each([
     ['Bitcoin (BTC)', 'bitcoin'],
     ['Monero (XMR)', 'monero'],
+    ['Credit / Debit Card', 'rapyd'],
   ] as const)('clicking %s sends payment_method=%s without stale state', async (label, expectedMethod) => {
     const user = userEvent.setup();
     render(<SubscriptionPanel />);

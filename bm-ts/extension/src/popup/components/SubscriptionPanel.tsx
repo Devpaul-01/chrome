@@ -68,7 +68,7 @@ export default function SubscriptionPanel() {
   // Preserve one idempotency key per plan until a checkout is successfully created.
   // If the provider result is uncertain, retrying the same plan must reuse the same key
   // so the backend can reconcile the original provider invoice instead of creating a duplicate.
-  const [paymentMethod, setPaymentMethod] = useState<'bitcoin' | 'monero'>('bitcoin');
+  const [paymentMethod, setPaymentMethod] = useState<'bitcoin' | 'monero' | 'rapyd'>('bitcoin');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<'monthly' | 'yearly' | null>(null);
   const checkoutKeysRef = useRef<Partial<Record<string, string>>>({});
@@ -149,7 +149,7 @@ export default function SubscriptionPanel() {
 
   async function handleCheckout(
     plan: 'monthly' | 'yearly',
-    selectedPaymentMethod: 'bitcoin' | 'monero',
+    selectedPaymentMethod: 'bitcoin' | 'monero' | 'rapyd',
   ) {
     setActionLoading(`checkout:${plan}`);
     setError(null);
@@ -656,16 +656,28 @@ export default function SubscriptionPanel() {
                   )}
                 </button>
 
-                <div
-                  className="w-full flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-left opacity-70"
-                  aria-disabled="true"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentMethod('rapyd');
+                    void handleCheckout(checkoutPlan, 'rapyd');
+                  }}
+                  className="w-full flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3 text-left hover:border-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-60"
+                  disabled={!!actionLoading}
                 >
-                  <span className="h-4 w-4 rounded-full border-2 border-gray-300" />
-                  <span className="flex-1">
-                    <span className="block font-semibold text-gray-700">Rapyd - Card / Bank</span>
-                    <span className="block text-xs text-gray-500">Coming soon</span>
+                  <span className="h-4 w-4 rounded-full border-2 border-gray-400 flex items-center justify-center">
+                    {actionLoading === `checkout:${checkoutPlan}` && paymentMethod === 'rapyd' && (
+                      <span className="h-2 w-2 rounded-full bg-orange-500" />
+                    )}
                   </span>
-                </div>
+                  <span className="flex-1">
+                    <span className="block font-semibold text-gray-900">Credit / Debit Card</span>
+                    <span className="block text-xs text-gray-500">Secure checkout powered by Rapyd</span>
+                  </span>
+                  {actionLoading === `checkout:${checkoutPlan}` && paymentMethod === 'rapyd' && (
+                    <Spinner size="sm" />
+                  )}
+                </button>
               </fieldset>
             </div>
           </div>

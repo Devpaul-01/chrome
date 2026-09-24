@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy import func, select
 from app.core.config import settings
 from app.db.models import AccessEntitlement, PaymentTransaction
+from app.services.rapyd_settlement import settle_rapyd_payment_snapshot
 
 PATH="/api/payments/rapyd/webhook"; URL="https://api-v2.birthdaymessaging.io/api/payments/rapyd/webhook"
 ACCESS="rapyd-webhook-access-test"; SECRET="rapyd-webhook-secret-test"; SALT="settlement-salt"
@@ -61,3 +62,14 @@ async def test_payment_succeeded_never_settles(async_client,db_session,test_user
     cfg(monkeypatch); x=await tx(db_session,test_user); p=evt(x); p["type"]="PAYMENT_SUCCEEDED"; p["data"]["status"]="ACT"
     r=await post(async_client,p); assert r.json()["reason"]=="non_settlement_event"
     await db_session.refresh(x); assert x.paid_at is None
+
+
+@pytest.mark.asyncio
+async def test_reconciliation_then_distinct_late_webhook_grants_once(async_client,db_session,test_user,monkeypatch):
+    cfg(monkeypatch); x=await tx(db_session,test_user); p=evt(x)
+    first=await settle_rapyd_payment_snapshot(db=db_session,payment=p["data"],source="reconciliation")
+    await db_session.commit(); assert first["settled"] is True
+    late=evt(x,id=p["data"]["id"]); r=await post(async_client,late)
+    assert r.status_code==200 and r.json()["settled"] is True
+    await db_session.refresh(x); assert x.status=="Settled" and x.provider_payment_id==p["data"]["id"]
+    n=await db_session.scalar(select(func.count()).select_from(AccessEntitlement).where(AccessEntitlement.source_transaction_id==x.id)); assert n==1

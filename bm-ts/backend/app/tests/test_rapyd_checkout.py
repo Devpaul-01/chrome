@@ -25,6 +25,7 @@ async def test_hosted_checkout_forwards_stable_idempotency(monkeypatch):
     assert captured["path"] == "/v1/checkout"
     assert captured["idempotency_key"] == "stable-idempotency-key-123"
     assert captured["payload"]["currency"] == "USD"
+    assert captured["payload"]["country"] == "US"
 
 @pytest.mark.asyncio
 async def test_finalize_is_idempotent(db_session, test_user):

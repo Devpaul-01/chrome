@@ -64,6 +64,20 @@ services:
       - .env
     command: ["python", "-m", "app.services.payment_checkout_recovery_worker"]
 
+  rapyd-reconciliation-worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    command: ["python", "-m", "app.services.rapyd_reconciliation_worker"]
+
   # Automated daily backup at 2:00 AM UTC
   db-backup:
     image: postgres:15

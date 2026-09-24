@@ -132,11 +132,15 @@ def validate_payment_production_config(settings: Any) -> None:
     batch = os.getenv("PAYMENT_CHECKOUT_RECOVERY_BATCH_SIZE", "50").strip()
     interval = os.getenv("PAYMENT_CHECKOUT_RECOVERY_INTERVAL_SECONDS", "60").strip()
     stale = os.getenv("PAYMENT_CHECKOUT_RECOVERY_STALE_SECONDS", "120").strip()
+    rapyd_batch = os.getenv("RAPYD_RECONCILIATION_WORKER_BATCH_SIZE", "50").strip()
+    rapyd_interval = os.getenv("RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS", "60").strip()
 
     for name, raw, minimum, maximum in (
         ("PAYMENT_CHECKOUT_RECOVERY_BATCH_SIZE", batch, 1, 500),
         ("PAYMENT_CHECKOUT_RECOVERY_INTERVAL_SECONDS", interval, 5, 3600),
         ("PAYMENT_CHECKOUT_RECOVERY_STALE_SECONDS", stale, 30, 86400),
+        ("RAPYD_RECONCILIATION_WORKER_BATCH_SIZE", rapyd_batch, 1, 500),
+        ("RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS", rapyd_interval, 1, 3600),
     ):
         try:
             parsed_int = int(raw)

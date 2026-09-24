@@ -91,7 +91,7 @@ export type BackgroundMessage =
       type: 'subscription.checkout';
       payload: {
         plan: 'monthly' | 'yearly';
-        payment_method: 'bitcoin' | 'monero';
+        payment_method: 'bitcoin' | 'monero' | 'rapyd';
         idempotency_key: string;
       };
     }

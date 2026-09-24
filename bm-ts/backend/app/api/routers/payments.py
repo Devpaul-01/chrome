@@ -37,6 +37,7 @@ from app.services.rapyd import (
     verify_webhook_signature,
 )
 from app.services.entitlements import grant_entitlement_for_settled_payment
+from app.services.rapyd_settlement import settle_rapyd_payment_snapshot
 from app.services.notifications import enqueue_payment_lifecycle_notifications
 from app.services.payment_plans import get_payment_plan
 
@@ -892,105 +893,43 @@ async def rapyd_webhook(
         return {"received": True, "processed": False, "reason": "missing_merchant_reference_id", "event": event_type}
 
     try:
-        tx = (await db.execute(
-            select(PaymentTransaction)
-            .where(
-                PaymentTransaction.provider == "rapyd",
-                PaymentTransaction.provider_order_id == reference,
-            )
-            .with_for_update()
-        )).scalar_one_or_none()
-        if tx is None:
-            ledger.processing_status = "ignored"
-            ledger.processing_error = "payment_not_found"
-            ledger.processed_at = datetime.now(timezone.utc)
-            await db.commit()
-            return {"received": True, "processed": False, "reason": "payment_not_found", "event": event_type}
-
-        if not payment_id:
-            raise ValueError("Rapyd PAYMENT_COMPLETED is missing payment id.")
-        raw_amount = payment.get("original_amount")
-        if raw_amount is None:
-            raw_amount = payment.get("amount")
-        try:
-            provider_amount = Decimal(str(raw_amount))
-        except (InvalidOperation, ValueError, TypeError) as exc:
-            raise ValueError("Rapyd PAYMENT_COMPLETED has invalid amount.") from exc
-        if not provider_amount.is_finite() or provider_amount.as_tuple().exponent < -2:
-            raise ValueError("Rapyd PAYMENT_COMPLETED has invalid money precision.")
-        provider_amount = provider_amount.quantize(Decimal("0.01"))
-        expected_amount = Decimal(str(tx.amount)).quantize(Decimal("0.01"))
-        provider_status = str(payment.get("status") or "").upper()
-        currency = str(payment.get("currency_code") or "").upper()
-        paid = payment.get("paid") is True
-        partial = payment.get("is_partial") is True
-        full = (
-            provider_status == "CLO" and paid and not partial
-            and provider_amount == expected_amount
-            and currency == str(tx.currency).upper()
+        outcome = await settle_rapyd_payment_snapshot(
+            db=db,
+            payment=payment,
+            source="webhook:" + event_type,
         )
 
-        now = datetime.now(timezone.utc)
-        meta = dict(tx.metadata_payload or {})
-        meta.update({
-            "last_rapyd_event": event_type, "last_rapyd_event_id": event_id,
-            "rapyd_payment_id": payment_id, "rapyd_payment_status": provider_status,
-            "rapyd_paid": paid, "rapyd_is_partial": partial,
-            "rapyd_currency_code": currency, "rapyd_reported_amount": str(provider_amount),
-            "rapyd_merchant_reference_id": reference,
-        })
-        tx.metadata_payload = meta
-        tx.updated_at = now
-        already = tx.status == "Settled" or tx.paid_at is not None
+        reason = str(outcome.get("reason") or "")
+        settled = bool(outcome.get("settled"))
 
-        if full:
-            if tx.provider_payment_id not in {None, "", payment_id}:
-                raise ValueError("Rapyd payment identity conflicts with existing transaction.")
-            owner = (await db.execute(
-                select(PaymentTransaction.id).where(
-                    PaymentTransaction.provider == "rapyd",
-                    PaymentTransaction.provider_payment_id == payment_id,
-                    PaymentTransaction.id != tx.id,
-                )
-            )).scalar_one_or_none()
-            if owner is not None:
-                ledger.processing_status = "ignored"
-                ledger.processing_error = "payment_identity_already_bound"
-                ledger.processed_at = now
-                await db.commit()
-                return {
-                    "received": True,
-                    "processed": False,
-                    "reason": "payment_identity_already_bound",
-                    "event": event_type,
-                }
-            tx.provider_payment_id = payment_id
-            tx.status = "Settled"
-            if tx.paid_at is None:
-                tx.paid_at = now
-            entitlement = await grant_entitlement_for_settled_payment(db=db, transaction=tx)
-            user = (await db.execute(select(User).where(User.id == tx.user_id))).scalar_one()
-            await enqueue_payment_lifecycle_notifications(
-                db=db, user=user, transaction=tx, entitlement=entitlement, now=now
-            )
-        elif already:
-            tx.status = "Settled"
+        if reason in {
+            "payment_not_found",
+            "payment_identity_already_bound",
+            "missing_merchant_reference_id",
+        }:
+            ledger.processing_status = "ignored"
+            ledger.processing_error = reason
+            processed = False
         else:
-            tx.status = "Processing"
+            ledger.processing_status = "processed"
+            ledger.processing_error = None
+            processed = True
 
-        ledger.processing_status = "processed"
-        ledger.processed_at = now
-        ledger.processing_error = None
+        ledger.processed_at = datetime.now(timezone.utc)
         await db.commit()
+
     except Exception as exc:
         await db.rollback()
         try:
-            failed = (await db.execute(
-                select(PaymentWebhookEvent).where(
-                    PaymentWebhookEvent.provider == "rapyd",
-                    PaymentWebhookEvent.provider_event_id == event_id,
+            failed = (
+                await db.execute(
+                    select(PaymentWebhookEvent).where(
+                        PaymentWebhookEvent.provider == "rapyd",
+                        PaymentWebhookEvent.provider_event_id == event_id,
+                    )
                 )
-            )).scalar_one_or_none()
+            ).scalar_one_or_none()
+
             if failed is not None:
                 failed.processing_status = "failed"
                 failed.processed_at = datetime.now(timezone.utc)
@@ -998,6 +937,7 @@ async def rapyd_webhook(
                 await db.commit()
         except Exception:
             await db.rollback()
+
         return {
             "received": True,
             "processed": False,
@@ -1005,7 +945,13 @@ async def rapyd_webhook(
             "event": event_type,
         }
 
-    return {"received": True, "processed": True, "event": event_type, "settled": full}
+    return {
+        "received": True,
+        "processed": processed,
+        "reason": reason,
+        "event": event_type,
+        "settled": settled,
+    }
 
 # BTCPay webhook events that directly represent the invoice lifecycle.
 # Important: only InvoiceSettled is treated as a final successful payment.

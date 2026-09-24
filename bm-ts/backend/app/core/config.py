@@ -128,6 +128,8 @@ class Settings(BaseSettings):
     support_email: str = Field(default="support@birthdaymessaging.com", alias="SUPPORT_EMAIL")
     notification_worker_batch_size: int = Field(default=50, ge=1, le=500, alias="NOTIFICATION_WORKER_BATCH_SIZE")
     notification_worker_interval_seconds: int = Field(default=30, ge=1, le=3600, alias="NOTIFICATION_WORKER_INTERVAL_SECONDS")
+    rapyd_reconciliation_worker_batch_size: int = Field(default=50, ge=1, le=500, alias="RAPYD_RECONCILIATION_WORKER_BATCH_SIZE")
+    rapyd_reconciliation_worker_interval_seconds: int = Field(default=60, ge=1, le=3600, alias="RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS")
     notification_processing_lease_seconds: int = Field(default=900, ge=30, le=86400, alias="NOTIFICATION_PROCESSING_LEASE_SECONDS")
     notification_max_attempts: int = Field(default=5, ge=1, le=50, alias="NOTIFICATION_MAX_ATTEMPTS")
     notification_shutdown_grace_seconds: int = Field(default=30, ge=1, le=300, alias="NOTIFICATION_SHUTDOWN_GRACE_SECONDS")

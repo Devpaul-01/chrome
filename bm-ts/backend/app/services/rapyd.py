@@ -271,11 +271,17 @@ async def create_hosted_checkout(
     currency: str,
     merchant_reference_id: str,
     idempotency_key: str,
+    country: str = "US",
     description: str | None = None,
 ) -> dict[str, Any]:
     """Create one Hosted Checkout without automatic financial retries."""
+    normalized_country = str(country).strip().upper()
+    if len(normalized_country) != 2 or not normalized_country.isalpha():
+        raise RapydConfigurationError("Rapyd checkout country must be a two-letter ISO country code.")
+
     payload: dict[str, Any] = {
         "amount": float(amount),
+        "country": normalized_country,
         "currency": str(currency).upper(),
         "merchant_reference_id": merchant_reference_id,
     }
@@ -367,3 +373,18 @@ def verify_webhook_signature(
         if hmac.compare_digest(expected, signature):
             return event
     raise RapydWebhookAuthenticationError("Invalid Rapyd webhook signature.")
+
+async def retrieve_checkout(checkout_id: str) -> dict[str, Any]:
+    """Retrieve one existing Rapyd Hosted Checkout without creating or mutating it."""
+    normalized = str(checkout_id or "").strip()
+    if not normalized.startswith("checkout_"):
+        raise ValueError("Rapyd checkout id must begin with 'checkout_'.")
+    return await request(method="GET", path=f"/v1/checkout/{normalized}")
+
+
+async def retrieve_payment(payment_id: str) -> dict[str, Any]:
+    """Retrieve one existing Rapyd payment without creating or mutating it."""
+    normalized = str(payment_id or "").strip()
+    if not normalized.startswith("payment_"):
+        raise ValueError("Rapyd payment id must begin with 'payment_'.")
+    return await request(method="GET", path=f"/v1/payments/{normalized}")

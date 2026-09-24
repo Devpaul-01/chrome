@@ -30,6 +30,8 @@ def _production_env(monkeypatch):
     monkeypatch.setenv("PAYMENT_CHECKOUT_RECOVERY_BATCH_SIZE", "50")
     monkeypatch.setenv("PAYMENT_CHECKOUT_RECOVERY_INTERVAL_SECONDS", "60")
     monkeypatch.setenv("PAYMENT_CHECKOUT_RECOVERY_STALE_SECONDS", "120")
+    monkeypatch.setenv("RAPYD_RECONCILIATION_WORKER_BATCH_SIZE", "50")
+    monkeypatch.setenv("RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS", "60")
 
 
 def test_development_environment_does_not_require_production_payment_config(monkeypatch):
@@ -120,3 +122,26 @@ def test_production_config_rejects_non_https_rapyd_webhook(monkeypatch):
     bad.rapyd_webhook_url = "http://api.example.test/api/payments/rapyd/webhook"
     with pytest.raises(RuntimeError, match="RAPYD_WEBHOOK_URL"):
         validate_payment_production_config(bad)
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("RAPYD_RECONCILIATION_WORKER_BATCH_SIZE", "0"),
+        ("RAPYD_RECONCILIATION_WORKER_BATCH_SIZE", "501"),
+        ("RAPYD_RECONCILIATION_WORKER_BATCH_SIZE", "not-an-int"),
+        ("RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS", "0"),
+        ("RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS", "3601"),
+        ("RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS", "not-an-int"),
+    ],
+)
+def test_production_config_rejects_invalid_rapyd_reconciliation_worker_settings(
+    monkeypatch, name, value
+):
+    _production_env(monkeypatch)
+    monkeypatch.setenv(name, value)
+
+    with pytest.raises(RuntimeError) as exc:
+        validate_payment_production_config(_settings())
+
+    assert name in str(exc.value)

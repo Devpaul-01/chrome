@@ -69,6 +69,22 @@ services:
     command: ["python", "-m", "app.services.payment_checkout_recovery_worker"]
     stop_grace_period: 30s
 
+  rapyd-reconciliation-worker:
+    image: birthdaymessaging-v2:${BM_V2_IMAGE_TAG:-local}
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-birthdaymessaging}
+      APP_ENVIRONMENT: production
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    command: ["python", "-m", "app.services.rapyd_reconciliation_worker"]
+    stop_grace_period: 30s
+
   db-backup:
     image: postgres:15
     restart: unless-stopped

@@ -115,9 +115,12 @@ async def test_invalid_signature_fails_before_db_mutation(async_client, db_sessi
 async def test_stale_future_and_malformed_timestamps_fail_closed(async_client, db_session, monkeypatch):
     _configure(monkeypatch)
     body = _compact(_event())
+    # Keep invalid timestamps comfortably outside the accepted boundary.
+    # Using exactly now+6 with a +5s allowance is race-prone: if one second
+    # elapses before verification, it legitimately becomes +5 and is accepted.
     now = int(time.time())
     before = await _count(db_session)
-    for timestamp in (str(now - 61), str(now + 6), "not-an-int"):
+    for timestamp in (str(now - 120), str(now + 30), "not-an-int"):
         signature = _sign(body, timestamp)
         response = await async_client.post(
             PATH,

@@ -15,6 +15,7 @@
   SMTPConfig,
   MessageTemplate,
   createBTCPayCheckout,
+  createRapydCheckout,
   cancelSubscription,
   reactivateSubscription,
   changeSubscriptionPlan,
@@ -619,15 +620,23 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) => subscriptionStatus(url, accessToken));
     }
     case 'subscription.checkout': {
-      return runAuthAware((accessToken, url) =>
-        createBTCPayCheckout(
+      return runAuthAware((accessToken, url) => {
+        if (message.payload.payment_method === 'rapyd') {
+          return createRapydCheckout(
+            url,
+            accessToken,
+            message.payload.plan,
+            message.payload.idempotency_key,
+          );
+        }
+        return createBTCPayCheckout(
           url,
           accessToken,
           message.payload.plan,
           message.payload.payment_method,
           message.payload.idempotency_key,
-        ),
-      );
+        );
+      });
     }
     case 'subscription.cancel': {
       return runAuthAware((accessToken, url) => cancelSubscription(url, accessToken));

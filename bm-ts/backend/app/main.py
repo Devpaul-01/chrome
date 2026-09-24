@@ -417,6 +417,7 @@ async def worker_health_check(
     """Report independently running worker heartbeat and batch health."""
     notification = await db.get(WorkerHeartbeat, "notification-worker")
     payment = await db.get(WorkerHeartbeat, "payment-recovery-worker")
+    rapyd = await db.get(WorkerHeartbeat, "rapyd-reconciliation-worker")
 
     notification_interval = max(1, settings.notification_worker_interval_seconds)
     payment_interval = max(
@@ -427,6 +428,8 @@ async def worker_health_check(
     # declaring a worker stale.
     notification_stale = max(120, notification_interval * 4)
     payment_stale = max(180, payment_interval * 4)
+    rapyd_interval = max(1, int(os.getenv("RAPYD_RECONCILIATION_INTERVAL_SECONDS", "60")))
+    rapyd_stale = max(180, rapyd_interval * 4)
 
     now = datetime.now(timezone.utc)
     workers = {
@@ -440,6 +443,12 @@ async def worker_health_check(
             payment,
             worker_name="payment-recovery-worker",
             stale_after_seconds=payment_stale,
+            now=now,
+        ),
+        "rapyd-reconciliation-worker": _worker_health_payload(
+            rapyd,
+            worker_name="rapyd-reconciliation-worker",
+            stale_after_seconds=rapyd_stale,
             now=now,
         ),
     }

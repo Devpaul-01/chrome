@@ -61,6 +61,7 @@ async def test_workers_missing_is_degraded(health_client):
     assert body["status"] == "degraded"
     assert body["workers"]["notification-worker"]["status"] == "missing"
     assert body["workers"]["payment-recovery-worker"]["status"] == "missing"
+    assert body["workers"]["rapyd-reconciliation-worker"]["status"] == "missing"
 
 
 @pytest.mark.asyncio
@@ -86,6 +87,15 @@ async def test_workers_fresh_and_successful_are_healthy(health_client, db_sessio
                 last_batch_summary={"recovered": 1},
                 updated_at=now,
             ),
+            WorkerHeartbeat(
+                worker_name="rapyd-reconciliation-worker",
+                started_at=now,
+                last_heartbeat_at=now,
+                last_success_at=now,
+                consecutive_failures=0,
+                last_batch_summary={"settled": 1},
+                updated_at=now,
+            ),
         ]
     )
     await db_session.commit()
@@ -98,6 +108,7 @@ async def test_workers_fresh_and_successful_are_healthy(health_client, db_sessio
     assert body["status"] == "healthy"
     assert body["workers"]["notification-worker"]["status"] == "healthy"
     assert body["workers"]["payment-recovery-worker"]["status"] == "healthy"
+    assert body["workers"]["rapyd-reconciliation-worker"]["status"] == "healthy"
 
 
 @pytest.mark.asyncio
