@@ -1,4 +1,4 @@
-﻿"""BirthdayMessaging payment endpoints.
+"""BirthdayMessaging payment endpoints.
 
 Phase 2 intentionally exposes only a controlled BTCPay test-invoice endpoint.
 Production plan pricing and subscription activation are added in later phases.
@@ -23,7 +23,7 @@ from app.core.config import settings
 from app.core.errors import AppError, ErrorCodes
 from app.db.models import PaymentCheckoutAttempt, PaymentTransaction, PaymentWebhookEvent, User
 from app.db.session import get_db
-from app.schemas.payment import BTCPayCheckoutRequest, BTCPayCheckoutResponse, BTCPayCheckoutStatusResponse, BTCPayTestInvoiceResponse, RapydCheckoutRequest
+from app.schemas.payment import BTCPayCheckoutRequest, BTCPayCheckoutResponse, BTCPayCheckoutStatusResponse, BTCPayTestInvoiceResponse, RapydCheckoutRequest, PayPalCheckoutRequest
 from app.services.btcpay import create_invoice, public_checkout_url, find_invoice_by_order_id
 from app.services.rapyd import (
     RapydConfigurationError,
@@ -36,6 +36,18 @@ from app.services.rapyd import (
     create_hosted_checkout,
     verify_webhook_signature,
 )
+from app.services.paypal import (
+    PayPalConfigurationError,
+    PayPalProviderError,
+    PayPalResponseError,
+    PayPalTransportError,
+    PayPalWebhookAuthenticationError,
+    approval_url as paypal_approval_url,
+    capture_order as paypal_capture_order,
+    create_order as paypal_create_order,
+    verify_webhook as verify_paypal_webhook,
+)
+from app.services.paypal_settlement import settle_paypal_capture
 from app.services.entitlements import grant_entitlement_for_settled_payment
 from app.services.rapyd_settlement import settle_rapyd_payment_snapshot
 from app.services.notifications import enqueue_payment_lifecycle_notifications
@@ -348,6 +360,80 @@ async def create_btcpay_checkout(
         term_months=plan.term_months,
     )
 
+    return _checkout_response(attempt, transaction, reused=False)
+
+
+async def _finalize_paypal_checkout(*, db: AsyncSession, attempt: PaymentCheckoutAttempt, order: dict, term_months: int) -> PaymentTransaction:
+    order_id = str(order.get("id") or "").strip()
+    checkout_url = paypal_approval_url(order)
+    provider_status = str(order.get("status") or "CREATED")
+    if not order_id:
+        raise AppError(status.HTTP_502_BAD_GATEWAY, ErrorCodes.PAYMENT_CHECKOUT_INCONSISTENT, "PayPal returned incomplete checkout information.")
+    existing = await _existing_checkout_transaction(db, attempt)
+    if existing is not None:
+        return existing
+    now = datetime.now(timezone.utc)
+    transaction = PaymentTransaction(id=uuid4(), user_id=attempt.user_id, provider="paypal", provider_payment_id=None, provider_order_id=order_id, checkout_attempt_id=attempt.id, amount=attempt.amount, currency=attempt.currency, status=provider_status, checkout_url=checkout_url, payment_method="paypal", plan_code=attempt.plan_code, paid_at=None, expires_at=None, created_at=now, updated_at=now, metadata_payload={"paypal_order_id": order_id, "checkout_attempt_id": str(attempt.id), "billing_term_months": term_months, "payment_method": "paypal", "phase": "production-checkout"})
+    db.add(transaction)
+    attempt.provider_order_id = order_id
+    attempt.checkout_url = checkout_url
+    attempt.status = "completed"
+    attempt.failure_code = None
+    attempt.claim_expires_at = None
+    attempt.completed_at = now
+    attempt.updated_at = now
+    await db.commit()
+    await db.refresh(attempt)
+    await db.refresh(transaction)
+    return transaction
+
+@router.post("/paypal/checkout", response_model=BTCPayCheckoutResponse, status_code=status.HTTP_201_CREATED)
+async def create_paypal_checkout(payload: PayPalCheckoutRequest, response: Response, idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> BTCPayCheckoutResponse:
+    key = _validate_idempotency_key(idempotency_key)
+    plan = get_payment_plan(payload.plan_code)
+    now = datetime.now(timezone.utc)
+    attempt = (await db.execute(select(PaymentCheckoutAttempt).where(PaymentCheckoutAttempt.provider == "paypal", PaymentCheckoutAttempt.user_id == current_user.id, PaymentCheckoutAttempt.idempotency_key == key))).scalar_one_or_none()
+    if attempt is not None:
+        if attempt.plan_code != plan.code:
+            raise AppError(status.HTTP_409_CONFLICT, ErrorCodes.PAYMENT_IDEMPOTENCY_CONFLICT, "This Idempotency-Key was already used for a different payment plan.")
+        existing = await _existing_checkout_transaction(db, attempt)
+        if existing is not None:
+            response.status_code = status.HTTP_200_OK
+            return _checkout_response(attempt, existing, reused=True)
+        raise AppError(status.HTTP_409_CONFLICT, ErrorCodes.PAYMENT_CHECKOUT_IN_PROGRESS, "Payment checkout is awaiting provider reconciliation. Retry with the same Idempotency-Key; do not start a second checkout.")
+    attempt_id = uuid4()
+    attempt = PaymentCheckoutAttempt(id=attempt_id, user_id=current_user.id, provider="paypal", idempotency_key=key, plan_code=plan.code, amount=plan.amount, currency=plan.currency, provider_order_id=f"BM-PAYPAL-{attempt_id}", provider_payment_id=None, checkout_url=None, status="claimed", failure_code=None, claim_expires_at=now + timedelta(seconds=_CHECKOUT_CLAIM_SECONDS), completed_at=None, created_at=now, updated_at=now, metadata_payload={"billing_term_months": plan.term_months, "catalog_price_env": plan.price_env_name, "payment_method": "paypal"})
+    db.add(attempt)
+    try:
+        await db.commit()
+        await db.refresh(attempt)
+    except IntegrityError as exc:
+        await db.rollback()
+        raise AppError(status.HTTP_409_CONFLICT, ErrorCodes.PAYMENT_CHECKOUT_IN_PROGRESS, "Payment checkout is already being created. Retry with the same Idempotency-Key.") from exc
+    try:
+        order = await paypal_create_order(amount=plan.amount, currency=plan.currency, description=plan.display_name, custom_id=attempt.provider_order_id, idempotency_key=key)
+    except (PayPalTransportError, PayPalResponseError) as exc:
+        attempt.status = "uncertain"
+        attempt.failure_code = "provider_create_uncertain"
+        attempt.claim_expires_at = now + timedelta(minutes=10)
+        attempt.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        raise AppError(status.HTTP_503_SERVICE_UNAVAILABLE, ErrorCodes.PAYMENT_PROVIDER_UNCERTAIN, "Payment provider status is uncertain. Retry with the same Idempotency-Key; do not start a second checkout.") from exc
+    except PayPalConfigurationError as exc:
+        attempt.status = "failed"
+        attempt.failure_code = "provider_configuration"
+        attempt.claim_expires_at = None
+        attempt.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        raise AppError(status.HTTP_503_SERVICE_UNAVAILABLE, ErrorCodes.INTERNAL_SERVER_ERROR, "PayPal payments are temporarily unavailable.") from exc
+    except PayPalProviderError as exc:
+        attempt.status = "failed"
+        attempt.failure_code = "provider_rejected"
+        attempt.claim_expires_at = None
+        attempt.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        raise AppError(status.HTTP_502_BAD_GATEWAY, ErrorCodes.BAD_REQUEST, "The payment provider could not create this checkout.") from exc
+    transaction = await _finalize_paypal_checkout(db=db, attempt=attempt, order=order, term_months=plan.term_months)
     return _checkout_response(attempt, transaction, reused=False)
 
 async def _finalize_rapyd_checkout(
@@ -790,6 +876,109 @@ async def create_btcpay_test_invoice(
         currency=transaction.currency,
         plan_code=transaction.plan_code or _TEST_PLAN_CODE,
     )
+
+
+@router.post("/paypal/webhook", status_code=status.HTTP_200_OK)
+async def paypal_webhook(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, bool | str]:
+    declared_length = request.headers.get("content-length")
+    if declared_length:
+        try:
+            declared_bytes = int(declared_length)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Content-Length header.") from exc
+        if declared_bytes < 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Content-Length header.")
+        if declared_bytes > settings.paypal_webhook_max_body_bytes:
+            raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="PayPal webhook payload is too large.")
+    body = bytearray()
+    async for chunk in request.stream():
+        if len(body) + len(chunk) > settings.paypal_webhook_max_body_bytes:
+            raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="PayPal webhook payload is too large.")
+        body.extend(chunk)
+    try:
+        event = json.loads(bytes(body).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid PayPal webhook payload.") from exc
+    if not isinstance(event, dict):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid PayPal webhook payload.")
+    headers = {k.lower(): v for k, v in request.headers.items()}
+    try:
+        verified = await verify_paypal_webhook(headers, event)
+    except PayPalWebhookAuthenticationError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid PayPal webhook authentication.") from exc
+    except PayPalConfigurationError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="PayPal webhook is not configured.") from exc
+    except (PayPalTransportError, PayPalProviderError, PayPalResponseError) as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="PayPal webhook verification is temporarily unavailable.") from exc
+    if not verified:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid PayPal webhook authentication.")
+    event_id = str(event.get("id") or "").strip()
+    event_type = str(event.get("event_type") or "unknown").strip() or "unknown"
+    if not event_id:
+        return {"received": True, "processed": False, "reason": "missing_event_id", "event": event_type}
+    resource = event.get("resource") if isinstance(event.get("resource"), dict) else {}
+    capture_id = str(resource.get("id") or "").strip() if event_type == "PAYMENT.CAPTURE.COMPLETED" else ""
+    ledger = PaymentWebhookEvent(provider="paypal", provider_event_id=event_id, provider_delivery_id=headers.get("paypal-transmission-id") or event_id, provider_payment_id=capture_id or None, event_type=event_type, is_redelivery=False, processing_status="received", payload=event)
+    db.add(ledger)
+    try:
+        await db.commit()
+        await db.refresh(ledger)
+    except IntegrityError:
+        await db.rollback()
+        existing = (await db.execute(select(PaymentWebhookEvent).where(PaymentWebhookEvent.provider == "paypal", PaymentWebhookEvent.provider_event_id == event_id))).scalar_one_or_none()
+        if existing is None:
+            raise
+        if existing.processing_status in {"processed", "ignored"}:
+            return {"received": True, "processed": False, "reason": "duplicate_event", "event": existing.event_type or event_type}
+        return {"received": True, "processed": False, "reason": "duplicate_in_progress", "event": existing.event_type or event_type}
+    if event_type not in {"CHECKOUT.ORDER.APPROVED", "PAYMENT.CAPTURE.COMPLETED"}:
+        ledger.processing_status = "ignored"
+        ledger.processed_at = datetime.now(timezone.utc)
+        await db.commit()
+        return {"received": True, "processed": False, "reason": "non_settlement_event", "event": event_type}
+    try:
+        if event_type == "CHECKOUT.ORDER.APPROVED":
+            order_id = str(resource.get("id") or "").strip()
+            if not order_id:
+                raise ValueError("Approved PayPal order is missing order id.")
+            captured = await paypal_capture_order(order_id)
+            units = captured.get("purchase_units") or []
+            captures = ((units[0].get("payments") or {}).get("captures") or []) if units and isinstance(units[0], dict) else []
+            capture = captures[0] if captures and isinstance(captures[0], dict) else {}
+        else:
+            capture = resource
+            related = ((resource.get("supplementary_data") or {}).get("related_ids") or {})
+            order_id = str(related.get("order_id") or "").strip()
+        if not capture or not order_id:
+            ledger.processing_status = "ignored"
+            ledger.processing_error = "missing_capture_or_order_id"
+            ledger.processed_at = datetime.now(timezone.utc)
+            await db.commit()
+            return {"received": True, "processed": False, "reason": "missing_capture_or_order_id", "event": event_type}
+        outcome = await settle_paypal_capture(db=db, capture=capture, order_id=order_id, source="webhook:" + event_type)
+        reason = str(outcome.get("reason") or "")
+        settled = bool(outcome.get("settled"))
+        if reason in {"payment_not_found", "payment_identity_already_bound"}:
+            ledger.processing_status = "ignored"
+            ledger.processing_error = reason
+            processed = False
+        else:
+            ledger.processing_status = "processed"
+            ledger.processing_error = None
+            processed = True
+        ledger.provider_payment_id = str(capture.get("id") or "") or ledger.provider_payment_id
+        ledger.processed_at = datetime.now(timezone.utc)
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        failed = (await db.execute(select(PaymentWebhookEvent).where(PaymentWebhookEvent.provider == "paypal", PaymentWebhookEvent.provider_event_id == event_id))).scalar_one_or_none()
+        if failed is not None:
+            failed.processing_status = "failed"
+            failed.processed_at = datetime.now(timezone.utc)
+            failed.processing_error = str(exc)[:4000]
+            await db.commit()
+        return {"received": True, "processed": False, "reason": "settlement_failed", "event": event_type}
+    return {"received": True, "processed": processed, "reason": reason, "event": event_type, "settled": settled}
 
 @router.post("/rapyd/webhook", status_code=status.HTTP_200_OK)
 async def rapyd_webhook(

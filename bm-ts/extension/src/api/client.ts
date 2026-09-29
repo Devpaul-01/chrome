@@ -172,6 +172,7 @@ export interface BTCPayCheckoutResponse {
 }
 
 export type RapydCheckoutResponse = BTCPayCheckoutResponse;
+export type PayPalCheckoutResponse = BTCPayCheckoutResponse;
 
 export interface CancelSubscriptionResponse {
   status: string;
@@ -289,6 +290,23 @@ export async function createBTCPayCheckout(
     '/api/payments/btcpay/checkout',
     'POST',
     { plan_code: plan, payment_method: paymentMethod },
+    accessToken,
+    30_000,
+    { 'Idempotency-Key': idempotencyKey },
+  );
+}
+
+export async function createPayPalCheckout(
+  baseUrl: string,
+  accessToken: string,
+  plan: 'monthly' | 'yearly',
+  idempotencyKey: string,
+): Promise<PayPalCheckoutResponse> {
+  return request(
+    baseUrl,
+    '/api/payments/paypal/checkout',
+    'POST',
+    { plan_code: plan },
     accessToken,
     30_000,
     { 'Idempotency-Key': idempotencyKey },

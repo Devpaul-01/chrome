@@ -67,3 +67,6 @@ class BTCPayCheckoutStatusResponse(BaseModel):
 class RapydCheckoutRequest(BaseModel):
     # Client selects only a plan; BirthdayMessaging owns price and currency.
     plan_code: str
+
+class PayPalCheckoutRequest(BaseModel):
+    plan_code: str

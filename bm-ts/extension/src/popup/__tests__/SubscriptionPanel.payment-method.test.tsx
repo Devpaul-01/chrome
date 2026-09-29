@@ -34,7 +34,7 @@ describe('SubscriptionPanel payment-method selection', () => {
   it.each([
     ['Bitcoin (BTC)', 'bitcoin'],
     ['Monero (XMR)', 'monero'],
-    ['Credit / Debit Card', 'rapyd'],
+    ['PayPal', 'paypal'],
   ] as const)('clicking %s sends payment_method=%s without stale state', async (label, expectedMethod) => {
     const user = userEvent.setup();
     render(<SubscriptionPanel />);
@@ -58,5 +58,16 @@ describe('SubscriptionPanel payment-method selection', () => {
         }),
       );
     });
+  });  it('does not expose Rapyd as a customer-facing payment method', async () => {
+    const user = userEvent.setup();
+    render(<SubscriptionPanel />);
+    await waitFor(() => expect(sendMessageMock).toHaveBeenCalledWith({ type: 'subscription.status' }));
+    const renewalButton = await screen.findByRole('button', { name: /renew monthly early/i });
+    await user.click(renewalButton);
+    expect(screen.queryByRole('button', { name: /credit \/ debit card/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/powered by rapyd/i)).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /paypal/i })).toBeInTheDocument();
   });
+
+
 });

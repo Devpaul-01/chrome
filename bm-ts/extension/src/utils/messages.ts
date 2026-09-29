@@ -1,4 +1,4 @@
-﻿/**
+/**
  * messages.ts â€” Discriminated-union message types for the Chrome MV3 message bus.
  *
  * Every message passed between the popup, content script, and background service
@@ -91,7 +91,7 @@ export type BackgroundMessage =
       type: 'subscription.checkout';
       payload: {
         plan: 'monthly' | 'yearly';
-        payment_method: 'bitcoin' | 'monero' | 'rapyd';
+        payment_method: 'bitcoin' | 'monero' | 'paypal' | 'rapyd';
         idempotency_key: string;
       };
     }

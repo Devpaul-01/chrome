@@ -68,7 +68,7 @@ export default function SubscriptionPanel() {
   // Preserve one idempotency key per plan until a checkout is successfully created.
   // If the provider result is uncertain, retrying the same plan must reuse the same key
   // so the backend can reconcile the original provider invoice instead of creating a duplicate.
-  const [paymentMethod, setPaymentMethod] = useState<'bitcoin' | 'monero' | 'rapyd'>('bitcoin');
+  const [paymentMethod, setPaymentMethod] = useState<'bitcoin' | 'monero' | 'paypal'>('bitcoin');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<'monthly' | 'yearly' | null>(null);
   const checkoutKeysRef = useRef<Partial<Record<string, string>>>({});
@@ -149,7 +149,7 @@ export default function SubscriptionPanel() {
 
   async function handleCheckout(
     plan: 'monthly' | 'yearly',
-    selectedPaymentMethod: 'bitcoin' | 'monero' | 'rapyd',
+    selectedPaymentMethod: 'bitcoin' | 'monero' | 'paypal',
   ) {
     setActionLoading(`checkout:${plan}`);
     setError(null);
@@ -659,22 +659,22 @@ export default function SubscriptionPanel() {
                 <button
                   type="button"
                   onClick={() => {
-                    setPaymentMethod('rapyd');
-                    void handleCheckout(checkoutPlan, 'rapyd');
+                    setPaymentMethod('paypal');
+                    void handleCheckout(checkoutPlan, 'paypal');
                   }}
-                  className="w-full flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3 text-left hover:border-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-60"
+                  className="w-full flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3 text-left hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-60"
                   disabled={!!actionLoading}
                 >
                   <span className="h-4 w-4 rounded-full border-2 border-gray-400 flex items-center justify-center">
-                    {actionLoading === `checkout:${checkoutPlan}` && paymentMethod === 'rapyd' && (
-                      <span className="h-2 w-2 rounded-full bg-orange-500" />
+                    {actionLoading === `checkout:${checkoutPlan}` && paymentMethod === 'paypal' && (
+                      <span className="h-2 w-2 rounded-full bg-blue-500" />
                     )}
                   </span>
                   <span className="flex-1">
-                    <span className="block font-semibold text-gray-900">Credit / Debit Card</span>
-                    <span className="block text-xs text-gray-500">Secure checkout powered by Rapyd</span>
+                    <span className="block font-semibold text-gray-900">PayPal</span>
+                    <span className="block text-xs text-gray-500">Secure checkout with PayPal</span>
                   </span>
-                  {actionLoading === `checkout:${checkoutPlan}` && paymentMethod === 'rapyd' && (
+                  {actionLoading === `checkout:${checkoutPlan}` && paymentMethod === 'paypal' && (
                     <Spinner size="sm" />
                   )}
                 </button>

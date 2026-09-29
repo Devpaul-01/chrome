@@ -73,6 +73,17 @@ class Settings(BaseSettings):
         default=262144, ge=16384, le=1048576, alias="RAPYD_WEBHOOK_MAX_BODY_BYTES"
     )
 
+    # PayPal Checkout - credentials remain server-side only.
+    paypal_environment: str = Field(default="sandbox", alias="PAYPAL_ENVIRONMENT")
+    paypal_client_id: str = Field(default="", alias="PAYPAL_CLIENT_ID")
+    paypal_client_secret: str = Field(default="", alias="PAYPAL_CLIENT_SECRET")
+    paypal_webhook_id: str = Field(default="", alias="PAYPAL_WEBHOOK_ID")
+    paypal_return_url: str = Field(default="https://birthdaymessaging.com/payment/paypal/return", alias="PAYPAL_RETURN_URL")
+    paypal_cancel_url: str = Field(default="https://birthdaymessaging.com/payment/paypal/cancel", alias="PAYPAL_CANCEL_URL")
+    paypal_connect_timeout_seconds: float = Field(default=5.0, ge=1.0, le=30.0, alias="PAYPAL_CONNECT_TIMEOUT_SECONDS")
+    paypal_read_timeout_seconds: float = Field(default=20.0, ge=1.0, le=120.0, alias="PAYPAL_READ_TIMEOUT_SECONDS")
+    paypal_webhook_max_body_bytes: int = Field(default=262144, ge=16384, le=1048576, alias="PAYPAL_WEBHOOK_MAX_BODY_BYTES")
+
     # BTCPay Server
     btcpay_url: str = Field(
         default="https://btcpay.birthdaymessaging.io",

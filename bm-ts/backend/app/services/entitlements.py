@@ -17,7 +17,7 @@ from app.db.models import AccessEntitlement, PaymentTransaction, User
 
 
 _ALLOWED_TERM_MONTHS = frozenset({1, 3, 6, 12})
-_SETTLEMENT_ENTITLEMENT_PROVIDERS = frozenset({"btcpay", "rapyd"})
+_SETTLEMENT_ENTITLEMENT_PROVIDERS = frozenset({"btcpay", "rapyd", "paypal"})
 
 
 def _utc_now() -> datetime:

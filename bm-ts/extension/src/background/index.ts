@@ -1,4 +1,4 @@
-﻿import {
+import {
   ApiError,
   BillingPortalResponse,
   CheckoutSessionResponse,
@@ -15,6 +15,7 @@
   SMTPConfig,
   MessageTemplate,
   createBTCPayCheckout,
+  createPayPalCheckout,
   createRapydCheckout,
   cancelSubscription,
   reactivateSubscription,
@@ -621,6 +622,14 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
     }
     case 'subscription.checkout': {
       return runAuthAware((accessToken, url) => {
+        if (message.payload.payment_method === 'paypal') {
+          return createPayPalCheckout(
+            url,
+            accessToken,
+            message.payload.plan,
+            message.payload.idempotency_key,
+          );
+        }
         if (message.payload.payment_method === 'rapyd') {
           return createRapydCheckout(
             url,
