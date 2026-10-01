@@ -49,6 +49,12 @@ class Settings(BaseSettings):
         default="price_yearly_placeholder", alias="STRIPE_PRICE_YEARLY"
     )
 
+    # Payment-provider feature gates. Optional providers default off and must be
+    # explicitly enabled by the server-side runtime environment.
+    btcpay_enabled: bool = Field(default=True, alias="BTCPAY_ENABLED")
+    rapyd_enabled: bool = Field(default=False, alias="RAPYD_ENABLED")
+    paypal_enabled: bool = Field(default=False, alias="PAYPAL_ENABLED")
+
     # Rapyd Payments - credentials remain server-side only.
     rapyd_base_url: str = Field(
         default="https://sandboxapi.rapyd.net",

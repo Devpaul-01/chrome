@@ -21,6 +21,13 @@ WORKER_NAME = "rapyd-reconciliation-worker"
 
 
 async def run_once(limit: int) -> dict[str, int]:
+    if not settings.rapyd_enabled:
+        result = {"processed": 0, "disabled": 1}
+        logger.info(
+            "rapyd_reconciliation_disabled",
+            extra={"event": "rapyd_reconciliation_disabled", **result},
+        )
+        return result
     async with AsyncSessionLocal() as db:
         result = await process_reconciliation_jobs(db=db, limit=limit)
     logger.info("rapyd_reconciliation_batch", extra={"event": "rapyd_reconciliation_batch", **result})
@@ -28,6 +35,13 @@ async def run_once(limit: int) -> dict[str, int]:
 
 
 async def run_forever(limit: int, interval: int) -> None:
+    if not settings.rapyd_enabled:
+        logger.info(
+            "rapyd_reconciliation_worker_disabled",
+            extra={"event": "rapyd_reconciliation_worker_disabled"},
+        )
+        return
+
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()
 

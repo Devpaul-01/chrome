@@ -35,6 +35,28 @@ def _positive_decimal(name: str, value: str, errors: list[str]) -> None:
         errors.append(f"{name} must be greater than zero.")
 
 
+def _enabled(settings: Any, attribute: str, *, legacy_default: bool) -> bool:
+    """Resolve a provider gate without silently weakening legacy validation."""
+    value = getattr(settings, attribute, None)
+    if value is None:
+        return legacy_default
+    return bool(value)
+
+
+def _public_https_url(name: str, value: str, errors: list[str]) -> None:
+    parsed = urlparse(value) if value else None
+    host = (parsed.hostname or "").lower() if parsed else ""
+    if (
+        parsed is None
+        or parsed.scheme.lower() != "https"
+        or not host
+        or host in {"localhost", "127.0.0.1", "::1"}
+        or host.endswith(".local")
+        or host.startswith("host.docker.")
+    ):
+        errors.append(f"{name} must be a public HTTPS URL.")
+
+
 def validate_payment_production_config(settings: Any) -> None:
     """Raise RuntimeError when production payment configuration is unsafe.
 
@@ -85,38 +107,55 @@ def validate_payment_production_config(settings: Any) -> None:
     if len(webhook_secret) < 16:
         errors.append("BTCPAY_WEBHOOK_SECRET is missing or implausibly short.")
 
-    rapyd_base_url = _text(settings, "rapyd_base_url", "RAPYD_BASE_URL")
-    rapyd_base = urlparse(rapyd_base_url) if rapyd_base_url else None
-    rapyd_host = (rapyd_base.hostname or "").lower() if rapyd_base else ""
-    if (
-        rapyd_base is None
-        or rapyd_base.scheme.lower() != "https"
-        or not rapyd_host
-        or rapyd_host in {"localhost", "127.0.0.1", "::1"}
-        or rapyd_host.endswith(".local")
-    ):
-        errors.append("RAPYD_BASE_URL must be a valid HTTPS provider URL.")
+    rapyd_enabled = _enabled(settings, "rapyd_enabled", legacy_default=True)
+    paypal_enabled = _enabled(settings, "paypal_enabled", legacy_default=False)
 
-    rapyd_access_key = _text(settings, "rapyd_access_key", "RAPYD_ACCESS_KEY")
-    if len(rapyd_access_key) < 8:
-        errors.append("RAPYD_ACCESS_KEY is missing or implausibly short.")
+    if rapyd_enabled:
+        rapyd_base_url = _text(settings, "rapyd_base_url", "RAPYD_BASE_URL")
+        rapyd_base = urlparse(rapyd_base_url) if rapyd_base_url else None
+        rapyd_host = (rapyd_base.hostname or "").lower() if rapyd_base else ""
+        if (
+            rapyd_base is None
+            or rapyd_base.scheme.lower() != "https"
+            or not rapyd_host
+            or rapyd_host in {"localhost", "127.0.0.1", "::1"}
+            or rapyd_host.endswith(".local")
+        ):
+            errors.append("RAPYD_BASE_URL must be a valid HTTPS provider URL.")
 
-    rapyd_secret_key = _text(settings, "rapyd_secret_key", "RAPYD_SECRET_KEY")
-    if len(rapyd_secret_key) < 16:
-        errors.append("RAPYD_SECRET_KEY is missing or implausibly short.")
+        rapyd_access_key = _text(settings, "rapyd_access_key", "RAPYD_ACCESS_KEY")
+        if len(rapyd_access_key) < 8:
+            errors.append("RAPYD_ACCESS_KEY is missing or implausibly short.")
 
-    rapyd_webhook_url = _text(settings, "rapyd_webhook_url", "RAPYD_WEBHOOK_URL")
-    rapyd_webhook = urlparse(rapyd_webhook_url) if rapyd_webhook_url else None
-    webhook_host = (rapyd_webhook.hostname or "").lower() if rapyd_webhook else ""
-    if (
-        rapyd_webhook is None
-        or rapyd_webhook.scheme.lower() != "https"
-        or not webhook_host
-        or webhook_host in {"localhost", "127.0.0.1", "::1"}
-        or webhook_host.endswith(".local")
-        or webhook_host.startswith("host.docker.")
-    ):
-        errors.append("RAPYD_WEBHOOK_URL must be a public HTTPS URL.")
+        rapyd_secret_key = _text(settings, "rapyd_secret_key", "RAPYD_SECRET_KEY")
+        if len(rapyd_secret_key) < 16:
+            errors.append("RAPYD_SECRET_KEY is missing or implausibly short.")
+
+        rapyd_webhook_url = _text(settings, "rapyd_webhook_url", "RAPYD_WEBHOOK_URL")
+        _public_https_url("RAPYD_WEBHOOK_URL", rapyd_webhook_url, errors)
+
+    if paypal_enabled:
+        paypal_environment = _text(settings, "paypal_environment", "PAYPAL_ENVIRONMENT").lower()
+        if paypal_environment not in {"sandbox", "live"}:
+            errors.append("PAYPAL_ENVIRONMENT must be sandbox or live.")
+
+        paypal_client_id = _text(settings, "paypal_client_id", "PAYPAL_CLIENT_ID")
+        if len(paypal_client_id) < 8:
+            errors.append("PAYPAL_CLIENT_ID is missing or implausibly short.")
+
+        paypal_client_secret = _text(settings, "paypal_client_secret", "PAYPAL_CLIENT_SECRET")
+        if len(paypal_client_secret) < 16:
+            errors.append("PAYPAL_CLIENT_SECRET is missing or implausibly short.")
+
+        paypal_webhook_id = _text(settings, "paypal_webhook_id", "PAYPAL_WEBHOOK_ID")
+        if len(paypal_webhook_id) < 8:
+            errors.append("PAYPAL_WEBHOOK_ID is missing or implausibly short.")
+
+        paypal_return_url = _text(settings, "paypal_return_url", "PAYPAL_RETURN_URL")
+        _public_https_url("PAYPAL_RETURN_URL", paypal_return_url, errors)
+
+        paypal_cancel_url = _text(settings, "paypal_cancel_url", "PAYPAL_CANCEL_URL")
+        _public_https_url("PAYPAL_CANCEL_URL", paypal_cancel_url, errors)
 
     for name in _REQUIRED_PRICE_VARS:
         value = os.getenv(name, "").strip()
@@ -132,16 +171,30 @@ def validate_payment_production_config(settings: Any) -> None:
     batch = os.getenv("PAYMENT_CHECKOUT_RECOVERY_BATCH_SIZE", "50").strip()
     interval = os.getenv("PAYMENT_CHECKOUT_RECOVERY_INTERVAL_SECONDS", "60").strip()
     stale = os.getenv("PAYMENT_CHECKOUT_RECOVERY_STALE_SECONDS", "120").strip()
-    rapyd_batch = os.getenv("RAPYD_RECONCILIATION_WORKER_BATCH_SIZE", "50").strip()
-    rapyd_interval = os.getenv("RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS", "60").strip()
-
-    for name, raw, minimum, maximum in (
+    worker_settings = [
         ("PAYMENT_CHECKOUT_RECOVERY_BATCH_SIZE", batch, 1, 500),
         ("PAYMENT_CHECKOUT_RECOVERY_INTERVAL_SECONDS", interval, 5, 3600),
         ("PAYMENT_CHECKOUT_RECOVERY_STALE_SECONDS", stale, 30, 86400),
-        ("RAPYD_RECONCILIATION_WORKER_BATCH_SIZE", rapyd_batch, 1, 500),
-        ("RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS", rapyd_interval, 1, 3600),
-    ):
+    ]
+    if rapyd_enabled:
+        worker_settings.extend(
+            [
+                (
+                    "RAPYD_RECONCILIATION_WORKER_BATCH_SIZE",
+                    os.getenv("RAPYD_RECONCILIATION_WORKER_BATCH_SIZE", "50").strip(),
+                    1,
+                    500,
+                ),
+                (
+                    "RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS",
+                    os.getenv("RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS", "60").strip(),
+                    1,
+                    3600,
+                ),
+            ]
+        )
+
+    for name, raw, minimum, maximum in worker_settings:
         try:
             parsed_int = int(raw)
         except ValueError:

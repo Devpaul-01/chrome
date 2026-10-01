@@ -61,6 +61,18 @@ _IDEMPOTENCY_MAX_LENGTH = 128
 _CHECKOUT_CLAIM_SECONDS = 120
 
 
+def _require_provider_enabled(provider: str) -> None:
+    enabled = {
+        "paypal": settings.paypal_enabled,
+        "rapyd": settings.rapyd_enabled,
+    }.get(provider)
+    if enabled is not True:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"{provider.title()} payments are not enabled.",
+        )
+
+
 def _validate_idempotency_key(value: str | None) -> str:
     if value is None or not value.strip():
         raise AppError(
@@ -389,6 +401,7 @@ async def _finalize_paypal_checkout(*, db: AsyncSession, attempt: PaymentCheckou
 
 @router.post("/paypal/checkout", response_model=BTCPayCheckoutResponse, status_code=status.HTTP_201_CREATED)
 async def create_paypal_checkout(payload: PayPalCheckoutRequest, response: Response, idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> BTCPayCheckoutResponse:
+    _require_provider_enabled("paypal")
     key = _validate_idempotency_key(idempotency_key)
     plan = get_payment_plan(payload.plan_code)
     now = datetime.now(timezone.utc)
@@ -500,6 +513,7 @@ async def create_rapyd_checkout(
     db: AsyncSession = Depends(get_db),
 ) -> BTCPayCheckoutResponse:
     """Create one durable Rapyd checkout; never duplicate ambiguous attempts."""
+    _require_provider_enabled("rapyd")
     key = _validate_idempotency_key(idempotency_key)
     plan = get_payment_plan(payload.plan_code)
     now = datetime.now(timezone.utc)
@@ -880,6 +894,7 @@ async def create_btcpay_test_invoice(
 
 @router.post("/paypal/webhook", status_code=status.HTTP_200_OK)
 async def paypal_webhook(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, bool | str]:
+    _require_provider_enabled("paypal")
     declared_length = request.headers.get("content-length")
     if declared_length:
         try:
@@ -986,6 +1001,7 @@ async def rapyd_webhook(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, bool | str]:
     """Authenticate, ledger, and settle authoritative Rapyd payment events."""
+    _require_provider_enabled("rapyd")
     declared_length = request.headers.get("content-length")
     if declared_length:
         try:
