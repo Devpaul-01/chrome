@@ -49,9 +49,11 @@ from app.services.paypal import (
     create_subscription as paypal_create_subscription,
     subscription_approval_url as paypal_subscription_approval_url,
     subscription_plan_id as paypal_subscription_plan_id,
+    show_subscription as paypal_show_subscription,
     verify_webhook as verify_paypal_webhook,
 )
 from app.services.paypal_settlement import settle_paypal_capture
+from app.services.paypal_recurring_settlement import settle_paypal_subscription_sale
 from app.services.entitlements import grant_entitlement_for_settled_payment
 from app.services.rapyd_settlement import settle_rapyd_payment_snapshot
 from app.services.notifications import enqueue_payment_lifecycle_notifications
@@ -1092,12 +1094,29 @@ async def paypal_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
         if existing.processing_status in {"processed", "ignored"}:
             return {"received": True, "processed": False, "reason": "duplicate_event", "event": existing.event_type or event_type}
         return {"received": True, "processed": False, "reason": "duplicate_in_progress", "event": existing.event_type or event_type}
-    if event_type not in {"CHECKOUT.ORDER.APPROVED", "PAYMENT.CAPTURE.COMPLETED"}:
+    if event_type not in {"CHECKOUT.ORDER.APPROVED", "PAYMENT.CAPTURE.COMPLETED", "PAYMENT.SALE.COMPLETED"}:
         ledger.processing_status = "ignored"
         ledger.processed_at = datetime.now(timezone.utc)
         await db.commit()
         return {"received": True, "processed": False, "reason": "non_settlement_event", "event": event_type}
     try:
+        if event_type == "PAYMENT.SALE.COMPLETED":
+            billing_id = str(resource.get("billing_agreement_id") or "").strip()
+            if not billing_id:
+                raise ValueError("Recurring PayPal sale is missing billing agreement id.")
+            recurring = (await db.execute(select(RecurringSubscription).where(RecurringSubscription.provider == "paypal", RecurringSubscription.provider_subscription_id == billing_id))).scalar_one_or_none()
+            if recurring is None:
+                ledger.processing_status = "ignored"; ledger.processing_error = "subscription_not_found"; ledger.processed_at = datetime.now(timezone.utc); await db.commit()
+                return {"received": True, "processed": False, "reason": "subscription_not_found", "event": event_type}
+            snapshot = await paypal_show_subscription(billing_id)
+            outcome = await settle_paypal_subscription_sale(db=db, sale=resource, subscription=recurring, subscription_snapshot=snapshot, source="webhook:" + event_type)
+            reason = str(outcome.get("reason") or ""); settled = bool(outcome.get("settled"))
+            ledger.provider_payment_id = str(resource.get("id") or "") or None
+            ledger.processing_status = "processed" if settled or reason == "already_processed" else "ignored"
+            ledger.processing_error = None if ledger.processing_status == "processed" else reason
+            ledger.processed_at = datetime.now(timezone.utc)
+            await db.commit()
+            return {"received": True, "processed": ledger.processing_status == "processed", "reason": reason, "event": event_type, "settled": settled}
         if event_type == "CHECKOUT.ORDER.APPROVED":
             order_id = str(resource.get("id") or "").strip()
             if not order_id:
