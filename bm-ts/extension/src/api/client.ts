@@ -133,7 +133,7 @@ export interface UserProfile {
 
 export type SegmentType = TemplateSegment['segment_type'];
 
-/** User's Stripe subscription status. */
+/** Provider-neutral subscription/access status. */
 export interface SubscriptionStatus {
   is_active: boolean;
   plan?: 'monthly' | 'yearly';
@@ -144,6 +144,10 @@ export interface SubscriptionStatus {
   in_grace_period?: boolean;
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
+  billing_provider?: string;
+  provider_subscription_id?: string;
+  auto_renew?: boolean;
+  next_billing_at?: string;
 }
 
 export interface CheckoutSessionRequest {
@@ -172,7 +176,7 @@ export interface BTCPayCheckoutResponse {
 }
 
 export type RapydCheckoutResponse = BTCPayCheckoutResponse;
-export type PayPalCheckoutResponse = BTCPayCheckoutResponse;
+export interface PayPalCheckoutResponse { provider: string; subscription_id: string; status: string; checkout_url: string; plan_code: string; reused: boolean; }
 
 export interface CancelSubscriptionResponse {
   status: string;
@@ -304,7 +308,7 @@ export async function createPayPalCheckout(
 ): Promise<PayPalCheckoutResponse> {
   return request(
     baseUrl,
-    '/api/payments/paypal/checkout',
+    '/api/payments/paypal/subscription/checkout',
     'POST',
     { plan_code: plan },
     accessToken,

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-describe('PayPal checkout API contract', () => {
+describe('PayPal recurring checkout API contract', () => {
   const BASE = 'http://localhost:8000';
   const TOKEN = 'access-token';
 
@@ -37,7 +37,7 @@ describe('PayPal checkout API contract', () => {
     await createPayPalCheckout(BASE, TOKEN, 'monthly', 'idem-paypal-001');
 
     const [url, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(url).toBe(`${BASE}/api/payments/paypal/checkout`);
+    expect(url).toBe(`${BASE}/api/payments/paypal/subscription/checkout`);
     expect((options as RequestInit).method).toBe('POST');
     expect(JSON.parse(String((options as RequestInit).body))).toEqual({ plan_code: 'monthly' });
     expect((options as RequestInit).headers).toMatchObject({

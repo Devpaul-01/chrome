@@ -263,6 +263,7 @@ export default function SubscriptionPanel() {
   const badge = getStatusBadge(subscription);
   const isPendingCancel = subscription?.cancel_at_period_end ?? false;
   const hasStripeCustomer = !!subscription?.stripe_customer_id;
+  const isPayPalRecurring = subscription?.billing_provider === 'paypal' && !!subscription?.provider_subscription_id;
 
   /* â”€â”€ render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   if (isLoading) {
@@ -321,6 +322,10 @@ export default function SubscriptionPanel() {
           )}
         </div>
 
+        {isPayPalRecurring && subscription?.auto_renew && (
+          <p className="text-xs text-gray-500 mb-2">Automatic renewal is enabled through PayPal{subscription.next_billing_at ? `; next billing: ${formatDate(subscription.next_billing_at)}` : ''}.</p>
+        )}
+
         {subscription?.current_period_end && (
           <p className="text-sm text-gray-600 mb-1">
             {isPendingCancel ? 'Access until' : 'Renews on'}:{' '}
@@ -331,17 +336,16 @@ export default function SubscriptionPanel() {
         {isPendingCancel && (
           <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
             <p className="text-sm text-yellow-800 mb-2">
-              Your subscription will be canceled at the end of the current billing period. You can
-              reactivate anytime before then.
+              {isPayPalRecurring
+                ? 'Automatic renewal through PayPal has been canceled. Your already-paid access remains available through its paid-through date.'
+                : 'Your subscription will be canceled at the end of the current billing period. You can reactivate anytime before then.'}
             </p>
-            <button
-              onClick={handleReactivate}
-              className="btn flex items-center justify-center gap-2 text-sm"
-              disabled={actionLoading === 'reactivate'}
-            >
-              {actionLoading === 'reactivate' && <Spinner size="sm" />}
-              {actionLoading === 'reactivate' ? 'Reactivating...' : 'Reactivate Subscription'}
-            </button>
+            {!isPayPalRecurring && (
+              <button onClick={handleReactivate} className="btn flex items-center justify-center gap-2 text-sm" disabled={actionLoading === 'reactivate'}>
+                {actionLoading === 'reactivate' && <Spinner size="sm" />}
+                {actionLoading === 'reactivate' ? 'Reactivating...' : 'Reactivate Subscription'}
+              </button>
+            )}
           </div>
         )}
 
@@ -672,7 +676,7 @@ export default function SubscriptionPanel() {
                   </span>
                   <span className="flex-1">
                     <span className="block font-semibold text-gray-900">PayPal</span>
-                    <span className="block text-xs text-gray-500">Secure checkout with PayPal</span>
+                    <span className="block text-xs text-gray-500">Secure recurring checkout with PayPal</span>
                   </span>
                   {actionLoading === `checkout:${checkoutPlan}` && paymentMethod === 'paypal' && (
                     <Spinner size="sm" />
