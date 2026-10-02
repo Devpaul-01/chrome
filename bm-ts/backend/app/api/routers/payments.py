@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.errors import AppError, ErrorCodes
-from app.db.models import PaymentCheckoutAttempt, PaymentTransaction, PaymentWebhookEvent, User
+from app.db.models import PaymentCheckoutAttempt, PaymentTransaction, PaymentWebhookEvent, RecurringSubscription, User
 from app.db.session import get_db
 from app.schemas.payment import BTCPayCheckoutRequest, BTCPayCheckoutResponse, BTCPayCheckoutStatusResponse, BTCPayTestInvoiceResponse, RapydCheckoutRequest, PayPalCheckoutRequest
 from app.services.btcpay import create_invoice, public_checkout_url, find_invoice_by_order_id
@@ -46,6 +46,9 @@ from app.services.paypal import (
     approval_url as paypal_approval_url,
     capture_order as paypal_capture_order,
     create_order as paypal_create_order,
+    create_subscription as paypal_create_subscription,
+    subscription_approval_url as paypal_subscription_approval_url,
+    subscription_plan_id as paypal_subscription_plan_id,
     verify_webhook as verify_paypal_webhook,
 )
 from app.services.paypal_settlement import settle_paypal_capture
@@ -515,6 +518,82 @@ async def create_paypal_checkout(payload: PayPalCheckoutRequest, response: Respo
         raise AppError(status.HTTP_502_BAD_GATEWAY, ErrorCodes.BAD_REQUEST, "The payment provider could not create this checkout.") from exc
     transaction = await _finalize_paypal_checkout(db=db, attempt=attempt, order=order, term_months=plan.term_months)
     return _checkout_response(attempt, transaction, reused=False)
+
+@router.post("/paypal/subscription/checkout", status_code=status.HTTP_201_CREATED)
+async def create_paypal_subscription_checkout(
+    payload: PayPalCheckoutRequest,
+    response: Response,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, object]:
+    # Approval creates a billing agreement only. It never grants access.
+    _require_provider_enabled("paypal")
+    key = _validate_idempotency_key(idempotency_key)
+    plan = get_payment_plan(payload.plan_code)
+    if plan.code not in {"monthly", "yearly"}:
+        raise AppError(status.HTTP_400_BAD_REQUEST, ErrorCodes.BAD_REQUEST, "PayPal recurring billing supports monthly and yearly plans only.")
+    provider = "paypal_subscription"
+    now = datetime.now(timezone.utc)
+    attempt = (await db.execute(select(PaymentCheckoutAttempt).where(
+        PaymentCheckoutAttempt.provider == provider,
+        PaymentCheckoutAttempt.user_id == current_user.id,
+        PaymentCheckoutAttempt.idempotency_key == key,
+    ))).scalar_one_or_none()
+    if attempt is not None:
+        if attempt.plan_code != plan.code:
+            raise AppError(status.HTTP_409_CONFLICT, ErrorCodes.PAYMENT_IDEMPOTENCY_CONFLICT, "This Idempotency-Key was already used for a different payment plan.")
+        if attempt.provider_payment_id and attempt.checkout_url:
+            recurring = (await db.execute(select(RecurringSubscription).where(
+                RecurringSubscription.provider == "paypal",
+                RecurringSubscription.provider_subscription_id == attempt.provider_payment_id,
+            ))).scalar_one_or_none()
+            if recurring is not None:
+                response.status_code = status.HTTP_200_OK
+                return {"provider":"paypal","subscription_id":recurring.provider_subscription_id,"status":recurring.status,"checkout_url":attempt.checkout_url,"plan_code":recurring.plan_code,"reused":True}
+        raise AppError(status.HTTP_409_CONFLICT, ErrorCodes.PAYMENT_CHECKOUT_IN_PROGRESS, "Subscription checkout is awaiting provider reconciliation. Retry with the same Idempotency-Key.")
+    attempt_id=uuid4()
+    attempt=PaymentCheckoutAttempt(
+        id=attempt_id,user_id=current_user.id,provider=provider,idempotency_key=key,
+        plan_code=plan.code,amount=plan.amount,currency=plan.currency,
+        provider_order_id=f"BM-PAYPAL-SUB-{attempt_id}",provider_payment_id=None,
+        checkout_url=None,status="claimed",failure_code=None,
+        claim_expires_at=now+timedelta(seconds=_CHECKOUT_CLAIM_SECONDS),
+        completed_at=None,created_at=now,updated_at=now,
+        metadata_payload={"billing_term_months":plan.term_months,"catalog_price_env":plan.price_env_name,"payment_method":"paypal_subscription"})
+    db.add(attempt)
+    try:
+        await db.commit(); await db.refresh(attempt)
+    except IntegrityError as exc:
+        await db.rollback()
+        raise AppError(status.HTTP_409_CONFLICT, ErrorCodes.PAYMENT_CHECKOUT_IN_PROGRESS, "Subscription checkout is already being created. Retry with the same Idempotency-Key.") from exc
+    try:
+        remote=await paypal_create_subscription(plan_code=plan.code,custom_id=f"bm-user:{current_user.id}:plan:{plan.code}",idempotency_key=key)
+        sid=str(remote.get("id") or "").strip()
+        remote_status=str(remote.get("status") or "APPROVAL_PENDING").strip()
+        url=paypal_subscription_approval_url(remote)
+        provider_plan_id=paypal_subscription_plan_id(plan.code)
+        if not sid: raise PayPalResponseError("PayPal subscription response did not include an id.")
+    except (PayPalTransportError, PayPalResponseError) as exc:
+        attempt.status="uncertain";attempt.failure_code="provider_create_uncertain";attempt.claim_expires_at=now+timedelta(minutes=10);attempt.updated_at=datetime.now(timezone.utc);await db.commit()
+        raise AppError(status.HTTP_503_SERVICE_UNAVAILABLE, ErrorCodes.PAYMENT_PROVIDER_UNCERTAIN, "Subscription provider status is uncertain. Retry with the same Idempotency-Key.") from exc
+    except PayPalConfigurationError as exc:
+        attempt.status="failed";attempt.failure_code="provider_configuration";attempt.claim_expires_at=None;attempt.updated_at=datetime.now(timezone.utc);await db.commit()
+        raise AppError(status.HTTP_503_SERVICE_UNAVAILABLE, ErrorCodes.INTERNAL_SERVER_ERROR, "PayPal recurring billing is temporarily unavailable.") from exc
+    except PayPalProviderError as exc:
+        attempt.status="failed";attempt.failure_code="provider_rejected";attempt.claim_expires_at=None;attempt.updated_at=datetime.now(timezone.utc);await db.commit()
+        raise AppError(status.HTTP_502_BAD_GATEWAY, ErrorCodes.BAD_REQUEST, "PayPal could not create this recurring subscription.") from exc
+    recurring=RecurringSubscription(
+        id=uuid4(),user_id=current_user.id,provider="paypal",provider_subscription_id=sid,
+        provider_plan_id=provider_plan_id,plan_code=plan.code,status=remote_status,
+        next_billing_at=None,cancel_at_period_end=False,created_at=now,updated_at=now,
+        metadata_payload={"checkout_attempt_id":str(attempt.id)})
+    db.add(recurring)
+    attempt.provider_payment_id=sid;attempt.checkout_url=url;attempt.status="completed";attempt.failure_code=None
+    attempt.claim_expires_at=None;attempt.completed_at=now;attempt.updated_at=now
+    await db.commit()
+    return {"provider":"paypal","subscription_id":sid,"status":remote_status,"checkout_url":url,"plan_code":plan.code,"reused":False}
+
 
 async def _finalize_rapyd_checkout(
     *,
