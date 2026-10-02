@@ -14,6 +14,7 @@ from decimal import Decimal, InvalidOperation
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,6 +56,7 @@ from app.services.payment_plans import get_payment_plan
 
 
 router = APIRouter()
+public_router = APIRouter()
 
 _IDEMPOTENCY_MIN_LENGTH = 16
 _IDEMPOTENCY_MAX_LENGTH = 128
@@ -398,6 +400,71 @@ async def _finalize_paypal_checkout(*, db: AsyncSession, attempt: PaymentCheckou
     await db.refresh(attempt)
     await db.refresh(transaction)
     return transaction
+
+
+def _paypal_browser_result_page(*, heading: str, message: str) -> str:
+    """Render a minimal no-secret browser result page for redirected PayPal buyers."""
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{heading} | BirthdayMessaging</title>
+  <style>
+    body {{ font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f8fafc; color: #0f172a; }}
+    main {{ max-width: 640px; margin: 12vh auto; padding: 32px; background: white; border-radius: 16px; box-shadow: 0 10px 35px rgba(15,23,42,.10); }}
+    h1 {{ margin-top: 0; font-size: 1.6rem; }}
+    p {{ line-height: 1.6; color: #475569; }}
+    .note {{ margin-top: 20px; padding: 12px 14px; background: #eff6ff; border-radius: 10px; color: #1e3a8a; }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>{heading}</h1>
+    <p>{message}</p>
+    <p class="note">You may close this tab and return to the BirthdayMessaging extension. Your subscription status refreshes automatically.</p>
+  </main>
+</body>
+</html>"""
+
+
+@public_router.get("/payment/paypal/return", response_class=HTMLResponse, include_in_schema=False)
+async def paypal_browser_return(
+    token: str | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+    """Browser landing page after PayPal approval; local settlement remains authoritative."""
+    heading = "Payment approval received"
+    message = "PayPal returned you to BirthdayMessaging. We are securely confirming the payment on the server."
+    if token:
+        transaction = (
+            await db.execute(
+                select(PaymentTransaction).where(
+                    PaymentTransaction.provider == "paypal",
+                    PaymentTransaction.provider_order_id == token,
+                )
+            )
+        ).scalar_one_or_none()
+        if transaction is not None and transaction.paid_at is not None:
+            heading = "Payment successful"
+            message = "Your PayPal payment has been confirmed and your BirthdayMessaging access has been updated."
+    return HTMLResponse(
+        _paypal_browser_result_page(heading=heading, message=message),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@public_router.get("/payment/paypal/cancel", response_class=HTMLResponse, include_in_schema=False)
+async def paypal_browser_cancel() -> HTMLResponse:
+    """Browser landing page after buyer cancellation; this endpoint never settles payment."""
+    return HTMLResponse(
+        _paypal_browser_result_page(
+            heading="PayPal checkout canceled",
+            message="No payment is confirmed by this page. You can return to BirthdayMessaging and choose a payment method when you are ready.",
+        ),
+        headers={"Cache-Control": "no-store"},
+    )
+
 
 @router.post("/paypal/checkout", response_model=BTCPayCheckoutResponse, status_code=status.HTTP_201_CREATED)
 async def create_paypal_checkout(payload: PayPalCheckoutRequest, response: Response, idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> BTCPayCheckoutResponse:

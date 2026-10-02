@@ -320,6 +320,7 @@ app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(subscription.router, prefix="/subscription", tags=["subscription"])
 app.include_router(webhook.router, prefix="/stripe", tags=["stripe"])
 app.include_router(payments.router, prefix="/api/payments", tags=["payments"])
+app.include_router(payments.public_router, tags=["payments"])
 
 # WebSocket authorization is intentionally handled separately because its
 # authentication handshake/token flow is not the same as HTTP OAuth2Bearer.
