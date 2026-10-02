@@ -26,7 +26,7 @@ from app.core.errors import AppError, ErrorCodes
 
 from app.api.deps import get_current_user
 from app.core.config import settings
-from app.db.models import AccessEntitlement, SubscriptionRecord, User
+from app.db.models import AccessEntitlement, RecurringSubscription, SubscriptionRecord, User
 from app.db.session import get_db
 from app.schemas.subscription import (
     BillingPortalResponse,
@@ -37,6 +37,7 @@ from app.schemas.subscription import (
     CheckoutSessionResponse,
     SubscriptionStatusResponse,
 )
+from app.services.paypal import cancel_recurring_subscription as cancel_paypal_subscription
 from app.services.stripe import (
     cancel_subscription,
     change_subscription_plan,
@@ -125,16 +126,15 @@ async def get_status(
                 paid_through = future.expires_at
                 coverage_plan = future.plan_code
 
+        recurring = (await db.execute(select(RecurringSubscription).where(RecurringSubscription.user_id == current_user.id).order_by(desc(RecurringSubscription.updated_at)).limit(1))).scalar_one_or_none()
         return SubscriptionStatusResponse(
-            is_active=True,
-            plan=coverage_plan,
-            status="ACTIVE",
-            current_period_end=paid_through,
-            cancel_at_period_end=False,
-            canceled_at=None,
-            in_grace_period=False,
-            stripe_customer_id=None,
-            stripe_subscription_id=None,
+            is_active=True, plan=coverage_plan, status="ACTIVE", current_period_end=paid_through,
+            cancel_at_period_end=bool(recurring.cancel_at_period_end) if recurring else False,
+            canceled_at=None, in_grace_period=False, stripe_customer_id=None, stripe_subscription_id=None,
+            billing_provider=recurring.provider if recurring else entitlement.source_provider,
+            provider_subscription_id=recurring.provider_subscription_id if recurring else None,
+            auto_renew=bool(recurring and recurring.status=="ACTIVE" and not recurring.cancel_at_period_end),
+            next_billing_at=recurring.next_billing_at if recurring else None,
         )
 
     stmt = (
@@ -221,6 +221,11 @@ async def cancel(
     db: AsyncSession = Depends(get_db),
 ) -> CancelSubscriptionResponse:
     """Cancel the current subscription at the end of the billing period."""
+    recurring = (await db.execute(select(RecurringSubscription).where(RecurringSubscription.user_id == current_user.id, RecurringSubscription.status.in_(["ACTIVE","APPROVAL_PENDING","PAYMENT_FAILED"])).order_by(desc(RecurringSubscription.updated_at)).limit(1))).scalar_one_or_none()
+    if recurring is not None and recurring.provider=="paypal":
+        await cancel_paypal_subscription(recurring.provider_subscription_id)
+        recurring.cancel_at_period_end=True;recurring.updated_at=datetime.now(timezone.utc);await db.commit()
+        return CancelSubscriptionResponse(status=recurring.status,cancel_at_period_end=True,current_period_end=None,message="PayPal recurring billing cancellation requested. Existing paid access remains valid through its paid-through date.")
     record = await _get_active_record(current_user, db)
     await cancel_subscription(record.stripe_subscription_id)
     # Optimistic local update (webhook will confirm)

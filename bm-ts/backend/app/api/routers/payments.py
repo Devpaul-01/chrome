@@ -54,6 +54,7 @@ from app.services.paypal import (
 )
 from app.services.paypal_settlement import settle_paypal_capture
 from app.services.paypal_recurring_settlement import settle_paypal_subscription_sale
+from app.services.paypal_subscription_lifecycle import apply_paypal_subscription_lifecycle
 from app.services.entitlements import grant_entitlement_for_settled_payment
 from app.services.rapyd_settlement import settle_rapyd_payment_snapshot
 from app.services.notifications import enqueue_payment_lifecycle_notifications
@@ -1094,6 +1095,16 @@ async def paypal_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
         if existing.processing_status in {"processed", "ignored"}:
             return {"received": True, "processed": False, "reason": "duplicate_event", "event": existing.event_type or event_type}
         return {"received": True, "processed": False, "reason": "duplicate_in_progress", "event": existing.event_type or event_type}
+    lifecycle_events = {"BILLING.SUBSCRIPTION.ACTIVATED", "BILLING.SUBSCRIPTION.CANCELLED", "BILLING.SUBSCRIPTION.SUSPENDED", "BILLING.SUBSCRIPTION.EXPIRED", "BILLING.SUBSCRIPTION.PAYMENT.FAILED"}
+    if event_type in lifecycle_events:
+        subscription_id = str(resource.get("id") or "").strip()
+        recurring = (await db.execute(select(RecurringSubscription).where(RecurringSubscription.provider == "paypal", RecurringSubscription.provider_subscription_id == subscription_id))).scalar_one_or_none()
+        if recurring is None:
+            ledger.processing_status="ignored";ledger.processing_error="subscription_not_found";ledger.processed_at=datetime.now(timezone.utc);await db.commit()
+            return {"received":True,"processed":False,"reason":"subscription_not_found","event":event_type}
+        apply_paypal_subscription_lifecycle(subscription=recurring,event_type=event_type,resource=resource)
+        ledger.processing_status="processed";ledger.processing_error=None;ledger.processed_at=datetime.now(timezone.utc);await db.commit()
+        return {"received":True,"processed":True,"reason":"subscription_state_updated","event":event_type}
     if event_type not in {"CHECKOUT.ORDER.APPROVED", "PAYMENT.CAPTURE.COMPLETED", "PAYMENT.SALE.COMPLETED"}:
         ledger.processing_status = "ignored"
         ledger.processed_at = datetime.now(timezone.utc)
