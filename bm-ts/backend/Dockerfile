@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-slim@sha256:9f6ef439f51f4b36dc5c6bb265c2d3dd810bde94c5bbec77ae86b6650c488cf9
 
 WORKDIR /app
 
@@ -9,10 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends postgresql-clie
     && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency manifests first for better caching
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md constraints.lock ./
 
 # Install Python dependencies (pin pip below 26.0 — CVE-2026-3219 affects 26.0 and 26.0.1, no fix released yet)
-RUN pip install "pip<26.0" && pip install --no-cache-dir ".[test]"
+RUN pip install "pip==24.0" && pip install --no-cache-dir -c constraints.lock ".[test]"
 
 # Copy the rest of the source code
 COPY . .
