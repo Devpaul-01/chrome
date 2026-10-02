@@ -222,6 +222,28 @@ class SubscriptionRecord(Base):
     )
 
 
+class RecurringSubscription(Base):
+    """Provider-neutral recurring billing agreement; access remains entitlement-based."""
+    __tablename__ = "recurring_subscriptions"
+    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    provider_subscription_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    provider_plan_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    plan_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    next_billing_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean(), nullable=False, server_default=text("false"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    metadata_payload: Mapped[dict[str, Any]] = mapped_column("metadata", JSON(), nullable=False, server_default=text("'{}'::json"))
+    __table_args__ = (
+        Index("uq_recurring_subscription_provider_id", "provider", "provider_subscription_id", unique=True),
+        Index("idx_recurring_subscription_user", "user_id"),
+        Index("idx_recurring_subscription_user_status", "user_id", "status"),
+    )
+
+
 class PaymentCheckoutAttempt(Base):
     """Durable server-owned idempotency record for external payment checkout.
 

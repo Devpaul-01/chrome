@@ -84,6 +84,8 @@ class Settings(BaseSettings):
     paypal_client_id: str = Field(default="", alias="PAYPAL_CLIENT_ID")
     paypal_client_secret: str = Field(default="", alias="PAYPAL_CLIENT_SECRET")
     paypal_webhook_id: str = Field(default="", alias="PAYPAL_WEBHOOK_ID")
+    paypal_plan_monthly: str = Field(default="", alias="PAYPAL_PLAN_MONTHLY")
+    paypal_plan_yearly: str = Field(default="", alias="PAYPAL_PLAN_YEARLY")
     paypal_return_url: str = Field(default="https://birthdaymessaging.com/payment/paypal/return", alias="PAYPAL_RETURN_URL")
     paypal_cancel_url: str = Field(default="https://birthdaymessaging.com/payment/paypal/cancel", alias="PAYPAL_CANCEL_URL")
     paypal_connect_timeout_seconds: float = Field(default=5.0, ge=1.0, le=30.0, alias="PAYPAL_CONNECT_TIMEOUT_SECONDS")

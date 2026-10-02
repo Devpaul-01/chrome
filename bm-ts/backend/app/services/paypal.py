@@ -88,3 +88,27 @@ async def verify_webhook(headers: Mapping[str, str], event: Mapping[str, Any]) -
         payload={**fields, "webhook_id": webhook_id, "webhook_event": dict(event)},
     )
     return str(result.get("verification_status") or "").upper() == "SUCCESS"
+
+
+def subscription_plan_id(plan_code: str) -> str:
+    mapping = {"monthly": settings.paypal_plan_monthly, "yearly": settings.paypal_plan_yearly}
+    plan_id = str(mapping.get(plan_code) or "").strip()
+    if not plan_id:
+        raise PayPalConfigurationError(f"PayPal recurring plan is not configured for {plan_code}.")
+    return plan_id
+
+async def create_subscription(*, plan_code: str, custom_id: str, idempotency_key: str):
+    payload = {"plan_id": subscription_plan_id(plan_code), "custom_id": custom_id,
+        "application_context": {"brand_name": "BirthdayMessaging", "locale": "en-US",
+        "shipping_preference": "NO_SHIPPING", "user_action": "SUBSCRIBE_NOW",
+        "return_url": settings.paypal_return_url, "cancel_url": settings.paypal_cancel_url}}
+    return await request("POST", "/v1/billing/subscriptions", payload=payload, idempotency_key=request_id("subscribe", idempotency_key))
+
+async def show_subscription(subscription_id: str):
+    return await request("GET", f"/v1/billing/subscriptions/{subscription_id}")
+
+async def cancel_recurring_subscription(subscription_id: str, reason: str = "Customer requested cancellation."):
+    return await request("POST", f"/v1/billing/subscriptions/{subscription_id}/cancel", payload={"reason": reason}, idempotency_key=request_id("cancel-subscription", subscription_id))
+
+def subscription_approval_url(subscription: Mapping[str, Any]) -> str:
+    return approval_url(subscription)
