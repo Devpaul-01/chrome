@@ -173,22 +173,12 @@ export function isRetryableError(error: unknown): boolean {
 /**
  * Log error to console with context
  */
-export function logError(error: unknown, context?: string): void {
+export function logError(error: unknown, _context?: string): void {
   const appError = parseApiError(error);
-  const timestamp = new Date().toISOString();
-
-  console.error('=== Error Log ===');
-  console.error('Timestamp:', timestamp);
-  if (context) {
-    console.error('Context:', context);
-  }
-  console.error('Error:', appError);
-  console.error('Message:', appError.message);
-  console.error('Code:', appError.code);
-  console.error('Status:', appError.statusCode);
-  console.error('Retryable:', appError.isRetryable);
-  console.error('Stack:', appError.stack);
-  console.error('================');
+  // Only fixed metadata is logged; no untrusted message, object, stack or context.
+  const status = typeof appError.statusCode === 'number' && Number.isInteger(appError.statusCode)
+    ? appError.statusCode : null;
+  console.error('Application error', { status, retryable: appError.isRetryable === true });
 }
 
 /**
