@@ -621,7 +621,7 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) => subscriptionStatus(url, accessToken));
     }
     case 'subscription.checkout': {
-      return runAuthAware((accessToken, url) => {
+      return runAuthAware<{ checkout_url: string }>((accessToken, url) => {
         if (message.payload.payment_method === 'paypal') {
           return createPayPalCheckout(
             url,
