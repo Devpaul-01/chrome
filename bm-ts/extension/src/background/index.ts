@@ -1014,15 +1014,14 @@ chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendRe
       if (!responded) {
         responded = true;
         clearTimeout(guardTimer);
-        logger.error(`Message handler error for ${request.type}:`, error);
+        logger.error(`Message handler error for ${request.type}: sensitive details withheld`);
 
         if (error instanceof ApiError) {
           sendResponse({
             success: false,
             error: {
               status: error.status,
-              message: error.message,
-              data: error.data,
+              message: "Request failed. Please try again or contact support.",
             },
           });
         } else if (error instanceof TypeError) {
@@ -1033,7 +1032,7 @@ chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendRe
             success: false,
             error: {
               status: 0,
-              message: error.message,
+              message: "Network request failed. Please try again.",
             },
           });
         } else if (error instanceof Error && error.message.startsWith('Request timed out')) {
@@ -1043,7 +1042,7 @@ chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendRe
             success: false,
             error: {
               status: 0,
-              message: error.message,
+              message: "Request timed out. Please try again.",
             },
           });
         } else {
@@ -1051,7 +1050,7 @@ chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendRe
             success: false,
             error: {
               status: 500,
-              message: error?.message ?? 'Unknown error',
+              message: "An unexpected error occurred. Please try again.",
             },
           });
         }
