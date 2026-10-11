@@ -14,7 +14,9 @@ import {
   UserImage,
   SMTPConfig,
   MessageTemplate,
-  createCheckoutSession as createCheckoutSessionRequest,
+  createBTCPayCheckout,
+  createPayPalCheckout,
+  createRapydCheckout,
   cancelSubscription,
   reactivateSubscription,
   changeSubscriptionPlan,
@@ -186,7 +188,7 @@ type AuthCall<T> = (accessToken: string, baseUrl: string) => Promise<T>;
  *  3. On a 401 response, attempts a single token refresh and retries the call.
  *  4. Re-throws any other errors unchanged.
  *
- * Use `runAuthAware` (below) as the call site wrapper — it simply delegates
+ * Use `runAuthAware` (below) as the call site wrapper â€” it simply delegates
  * to this function.
  */
 async function withAuth<T>(fn: AuthCall<T>): Promise<T> {
@@ -216,10 +218,14 @@ async function openOrFocusFacebookBirthdaysTab(): Promise<chrome.tabs.Tab> {
     chrome.tabs.query(
       { url: ['*://*.facebook.com/birthdays*', '*://*.facebook.com/friends/birthdays*'] },
       (tabs) => {
-        if (tabs.length > 0 && tabs[0].id !== undefined) {
-          resolve(tabs[0]);
+        const preferredTab =
+          tabs.find((tab) => tab.active && tab.id !== undefined) ??
+          tabs.find((tab) => tab.id !== undefined);
+
+        if (preferredTab?.id !== undefined) {
+          resolve(preferredTab);
         } else {
-          // Do NOT auto-open a Facebook tab — requires user to have the page open
+          // Do NOT auto-open a Facebook tab â€” requires user to have the page open
           reject(new Error('Facebook birthdays tab is not open; user action is required.'));
         }
       },
@@ -231,7 +237,7 @@ async function openOrFocusFacebookBirthdaysTab(): Promise<chrome.tabs.Tab> {
  * Short-lived in-memory cache for templates and posts fetched from the backend.
  * Prevents redundant API calls when automation scans run in quick succession
  * (e.g. alarm fires while a manual scan is still in progress).
- * TTL: 5 minutes — long enough to skip duplicate fetches, short enough that
+ * TTL: 5 minutes â€” long enough to skip duplicate fetches, short enough that
  * template edits are picked up promptly.
  */
 const _BACKEND_DATA_TTL_MS = 5 * 60 * 1000;
@@ -240,6 +246,10 @@ let _cachedBackendData: {
   posts: Post[];
   fetchedAt: number;
 } | null = null;
+
+function invalidateBackendDataCache(): void {
+  _cachedBackendData = null;
+}
 
 async function fetchBackendDataCached(): Promise<{
   templates: MessageTemplate[];
@@ -261,18 +271,52 @@ async function fetchBackendDataCached(): Promise<{
  * groups them by days_in_advance, opens the Facebook birthdays page, and
  * dispatches the full automation payload to the content script.
  */
+let automationScanInFlight: Promise<{ success: boolean }> | null = null;
+
+/**
+ * Starts one automation scan without keeping the popup's runtime message port
+ * open for the full scan. This prevents the popup from timing out while the
+ * background worker fetches backend data, waits for Facebook, and dispatches
+ * the content-script run.
+ *
+ * Repeated clicks while a scan is already running reuse the existing run
+ * instead of starting a second overlapping automation.
+ */
+function startAutomationScan(): void {
+  if (automationScanInFlight) {
+    logger.info('Automation scan request ignored because a scan is already running');
+    return;
+  }
+
+  automationScanInFlight = handleAutomationScan()
+    .catch(async (error) => {
+      logger.error('Unhandled automation scan failure', error);
+      await addActivityLogEntry(
+        'error',
+        `Automation scan failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      notifyAutomationFailed(
+        error instanceof Error ? error.message : 'Automation scan failed unexpectedly.',
+      );
+      return { success: false };
+    })
+    .finally(() => {
+      automationScanInFlight = null;
+    });
+}
+
 async function handleAutomationScan(): Promise<{ success: boolean }> {
   // Fail-safe checks before proceeding
   if (await isEmergencyStopActive()) {
     logger.warn('handleAutomationScan: emergency stop is active, skipping');
-    await addActivityLogEntry('warning', 'Automation scan skipped — emergency stop active');
+    await addActivityLogEntry('warning', 'Automation scan skipped â€” emergency stop active');
     notifyAutomationPaused('Emergency stop is active. Automation has been paused.');
     return { success: false };
   }
 
   if (await isBackoffPaused()) {
     logger.warn('handleAutomationScan: backoff pause active, skipping');
-    await addActivityLogEntry('warning', 'Automation scan skipped — failure backoff active');
+    await addActivityLogEntry('warning', 'Automation scan skipped â€” failure backoff active');
     notifyAutomationPaused(
       'Automation is paused due to recent send failures. It will resume automatically.',
     );
@@ -282,7 +326,7 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
   const rateLimit = await checkRateLimit();
   if (!rateLimit.allowed) {
     logger.warn('handleAutomationScan: rate limit reached', rateLimit.reason);
-    await addActivityLogEntry('warning', `Automation scan skipped — ${rateLimit.reason}`);
+    await addActivityLogEntry('warning', `Automation scan skipped â€” ${rateLimit.reason}`);
     notifyAutomationPaused(rateLimit.reason ?? 'Rate limit reached.');
     return { success: false };
   }
@@ -316,11 +360,11 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
 
   const config = await getAutomationConfig();
 
-  // Current-day templates (days_in_advance === 0) — used for friends scraped from
+  // Current-day templates (days_in_advance === 0) â€” used for friends scraped from
   // the Facebook birthday feed live during this run.
   const currentDayTemplates = templates.filter((t) => t.days_in_advance === 0);
 
-  // Warn when template diversity is too low — repeated identical messages are a
+  // Warn when template diversity is too low â€” repeated identical messages are a
   // detectable automation signal.
   if (templates.length > 0 && templates.length < 3) {
     await addActivityLogEntry(
@@ -328,14 +372,14 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
       `Low template diversity (${templates.length} template${
         templates.length === 1 ? '' : 's'
       }). ` +
-        'Create at least 3–5 templates to avoid sending identical messages that Facebook can flag.',
+        'Create at least 3â€“5 templates to avoid sending identical messages that Facebook can flag.',
     );
   }
 
-  // Advance templates (days_in_advance > 0) — matched to scraped friends by the content script.
+  // Advance templates (days_in_advance > 0) â€” matched to scraped friends by the content script.
   const advanceTemplates = templates.filter((t) => t.days_in_advance > 0);
 
-  // Follow-up templates (days_in_advance < 0) — matched to scraped friends by the content script.
+  // Follow-up templates (days_in_advance < 0) â€” matched to scraped friends by the content script.
   const followUpTemplates = templates.filter((t) => t.days_in_advance < 0);
 
   const payload: AutomationRunPayload = {
@@ -350,9 +394,9 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
   const tab = await openOrFocusFacebookBirthdaysTab();
   if (!tab || !tab.id) {
     logger.info(
-      'handleAutomationScan: no Facebook birthdays tab open — user must navigate to facebook.com/friends/birthdays',
+      'handleAutomationScan: no Facebook birthdays tab open â€” user must navigate to facebook.com/friends/birthdays',
     );
-    await addActivityLogEntry('info', 'Automation skipped — no Facebook birthdays tab open');
+    await addActivityLogEntry('info', 'Automation skipped â€” no Facebook birthdays tab open');
     notifyAutomationFailed(
       'No Facebook birthdays tab open. Please navigate to facebook.com/friends/birthdays.',
     );
@@ -385,7 +429,7 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
   try {
     await chrome.tabs.sendMessage(tab.id, { type: 'automation.runFull', payload });
   } catch {
-    logger.warn('Content script not reachable — re-injecting and retrying');
+    logger.warn('Content script not reachable â€” re-injecting and retrying');
     try {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -395,7 +439,7 @@ async function handleAutomationScan(): Promise<{ success: boolean }> {
       await new Promise((r) => setTimeout(r, 1500));
       await chrome.tabs.sendMessage(tab.id, { type: 'automation.runFull', payload });
     } catch (retryErr) {
-      logger.error('Re-injection failed — aborting automation', retryErr);
+      logger.error('Re-injection failed â€” aborting automation', retryErr);
       await addActivityLogEntry('error', 'Could not reach content script after re-injection');
       notifyAutomationFailed('Content script could not be loaded on the Facebook tab.');
       await clearCheckpoint();
@@ -577,9 +621,31 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) => subscriptionStatus(url, accessToken));
     }
     case 'subscription.checkout': {
-      return runAuthAware((accessToken, url) =>
-        createCheckoutSessionRequest(url, accessToken, message.payload),
-      );
+      return runAuthAware<{ checkout_url: string }>((accessToken, url) => {
+        if (message.payload.payment_method === 'paypal') {
+          return createPayPalCheckout(
+            url,
+            accessToken,
+            message.payload.plan,
+            message.payload.idempotency_key,
+          );
+        }
+        if (message.payload.payment_method === 'rapyd') {
+          return createRapydCheckout(
+            url,
+            accessToken,
+            message.payload.plan,
+            message.payload.idempotency_key,
+          );
+        }
+        return createBTCPayCheckout(
+          url,
+          accessToken,
+          message.payload.plan,
+          message.payload.payment_method,
+          message.payload.idempotency_key,
+        );
+      });
     }
     case 'subscription.cancel': {
       return runAuthAware((accessToken, url) => cancelSubscription(url, accessToken));
@@ -619,7 +685,7 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
     }
     case 'automation.setEnabled': {
       if (message.payload.enabled) {
-        // alarms is optional_permissions — request it before scheduling
+        // alarms is optional_permissions â€” request it before scheduling
         await requestAlarmsPermission();
       }
       return updateAutomationEnabled(message.payload.enabled);
@@ -697,7 +763,10 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return { success: true };
     }
     case 'automation.scanFacebook': {
-      return handleAutomationScan();
+      // Return immediately to the popup so Chrome does not close the message
+      // channel while the longer scan continues in the background.
+      startAutomationScan();
+      return { success: true };
     }
     case 'rateLimit.status': {
       return runAuthAware((accessToken, url) => getServerRateLimitStatus(url, accessToken));
@@ -706,7 +775,7 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) => recordServerSend(url, accessToken));
     }
 
-    // Contact handlers — full CRUD enabled.
+    // Contact handlers â€” full CRUD enabled.
     case 'contacts.list': {
       return runAuthAware((accessToken, url) =>
         listContacts(url, accessToken, message.payload?.updatedSince),
@@ -750,7 +819,7 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
         const result = await chrome.tabs.sendMessage(tab.id, { type: 'contacts.scrapeFromPage' });
         return result as unknown as BackgroundResponse;
       } catch {
-        // Content script not reachable — try re-injecting
+        // Content script not reachable â€” try re-injecting
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           files: ['content.js'],
@@ -766,14 +835,26 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
       return runAuthAware((accessToken, url) => listPosts(url, accessToken));
     }
     case 'posts.create': {
-      return runAuthAware((accessToken, url) => createPost(url, accessToken, message.payload));
+      const result = await runAuthAware((accessToken, url) =>
+        createPost(url, accessToken, message.payload),
+      );
+      invalidateBackendDataCache();
+      return result;
     }
     case 'posts.update': {
       const { id, ...payload } = message.payload;
-      return runAuthAware((accessToken, url) => updatePost(url, accessToken, id, payload));
+      const result = await runAuthAware((accessToken, url) =>
+        updatePost(url, accessToken, id, payload),
+      );
+      invalidateBackendDataCache();
+      return result;
     }
     case 'posts.delete': {
-      return runAuthAware((accessToken, url) => deletePost(url, accessToken, message.payload.id));
+      const result = await runAuthAware((accessToken, url) =>
+        deletePost(url, accessToken, message.payload.id),
+      );
+      invalidateBackendDataCache();
+      return result;
     }
     // Message Group handlers
     case 'messageGroups.list': {
@@ -904,7 +985,7 @@ chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendRe
 
   logger.debug('Received message:', request.type);
 
-  // Hard 15 s guard — guarantees sendResponse is always called so Chrome never
+  // Hard 15 s guard â€” guarantees sendResponse is always called so Chrome never
   // silently kills the MV3 service worker while we hold a `return true` port.
   // (Chrome can kill the SW at ~30 s even with an open sendResponse handle in
   // some versions; capping at 15 s keeps us well inside that window.)
@@ -933,15 +1014,14 @@ chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendRe
       if (!responded) {
         responded = true;
         clearTimeout(guardTimer);
-        logger.error(`Message handler error for ${request.type}:`, error);
+        logger.error(`Message handler error for ${request.type}: sensitive details withheld`);
 
         if (error instanceof ApiError) {
           sendResponse({
             success: false,
             error: {
               status: error.status,
-              message: error.message,
-              data: error.data,
+              message: "Request failed. Please try again or contact support.",
             },
           });
         } else if (error instanceof TypeError) {
@@ -952,7 +1032,7 @@ chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendRe
             success: false,
             error: {
               status: 0,
-              message: error.message,
+              message: "Network request failed. Please try again.",
             },
           });
         } else if (error instanceof Error && error.message.startsWith('Request timed out')) {
@@ -962,7 +1042,7 @@ chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendRe
             success: false,
             error: {
               status: 0,
-              message: error.message,
+              message: "Request timed out. Please try again.",
             },
           });
         } else {
@@ -970,7 +1050,7 @@ chrome.runtime.onMessage.addListener((request: BackgroundMessage, sender, sendRe
             success: false,
             error: {
               status: 500,
-              message: error?.message ?? 'Unknown error',
+              message: "An unexpected error occurred. Please try again.",
             },
           });
         }
@@ -1017,7 +1097,7 @@ if (chrome.alarms) {
       const prefHours = await getPreferredHours();
       if (!isWithinPreferredHours(prefHours)) {
         logger.info(
-          `Alarm fired outside preferred hours (${prefHours.startHour}:00–${prefHours.endHour}:00) — skipping`,
+          `Alarm fired outside preferred hours (${prefHours.startHour}:00â€“${prefHours.endHour}:00) â€” skipping`,
         );
         return;
       }
@@ -1025,7 +1105,7 @@ if (chrome.alarms) {
       // Only run if user has an active Facebook tab open (no background automation)
       const fbTabs = await chrome.tabs.query({ url: '*://*.facebook.com/*' });
       if (fbTabs.length === 0) {
-        logger.info('Alarm fired but no active Facebook tab — skipping automation');
+        logger.info('Alarm fired but no active Facebook tab â€” skipping automation');
         return;
       }
 
@@ -1040,7 +1120,7 @@ async function initializeAutomation(): Promise<void> {
   const staleCheckpoint = await checkForStaleCheckpoint();
   if (staleCheckpoint) {
     logger.warn(
-      'Found stale automation checkpoint — previous run was interrupted',
+      'Found stale automation checkpoint â€” previous run was interrupted',
       staleCheckpoint,
     );
     await addActivityLogEntry(

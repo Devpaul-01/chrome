@@ -1,8 +1,0 @@
-{
-  "devDependencies": {
-    "eslint": "^8.57.1"
-  },
-  "dependencies": {
-    "typescript": "^6.0.3"
-  }
-}

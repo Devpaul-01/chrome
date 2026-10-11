@@ -49,6 +49,71 @@ class Settings(BaseSettings):
         default="price_yearly_placeholder", alias="STRIPE_PRICE_YEARLY"
     )
 
+    # Payment-provider feature gates. Optional providers default off and must be
+    # explicitly enabled by the server-side runtime environment.
+    btcpay_enabled: bool = Field(default=True, alias="BTCPAY_ENABLED")
+    rapyd_enabled: bool = Field(default=False, alias="RAPYD_ENABLED")
+    paypal_enabled: bool = Field(default=False, alias="PAYPAL_ENABLED")
+
+    # Rapyd Payments - credentials remain server-side only.
+    rapyd_base_url: str = Field(
+        default="https://sandboxapi.rapyd.net",
+        alias="RAPYD_BASE_URL",
+    )
+    rapyd_access_key: str = Field(default="", alias="RAPYD_ACCESS_KEY")
+    rapyd_secret_key: str = Field(default="", alias="RAPYD_SECRET_KEY")
+    rapyd_connect_timeout_seconds: float = Field(
+        default=5.0, ge=1.0, le=30.0, alias="RAPYD_CONNECT_TIMEOUT_SECONDS"
+    )
+    rapyd_read_timeout_seconds: float = Field(
+        default=20.0, ge=1.0, le=120.0, alias="RAPYD_READ_TIMEOUT_SECONDS"
+    )
+    rapyd_webhook_url: str = Field(default="", alias="RAPYD_WEBHOOK_URL")
+    rapyd_webhook_max_age_seconds: int = Field(
+        default=60, ge=30, le=300, alias="RAPYD_WEBHOOK_MAX_AGE_SECONDS"
+    )
+    rapyd_webhook_max_future_seconds: int = Field(
+        default=5, ge=0, le=30, alias="RAPYD_WEBHOOK_MAX_FUTURE_SECONDS"
+    )
+    rapyd_webhook_max_body_bytes: int = Field(
+        default=262144, ge=16384, le=1048576, alias="RAPYD_WEBHOOK_MAX_BODY_BYTES"
+    )
+
+    # PayPal Checkout - credentials remain server-side only.
+    paypal_environment: str = Field(default="sandbox", alias="PAYPAL_ENVIRONMENT")
+    paypal_client_id: str = Field(default="", alias="PAYPAL_CLIENT_ID")
+    paypal_client_secret: str = Field(default="", alias="PAYPAL_CLIENT_SECRET")
+    paypal_webhook_id: str = Field(default="", alias="PAYPAL_WEBHOOK_ID")
+    paypal_plan_monthly: str = Field(default="", alias="PAYPAL_PLAN_MONTHLY")
+    paypal_plan_yearly: str = Field(default="", alias="PAYPAL_PLAN_YEARLY")
+    paypal_return_url: str = Field(default="https://birthdaymessaging.com/payment/paypal/return", alias="PAYPAL_RETURN_URL")
+    paypal_cancel_url: str = Field(default="https://birthdaymessaging.com/payment/paypal/cancel", alias="PAYPAL_CANCEL_URL")
+    paypal_connect_timeout_seconds: float = Field(default=5.0, ge=1.0, le=30.0, alias="PAYPAL_CONNECT_TIMEOUT_SECONDS")
+    paypal_read_timeout_seconds: float = Field(default=20.0, ge=1.0, le=120.0, alias="PAYPAL_READ_TIMEOUT_SECONDS")
+    paypal_webhook_max_body_bytes: int = Field(default=262144, ge=16384, le=1048576, alias="PAYPAL_WEBHOOK_MAX_BODY_BYTES")
+
+    # BTCPay Server
+    btcpay_url: str = Field(
+        default="https://btcpay.birthdaymessaging.io",
+        alias="BTCPAY_URL",
+    )
+    btcpay_public_url: str = Field(
+        default="https://btcpay.birthdaymessaging.io",
+        alias="BTCPAY_PUBLIC_URL",
+    )
+    btcpay_store_id: str = Field(
+        default="",
+        alias="BTCPAY_STORE_ID",
+    )
+    btcpay_api_key: str = Field(
+        default="",
+        alias="BTCPAY_API_KEY",
+    )
+    btcpay_webhook_secret: str = Field(
+    default="",
+    alias="BTCPAY_WEBHOOK_SECRET",
+    )
+
     @field_validator("stripe_api_key", mode="after")
     @classmethod
     def validate_stripe_api_key(cls, v: str) -> str:
@@ -71,6 +136,22 @@ class Settings(BaseSettings):
         default="generate-with-fernet", alias="SMTP_ENCRYPTION_KEY"
     )
     sendgrid_api_key: str = Field(default="", alias="SENDGRID_API_KEY")
+    notification_provider: str = Field(default="cloudflare_smtp", alias="NOTIFICATION_PROVIDER")
+    email_from_name: str = Field(default="BirthdayMessaging", alias="EMAIL_FROM_NAME")
+    cloudflare_smtp_host: str = Field(default="smtp.mx.cloudflare.net", alias="CLOUDFLARE_SMTP_HOST")
+    cloudflare_smtp_port: int = Field(default=465, alias="CLOUDFLARE_SMTP_PORT")
+    cloudflare_smtp_username: str = Field(default="api_token", alias="CLOUDFLARE_SMTP_USERNAME")
+    cloudflare_email_api_token: str = Field(default="", alias="CLOUDFLARE_EMAIL_API_TOKEN")
+    cloudflare_smtp_timeout_seconds: int = Field(default=30, ge=5, le=120, alias="CLOUDFLARE_SMTP_TIMEOUT_SECONDS")
+    account_url: str = Field(default="https://birthdaymessaging.com", alias="ACCOUNT_URL")
+    support_email: str = Field(default="support@birthdaymessaging.com", alias="SUPPORT_EMAIL")
+    notification_worker_batch_size: int = Field(default=50, ge=1, le=500, alias="NOTIFICATION_WORKER_BATCH_SIZE")
+    notification_worker_interval_seconds: int = Field(default=30, ge=1, le=3600, alias="NOTIFICATION_WORKER_INTERVAL_SECONDS")
+    rapyd_reconciliation_worker_batch_size: int = Field(default=50, ge=1, le=500, alias="RAPYD_RECONCILIATION_WORKER_BATCH_SIZE")
+    rapyd_reconciliation_worker_interval_seconds: int = Field(default=60, ge=1, le=3600, alias="RAPYD_RECONCILIATION_WORKER_INTERVAL_SECONDS")
+    notification_processing_lease_seconds: int = Field(default=900, ge=30, le=86400, alias="NOTIFICATION_PROCESSING_LEASE_SECONDS")
+    notification_max_attempts: int = Field(default=5, ge=1, le=50, alias="NOTIFICATION_MAX_ATTEMPTS")
+    notification_shutdown_grace_seconds: int = Field(default=30, ge=1, le=300, alias="NOTIFICATION_SHUTDOWN_GRACE_SECONDS")
     sentry_dsn: str = Field(default="", alias="SENTRY_DSN")
     sentry_environment: str = Field(default="production", alias="SENTRY_ENVIRONMENT")
     email_from_address: str = Field(default="", alias="EMAIL_FROM_ADDRESS")

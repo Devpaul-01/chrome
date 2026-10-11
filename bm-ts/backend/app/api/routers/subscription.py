@@ -26,7 +26,7 @@ from app.core.errors import AppError, ErrorCodes
 
 from app.api.deps import get_current_user
 from app.core.config import settings
-from app.db.models import SubscriptionRecord, User
+from app.db.models import AccessEntitlement, RecurringSubscription, SubscriptionRecord, User
 from app.db.session import get_db
 from app.schemas.subscription import (
     BillingPortalResponse,
@@ -37,6 +37,7 @@ from app.schemas.subscription import (
     CheckoutSessionResponse,
     SubscriptionStatusResponse,
 )
+from app.services.paypal import cancel_recurring_subscription as cancel_paypal_subscription
 from app.services.stripe import (
     cancel_subscription,
     change_subscription_plan,
@@ -75,7 +76,67 @@ async def get_status(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> SubscriptionStatusResponse:
-    """Return the most recent subscription record for the current user, or ``is_active=False`` if none exists."""
+    """Return provider-neutral paid access first, then fall back to legacy Stripe state.
+
+    ``AccessEntitlement`` is authoritative for application access regardless of
+    whether the payment originated from BTCPay, Rapyd, Stripe, Monero, or a future
+    provider. Legacy ``SubscriptionRecord`` rows remain supported during migration.
+    """
+    now = datetime.now(timezone.utc)
+    entitlement_stmt = (
+        select(AccessEntitlement)
+        .where(
+            AccessEntitlement.user_id == current_user.id,
+            AccessEntitlement.status == "ACTIVE",
+            AccessEntitlement.starts_at <= now,
+            AccessEntitlement.expires_at > now,
+        )
+        .order_by(desc(AccessEntitlement.expires_at))
+        .limit(1)
+    )
+    entitlement_result = await db.execute(entitlement_stmt)
+    entitlement = entitlement_result.scalar_one_or_none()
+    if entitlement is not None:
+        # Authorization is based only on the entitlement active right now.
+        # Subscription status additionally reports how far uninterrupted,
+        # already-paid ACTIVE coverage extends through future renewal rows.
+        paid_through = entitlement.expires_at
+        coverage_plan = entitlement.plan_code
+
+        future_result = await db.execute(
+            select(AccessEntitlement)
+            .where(
+                AccessEntitlement.user_id == current_user.id,
+                AccessEntitlement.status == "ACTIVE",
+                AccessEntitlement.starts_at >= entitlement.expires_at,
+            )
+            .order_by(
+                AccessEntitlement.starts_at.asc(),
+                AccessEntitlement.expires_at.asc(),
+            )
+        )
+        future_entitlements = future_result.scalars().all()
+
+        for future in future_entitlements:
+            future_starts = future.starts_at
+            if future_starts > paid_through:
+                # A real gap ends the customer's continuous paid-through chain.
+                break
+            if future.expires_at > paid_through:
+                paid_through = future.expires_at
+                coverage_plan = future.plan_code
+
+        recurring = (await db.execute(select(RecurringSubscription).where(RecurringSubscription.user_id == current_user.id).order_by(desc(RecurringSubscription.updated_at)).limit(1))).scalar_one_or_none()
+        return SubscriptionStatusResponse(
+            is_active=True, plan=coverage_plan, status="ACTIVE", current_period_end=paid_through,
+            cancel_at_period_end=bool(recurring.cancel_at_period_end) if recurring else False,
+            canceled_at=None, in_grace_period=False, stripe_customer_id=None, stripe_subscription_id=None,
+            billing_provider=recurring.provider if recurring else entitlement.source_provider,
+            provider_subscription_id=recurring.provider_subscription_id if recurring else None,
+            auto_renew=bool(recurring and recurring.status=="ACTIVE" and not recurring.cancel_at_period_end),
+            next_billing_at=recurring.next_billing_at if recurring else None,
+        )
+
     stmt = (
         select(SubscriptionRecord)
         .where(SubscriptionRecord.user_id == current_user.id)
@@ -95,16 +156,10 @@ async def get_status(
         )
 
     is_active = record.status in ("ACTIVE", "TRIALING")
-    now = datetime.now(timezone.utc)
-    period_end = record.current_period_end
-    if period_end is not None and period_end.tzinfo is None:
-        period_end = period_end.replace(tzinfo=timezone.utc)
-    in_grace_period = (
-        record.status == "PAST_DUE" and period_end is not None and period_end > now
-    )
+    in_grace_period = False
 
     return SubscriptionStatusResponse(
-        is_active=is_active or in_grace_period,
+        is_active=is_active,
         plan=_infer_plan(record.price_id),
         status=record.status,
         current_period_end=record.current_period_end,
@@ -136,23 +191,12 @@ async def create_session(
 
 
 async def _get_active_record(user: User, db: AsyncSession) -> SubscriptionRecord:
-    """Return the user's active subscription record or raise 404.
-
-    Includes PAST_DUE subscriptions still within their grace period so that
-    users can cancel, reactivate, or change plans even after a failed payment.
-    """
-    now = datetime.now(timezone.utc)
+    """Return the user's ACTIVE/TRIALING Stripe subscription record or raise 404."""
     stmt = (
         select(SubscriptionRecord)
         .where(
             SubscriptionRecord.user_id == user.id,
-            (
-                SubscriptionRecord.status.in_(["ACTIVE", "TRIALING"])
-                | (
-                    (SubscriptionRecord.status == "PAST_DUE")
-                    & (SubscriptionRecord.current_period_end > now)
-                )
-            ),
+            SubscriptionRecord.status.in_(["ACTIVE", "TRIALING"]),
         )
         .order_by(desc(SubscriptionRecord.updated_at))
         .limit(1)
@@ -177,6 +221,11 @@ async def cancel(
     db: AsyncSession = Depends(get_db),
 ) -> CancelSubscriptionResponse:
     """Cancel the current subscription at the end of the billing period."""
+    recurring = (await db.execute(select(RecurringSubscription).where(RecurringSubscription.user_id == current_user.id, RecurringSubscription.status.in_(["ACTIVE","APPROVAL_PENDING","PAYMENT_FAILED"])).order_by(desc(RecurringSubscription.updated_at)).limit(1))).scalar_one_or_none()
+    if recurring is not None and recurring.provider=="paypal":
+        await cancel_paypal_subscription(recurring.provider_subscription_id)
+        recurring.cancel_at_period_end=True;recurring.updated_at=datetime.now(timezone.utc);await db.commit()
+        return CancelSubscriptionResponse(status=recurring.status,cancel_at_period_end=True,current_period_end=None,message="PayPal recurring billing cancellation requested. Existing paid access remains valid through its paid-through date.")
     record = await _get_active_record(current_user, db)
     await cancel_subscription(record.stripe_subscription_id)
     # Optimistic local update (webhook will confirm)
@@ -238,14 +287,13 @@ async def change_plan(
 
     new_price_id = get_price_id(data.new_plan)
     await change_subscription_plan(record.stripe_subscription_id, new_price_id)
-    # Optimistic local update
-    record.price_id = new_price_id
-    await db.commit()
-    await db.refresh(record)
     return ChangePlanResponse(
         status=record.status,
         new_plan=data.new_plan,
-        message=f"Plan changed to {data.new_plan}. Proration will be applied.",
+        message=(
+            f"Plan change to {data.new_plan} is scheduled for the end of the "
+            "current paid period. No proration will be applied."
+        ),
     )
 
 

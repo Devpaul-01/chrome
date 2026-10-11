@@ -19,12 +19,13 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_active_entitlement
 from app.db.models import SendRateLimit, User
 from app.db.session import get_db
 from app.schemas.common import ErrorResponse
 
 router = APIRouter(
+    dependencies=[Depends(require_active_entitlement)],
     prefix="/rate-limits",
     tags=["rate-limits"],
     responses={

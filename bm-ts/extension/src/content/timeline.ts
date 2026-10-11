@@ -1,34 +1,29 @@
 /**
- * timeline.ts - Facebook Timeline posting automation
+ * timeline.ts - Facebook inline birthday timeline posting automation
  *
- * Provides functionality to:
- * - Navigate to friend's profile/timeline
- * - Open post composer
- * - Insert text content with merge tag support
- * - Attach images via clipboard API (Nifty Images support)
- * - Submit posts to friend timelines
+ * This implementation:
+ * - targets the exact birthday card for one friend
+ * - targets Facebook's Lexical contenteditable birthday editor
+ * - inserts the custom message exactly once
+ * - verifies the custom text before clicking the blue birthday-post button
+ * - avoids Messenger/global textbox searches
  */
 
-const SHORT_DELAY = 1000;
-const MEDIUM_DELAY = 2000;
-const LONG_DELAY = 3000;
-
-import { waitForElement, delay, trySelectors, retryOperation, simulateClick } from './dom-helpers';
+import { delay } from './dom-helpers';
 import { logger } from '../utils/logger';
+import { readEditableText, replaceFacebookEditorText } from './editor-helpers';
 
-/**
- * Interface for post content
- */
+const SHORT_DELAY = 400;
+const MEDIUM_DELAY = 1000;
+
 export interface TimelinePost {
   content: string;
   imageUrl?: string;
   friendName: string;
   profileUrl?: string;
+  sourceCard?: HTMLElement;
 }
 
-/**
- * Interface for merge tag replacement in Nifty Images URLs
- */
 interface NiftyImagesMergeTags {
   name?: string;
   firstName?: string;
@@ -37,227 +32,306 @@ interface NiftyImagesMergeTags {
   customTags?: Record<string, string>;
 }
 
-/**
- * Navigate to a friend's profile/timeline
- */
-export async function navigateToProfile(profileUrl: string): Promise<boolean> {
-  logger.log(`[BM Timeline] Navigating to profile: ${profileUrl}`);
+function normalizeText(value: string): string {
+  return value
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-  try {
-    // If we're already on the profile, no need to navigate
-    if (window.location.href.includes(profileUrl)) {
-      logger.log('[BM Timeline] Already on profile page');
+function isVisible(element: HTMLElement): boolean {
+  const rect = element.getBoundingClientRect();
+  return element.isConnected && element.offsetParent !== null && rect.width > 0 && rect.height > 0;
+}
+
+function readEditorText(editor: HTMLElement): string {
+  return normalizeText(editor.innerText || editor.textContent || '');
+}
+
+interface SuspendedOverlay {
+  element: HTMLElement;
+  display: string;
+  pointerEvents: string;
+}
+
+function suspendBirthdayMessagingOverlays(): SuspendedOverlay[] {
+  const suspended: SuspendedOverlay[] = [];
+
+  for (const id of ['bm-auto-overlay', 'bm-confirm-modal']) {
+    const element = document.getElementById(id);
+    if (!(element instanceof HTMLElement)) continue;
+
+    suspended.push({
+      element,
+      display: element.style.display,
+      pointerEvents: element.style.pointerEvents,
+    });
+
+    element.style.display = 'none';
+    element.style.pointerEvents = 'none';
+  }
+
+  return suspended;
+}
+
+function restoreBirthdayMessagingOverlays(suspended: SuspendedOverlay[]): void {
+  for (const item of suspended) {
+    if (!item.element.isConnected) continue;
+    item.element.style.display = item.display;
+    item.element.style.pointerEvents = item.pointerEvents;
+  }
+}
+
+function isMessengerArea(element: HTMLElement): boolean {
+  let current: HTMLElement | null = element;
+
+  for (let depth = 0; depth < 14 && current; depth += 1) {
+    const labels = Array.from(current.querySelectorAll<HTMLElement>('[aria-label]')).map((item) =>
+      (item.getAttribute('aria-label') || '').toLowerCase(),
+    );
+
+    if (
+      labels.some(
+        (label) =>
+          label.includes('conversation details') ||
+          label.includes('press enter to send') ||
+          label.includes('send a voice clip') ||
+          label.includes('send a like') ||
+          label.includes('new message'),
+      )
+    ) {
       return true;
     }
 
-    // Navigate to the profile
-    window.location.href = profileUrl;
-
-    // Wait for navigation to complete
-    await new Promise<void>((resolve) => {
-      const checkNavigation = setInterval(() => {
-        if (window.location.href.includes(profileUrl)) {
-          clearInterval(checkNavigation);
-          resolve();
-        }
-      }, 500);
-
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        clearInterval(checkNavigation);
-        resolve();
-      }, 10000);
-    });
-
-    // Wait for page to stabilize
-    await delay(MEDIUM_DELAY);
-
-    // Verify we're on a profile page
-    const isProfilePage =
-      document.querySelector('[role="main"]') !== null ||
-      document.querySelector('[data-pagelet="ProfileTimeline"]') !== null;
-
-    if (!isProfilePage) {
-      logger.error('[BM Timeline] Failed to verify profile page load');
-      return false;
-    }
-
-    logger.log('[BM Timeline] Successfully navigated to profile');
-    return true;
-  } catch (error) {
-    logger.error('[BM Timeline] Error navigating to profile:', error);
-    return false;
+    current = current.parentElement;
   }
+
+  return false;
 }
 
-/**
- * Open the post composer on a friend's timeline
- */
-export async function openPostComposer(): Promise<HTMLElement | null> {
-  logger.log('[BM Timeline] Opening post composer...');
+function cardContainsFriend(card: HTMLElement, friendName: string): boolean {
+  const wanted = normalizeText(friendName).toLowerCase();
+  const cardText = normalizeText(card.innerText || card.textContent || '').toLowerCase();
+  return wanted.length > 0 && cardText.includes(wanted);
+}
 
+function normalizeProfileUrl(value?: string): string {
+  if (!value) return '';
   try {
-    // Selectors ordered: structural/language-agnostic first, then English-specific
-    const composerSelectors = [
-      // Structural selectors (language-agnostic)
-      '[contenteditable="true"][role="textbox"]',
-      '[data-testid*="composer"], [data-testid*="post-composer"]',
-      // aria-label selectors (may vary by locale)
-      '[role="button"][aria-label*="Write something"]',
-      '[role="button"][aria-label*="Create post"]',
-      '[aria-label*="Write post"]',
-      // German
-      '[role="button"][aria-label*="Was denkst du"]',
-      '[role="button"][aria-label*="Beitrag erstellen"]',
-      // Spanish
-      '[role="button"][aria-label*="crees"]',
-      '[role="button"][aria-label*="Crear publicaci"]',
-      // French
-      '[role="button"][aria-label*="quoi pensez"]',
-      '[role="button"][aria-label*="Cr"]',
-    ];
-
-    let composerTrigger: HTMLElement | null = trySelectors(composerSelectors);
-
-    if (!composerTrigger) {
-      // Structural fallback: find buttons near the profile timeline that look like composer triggers
-      const mainContent = document.querySelector('[role="main"]');
-      if (mainContent) {
-        const buttons = Array.from(mainContent.querySelectorAll('[role="button"]'));
-        composerTrigger =
-          (buttons.find((btn) => {
-            // Look for buttons that contain a user avatar image + placeholder text
-            const hasAvatar = btn.querySelector('image, img[src*="profile"], svg');
-            const hasPlaceholder = btn.querySelector('span')?.textContent?.trim();
-            return hasAvatar && hasPlaceholder && hasPlaceholder.length > 3;
-          }) as HTMLElement) ?? null;
-      }
-    }
-
-    if (!composerTrigger) {
-      logger.error('[BM Timeline] Could not find post composer trigger');
-      return null;
-    }
-
-    // Click the trigger to open composer
-    await simulateClick(composerTrigger);
-    await delay(SHORT_DELAY);
-
-    // Wait for the composer dialog/modal to appear
-    const composerDialog = await waitForElement('[role="dialog"], [role="presentation"]', 5000);
-
-    if (!composerDialog) {
-      logger.warn('[BM Timeline] Composer dialog not found, checking for inline composer');
-      // Sometimes composer is inline, not a dialog
-      return composerTrigger;
-    }
-
-    logger.log('[BM Timeline] Post composer opened successfully');
-    return composerDialog;
-  } catch (error) {
-    logger.error('[BM Timeline] Error opening post composer:', error);
-    return null;
+    const url = new URL(value, window.location.href);
+    const id = url.searchParams.get('id');
+    return id ? `profile:${id}` : url.pathname.replace(/\/+$/, '').toLowerCase();
+  } catch {
+    return value.split('?')[0].replace(/\/+$/, '').toLowerCase();
   }
 }
 
-/**
- * Insert text content into the post composer
- */
+function cardContainsProfile(card: HTMLElement, profileUrl?: string): boolean {
+  const wanted = normalizeProfileUrl(profileUrl);
+  if (!wanted) return true;
+
+  return Array.from(card.querySelectorAll<HTMLAnchorElement>('a[href]')).some(
+    (anchor) => normalizeProfileUrl(anchor.href) === wanted,
+  );
+}
+
+function findSmallestCardForEditor(
+  editor: HTMLElement,
+  friendName: string,
+  profileUrl?: string,
+): HTMLElement | null {
+  let current = editor.parentElement;
+  let best: HTMLElement | null = null;
+
+  for (let depth = 0; depth < 14 && current; depth += 1) {
+    if (isMessengerArea(current)) return null;
+
+    const editors = current.querySelectorAll(
+      '[contenteditable="true"][role="textbox"][data-lexical-editor="true"]',
+    );
+
+    if (
+      editors.length === 1 &&
+      cardContainsFriend(current, friendName) &&
+      cardContainsProfile(current, profileUrl)
+    ) {
+      best = current;
+      // The first matching ancestor is the smallest safe card.
+      break;
+    }
+
+    current = current.parentElement;
+  }
+
+  return best;
+}
+
+function reacquireBirthdayCard(post: TimelinePost): HTMLElement | null {
+  const editors = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      '[contenteditable="true"][role="textbox"][data-lexical-editor="true"]',
+    ),
+  ).filter((editor) => isVisible(editor) && !isMessengerArea(editor));
+
+  // First use the strongest identity: name + canonical profile URL.
+  const exactMatches = editors
+    .map((editor) => findSmallestCardForEditor(editor, post.friendName, post.profileUrl))
+    .filter((card): card is HTMLElement => card !== null);
+  if (exactMatches.length === 1) return exactMatches[0];
+
+  // Some Facebook birthday cards place the profile anchor outside the smallest
+  // ancestor containing the Lexical editor. In that layout profile matching is
+  // impossible at editor-card scope. A name-only fallback is safe only when
+  // exactly one visible non-Messenger birthday editor matches that name.
+  const nameMatches = editors
+    .map((editor) => findSmallestCardForEditor(editor, post.friendName))
+    .filter((card): card is HTMLElement => card !== null);
+  const uniqueNameMatches = Array.from(new Set(nameMatches));
+
+  return uniqueNameMatches.length === 1 ? uniqueNameMatches[0] : null;
+}
+
+function findBirthdayCard(post: TimelinePost): HTMLElement | null {
+  if (
+    post.sourceCard &&
+    post.sourceCard.isConnected &&
+    isVisible(post.sourceCard) &&
+    !isMessengerArea(post.sourceCard) &&
+    cardContainsFriend(post.sourceCard, post.friendName) &&
+    cardContainsProfile(post.sourceCard, post.profileUrl)
+  ) {
+    return post.sourceCard;
+  }
+
+  // Facebook frequently replaces birthday-card DOM nodes after opening or
+  // closing Messenger. Reacquire the same person's card by BOTH identity and
+  // its own Lexical editor instead of using an unsafe page-wide textbox.
+  return reacquireBirthdayCard(post);
+}
+
+function findBirthdayEditor(card: HTMLElement): HTMLElement | null {
+  const candidates = Array.from(
+    card.querySelectorAll<HTMLElement>(
+      '[contenteditable="true"][role="textbox"][data-lexical-editor="true"]',
+    ),
+  ).filter((editor) => isVisible(editor) && !isMessengerArea(editor));
+
+  return (
+    candidates.find((editor) => {
+      const placeholder = (editor.getAttribute('aria-placeholder') || '').toLowerCase();
+      const text = readEditorText(editor).toLowerCase();
+
+      return (
+        placeholder.includes('write on his profile') ||
+        placeholder.includes('write on her profile') ||
+        placeholder.includes('write on their profile') ||
+        text.includes('happy birthday')
+      );
+    }) ??
+    candidates[0] ??
+    null
+  );
+}
+
+async function replaceLexicalBirthdayText(editor: HTMLElement, message: string): Promise<void> {
+  const expected = normalizeText(message);
+
+  if (!expected) {
+    throw new Error('Timeline message cannot be empty');
+  }
+
+  editor.scrollIntoView({ block: 'center', behavior: 'auto' });
+  editor.click();
+  editor.focus({ preventScroll: true });
+  await delay(200);
+
+  logger.log('[BM Timeline] Replacing Facebook Lexical content', {
+    before: readEditorText(editor),
+    expected,
+    expectedLength: expected.length,
+  });
+
+  await replaceFacebookEditorText(editor, expected);
+  await delay(SHORT_DELAY);
+
+  let actual = normalizeText(readEditableText(editor));
+
+  logger.log('[BM Timeline] Lexical replacement result', {
+    expected,
+    actual,
+    expectedLength: expected.length,
+    actualLength: actual.length,
+  });
+
+  if (actual !== expected) {
+    throw new Error(
+      `Timeline editor verification failed. Expected ${expected.length} characters, found ${actual.length}. Actual text: "${actual}"`,
+    );
+  }
+
+  // Verify a second time after Facebook has had time to reconcile Lexical and
+  // React state. The post must never be submitted if the default text returns.
+  await delay(350);
+  actual = normalizeText(readEditableText(editor));
+
+  if (actual !== expected) {
+    throw new Error(
+      `Facebook restored the default timeline text after insertion. Expected ${expected.length} characters, found ${actual.length}. Actual text: "${actual}"`,
+    );
+  }
+
+  // Do not blur here. Facebook may restore the default birthday greeting when
+  // the inline Lexical editor loses focus before its form is submitted.
+}
+
 export async function insertPostContent(
   content: string,
-  containerElement?: HTMLElement,
+  container?: HTMLElement,
 ): Promise<boolean> {
-  logger.log('[BM Timeline] Inserting post content...');
-
   try {
-    const searchRoot = containerElement || document;
-
-    // Find the contenteditable textbox
-    const textboxSelectors = [
-      '[contenteditable="true"][role="textbox"]',
-      '[contenteditable="true"][aria-label*="post"]',
-      '[contenteditable="true"][data-text="true"]',
-      'div[contenteditable="true"]',
-    ];
-
-    let textbox: HTMLElement | null = null;
-
-    for (const selector of textboxSelectors) {
-      textbox = searchRoot.querySelector<HTMLElement>(selector);
-      if (textbox && !textbox.getAttribute('aria-hidden')) {
-        logger.log(`[BM Timeline] Found textbox: ${selector}`);
-        break;
-      }
+    if (!container) {
+      throw new Error('A scoped birthday card is required');
     }
 
-    if (!textbox) {
-      logger.error('[BM Timeline] Could not find post textbox');
-      return false;
+    const editor = container.matches(
+      '[contenteditable="true"][role="textbox"][data-lexical-editor="true"]',
+    )
+      ? container
+      : findBirthdayEditor(container);
+
+    if (!editor) {
+      throw new Error('Could not find the Facebook Lexical birthday editor');
     }
 
-    // Focus the textbox
-    textbox.focus();
-    await delay(300);
-
-    // Clear existing content
-    textbox.textContent = '';
-
-    // Insert the new content
-    textbox.textContent = content;
-
-    // Trigger input events to notify Facebook's React components
-    textbox.dispatchEvent(
-      new InputEvent('input', {
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-
-    textbox.dispatchEvent(
-      new Event('change', {
-        bubbles: true,
-      }),
-    );
-
-    // Verify content was inserted
-    await delay(300);
-    const insertedText = textbox.textContent || textbox.innerText || '';
-
-    if (!insertedText.includes(content.substring(0, 20))) {
-      logger.warn('[BM Timeline] Content verification failed, retrying with alternative method');
-
-      // Alternative method: use document.execCommand (deprecated but sometimes works)
-      textbox.focus();
-      document.execCommand('selectAll', false);
-      document.execCommand('insertText', false, content);
-    }
-
-    logger.log('[BM Timeline] Post content inserted successfully');
+    await replaceLexicalBirthdayText(editor, content);
     return true;
   } catch (error) {
-    logger.error('[BM Timeline] Error inserting post content:', error);
+    logger.error('[BM Timeline] Failed to insert custom timeline text:', error);
     return false;
   }
 }
 
-/**
- * Process Nifty Images merge tags in image URL
- */
+export async function navigateToProfile(_profileUrl: string): Promise<boolean> {
+  logger.warn('[BM Timeline] Profile navigation is disabled for inline birthday posting.');
+  return false;
+}
+
+export async function openPostComposer(): Promise<HTMLElement | null> {
+  logger.warn('[BM Timeline] Generic post composer is disabled.');
+  return null;
+}
+
 export function processNiftyImagesMergeTags(
   imageUrl: string,
   mergeTags: NiftyImagesMergeTags,
 ): string {
-  if (!imageUrl || !imageUrl.includes('niftyimages')) {
-    return imageUrl;
-  }
+  if (!imageUrl || !imageUrl.includes('niftyimages')) return imageUrl;
 
   let processedUrl = imageUrl;
 
-  // Replace common merge tags
   if (mergeTags.name) {
     processedUrl = processedUrl.replace(/\[name\]/gi, encodeURIComponent(mergeTags.name));
   }
-
   if (mergeTags.firstName) {
     processedUrl = processedUrl.replace(
       /\[first_name\]/gi,
@@ -265,341 +339,157 @@ export function processNiftyImagesMergeTags(
     );
     processedUrl = processedUrl.replace(/\[firstname\]/gi, encodeURIComponent(mergeTags.firstName));
   }
-
   if (mergeTags.age) {
     processedUrl = processedUrl.replace(/\[age\]/gi, encodeURIComponent(mergeTags.age));
   }
-
   if (mergeTags.date) {
     processedUrl = processedUrl.replace(/\[date\]/gi, encodeURIComponent(mergeTags.date));
   }
-
-  // Process custom tags
   if (mergeTags.customTags) {
     for (const [key, value] of Object.entries(mergeTags.customTags)) {
-      const regex = new RegExp(`\\[${key}\\]`, 'gi');
-      processedUrl = processedUrl.replace(regex, encodeURIComponent(value));
+      processedUrl = processedUrl.replace(
+        new RegExp(`\\[${key}\\]`, 'gi'),
+        encodeURIComponent(value),
+      );
     }
   }
 
-  logger.log(`[BM Timeline] Processed Nifty Images URL: ${processedUrl}`);
   return processedUrl;
 }
 
-/**
- * Attach an image to the post using clipboard API
- */
 export async function attachImageToPost(
-  imageUrl: string,
-  mergeTags?: NiftyImagesMergeTags,
+  _imageUrl: string,
+  _mergeTags?: NiftyImagesMergeTags,
 ): Promise<boolean> {
-  logger.log(`[BM Timeline] Attaching image: ${imageUrl}`);
+  logger.warn('[BM Timeline] Image attachment is disabled for inline birthday posts.');
+  return false;
+}
+
+function findBirthdaySubmitControl(card: HTMLElement, editor: HTMLElement): HTMLElement | null {
+  const scope = editor.closest('form') ?? card;
+  const controls = Array.from(scope.querySelectorAll<HTMLElement>('button, [role="button"]'));
+
+  return (
+    controls.find((control) => {
+      if (!isVisible(control) || control === editor || control.contains(editor)) return false;
+      const label = normalizeText(
+        `${control.getAttribute('aria-label') || ''} ${control.getAttribute('title') || ''} ${
+          control.textContent || ''
+        }`,
+      ).toLowerCase();
+      return label.includes('post birthday message') || label === 'post';
+    }) ?? null
+  );
+}
+
+export async function postToTimeline(post: TimelinePost): Promise<boolean> {
+  logger.log(`[BM Timeline] Starting scoped birthday post for ${post.friendName}`);
+
+  const suspendedOverlays = suspendBirthdayMessagingOverlays();
 
   try {
-    // Process merge tags if this is a Nifty Images URL
-    let processedUrl = imageUrl;
-    if (mergeTags) {
-      processedUrl = processNiftyImagesMergeTags(imageUrl, mergeTags);
+    const card = findBirthdayCard(post);
+    if (!card) {
+      throw new Error(
+        `Could not resolve one unique live birthday composer for ${post.friendName}; unsafe page-wide posting is disabled`,
+      );
     }
 
-    // Fetch the image
-    logger.log('[BM Timeline] Fetching image...');
-    const response = await fetch(processedUrl, {
-      mode: 'cors',
-      credentials: 'omit',
+    let editor = findBirthdayEditor(card);
+    if (!editor) {
+      throw new Error(`Could not find the Lexical birthday editor for ${post.friendName}`);
+    }
+
+    logger.log('[BM Timeline] Selected custom post content', {
+      friendName: post.friendName,
+      customContent: post.content,
+      facebookDefaultText: readEditorText(editor),
+      placeholder: editor.getAttribute('aria-placeholder'),
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+    await replaceLexicalBirthdayText(editor, post.content);
+
+    const expected = normalizeText(post.content);
+
+    // React can replace descendants after an edit, so reacquire both the editor
+    // and its form after insertion instead of submitting stale DOM references.
+    editor = findBirthdayEditor(card);
+    if (!editor || readEditorText(editor) !== expected) {
+      throw new Error(
+        'Custom timeline message was not retained after Facebook re-rendered the card.',
+      );
     }
 
-    const blob = await response.blob();
-    logger.log(`[BM Timeline] Image fetched, size: ${blob.size} bytes, type: ${blob.type}`);
+    const form = editor.closest('form');
+    const submitControl = findBirthdaySubmitControl(card, editor);
 
-    // Ensure we have an image blob
-    if (!blob.type.startsWith('image/')) {
-      throw new Error(`Invalid image type: ${blob.type}`);
+    logger.log('[BM Timeline] Submitting exact birthday composer', {
+      friendName: post.friendName,
+      verifiedContent: readEditorText(editor),
+      submitAriaLabel: submitControl?.getAttribute('aria-label'),
+    });
+
+    // Facebook's birthday composer exposes a dedicated control whose aria-label
+    // is normally "Post birthday message". Trigger that exact control so React
+    // runs the same handler as a real user click. Fall back to the editor's own
+    // form only when the dedicated control is unavailable.
+    if (form instanceof HTMLFormElement) {
+      logger.log('[BM Timeline] Submitting editor form with requestSubmit()', {
+        friendName: post.friendName,
+        content: readEditorText(editor),
+      });
+      form.requestSubmit();
+    } else if (submitControl) {
+      logger.log('[BM Timeline] Clicking birthday submit control', {
+        friendName: post.friendName,
+        ariaLabel: submitControl.getAttribute('aria-label'),
+        title: submitControl.getAttribute('title'),
+      });
+      submitControl.click();
+    } else {
+      throw new Error('The birthday editor has neither a form nor a usable submit control');
     }
-
-    // Copy image to clipboard
-    logger.log('[BM Timeline] Copying image to clipboard...');
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        [blob.type]: blob,
-      }),
-    ]);
-
-    await delay(500);
-
-    // Find the composer textbox to paste into
-    const textbox = document.querySelector<HTMLElement>('[contenteditable="true"][role="textbox"]');
-
-    if (!textbox) {
-      throw new Error('Could not find textbox for pasting image');
-    }
-
-    // Focus and paste
-    textbox.focus();
-    await delay(200);
-
-    // Try modern paste method first
-    try {
-      const items = await navigator.clipboard.read();
-      if (items.length > 0) {
-        // Dispatch paste event
-        const pasteEvent = new ClipboardEvent('paste', {
-          bubbles: true,
-          cancelable: true,
-          clipboardData: new DataTransfer(),
-        });
-
-        textbox.dispatchEvent(pasteEvent);
-      }
-    } catch {
-      // Fallback to execCommand
-      document.execCommand('paste');
-    }
-
-    // Wait for image to be processed
     await delay(MEDIUM_DELAY);
 
-    // Verify image was attached by looking for image preview
-    const imagePreview = document.querySelector(
-      '[role="dialog"] img, [role="presentation"] img, [aria-label*="image"] img',
-    );
+    const cardText = normalizeText(card.innerText || card.textContent || '');
+    const remainingEditor = findBirthdayEditor(card);
+    const successState =
+      /you wished|view post/i.test(cardText) ||
+      !remainingEditor ||
+      readEditorText(remainingEditor) === '';
 
-    if (!imagePreview) {
-      logger.warn('[BM Timeline] Could not verify image attachment');
-      // Don't fail - image might still be processing
-    } else {
-      logger.log('[BM Timeline] Image attachment verified');
+    if (!successState) {
+      throw new Error('Facebook did not confirm the customized birthday post submission.');
     }
 
-    logger.log('[BM Timeline] Image attached successfully');
+    logger.log(`[BM Timeline] Customized birthday post confirmed for ${post.friendName}`);
     return true;
   } catch (error) {
-    logger.error('[BM Timeline] Error attaching image:', error);
+    logger.error(`[BM Timeline] Customized timeline post failed for ${post.friendName}:`, error);
     return false;
+  } finally {
+    restoreBirthdayMessagingOverlays(suspendedOverlays);
   }
 }
 
-/**
- * Submit the post
- */
-export async function submitPost(): Promise<boolean> {
-  logger.log('[BM Timeline] Submitting post...');
-
-  try {
-    // Selectors: structural first, then locale-specific aria-labels
-    const postButtonSelectors = [
-      // Data-testid based (language-agnostic)
-      '[data-testid*="post_submit"], [data-testid*="share_button"]',
-      // aria-label selectors (English)
-      '[role="button"][aria-label="Post"]',
-      '[role="button"][aria-label="Share"]',
-      '[aria-label*="Post"][role="button"]',
-      // German
-      '[role="button"][aria-label*="Posten"]',
-      '[role="button"][aria-label="Teilen"]',
-      // Spanish
-      '[role="button"][aria-label="Publicar"]',
-      '[role="button"][aria-label="Compartir"]',
-      // French
-      '[role="button"][aria-label="Publier"]',
-      '[role="button"][aria-label="Partager"]',
-      // Legacy pattern
-      'div[aria-label*="enter" i]',
-      'div[aria-label*="post" i][role="button"]',
-    ];
-
-    let postButton: HTMLElement | null = null;
-
-    for (const selector of postButtonSelectors) {
-      postButton = document.querySelector<HTMLElement>(selector);
-      if (postButton) {
-        // Make sure it's not disabled
-        const isDisabled =
-          postButton.getAttribute('aria-disabled') === 'true' ||
-          postButton.hasAttribute('disabled');
-
-        if (!isDisabled) {
-          logger.log(`[BM Timeline] Found post button: ${selector}`);
-          break;
-        }
-        postButton = null;
-      }
-    }
-
-    if (!postButton) {
-      // Structural fallback: find the primary action button in the dialog
-      // Facebook typically places the submit button as the last enabled button in the dialog footer
-      const dialog = document.querySelector('[role="dialog"]');
-      if (dialog) {
-        const buttons = Array.from(dialog.querySelectorAll('[role="button"]'));
-        postButton =
-          (buttons.reverse().find((btn) => {
-            const isDisabled =
-              btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('disabled');
-            // Skip close/cancel buttons
-            const label = btn.getAttribute('aria-label')?.toLowerCase() ?? '';
-            const isClose = label.includes('close') || label.includes('cancel');
-            return !isDisabled && !isClose;
-          }) as HTMLElement) ?? null;
-      }
-    }
-
-    if (!postButton) {
-      // Final fallback: dispatch Enter keydown on the active post textbox.
-      const textbox =
-        document.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]') ??
-        (document.activeElement as HTMLElement | null);
-      if (textbox) {
-        logger.log('[BM Timeline] No Post button found — dispatching Enter key on textbox');
-        textbox.dispatchEvent(
-          new KeyboardEvent('keydown', {
-            key: 'Enter',
-            keyCode: 13,
-            bubbles: true,
-            cancelable: true,
-          }),
-        );
-        await delay(LONG_DELAY);
-        return true;
-      }
-      logger.error('[BM Timeline] Could not find Post button');
-      return false;
-    }
-
-    // Click the button
-    await simulateClick(postButton);
-
-    // Wait for post to be submitted
-    await delay(LONG_DELAY);
-
-    // Check if composer dialog closed (indicates success)
-    const composerDialog = document.querySelector('[role="dialog"]');
-    const postSuccess = !composerDialog;
-
-    if (postSuccess) {
-      logger.log('[BM Timeline] Post submitted successfully');
-    } else {
-      logger.warn('[BM Timeline] Post submission unclear - dialog still open');
-    }
-
-    return true;
-  } catch (error) {
-    logger.error('[BM Timeline] Error submitting post:', error);
-    return false;
-  }
-}
-
-/**
- * Main function to post to a friend's timeline
- */
-export async function postToTimeline(post: TimelinePost): Promise<boolean> {
-  logger.log(`[BM Timeline] Starting timeline post for ${post.friendName}`);
-
-  try {
-    return await retryOperation(
-      async () => {
-        // 1. Navigate to profile if URL provided
-        if (post.profileUrl) {
-          const navigated = await navigateToProfile(post.profileUrl);
-          if (!navigated) {
-            throw new Error('Failed to navigate to profile');
-          }
-        }
-
-        // 2. Open post composer (retry up to 2 attempts within this step)
-        let composer: HTMLElement | null = null;
-        for (let i = 0; i < 2; i++) {
-          composer = await openPostComposer();
-          if (composer) break;
-          await delay(SHORT_DELAY);
-        }
-        if (!composer) {
-          throw new Error('Failed to open post composer');
-        }
-
-        await delay(SHORT_DELAY);
-
-        // 3. Insert text content
-        const contentInserted = await insertPostContent(post.content, composer);
-        if (!contentInserted) {
-          throw new Error('Failed to insert post content');
-        }
-
-        await delay(SHORT_DELAY);
-
-        // 4. Attach image if present
-        if (post.imageUrl) {
-          const mergeTags: NiftyImagesMergeTags = {
-            name: post.friendName,
-            firstName: post.friendName.split(' ')[0],
-            date: new Date().toLocaleDateString(),
-          };
-
-          const imageAttached = await attachImageToPost(post.imageUrl, mergeTags);
-          if (!imageAttached) {
-            logger.warn('[BM Timeline] Image attachment failed, continuing without image');
-          }
-
-          await delay(MEDIUM_DELAY);
-        }
-
-        // 5. Submit the post
-        const submitted = await submitPost();
-        if (!submitted) {
-          throw new Error('Failed to submit post');
-        }
-
-        logger.log(`[BM Timeline] Successfully posted to ${post.friendName}'s timeline`);
-        return true;
-      },
-      2,
-      2000,
-    ); // retry up to 2 times with 2s base delay
-  } catch (error) {
-    logger.error('[BM Timeline] Error posting to timeline after retries:', error);
-    return false;
-  }
-}
-
-/**
- * Batch post to multiple friend timelines with delays
- */
 export async function batchPostToTimelines(
   posts: TimelinePost[],
-  delayBetweenPosts: number = 5000,
+  delayBetweenPosts = 5000,
 ): Promise<{ success: number; failed: number; results: boolean[] }> {
-  logger.log(`[BM Timeline] Starting batch post for ${posts.length} friends`);
-
   const results: boolean[] = [];
-  let successCount = 0;
-  let failedCount = 0;
+  let success = 0;
+  let failed = 0;
 
-  for (const post of posts) {
-    const result = await postToTimeline(post);
+  for (let index = 0; index < posts.length; index += 1) {
+    const result = await postToTimeline(posts[index]);
     results.push(result);
+    if (result) success += 1;
+    else failed += 1;
 
-    if (result) {
-      successCount++;
-    } else {
-      failedCount++;
-    }
-
-    // Wait between posts to avoid rate limiting
-    if (posts.indexOf(post) < posts.length - 1) {
-      logger.log(`[BM Timeline] Waiting ${delayBetweenPosts}ms before next post...`);
+    if (index < posts.length - 1) {
       await delay(delayBetweenPosts);
     }
   }
 
-  logger.log(`[BM Timeline] Batch complete: ${successCount} success, ${failedCount} failed`);
-
-  return {
-    success: successCount,
-    failed: failedCount,
-    results,
-  };
+  return { success, failed, results };
 }

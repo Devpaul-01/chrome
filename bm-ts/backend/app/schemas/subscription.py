@@ -29,6 +29,10 @@ class SubscriptionStatusResponse(BaseModel):
     in_grace_period: bool = False
     stripe_customer_id: Optional[str]
     stripe_subscription_id: Optional[str]
+    billing_provider: Optional[str] = None
+    provider_subscription_id: Optional[str] = None
+    auto_renew: bool = False
+    next_billing_at: Optional[datetime] = None
 
 
 class CheckoutSessionRequest(BaseModel):

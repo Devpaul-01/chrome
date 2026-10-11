@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "BirthdayMessaging",
-  "version": "0.1.0",
+  "name": "BirthdayMessaging FB",
+  "version": "1.4.0",
   "description": "Helps you remember and send personalized birthday wishes to your Facebook friends.",
-  "homepage_url": "https://birthdaymessaging.app/privacy",
+  "homepage_url": "https://birthdaymessaging.io/",
   "permissions": [
     "storage",
     "scripting",
@@ -12,10 +12,12 @@
     "notifications",
     "clipboardWrite"
   ],
-  "optional_permissions": ["alarms"],
+  "optional_permissions": [
+    "alarms"
+  ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "BirthdayMessaging"
+    "default_title": "BirthdayMessaging FB"
   },
   "background": {
     "service_worker": "background.js",
@@ -26,9 +28,12 @@
       "matches": [
         "https://www.facebook.com/birthdays*",
         "https://www.facebook.com/messages/*",
-        "https://www.facebook.com/profile.php*"
+        "https://www.facebook.com/profile.php*",
+        "https://www.facebook.com/friends/birthdays*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -36,15 +41,21 @@
     "https://www.facebook.com/birthdays*",
     "https://www.facebook.com/messages/*",
     "https://www.facebook.com/profile.php*",
+    "https://www.facebook.com/friends/birthdays*",
     "http://localhost/*",
     "https://localhost/*",
     "http://*.sslip.io/*",
-    "https://*.sslip.io/*"
+    "https://*.sslip.io/*",
+    "https://api-v2.birthdaymessaging.io/*"
   ],
   "web_accessible_resources": [
     {
-      "resources": ["assets/*"],
-      "matches": ["https://www.facebook.com/*"]
+      "resources": [
+        "assets/*"
+      ],
+      "matches": [
+        "https://www.facebook.com/*"
+      ]
     }
   ],
   "icons": {

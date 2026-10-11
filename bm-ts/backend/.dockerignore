@@ -13,3 +13,12 @@ backups
 docker-compose.yml
 deploy*.sh
 scripts
+*.bak
+*.before-*
+btcpay-testnet.local.env
+*testnet*.ps1
+*testnet*.yml
+*testnet*.yaml
+app/tests
+**/__pycache__
+*.pyc

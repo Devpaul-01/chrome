@@ -22,7 +22,7 @@ from app.core.errors import AppError, ErrorCodes
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_active_entitlement
 from app.db.models import TemplateSegment, User
 from app.db.session import get_db
 from app.schemas.template import (
@@ -43,7 +43,7 @@ _ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     500: {"model": ErrorResponse},
 }
 
-router = APIRouter(responses=_ERROR_RESPONSES)
+router = APIRouter(responses=_ERROR_RESPONSES, dependencies=[Depends(require_active_entitlement)])
 
 
 @router.post(

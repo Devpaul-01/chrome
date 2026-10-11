@@ -1,35 +1,34 @@
-# Python cache
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.dump
+*.sql
+*.sqlite
+*.sqlite3
+*.bak
+*.backup
+*.pre-*
+backups/
 __pycache__/
 *.py[cod]
 .pytest_cache/
-
-# Node
-node_modules/
-**/node_modules/
-
-# Build outputs
-dist/
-build/
-*.egg-info/
-
-# Environment
-.env
-*.env
-!.env.example
-
-# IDE
-.vscode/
-.idea/
-*.iml
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Test coverage
+.mypy_cache/
 .coverage
 htmlcov/
+node_modules/
+dist/
+build/
+.DS_Store
+*.log
+wallet/
+wallets/
+secrets/
+credentials/
 
-# Docker volumes
-postgres_data/
+# Safe deployment templates
+!.env.example
+!.env.production.example

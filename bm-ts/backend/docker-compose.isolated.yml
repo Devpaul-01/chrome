@@ -1,0 +1,48 @@
+services:
+  db:
+    container_name: bm-v2-db
+  backend:
+    container_name: bm-v2-backend
+    ports:
+      - "127.0.0.1:18080:80"
+    networks:
+      - default
+      - coolify
+      - btcpay-integration
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+      - "traefik.http.middlewares.bm-v2-gzip.compress=true"
+      - "traefik.http.routers.bm-v2-http.rule=Host(`api-v2.birthdaymessaging.io`)"
+      - "traefik.http.routers.bm-v2-http.entrypoints=http"
+      - "traefik.http.routers.bm-v2-http.middlewares=bm-v2-redirect"
+      - "traefik.http.middlewares.bm-v2-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.bm-v2-https.rule=Host(`api-v2.birthdaymessaging.io`)"
+      - "traefik.http.routers.bm-v2-https.entrypoints=https"
+      - "traefik.http.routers.bm-v2-https.middlewares=bm-v2-gzip"
+      - "traefik.http.routers.bm-v2-https.tls=true"
+      - "traefik.http.routers.bm-v2-https.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bm-v2.loadbalancer.server.port=80"
+      - "traefik.http.routers.bm-v2-https.service=bm-v2"
+      - "traefik.http.routers.bm-v2-http.service=bm-v2"
+  notification-worker:
+    container_name: bm-v2-notification-worker
+  payment-recovery-worker:
+    container_name: bm-v2-payment-recovery-worker
+    networks:
+      - default
+      - btcpay-integration
+  db-backup:
+    container_name: bm-v2-db-backup
+    command: ["sh", "-c", "while true; do TS=$$(date -u +%Y%m%d_%H%M%S); TMP=/backups/.birthdaymessaging_$${TS}.dump.tmp; FINAL=/backups/birthdaymessaging_$${TS}.dump; rm -f \"$$TMP\"; until pg_isready -h db -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" >/dev/null 2>&1; do sleep 2; done; if pg_dump -h db -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" --format=custom --no-owner --no-privileges -f \"$$TMP\" && test -s \"$$TMP\" && pg_restore -l \"$$TMP\" >/dev/null 2>&1; then mv \"$$TMP\" \"$$FINAL\"; find /backups -type f -name 'birthdaymessaging_*.dump' -mtime +7 -delete; else rm -f \"$$TMP\"; fi; sleep 86400; done"]
+volumes:
+  postgres_data:
+    name: bm-v2-postgres-data
+
+networks:
+  coolify:
+    external: true
+    name: coolify
+  btcpay-integration:
+    external: true
+    name: bm-btcpay-integration

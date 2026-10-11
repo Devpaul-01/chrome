@@ -94,10 +94,27 @@ export function parseApiError(error: unknown): AppError {
       case 400:
         return new ValidationError(message);
       case 401:
+        return new AuthenticationError('The email or password you entered is incorrect.');
       case 403:
-        return new AuthenticationError(message);
+        if (
+          message.toLowerCase().includes('verify your email') ||
+          message.toLowerCase().includes('check your inbox')
+        ) {
+          return new AuthenticationError(message);
+        }
+        if (message.toLowerCase().includes('locked')) {
+          return new AuthenticationError(
+            'Your account is temporarily locked after too many failed sign-in attempts. Please try again later.',
+          );
+        }
+        return new AuthenticationError('We could not sign you in. Please try again.');
       case 404:
-        return new AppError(message || 'Resource not found', 'NOT_FOUND', 404);
+        return new AppError(
+          'We could not reach the BirthdayMessaging sign-in service. Please try again.',
+          'NOT_FOUND',
+          404,
+          true,
+        );
       case 409:
         return new AppError(message || 'Conflict occurred', 'CONFLICT', 409);
       case 422:
@@ -108,7 +125,9 @@ export function parseApiError(error: unknown): AppError {
       case 502:
       case 503:
       case 504:
-        return new ServerError(message);
+        return new ServerError(
+          'BirthdayMessaging is temporarily unavailable. Please try again shortly.',
+        );
       default:
         return new AppError(message, 'UNKNOWN_ERROR', status);
     }
@@ -154,22 +173,12 @@ export function isRetryableError(error: unknown): boolean {
 /**
  * Log error to console with context
  */
-export function logError(error: unknown, context?: string): void {
+export function logError(error: unknown, _context?: string): void {
   const appError = parseApiError(error);
-  const timestamp = new Date().toISOString();
-
-  console.error('=== Error Log ===');
-  console.error('Timestamp:', timestamp);
-  if (context) {
-    console.error('Context:', context);
-  }
-  console.error('Error:', appError);
-  console.error('Message:', appError.message);
-  console.error('Code:', appError.code);
-  console.error('Status:', appError.statusCode);
-  console.error('Retryable:', appError.isRetryable);
-  console.error('Stack:', appError.stack);
-  console.error('================');
+  // Only fixed metadata is logged; no untrusted message, object, stack or context.
+  const status = typeof appError.statusCode === 'number' && Number.isInteger(appError.statusCode)
+    ? appError.statusCode : null;
+  console.error('Application error', { status, retryable: appError.isRetryable === true });
 }
 
 /**

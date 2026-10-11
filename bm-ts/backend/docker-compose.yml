@@ -1,5 +1,6 @@
 services:
   db:
+    restart: unless-stopped
     image: postgres:15
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -10,13 +11,14 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-birthdaymessaging}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   backend:
     build: .
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -31,8 +33,50 @@ services:
     command: >
       bash -c "
         alembic upgrade head &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
       "
+
+  notification-worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    command: ["python", "-m", "app.services.notification_worker"]
+
+  payment-recovery-worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    command: ["python", "-m", "app.services.payment_checkout_recovery_worker"]
+
+  rapyd-reconciliation-worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    command: ["python", "-m", "app.services.rapyd_reconciliation_worker"]
 
   # Automated daily backup at 2:00 AM UTC
   db-backup:

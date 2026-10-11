@@ -1,5 +1,5 @@
 /**
- * api/client.ts — HTTP client layer for the BirthdayMessaging backend API.
+ * api/client.ts â€” HTTP client layer for the BirthdayMessaging backend API.
  *
  * All requests are proxied through the background service worker
  * (`background/index.ts`) rather than being made directly from the popup or
@@ -8,11 +8,11 @@
  * is imported exclusively by `background/index.ts`.
  *
  * Architecture:
- *   popup / content  ──chrome.runtime.sendMessage──►  background
- *   background       ──fetch()──►  backend API
+ *   popup / content  â”€â”€chrome.runtime.sendMessageâ”€â”€â–º  background
+ *   background       â”€â”€fetch()â”€â”€â–º  backend API
  *
  * Every exported function follows the same signature convention:
- *   (baseUrl: string, accessToken?: string, ...args) ⇒ Promise<ResponseType>
+ *   (baseUrl: string, accessToken?: string, ...args) â‡’ Promise<ResponseType>
  */
 
 /**
@@ -55,9 +55,11 @@ async function request<T>(
   body?: JsonBody,
   accessToken?: string,
   timeoutMs = 10_000,
+  extraHeaders: Record<string, string> = {},
 ): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...extraHeaders,
   };
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
@@ -131,7 +133,7 @@ export interface UserProfile {
 
 export type SegmentType = TemplateSegment['segment_type'];
 
-/** User's Stripe subscription status. */
+/** Provider-neutral subscription/access status. */
 export interface SubscriptionStatus {
   is_active: boolean;
   plan?: 'monthly' | 'yearly';
@@ -142,6 +144,10 @@ export interface SubscriptionStatus {
   in_grace_period?: boolean;
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
+  billing_provider?: string;
+  provider_subscription_id?: string;
+  auto_renew?: boolean;
+  next_billing_at?: string;
 }
 
 export interface CheckoutSessionRequest {
@@ -153,6 +159,24 @@ export interface CheckoutSessionRequest {
 export interface CheckoutSessionResponse {
   checkout_url: string;
 }
+
+export interface BTCPayCheckoutResponse {
+  checkout_attempt_id: string;
+  payment_id: string;
+  provider: string;
+  provider_payment_id: string;
+  provider_order_id: string;
+  status: string;
+  checkout_url: string;
+  amount: string | number;
+  currency: string;
+  plan_code: string;
+  billing_term_months: number;
+  reused: boolean;
+}
+
+export type RapydCheckoutResponse = BTCPayCheckoutResponse;
+export interface PayPalCheckoutResponse { provider: string; subscription_id: string; status: string; checkout_url: string; plan_code: string; reused: boolean; }
 
 export interface CancelSubscriptionResponse {
   status: string;
@@ -203,7 +227,7 @@ export async function revokeToken(
   return request<{ message: string }>(baseUrl, '/auth/revoke', 'POST', { refresh_token });
 }
 
-/** Return the currently-authenticated user's profile (‘/auth/me’). */
+/** Return the currently-authenticated user's profile (â€˜/auth/meâ€™). */
 export async function me(baseUrl: string, accessToken: string): Promise<UserProfile> {
   return request(baseUrl, '/auth/me', 'GET', undefined, accessToken);
 }
@@ -258,12 +282,56 @@ export async function subscriptionStatus(
   return request(baseUrl, '/subscription/status', 'GET', undefined, accessToken);
 }
 
-export async function createCheckoutSession(
+export async function createBTCPayCheckout(
   baseUrl: string,
   accessToken: string,
-  payload: CheckoutSessionRequest,
-): Promise<CheckoutSessionResponse> {
-  return request(baseUrl, '/subscription/create-checkout-session', 'POST', payload, accessToken);
+  plan: 'monthly' | 'yearly',
+  paymentMethod: 'bitcoin' | 'monero',
+  idempotencyKey: string,
+): Promise<BTCPayCheckoutResponse> {
+  return request(
+    baseUrl,
+    '/api/payments/btcpay/checkout',
+    'POST',
+    { plan_code: plan, payment_method: paymentMethod },
+    accessToken,
+    30_000,
+    { 'Idempotency-Key': idempotencyKey },
+  );
+}
+
+export async function createPayPalCheckout(
+  baseUrl: string,
+  accessToken: string,
+  plan: 'monthly' | 'yearly',
+  idempotencyKey: string,
+): Promise<PayPalCheckoutResponse> {
+  return request(
+    baseUrl,
+    '/api/payments/paypal/subscription/checkout',
+    'POST',
+    { plan_code: plan },
+    accessToken,
+    30_000,
+    { 'Idempotency-Key': idempotencyKey },
+  );
+}
+
+export async function createRapydCheckout(
+  baseUrl: string,
+  accessToken: string,
+  plan: 'monthly' | 'yearly',
+  idempotencyKey: string,
+): Promise<RapydCheckoutResponse> {
+  return request(
+    baseUrl,
+    '/api/payments/rapyd/checkout',
+    'POST',
+    { plan_code: plan },
+    accessToken,
+    30_000,
+    { 'Idempotency-Key': idempotencyKey },
+  );
 }
 
 export async function cancelSubscription(

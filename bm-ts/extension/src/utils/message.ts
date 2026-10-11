@@ -75,24 +75,30 @@ export function selectPost(posts: Post[], gender: Gender, groupId?: string | nul
   if (!posts.length) return null;
   const gKey = (gender ?? 'NEUTRAL') as Post['gender'];
 
-  // If a groupId is provided, prefer posts in that group
+  // Prefer user-created/custom posts. Facebook's own inline greeting is not a
+  // backend Post, but ignoring is_default here prevents an old seeded default
+  // record from randomly winning over a custom saved template.
+  const customPosts = posts.filter((post) => !post.is_default);
+  const availablePosts = customPosts.length > 0 ? customPosts : posts;
+
+  // If a groupId is provided, prefer posts in that group.
   if (groupId) {
-    const inGroup = posts.filter((p) => p.group_id === groupId);
+    const inGroup = availablePosts.filter((post) => post.group_id === groupId);
     if (inGroup.length) {
-      const exactGroup = inGroup.filter((p) => p.gender === gKey);
+      const exactGroup = inGroup.filter((post) => post.gender === gKey);
       if (exactGroup.length) return pickRandom(exactGroup);
-      const neutralGroup = inGroup.filter((p) => p.gender === 'NEUTRAL');
+      const neutralGroup = inGroup.filter((post) => post.gender === 'NEUTRAL');
       if (neutralGroup.length) return pickRandom(neutralGroup);
       return pickRandom(inGroup);
     }
   }
 
-  // Fall back to ungrouped posts first, then any
-  const ungrouped = posts.filter((p) => !p.group_id);
-  const pool = ungrouped.length ? ungrouped : posts;
-  const exact = pool.filter((p) => p.gender === gKey);
+  // Fall back to ungrouped custom posts first, then the remaining custom pool.
+  const ungrouped = availablePosts.filter((post) => !post.group_id);
+  const pool = ungrouped.length ? ungrouped : availablePosts;
+  const exact = pool.filter((post) => post.gender === gKey);
   if (exact.length) return pickRandom(exact);
-  const neutral = pool.filter((p) => p.gender === 'NEUTRAL');
+  const neutral = pool.filter((post) => post.gender === 'NEUTRAL');
   if (neutral.length) return pickRandom(neutral);
   return pickRandom(pool);
 }
