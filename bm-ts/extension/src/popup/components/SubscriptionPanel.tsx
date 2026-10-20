@@ -72,6 +72,7 @@ export default function SubscriptionPanel() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<'monthly' | 'yearly' | null>(null);
   const checkoutKeysRef = useRef<Partial<Record<string, string>>>({});
+  const switchIntentsRef = useRef<Partial<Record<string, { key: string; id?: string }>>>({});
 
   /* â”€â”€ data fetching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const fetchStatus = useCallback(async () => {
@@ -147,6 +148,40 @@ export default function SubscriptionPanel() {
     setShowPaymentModal(true);
   }
 
+  async function handlePayPalSwitch(plan: 'monthly' | 'yearly') {
+    const key = `paypal-revision:${plan}`;
+    setActionLoading(`checkout:${plan}`);
+    setError(null);
+    try {
+      let intent = switchIntentsRef.current[key];
+      if (!intent) { intent = { key: crypto.randomUUID() }; switchIntentsRef.current[key] = intent; }
+      if (!intent.id) {
+        const created = await sendBackgroundMessage<{ intent_id: string }>({
+          type: 'subscription.planSwitchIntent',
+          payload: { target_plan: plan, idempotency_key: intent.key },
+        });
+        intent.id = created.intent_id;
+      }
+      const revision = await sendBackgroundMessage<{ approval_url?: string | null; status: string; requires_reconciliation: boolean }>({
+        type: 'subscription.paypalPlanRevise', payload: { intent_id: intent.id },
+      });
+      if (revision.approval_url) {
+        const url = new URL(revision.approval_url);
+        if (url.protocol !== 'https:' || !/(^|\.)paypal\.com$|(^|\.)paypalobjects\.com$|(^|\.)sandbox\.paypal\.com$/.test(url.hostname)) {
+          throw new Error('Unexpected PayPal approval URL');
+        }
+        await chrome.tabs.create({ url: url.toString() });
+      }
+      setSuccessMsg('PayPal revision is pending provider approval and verified settlement. Your current plan remains unchanged.');
+    } catch (err) {
+      console.error('PayPal plan revision requires reconciliation', err);
+      setError('Unable to confirm PayPal revision initiation. Your current plan remains unchanged; do not start another checkout.');
+    } finally {
+      setActionLoading(null);
+      void fetchStatus();
+    }
+  }
+
   async function handleCheckout(
     plan: 'monthly' | 'yearly',
     selectedPaymentMethod: 'bitcoin' | 'monero' | 'paypal',
@@ -162,18 +197,40 @@ export default function SubscriptionPanel() {
     }
 
     try {
+      let planSwitchIntentId: string | undefined;
+      const switching = isActive && currentPlan !== plan;
+      if (switching) {
+        if (selectedPaymentMethod === 'paypal') {
+          throw new Error('Existing PayPal subscriptions must use the provider revision flow');
+        }
+        let intent = switchIntentsRef.current[checkoutKey];
+        if (!intent) {
+          intent = { key: crypto.randomUUID() };
+          switchIntentsRef.current[checkoutKey] = intent;
+        }
+        if (!intent.id) {
+          const created = await sendBackgroundMessage<{ intent_id: string }>({
+            type: 'subscription.planSwitchIntent',
+            payload: { target_plan: plan, idempotency_key: intent.key },
+          });
+          intent.id = created.intent_id;
+        }
+        planSwitchIntentId = intent.id;
+      }
       const result = await sendBackgroundMessage<{ checkout_url: string }>({
         type: 'subscription.checkout',
         payload: {
           plan,
           payment_method: selectedPaymentMethod,
           idempotency_key: idempotencyKey,
+          ...(planSwitchIntentId ? { plan_switch_intent_id: planSwitchIntentId } : {}),
         },
       });
 
       // Checkout creation is now durable in the backend, so a later click should
       // intentionally create a new purchase attempt rather than reusing this one.
       delete checkoutKeysRef.current[checkoutKey];
+      delete switchIntentsRef.current[checkoutKey];
       setShowPaymentModal(false);
       setCheckoutPlan(null);
       await chrome.tabs.create({ url: result.checkout_url });
@@ -419,8 +476,17 @@ export default function SubscriptionPanel() {
                 ) : isActive ? (
                   <button
                     onClick={() => {
-                      setTargetPlan(key);
-                      setShowChangePlanModal(true);
+                      if (isPayPalRecurring) {
+                        void handlePayPalSwitch(key);
+                      } else if (subscription?.billing_provider === 'btcpay' || subscription?.billing_provider === 'monero') {
+                        openPaymentModal(key);
+                      } else {
+                        setError(subscription?.billing_provider === 'development_admin' || !subscription?.billing_provider
+                          ? 'Administrative or non-recurring access cannot be switched through customer billing. Your current access remains unchanged.'
+                          : subscription?.billing_provider === 'paypal'
+                            ? 'PayPal subscription identification is missing. Your current plan remains unchanged.'
+                            : 'Provider confirmation is unavailable. Your current subscription remains unchanged.');
+                      }
                     }}
                     className="btn-outline-orange text-xs w-full"
                     disabled={!!actionLoading}

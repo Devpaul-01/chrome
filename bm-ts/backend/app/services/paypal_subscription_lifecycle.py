@@ -4,6 +4,7 @@ from app.db.models import RecurringSubscription
 STATUS_MAP={"BILLING.SUBSCRIPTION.ACTIVATED":"ACTIVE","BILLING.SUBSCRIPTION.CANCELLED":"CANCELLED","BILLING.SUBSCRIPTION.SUSPENDED":"SUSPENDED","BILLING.SUBSCRIPTION.EXPIRED":"EXPIRED","BILLING.SUBSCRIPTION.PAYMENT.FAILED":"PAYMENT_FAILED"}
 def apply_paypal_subscription_lifecycle(*,subscription:RecurringSubscription,event_type:str,resource:dict)->bool:
     status=STATUS_MAP.get(event_type)
+    if getattr(subscription,"provider",None)!="paypal":return False
     if status is None:return False
     subscription.status=status;subscription.updated_at=datetime.now(timezone.utc)
     billing=resource.get("billing_info") if isinstance(resource.get("billing_info"),dict) else {}

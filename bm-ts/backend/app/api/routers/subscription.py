@@ -126,14 +126,42 @@ async def get_status(
                 paid_through = future.expires_at
                 coverage_plan = future.plan_code
 
-        recurring = (await db.execute(select(RecurringSubscription).where(RecurringSubscription.user_id == current_user.id).order_by(desc(RecurringSubscription.updated_at)).limit(1))).scalar_one_or_none()
+        # Administrative grants never inherit historical provider billing identity.
+        if entitlement.source_provider == "development_admin":
+            return SubscriptionStatusResponse(
+                is_active=True, plan=coverage_plan, status="ACTIVE",
+                current_period_end=paid_through, cancel_at_period_end=False,
+                canceled_at=None, in_grace_period=False,
+                stripe_customer_id=None, stripe_subscription_id=None,
+                billing_provider="development_admin", provider_subscription_id=None,
+                auto_renew=False, next_billing_at=None,
+            )
+
+        # Only one eligible active PayPal agreement may be revised.
+        agreements = (await db.execute(
+            select(RecurringSubscription).where(
+                RecurringSubscription.user_id == current_user.id,
+                RecurringSubscription.provider == "paypal",
+                RecurringSubscription.status == "ACTIVE",
+                RecurringSubscription.cancel_at_period_end.is_(False),
+            ).order_by(desc(RecurringSubscription.updated_at)).limit(2)
+        )).scalars().all()
+        recurring = agreements[0] if len(agreements) == 1 and agreements[0].provider_subscription_id else None
+        if agreements:
+            billing_provider = "paypal"
+            provider_subscription_id = recurring.provider_subscription_id if recurring else None
+        else:
+            billing_provider = entitlement.source_provider
+            provider_subscription_id = None
         return SubscriptionStatusResponse(
-            is_active=True, plan=coverage_plan, status="ACTIVE", current_period_end=paid_through,
+            is_active=True, plan=coverage_plan, status="ACTIVE",
+            current_period_end=paid_through,
             cancel_at_period_end=bool(recurring.cancel_at_period_end) if recurring else False,
-            canceled_at=None, in_grace_period=False, stripe_customer_id=None, stripe_subscription_id=None,
-            billing_provider=recurring.provider if recurring else entitlement.source_provider,
-            provider_subscription_id=recurring.provider_subscription_id if recurring else None,
-            auto_renew=bool(recurring and recurring.status=="ACTIVE" and not recurring.cancel_at_period_end),
+            canceled_at=None, in_grace_period=False,
+            stripe_customer_id=None, stripe_subscription_id=None,
+            billing_provider=billing_provider,
+            provider_subscription_id=provider_subscription_id,
+            auto_renew=bool(recurring),
             next_billing_at=recurring.next_billing_at if recurring else None,
         )
 

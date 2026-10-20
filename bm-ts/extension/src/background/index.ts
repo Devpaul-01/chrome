@@ -2,6 +2,7 @@ import {
   ApiError,
   BillingPortalResponse,
   CheckoutSessionResponse,
+  PayPalPlanConfirmationResponse,
   TemplateSegment,
   TokenResponse,
   SubscriptionStatus,
@@ -15,6 +16,9 @@ import {
   SMTPConfig,
   MessageTemplate,
   createBTCPayCheckout,
+  createPlanSwitchIntent,
+  revisePayPalPlan,
+  confirmPayPalPlan,
   createPayPalCheckout,
   createRapydCheckout,
   cancelSubscription,
@@ -469,6 +473,7 @@ type BackgroundResponse =
   | { status: string }
   | SubscriptionStatus
   | CheckoutSessionResponse
+  | PayPalPlanConfirmationResponse
   | BillingPortalResponse
   | AutomationConfig
   | QueuedMessage
@@ -620,6 +625,15 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
     case 'subscription.status': {
       return runAuthAware((accessToken, url) => subscriptionStatus(url, accessToken));
     }
+    case 'subscription.planSwitchIntent': {
+      return runAuthAware((accessToken, url) => createPlanSwitchIntent(url, accessToken, message.payload.target_plan, message.payload.idempotency_key));
+    }
+    case 'subscription.paypalPlanRevise': {
+      return runAuthAware((accessToken, url) => revisePayPalPlan(url, accessToken, message.payload.intent_id));
+    }
+    case 'subscription.paypalPlanConfirm': {
+      return runAuthAware((accessToken, url) => confirmPayPalPlan(url, accessToken, message.payload.intent_id));
+    }
     case 'subscription.checkout': {
       return runAuthAware<{ checkout_url: string }>((accessToken, url) => {
         if (message.payload.payment_method === 'paypal') {
@@ -644,6 +658,7 @@ async function handleMessage(message: BackgroundMessage): Promise<BackgroundResp
           message.payload.plan,
           message.payload.payment_method,
           message.payload.idempotency_key,
+          message.payload.plan_switch_intent_id,
         );
       });
     }
