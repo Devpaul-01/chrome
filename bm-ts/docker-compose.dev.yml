@@ -26,7 +26,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - '127.0.0.1:${BM_DEV_API_PORT:-18765}:8000'
+      - '127.0.0.1:${BM_DEV_API_PORT:-18767}:8000'
     environment:
       DATABASE_URL: postgresql+asyncpg://bmdev:${BM_DEV_DB_PASSWORD}@db:5432/birthdaymessaging_dev
       SECRET_KEY: ${BM_DEV_SECRET_KEY:?Generate a unique local secret}
