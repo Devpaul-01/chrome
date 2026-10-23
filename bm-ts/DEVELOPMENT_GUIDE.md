@@ -356,10 +356,10 @@ npm run format
 ### Database Commands
 
 ```powershell
-# Full database reset
+# Database troubleshooting (preserve data)
 cd bm-ts\backend
-docker-compose down -v    # -v removes volumes (deletes data!)
-docker-compose up -d      # Recreates database with fresh schema
+# Data-preserving recovery: do not run docker-compose down -v; it deletes database volumes.
+docker-compose up -d      # Restart services without deleting volumes
 ```
 
 ### Database Migrations (Alembic)
@@ -703,15 +703,15 @@ If you encounter issues not covered here:
    ```powershell
    cd bm-ts
    .\shutdown.ps1
-   docker system prune -f    # Cleanup
+   # Avoid docker system prune: it can remove unrelated Docker resources.
    .\startup.ps1
    ```
 
-5. **Database issues? Reset it:**
+5. **Database issues? Inspect safely before recovery:**
    ```powershell
    cd bm-ts\backend
-   docker-compose down -v    # Deletes data!
-   docker-compose up -d      # Fresh start
+   # Preserve database volumes; do not use docker-compose down -v for troubleshooting.
+   docker-compose up -d      # Restart without deleting volumes
    ```
 
 ---
