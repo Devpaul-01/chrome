@@ -1,0 +1,148 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Architecture">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Facebook -->
+        <mxCell id="fb" value="Facebook Web UI&#10;(facebook.com)&#10;&#10;- Friends page&#10;- Birthdays page&#10;- Messenger UI&#10;&#10;❌ No Graph API"
+                style="rounded=1;fillColor=#f5f5f5;strokeColor=#000000;"
+                vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="260" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- Chrome Extension -->
+        <mxCell id="ext" value="Chrome Extension"
+                style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;"
+                vertex="1" parent="1">
+          <mxGeometry x="360" y="120" width="320" height="420" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="content" value="Content Script&#10;&#10;- Parse friends list&#10;- Parse birthdays&#10;- Open chat&#10;- Send message"
+                style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;"
+                vertex="1" parent="1">
+          <mxGeometry x="380" y="160" width="280" height="120" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="background" value="Background Script&#10;&#10;- Auth&#10;- API calls&#10;- Scheduling"
+                style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;"
+                vertex="1" parent="1">
+          <mxGeometry x="380" y="300" width="280" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="popup" value="Popup UI&#10;&#10;- Settings&#10;- Message segments&#10;- Logs"
+                style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;"
+                vertex="1" parent="1">
+          <mxGeometry x="380" y="420" width="280" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- Backend -->
+        <mxCell id="backend" value="Backend API (Spring Boot)&#10;&#10;- Users&#10;- Friends&#10;- Message Segments&#10;- Scheduler&#10;- Logs"
+                style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;"
+                vertex="1" parent="1">
+          <mxGeometry x="780" y="220" width="300" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- Database -->
+        <mxCell id="db" value="Database (PostgreSQL)&#10;&#10;- users&#10;- friends&#10;- message_segments&#10;- congratulation_log"
+                style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;"
+                vertex="1" parent="1">
+          <mxGeometry x="1120" y="250" width="300" height="160" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="endpointAuth" value="/api/auth"
+                style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;"
+                vertex="1" parent="1">
+          <mxGeometry x="590" y="220" width="160" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="endpointFriends" value="/api/friends"
+                style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;"
+                vertex="1" parent="1">
+          <mxGeometry x="590" y="270" width="160" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="endpointSegments" value="/api/message-segments"
+                style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;"
+                vertex="1" parent="1">
+          <mxGeometry x="590" y="320" width="160" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="endpointScheduler" value="/api/scheduler"
+                style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;"
+                vertex="1" parent="1">
+          <mxGeometry x="590" y="370" width="160" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="endpointLogs" value="/api/logs"
+                style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;"
+                vertex="1" parent="1">
+          <mxGeometry x="590" y="420" width="160" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="a1" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="content" target="fb">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a2" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="background" target="endpointAuth">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a2b" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="background" target="endpointFriends">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a2c" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="background" target="endpointSegments">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a2d" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="background" target="endpointScheduler">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a2e" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="popup" target="endpointLogs">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a2f" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="endpointAuth" target="backend">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a2g" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="endpointFriends" target="backend">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a2h" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="endpointSegments" target="backend">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a2i" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="endpointScheduler" target="backend">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a2j" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="endpointLogs" target="backend">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a3" style="endArrow=block;strokeWidth=2;" edge="1" parent="1"
+                source="backend" target="db">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
