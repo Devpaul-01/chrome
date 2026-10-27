@@ -48,4 +48,3 @@ if($LaunchChrome){
  Write-Host 'Chrome launched. Verify the extension loaded in chrome://extensions.'
 }
 Write-Host 'ONBOARDING_COMPLETE: verified steps above; worker runtime remains gated'
-
