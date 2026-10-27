@@ -1,20 +1,27 @@
-# Development and testing — proposed restoration
+# BirthdayMessaging development and testing — PR #187 proposed replacement
 
-## Source of truth
-Gitea `ctmmediagroup/BIRTHDAYMESSAGING-LEGACY`, branch `main`. Baseline verified at `dda6a7f58f02e23219c08b9fa67705c9463b9fbc`, including PR #186. Refresh main before opening this restoration PR.
+## Supported modes
 
-## Workstation onboarding
-1. Clone the repository or create an isolated worktree from current main. Do not overwrite an existing dirty development checkout.
-2. Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\bm-ts\startup.ps1 -Mode Audit`.
-3. Review prerequisites and explicitly approve any installation. `-Mode Extension` installs locked extension dependencies and runs `build:dev`.
-4. `-Mode Extension -LaunchChrome` opens an isolated Chrome QA profile; confirm extension loaded under `chrome://extensions`.
-5. Full-stack startup is **not enabled** until a reviewed Compose configuration verifies unique ports, named volumes, local-only network binding, development-only secrets, and migrations.
+- **Audit:** `./startup.ps1 -Mode Audit`; read-only prerequisite review.
+- **Extension:** `./startup.ps1 -Mode Extension`; requires prior approval for npm installation and local development build. Must use `dist-dev` and validate local-only routing.
+- **FullStack:** disabled; separate authorization and implementation review required before enabling Docker creation/rebuilds.
 
-## Tests and acceptance
-Run backend focused and full test suites, extension Vitest, TypeScript, build, and local health checks. A development-only checkout preview does not verify real PayPal, BTCPay or Monero billing. Never use production credentials in local tests.
+## Isolation contract
 
-## Git protections
-Protected main; PR review; required CI; prevent force pushes; code-owner review for billing, auth, deployment and migrations; review changes to approval rules; signed commits if supported. Preserve historical files and document provenance.
+Development and production use one source repository but different build outputs (`dist-dev` and `dist`), API origins, entitlements, and Chrome extension IDs. The development API is `http://127.0.0.1:8000`. No development build may silently fall back to `https://api-v2.birthdaymessaging.io`; the DEV manifest must not include that host permission. Production build behavior must remain unchanged.
 
-## Known recovery patterns
-Windows PowerShell 5.1 native stderr can throw `NativeCommandError`: run Git via `cmd.exe` with redirected streams and inspect exit code. Main-server SSH Git transport uses the dedicated Gitea key, not Windows HTTPS. A `git ls-remote` ref does not fetch the commit object. Avoid reapplying patches to modified worktrees. Verify Python test fixture timestamps and isolated plan catalog before treating failures as billing defects.
+## Evidence and QA
+
+Capture source and manifest hashes, build exit code, full `dist` before/after hashes, development manifest and compiled routing checks, local health status, Chrome extension ID, login, entitlement, images, templates, posts, contacts/scanning, and console/service-worker errors. Produce one timestamped evidence ZIP for each execution. Do not include passwords, access tokens, private keys, or personal customer data.
+
+## Payment testing
+
+Use offline, temporary-credential tests with no provider network or real payments. The targeted Bitcoin/Monero idempotency regression and expiration/renewal acceptance remain outstanding until independently verified. Never use operational payment stagenet containers as test runners.
+
+## Clean-machine acceptance
+
+On an explicitly authorized fresh VM, verify prerequisite detection, approved installation, secure development-only configuration, startup, extension build, Chrome loading, local API, and functional QA. Do not mark the onboarding workflow end-to-end accepted before this test.
+
+## Git and release controls
+
+PR #187 is for onboarding. The v992/v997 frontend entitlement/request-guard fixes require their own focused reviewed promotion. No broad staging of unrelated local payment/backend files. Merge and deployment are distinct approvals; Chrome Web Store submission is separate.

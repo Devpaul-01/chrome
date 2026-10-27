@@ -11,9 +11,9 @@
  */
 
 /** Centralised map of `chrome.storage.local` key names used by this extension. */
-const IS_PRODUCTION = import.meta.env.PROD;
+const IS_PRODUCTION = import.meta.env.MODE === 'production';
 const PRODUCTION_BACKEND_URL = 'https://api-v2.birthdaymessaging.io';
-const DEVELOPMENT_BACKEND_URL = 'http://localhost:8000';
+const DEVELOPMENT_BACKEND_URL = 'http://127.0.0.1:8000';
 const DEFAULT_BACKEND_URL = (import.meta.env.VITE_API_BASE_URL || (IS_PRODUCTION ? PRODUCTION_BACKEND_URL : DEVELOPMENT_BACKEND_URL)).replace(/\/+$/, '');
 
 export const STORAGE_KEYS = {
@@ -74,7 +74,7 @@ export async function getBackendUrl(): Promise<string> {
   return new Promise((resolve) => {
     chrome.storage.local.get([STORAGE_KEYS.backendUrl], (data) => {
       const stored = data[STORAGE_KEYS.backendUrl] as string | undefined;
-      const raw = IS_PRODUCTION && stored && isAllowedDevUrl(stored) ? DEFAULT_BACKEND_URL : stored || DEFAULT_BACKEND_URL;
+      const raw = IS_PRODUCTION ? (stored && isAllowedDevUrl(stored) ? DEFAULT_BACKEND_URL : stored || DEFAULT_BACKEND_URL) : DEVELOPMENT_BACKEND_URL;
       resolve(raw.replace(/\/+$/, ''));
     });
   });
@@ -108,6 +108,7 @@ function isAllowedDevUrl(url: string): boolean {
 function isValidBackendUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
+    if (!IS_PRODUCTION) return parsed.origin === DEVELOPMENT_BACKEND_URL;
     if (parsed.protocol === 'https:') return true;
     if (!IS_PRODUCTION && parsed.protocol === 'http:' && isAllowedDevHostname(parsed.hostname)) return true;
     return false;
