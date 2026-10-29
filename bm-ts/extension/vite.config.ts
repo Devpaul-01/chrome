@@ -52,7 +52,7 @@ function stripLocalhostInProduction(outDir: string, mode: string): Plugin {
     apply: 'build',
     writeBundle() {
             if (mode === 'development') {
-        const manifestPath = resolve(resolvedOutDir, 'manifest.json');
+        const manifestPath = resolve(__dirname, outDir, 'manifest.json');
         const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
         manifest.name = 'BirthdayMessaging FB - DEV';
         if (manifest.action) manifest.action.default_title = 'BirthdayMessaging FB - DEV';
@@ -69,7 +69,7 @@ function stripLocalhostInProduction(outDir: string, mode: string): Plugin {
       }
       if (mode !== 'production') return;
 
-      const manifestPath = resolve(resolvedOutDir, 'manifest.json');
+      const manifestPath = resolve(__dirname, outDir, 'manifest.json');
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
 
       if (Array.isArray(manifest.host_permissions)) {
@@ -127,7 +127,7 @@ export default defineConfig(async ({ mode }) => {
     plugins: [
       react(),
       buildContentScriptIIFE(outDir),
-      stripLocalhostInProduction(mode),
+      stripLocalhostInProduction(outDir, mode),
       ...(lightning
         ? [
             lightning({
