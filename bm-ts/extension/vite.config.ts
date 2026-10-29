@@ -50,7 +50,7 @@ function stripLocalhostInProduction(outDir: string, mode: string): Plugin {
   return {
     name: 'strip-localhost-manifest',
     apply: 'build',
-    closeBundle() {
+    writeBundle() {
             if (mode === 'development') {
         const manifestPath = resolve(resolvedOutDir, 'manifest.json');
         const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
