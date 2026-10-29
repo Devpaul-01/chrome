@@ -1,7 +1,7 @@
 import { resolve, dirname } from 'path';
 import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, type Plugin, type ResolvedConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -52,7 +52,7 @@ function stripLocalhostInProduction(outDir: string, mode: string): Plugin {
     apply: 'build',
     closeBundle() {
             if (mode === 'development') {
-        const manifestPath = resolve(outDir, 'manifest.json');
+        const manifestPath = resolve(resolvedOutDir, 'manifest.json');
         const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
         manifest.name = 'BirthdayMessaging FB - DEV';
         if (manifest.action) manifest.action.default_title = 'BirthdayMessaging FB - DEV';
@@ -69,7 +69,7 @@ function stripLocalhostInProduction(outDir: string, mode: string): Plugin {
       }
       if (mode !== 'production') return;
 
-      const manifestPath = resolve(outDir, 'manifest.json');
+      const manifestPath = resolve(resolvedOutDir, 'manifest.json');
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
 
       if (Array.isArray(manifest.host_permissions)) {
@@ -127,7 +127,7 @@ export default defineConfig(async ({ mode }) => {
     plugins: [
       react(),
       buildContentScriptIIFE(outDir),
-      stripLocalhostInProduction(outDir, mode),
+      stripLocalhostInProduction(mode),
       ...(lightning
         ? [
             lightning({
