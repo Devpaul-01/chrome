@@ -52,13 +52,12 @@ $lines=@(foreach($name in $map.Keys){"$name=$($map[$name])"})
 $temp="$EnvironmentFile.tmp.$PID"
 try{
  [IO.File]::WriteAllLines($temp,$lines,[Text.UTF8Encoding]::new($false))
- $identity=[Security.Principal.WindowsIdentity]::GetCurrent().Name
- $acl=New-Object Security.AccessControl.FileSecurity
- $acl.SetAccessRuleProtection($true,$false)
- $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($identity,'FullControl','Allow')))
- $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule('NT AUTHORITY\SYSTEM','FullControl','Allow')))
- Set-Acl -LiteralPath $temp -AclObject $acl
- Move-Item -LiteralPath $temp -Destination $EnvironmentFile -Force
- Set-Acl -LiteralPath $EnvironmentFile -AclObject $acl
-}finally{if(Test-Path $temp){Remove-Item $temp -Force}}
+  # DACL-only change: icacls does not request SeSecurityPrivilege (SACL).
+  $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+  & icacls.exe $temp /inheritance:r /grant:r ('*'+$sid+':(F)') '*S-1-5-18:(F)' 1>$null
+  if($LASTEXITCODE -ne 0){throw 'DEV_SECRETS_ACL_RESTRICTION_FAILED'}
+  Move-Item -LiteralPath $temp -Destination $EnvironmentFile -Force
+  & icacls.exe $EnvironmentFile /inheritance:r /grant:r ('*'+$sid+':(F)') '*S-1-5-18:(F)' 1>$null
+  if($LASTEXITCODE -ne 0){throw 'DEV_SECRETS_FINAL_ACL_FAILED'}
+ }finally{if(Test-Path $temp){Remove-Item $temp -Force}}
 Write-Output 'DEV_SECRETS_VALIDATED'
