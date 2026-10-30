@@ -1,4 +1,4 @@
-﻿param([ValidateSet('Audit','Extension','FullStack')][string]$Mode='Audit',[switch]$LaunchChrome)
+param([ValidateSet('Audit','Extension','FullStack')][string]$Mode='Audit',[switch]$LaunchChrome)
 $ErrorActionPreference='Stop'
 $base=$PSScriptRoot
 $ext=Join-Path $base 'extension'
@@ -37,6 +37,13 @@ function EnsureDevBackend {
  foreach($key in @('BM_DEV_DB_PASSWORD','BM_DEV_SECRET_KEY','JWT_SECRET_KEY','SMTP_ENCRYPTION_KEY')){
   if([string]::IsNullOrWhiteSpace($values[$key])){throw "Required development secret missing: $key"}
  }
+ # Compose --env-file supplies interpolation values, but child processes and subsequent
+ # invocations must also inherit the validated secrets in this PowerShell process.
+ foreach($key in @('BM_DEV_DB_PASSWORD','BM_DEV_SECRET_KEY','JWT_SECRET_KEY','SMTP_ENCRYPTION_KEY')){
+  [Environment]::SetEnvironmentVariable($key,[string]$values[$key],'Process')
+ }
+ & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose config --quiet
+ if($LASTEXITCODE -ne 0){throw 'DEV_COMPOSE_INTERPOLATION_FAILED'}
  $running=@(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose ps -q backend 2>$null)
  if($LASTEXITCODE -ne 0){throw 'Cannot inspect isolated Compose project'}
  # Validate Docker's published host binding against the isolated Compose backend.
@@ -127,7 +134,8 @@ asyncio.run(verify())
  & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose up -d db
  if($LASTEXITCODE -ne 0){throw 'Database startup failed'}
  $dbid=(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose ps -q db | Select-Object -First 1)
- if($LASTEXITCODE -ne 0 -or -not $dbid){throw 'DEV_DB_CONTAINER_MISSING'}
+ if($LASTEXITCODE -ne 0){throw 'DEV_DB_COMPOSE_DISCOVERY_FAILED'}
+ if(-not $dbid){throw 'DEV_DB_CONTAINER_NOT_LISTED_AFTER_START'}
  $dbmeta=(& docker.exe inspect --format '{{json .}}' $dbid | ConvertFrom-Json)
  if($LASTEXITCODE -ne 0 -or -not $dbmeta){throw 'DEV_DB_INSPECT_FAILED'}
  if($dbmeta.Config.Labels.'com.docker.compose.project' -cne $project -or $dbmeta.Config.Labels.'com.docker.compose.service' -cne 'db'){throw 'DEV_DB_OWNERSHIP_MISMATCH'}
