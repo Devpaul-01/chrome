@@ -36,6 +36,7 @@ services:
       ENVIRONMENT: development
       BM_DEPLOYMENT_ENV: isolated_development
       STRIPE_ENABLED: "false"
+      EMAIL_VERIFICATION_URL_BASE: "http://127.0.0.1:8000/auth/verify-email-page"
     command: ['bash', '-c', 'uvicorn app.main:app --host 0.0.0.0 --port 8000']
   notification-worker:
     profiles: ['workers']
