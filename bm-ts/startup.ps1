@@ -92,8 +92,15 @@ function EnsureDevBackend {
   # With no explicit `image:` key, Compose tags the new build as <project>-backend.
   # Inspect that tag directly; do not infer the freshly built image from ps/images.
   $builtTag="$project-backend"
-  $builtImage=(& docker.exe image inspect --format '{{.Id}}' $builtTag 2>$null | Select-Object -First 1)
-  if($LASTEXITCODE -ne 0 -or -not $builtImage -or $builtImage -notmatch '^sha256:[0-9a-f]{64}$'){throw 'EXISTING_BACKEND_BUILT_IMAGE_INSPECT_FAILED'}
+  $priorPreference=$ErrorActionPreference
+ try {
+  $ErrorActionPreference='Continue'
+  $imageInspectOutput=@(& docker.exe image inspect --format '{{.Id}}' $builtTag 2>&1)
+  $imageInspectExit=$LASTEXITCODE
+ } finally { $ErrorActionPreference=$priorPreference }
+ $imageIdMatches=@($imageInspectOutput | ForEach-Object { [regex]::Matches([string]$_,'(?i)sha256:[0-9a-f]{64}') | ForEach-Object { $_.Value.ToLowerInvariant() } } | Select-Object -Unique)
+ if($imageInspectExit -ne 0 -or $imageIdMatches.Count -ne 1){throw 'EXISTING_BACKEND_BUILT_IMAGE_INSPECT_FAILED'}
+ $builtImage=$imageIdMatches[0]
   if($meta.Image -cne $builtImage){
    if((Read-Host 'Recreate ONLY this isolated DEV backend container using the updated image? Type RECREATE') -cne 'RECREATE'){throw 'EXISTING_BACKEND_IMAGE_STALE_RECREATE_DECLINED'}
    & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose up -d --no-deps --force-recreate backend
