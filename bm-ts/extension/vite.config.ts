@@ -1,7 +1,7 @@
 import { resolve, dirname } from 'path';
 import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, type Plugin, type ResolvedConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -51,11 +51,26 @@ function stripLocalhostInProduction(outDir: string, mode: string): Plugin {
     name: 'strip-localhost-manifest',
     apply: 'build',
     writeBundle() {
+            if (mode === 'development') {
+        const manifestPath = resolve(__dirname, outDir, 'manifest.json');
+        const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+        manifest.name = 'BirthdayMessaging FB - DEV';
+        if (manifest.action) manifest.action.default_title = 'BirthdayMessaging FB - DEV';
+        if (Array.isArray(manifest.host_permissions)) {
+          manifest.host_permissions = manifest.host_permissions.filter(
+            (p: string) => !p.includes('api-v2.birthdaymessaging.io'),
+          );
+          if (!manifest.host_permissions.includes('http://127.0.0.1/*')) {
+            manifest.host_permissions.push('http://127.0.0.1/*');
+          }
+        }
+        writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+        return;
+      }
       if (mode !== 'production') return;
 
-      const sourceManifestPath = resolve(__dirname, 'public', 'manifest.json');
-      const outputManifestPath = resolve(outDir, 'manifest.json');
-      const manifest = JSON.parse(readFileSync(sourceManifestPath, 'utf-8'));
+      const manifestPath = resolve(__dirname, outDir, 'manifest.json');
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
 
       if (Array.isArray(manifest.host_permissions)) {
         manifest.host_permissions = manifest.host_permissions.filter(
@@ -63,7 +78,7 @@ function stripLocalhostInProduction(outDir: string, mode: string): Plugin {
         );
       }
 
-      writeFileSync(outputManifestPath, JSON.stringify(manifest, null, 2));
+      writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
     },
   };
 }
@@ -73,7 +88,7 @@ export default defineConfig(async ({ mode }) => {
   const lightning =
     lightningModule && 'default' in lightningModule ? lightningModule.default : lightningModule;
 
-  const outDir = 'dist';
+  const outDir = mode === 'development' ? 'dist-dev' : 'dist';
 
   return {
     root: '.',

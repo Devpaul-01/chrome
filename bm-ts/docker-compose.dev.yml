@@ -1,0 +1,85 @@
+# BirthdayMessaging local-only development stack; requires unique Compose project.
+name: bmdev
+services:
+  db:
+    image: postgres:15
+    restart: 'no'
+    environment:
+      POSTGRES_USER: bmdev
+      POSTGRES_DB: birthdaymessaging_dev
+      POSTGRES_PASSWORD: ${BM_DEV_DB_PASSWORD:?Generate a unique local password}
+    ports:
+      - '127.0.0.1:${BM_DEV_DB_PORT:-15432}:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U bmdev -d birthdaymessaging_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: 'no'
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${BM_DEV_API_PORT:-8000}:8000'
+    environment:
+      DATABASE_URL: postgresql+asyncpg://bmdev:${BM_DEV_DB_PASSWORD}@db:5432/birthdaymessaging_dev
+      BM_DEV_DB_PASSWORD: ${BM_DEV_DB_PASSWORD:?Generate a unique local password}
+      SECRET_KEY: ${BM_DEV_SECRET_KEY:?Generate a unique local secret}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Generate a unique JWT secret}
+      SMTP_ENCRYPTION_KEY: ${SMTP_ENCRYPTION_KEY:?Generate a Fernet encryption key}
+      ENVIRONMENT: development
+      BM_DEPLOYMENT_ENV: isolated_development
+      STRIPE_ENABLED: "false"
+      EMAIL_VERIFICATION_URL_BASE: "http://127.0.0.1:8000/auth/verify-email-page"
+      TRANSACTIONAL_EMAIL_PROVIDER: postal_smtp
+      POSTAL_SMTP_HOST: email.birthdaymessaging.io
+      POSTAL_SMTP_PORT: "587"
+      POSTAL_SMTP_USERNAME: ${POSTAL_SMTP_USERNAME:?Provide a dedicated DEV Postal SMTP username}
+      POSTAL_SMTP_PASSWORD: ${POSTAL_SMTP_PASSWORD:?Provide a dedicated DEV Postal SMTP token}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-support@birthdaymessaging.io}
+      PASSWORD_RESET_URL_BASE: "http://127.0.0.1:8000/auth/reset-password-page"
+    command: ['bash', '-c', 'uvicorn app.main:app --host 0.0.0.0 --port 8000']
+  notification-worker:
+    profiles: ['workers']
+    build: ./backend
+    restart: 'no'
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql+asyncpg://bmdev:${BM_DEV_DB_PASSWORD}@db:5432/birthdaymessaging_dev
+      SECRET_KEY: ${BM_DEV_SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Generate a unique JWT secret}
+      SMTP_ENCRYPTION_KEY: ${SMTP_ENCRYPTION_KEY:?Generate a Fernet encryption key}
+      ENVIRONMENT: development
+      BM_DEPLOYMENT_ENV: isolated_development
+      STRIPE_ENABLED: "false"
+    command: ['python', '-m', 'app.services.notification_worker']
+  payment-recovery-worker:
+    profiles: ['workers']
+    build: ./backend
+    restart: 'no'
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql+asyncpg://bmdev:${BM_DEV_DB_PASSWORD}@db:5432/birthdaymessaging_dev
+      SECRET_KEY: ${BM_DEV_SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Generate a unique JWT secret}
+      SMTP_ENCRYPTION_KEY: ${SMTP_ENCRYPTION_KEY:?Generate a Fernet encryption key}
+      ENVIRONMENT: development
+      BM_DEPLOYMENT_ENV: isolated_development
+      STRIPE_ENABLED: "false"
+    command: ['python', '-m', 'app.services.payment_checkout_recovery_worker']
+volumes:
+  db_data:

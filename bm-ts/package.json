@@ -1,0 +1,9 @@
+{
+  "name": "birthdaymessaging-development",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "install:extension": "npm --prefix extension ci --include=dev --no-audit --no-fund",
+    "build": "npm run install:extension && npm --prefix extension run build"
+  }
+}

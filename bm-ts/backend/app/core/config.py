@@ -16,7 +16,7 @@ import json
 import logging
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -114,15 +114,18 @@ class Settings(BaseSettings):
     alias="BTCPAY_WEBHOOK_SECRET",
     )
 
-    @field_validator("stripe_api_key", mode="after")
-    @classmethod
-    def validate_stripe_api_key(cls, v: str) -> str:
-        if v in {"sk_test_placeholder", ""}:
-            raise ValueError(
-                "STRIPE_API_KEY is a placeholder. Set a real Stripe key (live or test) before starting. "
-                "The app cannot start in a silently degraded billing state."
-            )
-        return v
+    bm_deployment_env: str = Field(default="production", alias="BM_DEPLOYMENT_ENV")
+    stripe_enabled: bool = Field(default=True, alias="STRIPE_ENABLED")
+
+    @model_validator(mode="after")
+    def validate_stripe_api_key(self):
+        if self.stripe_api_key in {"sk_test_placeholder", ""}:
+            if not (self.bm_deployment_env == "isolated_development" and not self.stripe_enabled):
+                raise ValueError(
+                    "STRIPE_API_KEY is a placeholder. Set a real Stripe key (live or test) before starting. "
+                    "The app cannot start in a silently degraded billing state."
+                )
+        return self
 
     stripe_redirect_allowed_domains: list[str] = Field(
         default_factory=lambda: ["localhost"],
@@ -136,6 +139,12 @@ class Settings(BaseSettings):
         default="generate-with-fernet", alias="SMTP_ENCRYPTION_KEY"
     )
     sendgrid_api_key: str = Field(default="", alias="SENDGRID_API_KEY")
+    transactional_email_provider: str = Field(default="sendgrid", alias="TRANSACTIONAL_EMAIL_PROVIDER")
+    postal_smtp_host: str = Field(default="email.birthdaymessaging.io", alias="POSTAL_SMTP_HOST")
+    postal_smtp_port: int = Field(default=587, alias="POSTAL_SMTP_PORT")
+    postal_smtp_username: str = Field(default="", alias="POSTAL_SMTP_USERNAME")
+    postal_smtp_password: str = Field(default="", alias="POSTAL_SMTP_PASSWORD")
+    postal_smtp_timeout_seconds: int = Field(default=20, ge=5, le=120, alias="POSTAL_SMTP_TIMEOUT_SECONDS")
     notification_provider: str = Field(default="cloudflare_smtp", alias="NOTIFICATION_PROVIDER")
     email_from_name: str = Field(default="BirthdayMessaging", alias="EMAIL_FROM_NAME")
     cloudflare_smtp_host: str = Field(default="smtp.mx.cloudflare.net", alias="CLOUDFLARE_SMTP_HOST")
