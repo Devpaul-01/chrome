@@ -246,12 +246,15 @@ async def register(
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    # Send email verification; do not fail registration if email sending fails
+    # The user is already committed. Do not undo registration if delivery fails.
     try:
         token = await create_verification_token(user, db)
         await send_verification_email(user.email, token)
-    except Exception as e:
-        logger.warning("Failed to send verification email to %s: %s", user.email, e)
+    except Exception:
+        logger.exception("Verification delivery failed after account creation")
+        return MessageResponse(
+            message="Account created, but the verification email could not be sent. Please request a new verification link later."
+        )
     return MessageResponse(
         message="Account created. Please check your email to verify your account before logging in."
     )
@@ -578,8 +581,11 @@ async def request_password_reset(
     user = result.scalar_one_or_none()
 
     if user:
-        token = await create_reset_token(user, db)
-        await send_reset_email(user.email, token)
+        try:
+            token = await create_reset_token(user, db)
+            await send_reset_email(user.email, token)
+        except Exception:
+            logger.exception("Password reset delivery failed")
 
     return MessageResponse(
         message="If an account exists with that email, a password reset link has been sent."
@@ -602,8 +608,11 @@ async def request_email_verification(
 
     # Always return success to avoid email enumeration
     if user and not user.email_verified:
-        token = await create_verification_token(user, db)
-        await send_verification_email(user.email, token)
+        try:
+            token = await create_verification_token(user, db)
+            await send_verification_email(user.email, token)
+        except Exception:
+            logger.exception("Verification resend delivery failed")
 
     return MessageResponse(
         message="If an account exists with that email, a verification link has been sent."

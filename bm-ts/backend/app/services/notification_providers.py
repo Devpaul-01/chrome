@@ -143,6 +143,18 @@ class CloudflareSMTPEmailProvider:
         )
 
 
+
+class PostalNotificationProvider:
+    name = "postal_smtp"
+
+    async def deliver_email(self, *, recipient: str, subject: str, body_text: str, body_html: str) -> DeliveryResult:
+        from app.services.postal_smtp import EmailDeliveryError, send_postal_email
+        try:
+            await send_postal_email(recipient=recipient, subject=subject, html=body_html, plain=body_text)
+        except EmailDeliveryError as exc:
+            raise NotificationDeliveryError(str(exc), retryable=str(exc) != "postal_authentication_failed") from exc
+        return DeliveryResult(provider=self.name)
+
 class SendGridEmailProvider:
     name = "sendgrid"
 
@@ -211,6 +223,11 @@ def validate_notification_runtime_config() -> None:
             raise RuntimeError(
                 "CLOUDFLARE_SMTP_PORT must be 465 for implicit TLS."
             )
+    elif provider == "postal_smtp":
+        if not settings.postal_smtp_username or not settings.postal_smtp_password:
+            raise RuntimeError("Postal SMTP credentials are required.")
+        if settings.postal_smtp_port != 587:
+            raise RuntimeError("Postal SMTP requires port 587 STARTTLS.")
     elif provider == "sendgrid":
         if not settings.sendgrid_api_key.strip():
             raise RuntimeError("SENDGRID_API_KEY is required for SendGrid delivery.")
@@ -242,6 +259,8 @@ def get_notification_provider() -> NotificationProvider:
             from_address=settings.email_from_address,
             timeout_seconds=settings.cloudflare_smtp_timeout_seconds,
         )
+    if provider == "postal_smtp":
+        return PostalNotificationProvider()
     return SendGridEmailProvider(
         api_key=settings.sendgrid_api_key,
         from_address=settings.email_from_address,

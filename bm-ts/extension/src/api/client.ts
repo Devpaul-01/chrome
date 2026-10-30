@@ -282,6 +282,20 @@ export async function subscriptionStatus(
   return request(baseUrl, '/subscription/status', 'GET', undefined, accessToken);
 }
 
+export interface PlanSwitchIntentResponse { intent_id: string; status: string; payment_started: boolean }
+export async function createPlanSwitchIntent(baseUrl: string, accessToken: string, targetPlan: 'monthly' | 'yearly', key: string): Promise<PlanSwitchIntentResponse> {
+  return request(baseUrl, '/subscription/plan-switch/intents', 'POST', { target_plan: targetPlan }, accessToken, 30_000, { 'Idempotency-Key': key });
+}
+
+export interface PayPalPlanRevisionResponse { intent_id: string; status: string; approval_url?: string | null; requires_reconciliation: boolean; revision_resubmitted: boolean }
+export interface PayPalPlanConfirmationResponse { intent_id: string; provider_confirmed: boolean; reason: string; billing_settled: boolean; plan_activated: boolean }
+export async function revisePayPalPlan(baseUrl: string, accessToken: string, intentId: string): Promise<PayPalPlanRevisionResponse> {
+  return request(baseUrl, `/subscription/plan-switch/intents/${encodeURIComponent(intentId)}/paypal/revise`, 'POST', undefined, accessToken);
+}
+export async function confirmPayPalPlan(baseUrl: string, accessToken: string, intentId: string): Promise<PayPalPlanConfirmationResponse> {
+  return request(baseUrl, `/subscription/plan-switch/intents/${encodeURIComponent(intentId)}/paypal/confirmation`, 'GET', undefined, accessToken);
+}
+
 export async function createBTCPayCheckout(
   baseUrl: string,
   accessToken: string,

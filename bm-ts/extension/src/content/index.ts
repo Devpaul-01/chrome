@@ -209,6 +209,7 @@ async function loadOverlayGroups(): Promise<void> {
 async function refreshFriendList() {
   friends = gatherBirthdayFriends();
   selectedFriends.clear();
+  friends.forEach((f) => selectedFriends.add(f.id));
   await loadOverlayGroups();
   renderFriendList();
   await loadSegments();
@@ -721,10 +722,7 @@ function renderFriendList() {
     return;
   }
 
-  // Initialize selectedFriends with all friends if empty
-  if (selectedFriends.size === 0) {
-    friends.forEach((f) => selectedFriends.add(f.id));
-  }
+  // Selection is initialized when friends are refreshed, not during rendering.
 
   // Select all / deselect all row
   const selectRow = document.createElement('div');
