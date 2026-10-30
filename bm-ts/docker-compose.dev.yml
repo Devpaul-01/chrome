@@ -37,6 +37,13 @@ services:
       BM_DEPLOYMENT_ENV: isolated_development
       STRIPE_ENABLED: "false"
       EMAIL_VERIFICATION_URL_BASE: "http://127.0.0.1:8000/auth/verify-email-page"
+      TRANSACTIONAL_EMAIL_PROVIDER: postal_smtp
+      POSTAL_SMTP_HOST: email.birthdaymessaging.io
+      POSTAL_SMTP_PORT: "587"
+      POSTAL_SMTP_USERNAME: ${POSTAL_SMTP_USERNAME:?Provide a dedicated DEV Postal SMTP username}
+      POSTAL_SMTP_PASSWORD: ${POSTAL_SMTP_PASSWORD:?Provide a dedicated DEV Postal SMTP token}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-support@birthdaymessaging.io}
+      PASSWORD_RESET_URL_BASE: "http://127.0.0.1:8000/auth/reset-password-page"
     command: ['bash', '-c', 'uvicorn app.main:app --host 0.0.0.0 --port 8000']
   notification-worker:
     profiles: ['workers']

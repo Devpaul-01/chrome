@@ -21,8 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.models import User, PasswordResetToken
 
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+from app.services.postal_smtp import send_postal_email
 
 logger = logging.getLogger(__name__)
 
@@ -96,10 +95,10 @@ async def mark_token_used(raw_token: str, db: AsyncSession) -> None:
 
 
 async def send_reset_email(email: str, token: str) -> None:
-    """Send a password reset email via SendGrid.
+    """Send a password reset email via the configured Postal transport.
 
     Constructs a reset URL pointing to the backend-hosted reset page and
-    dispatches the email asynchronously using ``asyncio.to_thread``.
+    dispatches the email asynchronously using the shared SMTP transport.
     """
 
     if not settings.password_reset_url_base:
@@ -144,33 +143,11 @@ async def send_reset_email(email: str, token: str) -> None:
 </body>
 </html>"""
 
-    message = Mail(
-        from_email=settings.email_from_address,
-        to_emails=email,
-        subject="Password Reset Request",
-        html_content=html_content,
+    if settings.transactional_email_provider != "postal_smtp":
+        raise RuntimeError("transactional_email_provider_not_configured_for_postal")
+    await send_postal_email(
+        recipient=email,
+        subject='Password Reset Request',
+        html=html_content,
+        plain=f"BirthdayMessaging: open this secure link to continue: {reset_url}",
     )
-
-    try:
-        sg = SendGridAPIClient(settings.sendgrid_api_key)
-        last_exc: Exception | None = None
-        for attempt in range(3):
-            try:
-                await asyncio.to_thread(sg.send, message)
-                logger.info("Password reset email sent to %s", email)
-                return
-            except Exception as exc:
-                last_exc = exc
-                if attempt < 2:
-                    await asyncio.sleep(2**attempt)  # 1 s, 2 s
-                    logger.warning(
-                        "Retry %d/2 sending reset email to %s: %s",
-                        attempt + 1,
-                        email,
-                        exc,
-                    )
-        logger.error(
-            "Failed to send reset email to %s after 3 attempts: %s", email, last_exc
-        )
-    except Exception as e:
-        logger.error("Failed to send reset email to %s: %s", email, e)

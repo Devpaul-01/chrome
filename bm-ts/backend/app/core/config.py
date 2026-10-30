@@ -139,6 +139,12 @@ class Settings(BaseSettings):
         default="generate-with-fernet", alias="SMTP_ENCRYPTION_KEY"
     )
     sendgrid_api_key: str = Field(default="", alias="SENDGRID_API_KEY")
+    transactional_email_provider: str = Field(default="sendgrid", alias="TRANSACTIONAL_EMAIL_PROVIDER")
+    postal_smtp_host: str = Field(default="email.birthdaymessaging.io", alias="POSTAL_SMTP_HOST")
+    postal_smtp_port: int = Field(default=587, alias="POSTAL_SMTP_PORT")
+    postal_smtp_username: str = Field(default="", alias="POSTAL_SMTP_USERNAME")
+    postal_smtp_password: str = Field(default="", alias="POSTAL_SMTP_PASSWORD")
+    postal_smtp_timeout_seconds: int = Field(default=20, ge=5, le=120, alias="POSTAL_SMTP_TIMEOUT_SECONDS")
     notification_provider: str = Field(default="cloudflare_smtp", alias="NOTIFICATION_PROVIDER")
     email_from_name: str = Field(default="BirthdayMessaging", alias="EMAIL_FROM_NAME")
     cloudflare_smtp_host: str = Field(default="smtp.mx.cloudflare.net", alias="CLOUDFLARE_SMTP_HOST")
