@@ -123,7 +123,7 @@ asyncio.run(verify())
  if($LASTEXITCODE -ne 0){throw 'ISOLATED_DB_CONNECTION_NOT_VERIFIED'}
   # Verify existing schema without altering it on repeat runs.
   # Verify installed Alembic supports the exact repeat-run head check before relying on it.
-  $alembicHelp=(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps --entrypoint alembic backend current --help 2>&1 | Out-String)
+  $alembicHelp=(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps --entrypoint alembic backend current --help 2>$null | Out-String)
   if($LASTEXITCODE -ne 0 -or $alembicHelp -notmatch '--check-heads'){throw 'ALEMBIC_CHECK_HEADS_UNSUPPORTED'}
   & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps --entrypoint alembic backend current
   if($LASTEXITCODE -ne 0){throw 'EXISTING_BACKEND_ALEMBIC_CURRENT_FAILED'}
@@ -188,7 +188,7 @@ asyncio.run(verify())
  $connectionProbe | & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps -T --entrypoint python backend -
  if($LASTEXITCODE -ne 0){throw 'ISOLATED_DB_CONNECTION_NOT_VERIFIED'}
   # Check installed Alembic capability before requesting permission to migrate.
-  $alembicHelp=(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps --entrypoint alembic backend current --help 2>&1 | Out-String)
+  $alembicHelp=(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps --entrypoint alembic backend current --help 2>$null | Out-String)
   if($LASTEXITCODE -ne 0 -or $alembicHelp -notmatch '--check-heads'){throw 'ALEMBIC_CHECK_HEADS_UNSUPPORTED'}
  if((Read-Host 'Run Alembic migrations on isolated DEV database? Type MIGRATE') -cne 'MIGRATE'){throw 'Migration declined; backend not started'}
  & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps --entrypoint alembic backend upgrade head
