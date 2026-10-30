@@ -30,10 +30,35 @@ if(!$map.Contains('BM_DEV_API_PORT')){$map['BM_DEV_API_PORT']='8000'}
 $key=$map['SMTP_ENCRYPTION_KEY']
 try{$raw=[Convert]::FromBase64String(($key.Replace('-','+').Replace('_','/') + ('=' * ((4 - ($key.Length % 4)) % 4))));if($raw.Length -ne 32){throw 'Invalid length'}}catch{throw 'Existing SMTP encryption key invalid; refusing overwrite'}
 foreach($name in @('JWT_SECRET_KEY','BM_DEV_SECRET_KEY','BM_DEV_DB_PASSWORD')){if($map[$name].Length -lt 32){throw "Existing $name too short; refusing overwrite"}}
+# Postal DEV SMTP one-time enrollment: never generate or print a provider token.
+# Reuse existing nonempty credentials on subsequent startup runs.
+if ([string]::IsNullOrWhiteSpace($map['POSTAL_SMTP_USERNAME']) -or [string]::IsNullOrWhiteSpace($map['POSTAL_SMTP_PASSWORD'])) {
+  if ((Read-Host 'Enroll dedicated DEV Postal SMTP credential once? Type ENROLL') -cne 'ENROLL') { throw 'POSTAL_DEV_CREDENTIAL_ENROLLMENT_REQUIRED' }
+  $smtpUser=Read-Host 'Postal DEV SMTP username (not the credential display name unless confirmed)'
+  if ([string]::IsNullOrWhiteSpace($smtpUser) -or $smtpUser -match '[\r\n=]') { throw 'INVALID_POSTAL_SMTP_USERNAME' }
+  $secure=Read-Host 'Postal DEV SMTP authentication token' -AsSecureString
+  $ptr=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+  try { $smtpToken=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
+  if ([string]::IsNullOrWhiteSpace($smtpToken) -or $smtpToken -match '[\r\n]') { throw 'INVALID_POSTAL_SMTP_TOKEN' }
+  $map['POSTAL_SMTP_USERNAME']=$smtpUser
+  $map['POSTAL_SMTP_PASSWORD']=$smtpToken
+  $smtpToken=$null
+}
+# Refuse insecure inherited variables or partial enrollment, never overwrite working credentials.
+foreach($name in @('POSTAL_SMTP_USERNAME','POSTAL_SMTP_PASSWORD')) {
+  if ([string]::IsNullOrWhiteSpace($map[$name])) { throw "MISSING_$name" }
+}
 $lines=@(foreach($name in $map.Keys){"$name=$($map[$name])"})
 $temp="$EnvironmentFile.tmp.$PID"
 try{
  [IO.File]::WriteAllLines($temp,$lines,[Text.UTF8Encoding]::new($false))
+ $identity=[Security.Principal.WindowsIdentity]::GetCurrent().Name
+ $acl=New-Object Security.AccessControl.FileSecurity
+ $acl.SetAccessRuleProtection($true,$false)
+ $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($identity,'FullControl','Allow')))
+ $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule('NT AUTHORITY\SYSTEM','FullControl','Allow')))
+ Set-Acl -LiteralPath $temp -AclObject $acl
  Move-Item -LiteralPath $temp -Destination $EnvironmentFile -Force
+ Set-Acl -LiteralPath $EnvironmentFile -AclObject $acl
 }finally{if(Test-Path $temp){Remove-Item $temp -Force}}
 Write-Output 'DEV_SECRETS_VALIDATED'

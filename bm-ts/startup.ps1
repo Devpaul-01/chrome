@@ -50,6 +50,7 @@ function EnsureDevBackend {
   if($line -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$'){$values[$matches[1]]=$matches[2]}
  }
  if($values['BM_DEPLOYMENT_ENV'] -ne 'isolated_development' -or $values['STRIPE_ENABLED'] -ne 'false'){throw 'Unsafe development configuration'}
+ foreach($key in @('POSTAL_SMTP_USERNAME','POSTAL_SMTP_PASSWORD')){if([string]::IsNullOrWhiteSpace($values[$key])){throw "POSTAL_DEV_CREDENTIAL_MISSING_$key"}}
  if($values['BM_DEV_API_PORT'] -ne '8000'){
   # Existing 18767 defaults must never be silently rewritten or reused.
   throw 'Existing DEV environment uses a non-8000 port; preserve it and review port alignment before startup.'
@@ -101,8 +102,21 @@ function EnsureDevBackend {
  $imageIdMatches=@($imageInspectOutput | ForEach-Object { [regex]::Matches([string]$_,'(?i)sha256:[0-9a-f]{64}') | ForEach-Object { $_.Value.ToLowerInvariant() } } | Select-Object -Unique)
  if($imageInspectExit -ne 0 -or $imageIdMatches.Count -ne 1){throw 'EXISTING_BACKEND_BUILT_IMAGE_INSPECT_FAILED'}
  $builtImage=$imageIdMatches[0]
-  if($meta.Image -cne $builtImage){
-   if((Read-Host 'Recreate ONLY this isolated DEV backend container using the updated image? Type RECREATE') -cne 'RECREATE'){throw 'EXISTING_BACKEND_IMAGE_STALE_RECREATE_DECLINED'}
+   # Compare effective container SMTP environment without printing any values.
+   # Docker image equality alone is insufficient: Compose environment can drift.
+   $currentEnv=@{}
+   foreach($entry in @($meta.Config.Env)){
+    $pos=$entry.IndexOf('=')
+    if($pos -gt 0){$currentEnv[$entry.Substring(0,$pos)]=$entry.Substring($pos+1)}
+   }
+   $smtpKeys=@('POSTAL_SMTP_USERNAME','POSTAL_SMTP_PASSWORD')
+   $smtpDrift=$false
+   foreach($smtpKey in $smtpKeys){
+    if(-not $currentEnv.ContainsKey($smtpKey) -or $currentEnv[$smtpKey] -cne $values[$smtpKey]){$smtpDrift=$true}
+   }
+   # Do not print or persist SMTP values or Docker environment inspection output.
+  if($meta.Image -cne $builtImage -or $smtpDrift){
+   if((Read-Host 'Recreate ONLY this isolated DEV backend for image/config changes? Type RECREATE') -cne 'RECREATE'){throw 'EXISTING_BACKEND_RECREATE_DECLINED'}
    & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose up -d --no-deps --force-recreate backend
    if($LASTEXITCODE -ne 0){throw 'EXISTING_DEV_BACKEND_RECREATE_FAILED'}
    $cid=FindIsolatedBackendContainer $project
@@ -111,6 +125,10 @@ function EnsureDevBackend {
    if($LASTEXITCODE -ne 0 -or -not $meta -or $meta.Image -cne $builtImage -or $meta.Config.Labels.'com.docker.compose.project' -cne $project -or $meta.Config.Labels.'com.docker.compose.service' -cne 'backend'){throw 'RECREATED_BACKEND_IDENTITY_MISMATCH'}
    $bindings=@($meta.NetworkSettings.Ports.'8000/tcp')
    if($bindings.Count -ne 1 -or $bindings[0].HostIp -cne '127.0.0.1' -or $bindings[0].HostPort -cne '8000'){throw 'RECREATED_BACKEND_PORT_MISMATCH'}
+    $effective=@{}
+    foreach($entry in @($meta.Config.Env)){$pos=$entry.IndexOf('=');if($pos -gt 0){$effective[$entry.Substring(0,$pos)]=$entry.Substring($pos+1)}}
+    foreach($smtpKey in $smtpKeys){if(-not $effective.ContainsKey($smtpKey) -or $effective[$smtpKey] -cne $values[$smtpKey]){throw 'RECREATED_BACKEND_SMTP_CONFIG_MISMATCH'}}
+    Write-Host 'ISOLATED_DEV_SMTP_CONFIG_APPLIED'
    $ready=$false
    for($retry=0;$retry -lt 30;$retry++){if(CheckApi 8000){$ready=$true;break};Start-Sleep -Seconds 2}
    if(-not $ready){throw 'RECREATED_BACKEND_HEALTH_TIMEOUT'}
