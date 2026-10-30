@@ -101,7 +101,7 @@ function EnsureDevBackend {
   }
   $probe='from app.core.config import settings; from sqlalchemy.engine.url import make_url; u=make_url(str(settings.database_url)); assert u.host=="db" and u.port==5432 and u.database=="birthdaymessaging_dev" and u.username=="bmdev" and u.password==__import__("os").environ["BM_DEV_DB_PASSWORD"], "UNSAFE_DATABASE_TARGET"; print("ISOLATED_DATABASE_TARGET_PASS")'
   if((Read-Host 'Verify effective Alembic DEV database target in one-off container? Type INSPECT') -cne 'INSPECT'){throw 'Existing backend database verification declined'}
-  & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps --entrypoint python backend -c $probe
+  $probe | & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps -T --entrypoint python backend -
   if($LASTEXITCODE -ne 0){throw 'EXISTING_BACKEND_DATABASE_TARGET_UNVERIFIED'}
  $connectionProbe=@'
 import asyncio
@@ -119,7 +119,7 @@ async def verify():
         await conn.close()
 asyncio.run(verify())
 '@
- & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps --entrypoint python backend -c $connectionProbe
+ $connectionProbe | & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps -T --entrypoint python backend -
  if($LASTEXITCODE -ne 0){throw 'ISOLATED_DB_CONNECTION_NOT_VERIFIED'}
   # Verify existing schema without altering it on repeat runs.
   # Verify installed Alembic supports the exact repeat-run head check before relying on it.
@@ -167,7 +167,7 @@ asyncio.run(verify())
  if((Read-Host 'Inspect effective DEV Alembic database target in an isolated one-off backend? Type INSPECT') -cne 'INSPECT'){throw 'Effective database inspection declined'}
  $probe='from app.core.config import settings; from sqlalchemy.engine.url import make_url; u=make_url(str(settings.database_url)); assert u.host=="db" and u.port==5432 and u.database=="birthdaymessaging_dev" and u.username=="bmdev" and u.password==__import__("os").environ["BM_DEV_DB_PASSWORD"], "UNSAFE_DATABASE_TARGET"; print("ISOLATED_DATABASE_TARGET_PASS")'
  # This import must be verified against the exact PR backend source before approval.
- & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps --entrypoint python backend -c $probe
+ $probe | & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps -T --entrypoint python backend -
  if($LASTEXITCODE -ne 0){throw 'EFFECTIVE_DATABASE_TARGET_NOT_VERIFIED'}
  $connectionProbe=@'
 import asyncio
@@ -185,7 +185,7 @@ async def verify():
         await conn.close()
 asyncio.run(verify())
 '@
- & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps --entrypoint python backend -c $connectionProbe
+ $connectionProbe | & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps -T --entrypoint python backend -
  if($LASTEXITCODE -ne 0){throw 'ISOLATED_DB_CONNECTION_NOT_VERIFIED'}
   # Check installed Alembic capability before requesting permission to migrate.
   $alembicHelp=(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose run --rm --no-deps --entrypoint alembic backend current --help 2>&1 | Out-String)
