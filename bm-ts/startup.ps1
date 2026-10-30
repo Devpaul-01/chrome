@@ -14,6 +14,15 @@ if($Mode -eq 'Audit'){
  Write-Host 'AUDIT_PASS: no services changed'
  exit 0
 }
+function FindIsolatedDbContainer([string]$expectedProject) {
+ # Query Docker's persisted Compose labels directly; do not depend on Compose ps or a PowerShell pipeline.
+ $found=@(& docker.exe ps -aq --no-trunc --filter "label=com.docker.compose.project=$expectedProject" --filter 'label=com.docker.compose.service=db')
+ $exitCode=$LASTEXITCODE
+ if($exitCode -ne 0){throw "DEV_DB_DOCKER_LABEL_QUERY_FAILED (exit=$exitCode)"}
+ $ids=@($found | Where-Object { $_ -match '^[a-f0-9]{12,64}$' })
+ if($ids.Count -ne 1){throw "DEV_DB_CONTAINER_COUNT_INVALID (count=$($ids.Count))"}
+ return [string]$ids[0]
+}
 function EnsureDevBackend {
  Require 'docker.exe'
  if(-not (Test-Path -LiteralPath $compose)){throw 'Development Compose file missing'}
@@ -59,8 +68,8 @@ function EnsureDevBackend {
   if($bindings.Count -ne 1 -or $bindings[0].HostIp -ne '127.0.0.1' -or $bindings[0].HostPort -ne '8000'){throw 'BACKEND_PORT_BINDING_MISMATCH'}
   if(-not (CheckApi 8000)){throw 'ISOLATED_BACKEND_UNHEALTHY'}
   # Existing backend must pass the same isolated DB verification as first-run.
-  $dbid=(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose ps -q db | Select-Object -First 1)
-  if($LASTEXITCODE -ne 0 -or -not $dbid){throw 'EXISTING_DEV_DB_MISSING'}
+  $dbid=FindIsolatedDbContainer $project
+  if(-not $dbid){throw 'EXISTING_DEV_DB_MISSING'}
   $dbmeta=(& docker.exe inspect --format '{{json .}}' $dbid | ConvertFrom-Json)
   if($LASTEXITCODE -ne 0 -or -not $dbmeta){throw 'EXISTING_DEV_DB_INSPECT_FAILED'}
   if($dbmeta.Config.Labels.'com.docker.compose.project' -cne $project -or $dbmeta.Config.Labels.'com.docker.compose.service' -cne 'db' -or $dbmeta.State.Health.Status -cne 'healthy'){throw 'EXISTING_DEV_DB_ISOLATION_OR_HEALTH_FAILED'}
@@ -133,8 +142,8 @@ asyncio.run(verify())
  if($LASTEXITCODE -ne 0){throw 'Compose validation failed'}
  & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose up -d db
  if($LASTEXITCODE -ne 0){throw 'Database startup failed'}
- $dbid=(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose ps -q db | Select-Object -First 1)
- if($LASTEXITCODE -ne 0){throw 'DEV_DB_COMPOSE_DISCOVERY_FAILED'}
+ $dbid=FindIsolatedDbContainer $project
+ if(-not $dbid){throw 'DEV_DB_CONTAINER_NOT_DISCOVERED'}
  if(-not $dbid){throw 'DEV_DB_CONTAINER_NOT_LISTED_AFTER_START'}
  $dbmeta=(& docker.exe inspect --format '{{json .}}' $dbid | ConvertFrom-Json)
  if($LASTEXITCODE -ne 0 -or -not $dbmeta){throw 'DEV_DB_INSPECT_FAILED'}
