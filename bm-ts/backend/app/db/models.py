@@ -1405,3 +1405,19 @@ class NotificationOutbox(Base):
         Index("idx_notification_outbox_processing_lease", "status", "claim_expires_at"),
         Index("idx_notification_outbox_dead_lettered", "status", "dead_lettered_at"),
     )
+
+class PlanSwitchIntent(Base):
+    """Durable request state; no provider call or entitlement mutation here."""
+    __tablename__ = "plan_switch_intents"
+    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    from_plan: Mapped[str] = mapped_column(String(16), nullable=False)
+    target_plan: Mapped[str] = mapped_column(String(16), nullable=False)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, server_default=text("'PENDING'"))
+    provider_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    metadata_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    __table_args__ = (Index("uq_plan_switch_user_key", "user_id", "idempotency_key", unique=True),)
