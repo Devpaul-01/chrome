@@ -26,12 +26,16 @@ services:
       db:
         condition: service_healthy
     ports:
-      - '127.0.0.1:${BM_DEV_API_PORT:-18767}:8000'
+      - '127.0.0.1:${BM_DEV_API_PORT:-8000}:8000'
     environment:
       DATABASE_URL: postgresql+asyncpg://bmdev:${BM_DEV_DB_PASSWORD}@db:5432/birthdaymessaging_dev
+      BM_DEV_DB_PASSWORD: ${BM_DEV_DB_PASSWORD:?Generate a unique local password}
       SECRET_KEY: ${BM_DEV_SECRET_KEY:?Generate a unique local secret}
-      JWT_SECRET_KEY: ${BM_DEV_SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Generate a unique JWT secret}
+      SMTP_ENCRYPTION_KEY: ${SMTP_ENCRYPTION_KEY:?Generate a Fernet encryption key}
       ENVIRONMENT: development
+      BM_DEPLOYMENT_ENV: isolated_development
+      STRIPE_ENABLED: "false"
     command: ['bash', '-c', 'uvicorn app.main:app --host 0.0.0.0 --port 8000']
   notification-worker:
     profiles: ['workers']
@@ -45,8 +49,11 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://bmdev:${BM_DEV_DB_PASSWORD}@db:5432/birthdaymessaging_dev
       SECRET_KEY: ${BM_DEV_SECRET_KEY}
-      JWT_SECRET_KEY: ${BM_DEV_SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Generate a unique JWT secret}
+      SMTP_ENCRYPTION_KEY: ${SMTP_ENCRYPTION_KEY:?Generate a Fernet encryption key}
       ENVIRONMENT: development
+      BM_DEPLOYMENT_ENV: isolated_development
+      STRIPE_ENABLED: "false"
     command: ['python', '-m', 'app.services.notification_worker']
   payment-recovery-worker:
     profiles: ['workers']
@@ -60,8 +67,11 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://bmdev:${BM_DEV_DB_PASSWORD}@db:5432/birthdaymessaging_dev
       SECRET_KEY: ${BM_DEV_SECRET_KEY}
-      JWT_SECRET_KEY: ${BM_DEV_SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Generate a unique JWT secret}
+      SMTP_ENCRYPTION_KEY: ${SMTP_ENCRYPTION_KEY:?Generate a Fernet encryption key}
       ENVIRONMENT: development
+      BM_DEPLOYMENT_ENV: isolated_development
+      STRIPE_ENABLED: "false"
     command: ['python', '-m', 'app.services.payment_checkout_recovery_worker']
 volumes:
   db_data:

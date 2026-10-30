@@ -26,9 +26,9 @@ if($map.Contains('BM_DEPLOYMENT_ENV') -and $map['BM_DEPLOYMENT_ENV'] -ne 'isolat
 $map['STRIPE_ENABLED']='false'
 $map['BM_DEPLOYMENT_ENV']='isolated_development'
 if(!$map.Contains('BM_DEV_DB_PORT')){$map['BM_DEV_DB_PORT']='15432'}
-if(!$map.Contains('BM_DEV_API_PORT')){$map['BM_DEV_API_PORT']='18767'}
+if(!$map.Contains('BM_DEV_API_PORT')){$map['BM_DEV_API_PORT']='8000'}
 $key=$map['SMTP_ENCRYPTION_KEY']
-try{$raw=[Convert]::FromBase64String($key.Replace('-','+').Replace('_','/'));if($raw.Length -ne 32){throw 'Invalid length'}}catch{throw 'Existing SMTP encryption key invalid; refusing overwrite'}
+try{$raw=[Convert]::FromBase64String(($key.Replace('-','+').Replace('_','/') + ('=' * ((4 - ($key.Length % 4)) % 4))));if($raw.Length -ne 32){throw 'Invalid length'}}catch{throw 'Existing SMTP encryption key invalid; refusing overwrite'}
 foreach($name in @('JWT_SECRET_KEY','BM_DEV_SECRET_KEY','BM_DEV_DB_PASSWORD')){if($map[$name].Length -lt 32){throw "Existing $name too short; refusing overwrite"}}
 $lines=@(foreach($name in $map.Keys){"$name=$($map[$name])"})
 $temp="$EnvironmentFile.tmp.$PID"
