@@ -191,7 +191,7 @@ export default function HomeControls({
             </svg>
           </span>
           <span className="messages-hub-label">Facebook Popup</span>
-          <span className="messages-hub-desc">Open facebook popup</span>
+          <span className="messages-hub-desc">Open Facebook popup</span>
         </button>
 
         <button
