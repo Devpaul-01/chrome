@@ -14,6 +14,17 @@ if($Mode -eq 'Audit'){
  Write-Host 'AUDIT_PASS: no services changed'
  exit 0
 }
+function FindIsolatedBackendContainer([string]$expectedProject){
+ $found=@(& docker.exe ps -aq --no-trunc --filter "label=com.docker.compose.project=$expectedProject" --filter 'label=com.docker.compose.service=backend')
+ if($LASTEXITCODE -ne 0){throw 'DEV_BACKEND_DOCKER_DISCOVERY_FAILED'}
+ $rawIds=@($found | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+ $invalid=@($rawIds | Where-Object { $_ -notmatch '^[0-9a-f]{12,64}$' })
+ if($invalid.Count -gt 0){throw 'DEV_BACKEND_INVALID_DOCKER_ID_OUTPUT'}
+ $found=@($rawIds)
+ if($found.Count -gt 1){throw 'DEV_BACKEND_AMBIGUOUS_MULTIPLE_CONTAINERS'}
+ if($found.Count -eq 0){return $null}
+ return [string]$found[0]
+}
 function FindIsolatedDbContainer([string]$expectedProject) {
  # Query Docker's persisted Compose labels directly; do not depend on Compose ps or a PowerShell pipeline.
  $found=@(& docker.exe ps -aq --no-trunc --filter "label=com.docker.compose.project=$expectedProject" --filter 'label=com.docker.compose.service=db')
@@ -53,11 +64,9 @@ function EnsureDevBackend {
  }
  & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose config --quiet
  if($LASTEXITCODE -ne 0){throw 'DEV_COMPOSE_INTERPOLATION_FAILED'}
- $running=@(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose ps -q backend 2>$null)
- if($LASTEXITCODE -ne 0){throw 'Cannot inspect isolated Compose project'}
+ $running=@(FindIsolatedBackendContainer $project)
  # Validate Docker's published host binding against the isolated Compose backend.
- $cid=(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose ps -q backend | Select-Object -First 1)
- if($LASTEXITCODE -ne 0){throw 'Cannot resolve isolated backend container'}
+ $cid=FindIsolatedBackendContainer $project
  if($cid){
   $meta=(& docker.exe inspect --format '{{json .}}' $cid | ConvertFrom-Json)
   if($LASTEXITCODE -ne 0 -or -not $meta){throw 'BACKEND_INSPECT_FAILED'}
@@ -89,8 +98,8 @@ function EnsureDevBackend {
    if((Read-Host 'Recreate ONLY this isolated DEV backend container using the updated image? Type RECREATE') -cne 'RECREATE'){throw 'EXISTING_BACKEND_IMAGE_STALE_RECREATE_DECLINED'}
    & docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose up -d --no-deps --force-recreate backend
    if($LASTEXITCODE -ne 0){throw 'EXISTING_DEV_BACKEND_RECREATE_FAILED'}
-   $cid=(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose ps -q backend | Select-Object -First 1)
-   if($LASTEXITCODE -ne 0 -or -not $cid){throw 'RECREATED_BACKEND_MISSING'}
+   $cid=FindIsolatedBackendContainer $project
+   if(-not $cid){throw 'RECREATED_BACKEND_MISSING'}
    $meta=(& docker.exe inspect --format '{{json .}}' $cid | ConvertFrom-Json)
    if($LASTEXITCODE -ne 0 -or -not $meta -or $meta.Image -cne $builtImage -or $meta.Config.Labels.'com.docker.compose.project' -cne $project -or $meta.Config.Labels.'com.docker.compose.service' -cne 'backend'){throw 'RECREATED_BACKEND_IDENTITY_MISMATCH'}
    $bindings=@($meta.NetworkSettings.Ports.'8000/tcp')
@@ -218,8 +227,8 @@ asyncio.run(verify())
  $ready=$false
  for($i=0;$i -lt 30;$i++){if(CheckApi 8000){$ready=$true;break};Start-Sleep -Seconds 2}
  if(-not $ready){throw 'Backend health timeout'}
- $newid=(& docker.exe compose -p $project --project-directory $base --env-file $envFile -f $compose ps -q backend | Select-Object -First 1)
- if($LASTEXITCODE -ne 0 -or -not $newid){throw 'NEW_BACKEND_CONTAINER_MISSING'}
+ $newid=FindIsolatedBackendContainer $project
+ if(-not $newid){throw 'NEW_BACKEND_CONTAINER_MISSING'}
  $newmeta=(& docker.exe inspect --format '{{json .}}' $newid | ConvertFrom-Json)
  if($LASTEXITCODE -ne 0 -or -not $newmeta){throw 'NEW_BACKEND_INSPECT_FAILED'}
  if($newmeta.Config.Labels.'com.docker.compose.project' -cne $project -or $newmeta.Config.Labels.'com.docker.compose.service' -cne 'backend' -or $newmeta.State.Running -ne $true){throw 'NEW_BACKEND_OWNERSHIP_MISMATCH'}
