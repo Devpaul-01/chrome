@@ -13,7 +13,7 @@ function normalizeContactFields(
 ): Record<string, unknown> {
   const c = contact;
 
-  // Already in canonical backend shape for a create — pass through unchanged
+  // Already in canonical backend shape for a create ΓÇö pass through unchanged
   if (!opts?.id && 'name' in c && 'facebook_profile_url' in c) {
     return c;
   }
@@ -66,7 +66,7 @@ function normalizeContactFields(
   return mapped;
 }
 
-export function useContacts() {
+export function useContacts(enabled: boolean = true) {
   const { user, showToast, setViewMode } = useAppContext();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
@@ -85,12 +85,12 @@ export function useContacts() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !enabled) {
       setContacts([]);
       return;
     }
     void loadContacts();
-  }, [user, loadContacts]);
+  }, [user, enabled, loadContacts]);
 
   const handleAddContact = useCallback(
     async (contact: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> => {

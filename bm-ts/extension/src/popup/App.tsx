@@ -1,4 +1,4 @@
-﻿/// <reference types="chrome" />
+/// <reference types="chrome" />
 /**
  * popup/App.tsx — Root React component for the extension popup.
  *
@@ -144,9 +144,30 @@ function AppShell() {
     refreshUser,
   } = useAppContext();
 
-  const msgTemplates = useMessageTemplates();
+  // Production feature access is always determined by the backend, never by login alone.
+  const [entitlement, setEntitlement] = useState<'checking' | 'active' | 'inactive'>('checking');
+  const msgTemplates = useMessageTemplates(entitlement === 'active');
+  const contactsHook = useContacts(entitlement === 'active');
+  const refreshEntitlement = useCallback(async () => {
+    setEntitlement('checking');
+    try {
+      const status = await sendBackgroundMessage<{ is_active: boolean }>({ type: 'subscription.status' });
+      setEntitlement(status?.is_active === true ? 'active' : 'inactive');
+    } catch {
+      setEntitlement('inactive'); // Fail closed if status cannot be verified.
+    }
+  }, []);
+  useEffect(() => {
+    if (!user) { setEntitlement('checking'); return; }
+    void refreshEntitlement();
+    const onVisible = () => { if (document.visibilityState === 'visible') void refreshEntitlement(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user, refreshEntitlement]);
+
+
   const post = usePostComposer();
-  const contactsHook = useContacts();
+
 
   // ---- Onboarding wizard --------------------------------------------------
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -925,6 +946,20 @@ function AppShell() {
         )}
 
         {!isInitializing && isAuthenticated && (
+          entitlement !== 'active' ? (
+            <section className="card" role="status" aria-live="polite">
+              {entitlement === 'checking' ? (
+                <p>Verifying subscription access…</p>
+              ) : (
+                <>
+                  <p className="mb-3">Your subscription is inactive or could not be verified. Paid features are locked.</p>
+                  <SubscriptionPanel />
+                  <button type="button" className="btn-outline-orange w-full mt-3" onClick={() => void refreshEntitlement()}>Check subscription again</button>
+                  <button type="button" className="btn-outline-orange w-full mt-2" onClick={() => void handleLogout()}>Log out</button>
+                </>
+              )}
+            </section>
+          ) : (
           <>
             {renderTabNavigation()}
             <section
@@ -937,10 +972,11 @@ function AppShell() {
               {renderView()}
             </section>
           </>
+          )
         )}
       </main>
 
-      {isAuthenticated && (
+      {isAuthenticated && entitlement === 'active' && (
         <footer role="contentinfo" className="mt-2">
           {activeTab === 'home' && viewMode === 'main' && (
             <button

@@ -22,7 +22,7 @@ function toSavedTemplate(t: MessageTemplate): SavedTemplate {
   };
 }
 
-export function useMessageTemplates() {
+export function useMessageTemplates(enabled: boolean = true) {
   const { user, showToast } = useAppContext();
   const [messageTemplates, setMessageTemplates] = useState<SavedTemplate[]>([]);
   const [showTemplateCreator, setShowTemplateCreator] = useState(false);
@@ -42,12 +42,12 @@ export function useMessageTemplates() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !enabled) {
       setMessageTemplates([]);
       return;
     }
     void loadMessageTemplates();
-  }, [user, loadMessageTemplates]);
+  }, [user, enabled, loadMessageTemplates]);
 
   const handleCreateTemplate = useCallback(
     async (data: TemplateFormData): Promise<void> => {
